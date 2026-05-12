@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_456",
+  "title": "Course: COSC 456 - Compilers",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 456",
+  "course_name": "Compilers",
+  "credits": 3,
+  "description": "Introduction to compiler design and implementation principles, techniques, and tools. Topics include: lexical analysis (scanning), syntax analysis (parsing), semantic analysis, syntax-directed translation, intermediate code generation, code generation, code optimization, and symbol table management.",
+  "prerequisites_text": "COSC 385 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 385"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55592",
+  "content": "COSC 456 - Compilers\nCredits: 3\nPrerequisites: COSC 385 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Introduction to compiler design and implementation principles, techniques, and tools. Topics include: lexical analysis (scanning), syntax analysis (parsing), semantic analysis, syntax-directed translation, intermediate code generation, code generation, code optimization, and symbol table management.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55592",
+  "source_file": "catalog.morgan.edu (coid=55592, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

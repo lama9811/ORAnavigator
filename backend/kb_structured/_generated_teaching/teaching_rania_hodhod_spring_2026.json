@@ -1,0 +1,14 @@
+{
+  "doc_id": "teaching_rania_hodhod_spring_2026",
+  "title": "Teaching: Rania Hodhod (Spring 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Rania Hodhod",
+  "semester": "Spring 2026",
+  "course_codes": [
+    "COSC111"
+  ],
+  "section_count": 1,
+  "content": "Rania Hodhod - Teaching Schedule for Spring 2026\n\nCourses:\n  - COSC111 INTRO TO COMPUTER SCIENCE I | Section R01 | TR 3:00PM-4:40PM | Room: REM-001 | 4 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

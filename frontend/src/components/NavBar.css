@@ -1,0 +1,554 @@
+/* ========== Navbar - Glass Morphism ========== */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 70px;
+  display: flex;
+  align-items: center;
+}
+
+.navbar.scrolled {
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
+  border-bottom-color: transparent;
+}
+
+/* Container spans full width */
+.nav-container {
+  width: 100%;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ========== Left Side - Logo and Title - CLICKABLE ========== */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+}
+
+.navbar-left:hover {
+  opacity: 0.9;
+  background: rgba(66, 133, 244, 0.04);
+}
+
+.navbar-left:active {
+  opacity: 0.75;
+}
+
+/* Logo that morphs into hamburger on hover (Chat page) */
+.logo-hamburger-toggle {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.logo-hamburger-toggle:hover {
+  background: rgba(66, 133, 244, 0.08);
+}
+
+/* Logo image - visible by default */
+.nav-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 1;
+}
+
+/* Hamburger overlay - hidden by default */
+.hamburger-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--msu-blue);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* On hover: hide logo, show hamburger */
+.logo-hamburger-toggle:hover .nav-logo-image {
+  opacity: 0;
+  transform: scale(1.2);
+}
+
+.logo-hamburger-toggle:hover .hamburger-overlay {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Regular logo (when not authenticated) */
+.nav-logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* ========== Title ========== */
+.nav-title {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  font-family: var(--font-sans);
+}
+
+.brand-main {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ========== Right Side - Navigation Links ========== */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.95rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  background-color: rgba(66, 133, 244, 0.08);
+  color: var(--msu-blue);
+}
+
+.nav-link.active {
+  background-color: rgba(66, 133, 244, 0.1);
+  color: var(--msu-blue);
+  font-weight: 600;
+}
+
+/* Try Free link - highlighted */
+.try-free-link {
+  color: #FF6B00 !important;
+  font-weight: 600;
+}
+
+.try-free-link:hover {
+  background-color: rgba(255, 107, 0, 0.1) !important;
+  color: #e55c00 !important;
+}
+
+/* CTA button */
+.nav-cta {
+  text-decoration: none;
+  margin-left: 8px;
+}
+
+/* ========== Profile Icon Button - LIGHT & DARK MODE FIX ========== */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.profile-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid #dadce0;
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
+}
+
+/* Profile Avatar Image */
+.profile-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  position: relative;
+  z-index: 1;
+}
+
+/* Fallback Icon */
+.profile-icon-fallback {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4285F4, #34A853);
+  color: white;
+  z-index: 0;
+}
+
+/* Hover Effects - LIGHT MODE */
+.profile-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(60, 64, 67, 0.2);
+  border-color: #4285F4;
+  background: rgba(66, 133, 244, 0.04);
+}
+
+.profile-icon-btn:active {
+  transform: translateY(0);
+}
+
+.profile-icon-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+}
+
+/* ========== Admin Navigation Button ========== */
+.admin-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--msu-blue);
+  color: white;
+  border: 2px solid var(--msu-blue);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(66, 133, 244, 0.2);
+}
+
+.admin-nav-btn:hover {
+  background: var(--msu-blue-hover);
+  border-color: var(--msu-blue-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.admin-nav-btn:active {
+  transform: translateY(0);
+}
+
+/* ========== DARK MODE SUPPORT ========== */
+.dark .navbar {
+  background: rgba(31, 31, 31, 0.88);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .navbar.scrolled {
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  border-bottom-color: transparent;
+}
+
+.dark .navbar-left:hover {
+  background: rgba(138, 180, 248, 0.08);
+}
+
+.dark .hamburger-overlay {
+  color: #8ab4f8;
+}
+
+.dark .profile-icon-btn {
+  background: #3c4043;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  color: #e8eaed;
+}
+
+.dark .profile-icon-btn:hover {
+  border-color: rgba(138, 180, 248, 0.4);
+  box-shadow: 0 4px 12px rgba(138, 180, 248, 0.2);
+  background: #4c4c4c;
+  transform: translateY(-2px);
+}
+
+.dark .profile-icon-fallback {
+  background: rgba(138, 180, 248, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.dark .admin-nav-btn {
+  background: #8ab4f8;
+  border-color: #8ab4f8;
+  color: #202124;
+}
+
+.dark .admin-nav-btn:hover {
+  background: #aecbfa;
+  border-color: #aecbfa;
+  box-shadow: 0 4px 12px rgba(138, 180, 248, 0.3);
+}
+
+/* ========== RESPONSIVE BREAKPOINTS ========== */
+
+/* Large Desktop (1440px+) */
+@media (min-width: 1440px) {
+  .nav-container {
+    padding: 0 40px;
+  }
+
+  .navbar {
+    height: 75px;
+  }
+
+  .logo-hamburger-toggle {
+    width: 55px;
+    height: 55px;
+  }
+
+  .nav-logo {
+    height: 55px;
+  }
+
+  .brand-main {
+    font-size: 1.2rem;
+  }
+
+  .brand-sub {
+    font-size: 0.8rem;
+  }
+}
+
+/* iPad Pro Landscape (1024px - 1279px) */
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .nav-container {
+    padding: 0 20px;
+  }
+
+  .brand-main {
+    font-size: 1.05rem;
+  }
+
+  .nav-link {
+    font-size: 0.9rem;
+    padding: 6px 12px;
+  }
+}
+
+/* iPad Pro Portrait & Tablets (768px - 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .nav-container {
+    padding: 0 16px;
+  }
+
+  .navbar {
+    height: 65px;
+  }
+
+  .logo-hamburger-toggle {
+    width: 45px;
+    height: 45px;
+  }
+
+  .nav-logo {
+    height: 45px;
+  }
+
+  .brand-main {
+    font-size: 1rem;
+  }
+
+  .brand-sub {
+    font-size: 0.7rem;
+  }
+
+  .nav-links {
+    gap: 4px;
+  }
+
+  .nav-link {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+
+  .profile-icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .admin-nav-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Mobile (below 768px) */
+@media (max-width: 767px) {
+  .nav-container {
+    padding: 0 12px;
+  }
+
+  .navbar {
+    height: 60px;
+  }
+
+  .navbar-left {
+    gap: 8px;
+  }
+
+  .logo-hamburger-toggle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-logo {
+    height: 40px;
+  }
+
+  .brand-main {
+    font-size: 0.95rem;
+  }
+
+  .brand-sub {
+    display: none;
+  }
+
+  .nav-links {
+    gap: 2px;
+  }
+
+  .nav-link {
+    font-size: 0.8rem;
+    padding: 6px 8px;
+  }
+
+  .profile-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .profile-icon-fallback svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .admin-nav-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .admin-nav-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Small mobile devices (below 480px) */
+@media (max-width: 480px) {
+  .nav-container {
+    padding: 0 10px;
+  }
+
+  .navbar {
+    height: 56px;
+  }
+
+  .logo-hamburger-toggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .nav-logo {
+    height: 36px;
+  }
+
+  .brand-main {
+    font-size: 0.9rem;
+  }
+
+  .nav-title {
+    display: none;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .profile-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .admin-nav-btn {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .admin-nav-btn span {
+    display: none;
+  }
+}
+
+/* Extra small phones (below 375px) */
+@media (max-width: 374px) {
+  .nav-container {
+    padding: 0 8px;
+  }
+
+  .navbar {
+    height: 52px;
+  }
+
+  .logo-hamburger-toggle {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nav-logo {
+    height: 32px;
+  }
+
+  .profile-icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+}

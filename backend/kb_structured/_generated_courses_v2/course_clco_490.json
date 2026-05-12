@@ -1,0 +1,19 @@
+{
+  "doc_id": "course_clco_490",
+  "title": "Course: CLCO 490 - Senior Project in Cloud Computing",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "CLCO 490",
+  "course_name": "Senior Project in Cloud Computing",
+  "credits": 3,
+  "description": "Explores cutting-edge technologies in software and hardware through advanced cloud computing projects. Topics include SaaS, IaaS, PaaS, MapReduce, Hadoop clusters, BitTorrent protocols, security issues in cloud transactions, mobile cloud applications, and multi-cloud disaster recovery. Students select projects in consultation with faculty advisors.",
+  "prerequisites_text": "Department Chair permission and Senior Standing required",
+  "prerequisite_codes": [],
+  "terms_offered": "As Needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57245",
+  "content": "CLCO 490 - Senior Project in Cloud Computing\nCredits: 3\nPrerequisites: Department Chair permission and Senior Standing required\nOffered: As Needed\n\nDescription: Explores cutting-edge technologies in software and hardware through advanced cloud computing projects. Topics include SaaS, IaaS, PaaS, MapReduce, Hadoop clusters, BitTorrent protocols, security issues in cloud transactions, mobile cloud applications, and multi-cloud disaster recovery. Students select projects in consultation with faculty advisors.\n\nCurriculum role:\n  - BS Cloud Computing: Core\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57245",
+  "source_file": "catalog.morgan.edu (coid=57245, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "core",
+  "in_cs_minor": false
+}

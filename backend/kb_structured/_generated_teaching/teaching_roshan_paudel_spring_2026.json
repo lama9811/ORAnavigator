@@ -1,0 +1,19 @@
+{
+  "doc_id": "teaching_roshan_paudel_spring_2026",
+  "title": "Teaching: Roshan Paudel (Spring 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Roshan Paudel",
+  "semester": "Spring 2026",
+  "course_codes": [
+    "BIOI512",
+    "BIOI692",
+    "BIOI797",
+    "BIOI799",
+    "COSC112",
+    "COSC499"
+  ],
+  "section_count": 6,
+  "content": "Roshan Paudel - Teaching Schedule for Spring 2026\n\nCourses:\n  - BIOI512 STRUCTURAL BIOINFORMATICS | Section H85 | T 5:00PM-7:30PM | Room: CLWY-212 | 3 cr | Non-Traditional\n  - BIOI692 RESRCH SEM IN BIOINFORMATICS | Section H85 | R 5:00PM-7:30PM, TBA | Room: CLWY-212, WEB-001 | 3 cr | Non-Traditional\n  - BIOI797 THESIS GUIDANCE | Section H85 | W 5:00PM-7:20PM | Room: DSTH-1 | 9 cr | Non-Traditional\n  - BIOI799 THESIS DEFENSE | Section H01 | W 7:30PM-9:50PM | Room: DSTH-1 | 9 cr | Non-Traditional\n  - COSC112 INTRO TO COMPUTER SCIENCE II | Section 3 | TR 1:00PM-2:40PM | Room: MCMN-519 | 4 cr | Traditional\n  - COSC499 SENIOR RSCH OR TCHG/TUTOR ASST | Section W01 | TBA | Room: WEB-001 | 3 cr | Web",
+  "source_file": "schedule_*.txt"
+}

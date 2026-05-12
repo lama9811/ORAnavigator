@@ -1,0 +1,22 @@
+{
+  "doc_id": "course_cosc_474",
+  "title": "Course: COSC 474 - Artificial Intelligence in Cybersecurity",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 474",
+  "course_name": "Artificial Intelligence in Cybersecurity",
+  "credits": 3,
+  "description": "Introduces undergraduate students to foundational machine learning concepts and their applications in cybersecurity. Students learn how AI enhances threat detection, automates responses, and identifies cyber risks. Topics include supervised and unsupervised learning, deep learning, explainable AI (xAI), adversarial machine learning, and ethical concerns in security AI. Hands-on labs and case studies reinforce technical and ethical understanding.",
+  "prerequisites_text": "COSC 220 and MATH 312 completed with grades of C or higher",
+  "prerequisite_codes": [
+    "COSC 220",
+    "MATH 312"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68048",
+  "content": "COSC 474 - Artificial Intelligence in Cybersecurity\nCredits: 3\nPrerequisites: COSC 220 and MATH 312 completed with grades of C or higher\nOffered: Fall, Spring\n\nDescription: Introduces undergraduate students to foundational machine learning concepts and their applications in cybersecurity. Students learn how AI enhances threat detection, automates responses, and identifies cyber risks. Topics include supervised and unsupervised learning, deep learning, explainable AI (xAI), adversarial machine learning, and ethical concerns in security AI. Hands-on labs and case studies reinforce technical and ethical understanding.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68048",
+  "source_file": "catalog.morgan.edu (coid=68048, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

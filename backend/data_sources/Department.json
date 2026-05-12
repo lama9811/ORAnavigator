@@ -1,0 +1,266 @@
+{
+  "university": "Morgan State University",
+  "department": "Computer Science Department",
+  "university_leadership": {
+    "summary": "The president of Morgan State University is Dr. David K. Wilson. The provost of Morgan State University is Dr. Hongtao Yu. Dr. David Wilson is the 12th president of Morgan State and has served since 2010. Dr. Hongtao Yu is the Provost and Senior Vice President for Academic Affairs.",
+    "president": {
+      "name": "David K. Wilson",
+      "title": "President of Morgan State University",
+      "full_description": "The president of Morgan State University is Dr. David K. Wilson. Dr. David K. Wilson has served as the 12th president of Morgan State University since 2010. Under his leadership, Morgan State has seen significant growth in enrollment, research funding, and campus development. He is committed to expanding the university's impact as Maryland's Preeminent Public Urban Research University. The president's office is located in Truth Hall. You can contact the president's office at president@morgan.edu.",
+      "office": "Truth Hall",
+      "email": "president@morgan.edu"
+    },
+    "provost": {
+      "name": "Hongtao Yu",
+      "title": "Provost and Senior Vice President for Academic Affairs",
+      "full_description": "The provost of Morgan State University is Dr. Hongtao Yu. Dr. Hongtao Yu serves as Provost and Senior Vice President for Academic Affairs at Morgan State University. The provost oversees all academic programs, faculty affairs, and educational initiatives across the university. The provost's office is located in Truth Hall. You can contact the provost's office at provost@morgan.edu.",
+      "office": "Truth Hall",
+      "email": "provost@morgan.edu"
+    },
+    "scmns_dean": {
+      "name": "Paul Tchounwou",
+      "title": "Dean, School of Computer, Mathematical, and Natural Sciences (SCMNS)",
+      "full_description": "The Dean of the School of Computer, Mathematical, and Natural Sciences (SCMNS) is Dr. Paul Tchounwou. He oversees the Computer Science Department along with Mathematics, Biology, Chemistry, and Physics departments. The SCMNS Dean's office is located in Dixon Science Research Center, Room 200.",
+      "office": "Dixon Science Research Center, Room 200",
+      "phone": "443-885-4515",
+      "email": "scmns-deans-office@morgan.edu"
+    }
+  },
+  "about_department": {
+    "description": "The Morgan State University Computer Science Program is part of the School of Computer, Mathematics, and Natural Sciences. The program provides students with fundamental computer science knowledge and training, preparing them to apply their skills to solve real-world problems. Students learn problem definition, feasibility analysis, solution strategy development, design, implementation, testing, modification, documentation, and communication. The curriculum balances practical knowledge and theoretical foundations to support career readiness and adaptability in the evolving discipline.",
+    "degrees_offered": [
+      "Bachelor of Science (BS) in Computer Science",
+      "Master of Science (MS) in Advanced Computing",
+      "Ph.D. in Advanced Computing",
+      "Bachelor of Science (BS) in Cloud Computing",
+      "Master of Science (MS) in Bioinformatics",
+      "4+1 Bachelor’s and Master’s Program in Computer Science"
+    ]
+  },
+  "department_forms": {
+    "academic_appeals_form": {
+      "purpose": "To appeal decisions made by the department chairpersons in SCMNS.",
+      "instructions": "View instructions: [SCMNS Academic Appeals Process](https://www.morgan.edu/Documents/ACADEMIA/SCHOOLS/SCMNS/SCMNS%20Academic%20Appeals%20Process.pdf)",
+      "processing_time": "Varies per situation",
+      "required_form": "The Department C.A.R.E.S. Form must be completed and reviewed by the Chairperson before completing this form.",
+      "cares_form_link": "https://powerforms.docusign.net/95de2ecc-bb63-4e7d-9d77-30699f16b044?env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&accountId=91e00bed-fb84-48ab-9c47-f3a2c0621225",
+      "appeals_form_link": "https://www.morgan.edu/Documents/ACADEMIA/SCHOOLS/SCMNS/SCMNS%20Academic%20Appeals%20Form.pdf",
+      "notes": "Students can fill out this form if they have any issue with a grade or professor. Make sure to document and provide evidence"
+    }
+  },
+    "contact_information": {
+      "address": "1700 E Cold Spring Lane, Baltimore, MD 21251, McMechen 507 Suite",
+      "phone": "(443) 885-3962",
+      "email": "compsci@morgan.edu",
+      "website": "Morgan State CS Department"
+    },
+      "faculty_and_staff": {
+        "introduction": "The faculty and staff of the Morgan State University Computer Science Department are dedicated to advancing the field of computer science, guided by our mission to provide high-quality education and foster innovation through cutting-edge research. Our faculty members bring expertise from a wide range of research areas and are committed to supporting students in their academic and professional growth. During the Academic Advising Period, the Computer Science faculty serve as academic advisors for students in the department, assisting with course planning, registration, and providing necessary academic guidance. Students can find their academic advisors in their respective offices, and office hours are posted on the board in the Computer Science Suite, Room 507. Based on students' last names, they can easily locate the right advisor for their needs.\n\nFor office hours related to anyone in the Department of Computer Science, it’s best to check the syllabus for your professor’s specific office hours if you’re enrolled in their course. If you’re not taking a course or need further assistance, feel free to email them directly to inquire about their office hours and schedule an appointment—especially if you’d like to discuss something important. Office hours can change frequently, so this is the most reliable way to stay updated.",
+        
+        "department_leadership": [
+          {
+            "name": "Shuangbao \"Paul\" Wang",
+            "title": "Professor and Chair",
+            "office": "McMechen Hall 507",
+            "phone": "(443) 885-4503",
+            "email": "shuangbao.wang@morgan.edu",
+            "research_interest": "Focuses on quantum cryptography, secure architecture, AI and machine learning, IoT and cyber-physical systems, and video indexing."
+          },
+          {
+            "name": "Md Rahman",
+            "title": "Professor, Associate Chair, Director of PhD in Advanced Computing",
+            "office": "McMechen 629",
+            "phone": "(443) 885-1056",
+            "email": "Md.Rahman@morgan.edu",
+            "research_interest": "Concentrates on computer vision, image processing, information retrieval, machine learning, and data mining, applying these to extract relevant and actionable biomedical information for clinical and research purposes."
+          }
+        ],
+        
+        "professors": [
+          {
+            "name": "Amjad Ali",
+            "title": "Professor",
+            "office": "McMechen Hall 502",
+            "email": "amjad.ali@morgan.edu",
+            "research_interest": "Specializes in cybersecurity, artificial intelligence, critical infrastructure security, security policy and privacy, BYOD security, smart cities security, mobile security, and cloud security."
+          },
+          {
+            "name": "Radhouane Chouchane (Radwan Shushane)",
+            "title": "Associate Professor, Director of Undergraduate Studies",
+            "office": "McMechen Hall 624",
+            "phone": "(443) 885-3745",
+            "email": "Radwan.Shushane@morgan.edu",
+            "research_interest": "Explores explainable artificial intelligence and machine learning to detect potentially malicious cyber activities."
+          },
+          {
+            "name": "Monireh Dabaghchian",
+            "title": "Associate Professor",
+            "office": "McMechen Hall 508",
+            "phone": "(443) 885-2348",
+            "email": "Monireh.Dabaghchian@morgan.edu",
+            "research_interest": "Researches cybersecurity, IoT security, cyber-physical systems security, privacy in spectrum-sharing networks, online learning algorithms, multi-armed bandits, statistical learning, artificial intelligence, and deep learning."
+          },
+          {
+            "name": "Jamell Dacon",
+            "title": "Assistant Professor",
+            "office": "McMechen Hall 625",
+            "email": "jamell.dacon@morgan.edu",
+            "research_interest": "Focuses on artificial intelligence, machine learning, computational social science, and natural language processing, with an emphasis on fairness and bias in AI/ML/NLP, human-computer interaction, data science for social good, and AI applications in education, healthcare, accessibility for people with disabilities, and criminal justice."
+          },
+          {
+            "name": "Mohamed Eltoweissy",
+            "title": "Professor, Associate Dean for Research and Graduate Programs",
+            "office": "Dixon Research Center 200",
+            "phone": "(443) 885-4516",
+            "email": "Mohamed.Eltoweissy@morgan.edu",
+            "research_interest": "Research focuses on network security, cryptography, distributed systems, and applied machine learning."
+          },
+          {
+            "name": "Jin Guo",
+            "title": "Professor of Practice",
+            "office": "McMechen Hall 502",
+            "email": "jin.guo@morgan.edu",
+            "research_interest": "Specializes in cloud computing, enterprise IT architecture, and IT management."
+          },
+          {
+            "name": "Vahid Heydari",
+            "title": "Associate Professor",
+            "office": "McMechen Hall 619",
+            "email": "vahid.heydari@morgan.edu",
+            "research_interest": "Investigates moving target defense, security and privacy in industrial control systems, wireless networks, wearable medical devices, IoT, malware analysis, machine learning, and zero-trust architectures."
+          },
+          {
+            "name": "Naja Mack",
+            "title": "Assistant Professor",
+            "office": "McMechen Hall 623",
+            "lab": "McMechen Hall 616",
+            "phone": "(443) 885-2402",
+            "email": "Naja.Mack@morgan.edu",
+            "research_interest": "Researches human-centered computing, artificial intelligence, machine learning, adaptive learning technologies, conversational user interfaces, computer science education, broadening participation in computing, virtual reality, robotics, and social media data analytics."
+          },
+          {
+            "name": "Jianzhou Mao",
+            "title": "Research Assistant Professor",
+            "office": "McMechen Hall 627",
+            "email": "jianzhou.mao@morgan.edu",
+            "research_interest": "Focuses on machine learning, deep learning, and AI applications in big data analytics and optimization."
+          },
+          {
+            "name": "Blessing Ojeme",
+            "title": "Assistant Professor",
+            "office": "McMechen Hall 621",
+            "email": "blessing.ojeme@morgan.edu",
+            "research_interest": "Explores artificial intelligence, machine learning (theory and algorithms), deep learning, image processing, computer vision, bioinformatics, human-computer interaction, and information storage and retrieval."
+          },
+          {
+            "name": "Roshan Paudel",
+            "title": "Coordinator of the MS in Bioinformatics Program, Professor of Practice",
+            "office": "McMechen Hall 507D",
+            "phone": "(443) 885-3096",
+            "email": "Roshan.Paudel@morgan.edu",
+            "research_interest": "Specializes in high-performance computing, bioinformatics, next-generation sequencing analysis, computational biology, and computational modeling, with a primary interest in developing stochastic models of calcium and ion channels in cardiac myocytes."
+          },
+          {
+            "name": "Eric Sakk",
+            "title": "Associate Professor",
+            "office": "McMechen Hall 507F",
+            "phone": "(443) 885-3270",
+            "email": "Eric.Sakk@morgan.edu",
+            "research_interest": "Focuses on dynamical systems, machine learning, system theory, computer systems, communications systems, and bioinformatics."
+          },
+          {
+            "name": "Vojislav Stojkovic",
+            "title": "Associate Professor",
+            "office": "McMechen Hall 507E",
+            "phone": "(443) 885-1054",
+            "email": "Vojislav.Stojkovic@morgan.edu",
+            "research_interest": "Investigates bioinformatics (bioalgorithms and bioprogramming), cybersecurity, information assurance, artificial intelligence (agents and multiagent systems), formal languages (grammars and automata), programming languages, compiler/interpreter design, parallel and distributed computing, quantum and DNA computing, data science techniques, and machine learning."
+          },
+          {
+            "name": "Timothy Oladunni",
+            "title": "Assistant Professor",
+            "office": "McMechen Hall 617",
+            "email": "Timothy.Oladunni@morgan.edu",
+            "research_interest": "Expert in artificial intelligence, with a focus on natural language processing, computer vision, data science, and pattern recognition."
+          },
+          {
+            "name": "Guobin Xu",
+            "title": "Associate Professor, Director of MS in Advanced Computing",
+            "office": "McMechen Hall 615",
+            "phone": "(443) 885-3371",
+            "email": "guobin.xu@morgan.edu",
+            "research_interest": "Research interests include machine learning, computer vision, robotics, and the development of intelligent systems for healthcare applications."
+          }
+        ],
+        
+        "lecturers": [
+          {
+            "name": "Grace Steele",
+            "title": "Lecturer",
+            "office": "McMechen Hall 507C",
+            "phone": "(443) 885-1053",
+            "email": "Grace.Steele@morgan.edu"
+          },
+          {
+            "name": "Dr. Sam Tannouri",
+            "title": "Lecturer",
+            "office": "McMechen Hall 628",
+            "phone": "(443) 885-1055",
+            "email": "Sam.Tannouri@morgan.edu"
+          },
+          {
+            "name": "Adetifa Oluwole",
+            "title": "Research Associate",
+            "office": "McMechen Hall 616"
+          }
+        ],
+        "engineers_in_residence": {
+          "description": "Every Fall Semester, there is a Google Engineer in Residence through the Google in Residence (GIR) program. Launched in 2013, this program aims to increase diversity in the tech industry by partnering with Historically Black Colleges and Universities (HBCUs) and Hispanic-Serving Institutions (HSIs). Experienced Googlers teach introductory computer science courses and provide career guidance.",
+          "current_engineer": {
+            "name": "Rahmel Bailey",
+            "title": "Engineer in Residence (CodePath/Google)",
+            "office": "McMechen Hall 618",
+            "email": "rahmel.bailey@codepath.org"
+          }
+        },
+        "administrative_staff": [
+          {
+            "name": "Wendy Smith",
+            "title": "Administrative Assistant",
+            "office": "McMechen Hall 507A",
+            "phone": "(443) 885-3962",
+            "email": "Wendy.Smith@morgan.edu"
+          }
+        ]
+      }
+    ,
+    "research_areas": [
+      "Artificial Intelligence / Machine Learning / Deep Learning",
+      "Quantum Computing and Quantum Cryptography",
+      "Cybersecurity",
+      "Data Science / Big Data Analytics",
+      "Human-Computer Interactions",
+      "Cloud Computing",
+      "Robotics / Gaming"
+    ],
+    "student_organizations": [
+      {
+        "name": "Women In Computer Science (WiCS)",
+        "mission": "Supporting and empowering female students in computer science through networking, mentorship, and community building.",
+        "president": "Aramide Ogundiran",
+        "website": "WiCS",
+        "instagram": "@morganstatewics",
+        "linkedin": "MSU Women In Computer Science"
+      },
+      {
+        "name": "Google Developer Student Club (GDSC)",
+        "description": "A student-run organization supported by Google that bridges the gap between theoretical knowledge and real-world application in technology."
+      },
+      {
+        "name": "Society for the Advancement of Computer Science (SACS)",
+        "mission": "Promoting the advancement of computer science through discussions, technical events, and industry collaboration.",
+        "president": "Daniel Oluwarotimi",
+        "instagram": "@sacs_msu"
+      }
+    ]
+  }

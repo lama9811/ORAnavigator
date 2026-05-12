@@ -1,0 +1,423 @@
+{
+  "forms_overview": {
+    "description": "This document contains all important forms for Morgan State University students. Forms are organized by category and include direct links for easy access.",
+    "how_to_access_websis_forms": {
+      "steps": [
+        "Go to Student Self-Service/WebSIS at https://lbpsso.morgan.edu/cas/login",
+        "Click 'Service Requests' from the menu",
+        "Enter your Morgan State University email and click 'Continue'",
+        "Do NOT click 'Sign in with Google', 'Microsoft', or 'Apple'",
+        "Sign in with your MSU credentials on the landing page",
+        "Launch the Dashboard to access forms"
+      ],
+      "note": "You can track form submissions in WebSIS under 'Service Request' using the Smartsheet Dynamic View feature."
+    }
+  },
+  "registrar_forms": {
+    "description": "Forms managed by the Office of the Registrar for enrollment, records, and academic requests.",
+    "contact": {
+      "office": "Office of the Registrar",
+      "location": "Tyler Hall",
+      "phone": "443-885-3300",
+      "fax": "443-885-8279",
+      "hours": "Monday-Friday, 8:00 AM - 5:00 PM ET"
+    },
+    "current_student_forms": [
+      {
+        "name": "Change of Major/Minor/Concentration Request",
+        "purpose": "Request to change your major, minor, or concentration",
+        "access": "WebSIS Student Self-Service > Service Requests",
+        "video_tutorial": "https://youtu.be/Qjl2h9Z6SGo?si=EuQ8pWY8cqa08f2Q"
+      },
+      {
+        "name": "Change of Catalog Request",
+        "purpose": "Request to change to a different academic catalog year",
+        "access": "WebSIS Student Self-Service > Service Requests"
+      },
+      {
+        "name": "Excess Credit Request",
+        "purpose": "Request to take more than 18 credits in a semester",
+        "access": "WebSIS Student Self-Service > Service Requests",
+        "video_tutorial": "https://www.morgan.edu/office-of-the-registrar/priority-registration-time-ticket-groupings"
+      },
+      {
+        "name": "Time Conflict Request",
+        "purpose": "Request approval for courses with overlapping schedules (requires both instructors' approval)",
+        "access": "WebSIS Student Self-Service > Service Requests"
+      },
+      {
+        "name": "Permission to Take Courses Off Campus",
+        "purpose": "Request approval to take courses at another institution",
+        "access": "WebSIS Student Self-Service > Service Requests",
+        "video_tutorial": "https://youtu.be/4LlY9yyD9o0",
+        "policy": {
+          "core_courses": "Core Computer Science courses must be taken on campus and are NOT eligible for off-campus credit",
+          "seniors": "Seniors are generally NOT allowed to take courses off-campus except under specific circumstances - discuss with department chair",
+          "non_seniors": "Non-seniors may pursue courses via articulation agreements - check form instructions"
+        }
+      },
+      {
+        "name": "Withdrawal/Cancellation Request",
+        "purpose": "Withdraw from courses or cancel enrollment",
+        "access": "WebSIS Student Self-Service > Service Requests",
+        "instructions": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/registrar/Student%20Communication.pdf"
+      },
+      {
+        "name": "Enrollment Verification Request",
+        "purpose": "Request official verification of your enrollment status",
+        "access": "WebSIS Student Self-Service > Service Requests"
+      },
+      {
+        "name": "FERPA Release Form",
+        "purpose": "Authorize release of educational records to specified individuals",
+        "access": "WebSIS Student Self-Service > Service Requests"
+      },
+      {
+        "name": "Personal Information Update Request",
+        "purpose": "Update legal name, date of birth, address, gender, or Social Security Number",
+        "access": "WebSIS Student Self-Service > Service Requests",
+        "processing_time": "1-3 business days"
+      },
+      {
+        "name": "Exception to Enrollment Policy Appeal",
+        "purpose": "Appeal enrollment deadlines or policy exceptions",
+        "access": "WebSIS Student Self-Service > Service Requests",
+        "processing_time": "Up to 30 business days"
+      }
+    ],
+    "former_student_forms": [
+      {
+        "name": "Enrollment/Degree Verification Request",
+        "purpose": "Verify enrollment or degree for former students",
+        "link": "https://app.smartsheet.com/b/form/6dac11c037f34bfa8687092d04f88f5b",
+        "processing_time": "Up to 10 business days"
+      },
+      {
+        "name": "Exception to Enrollment Policy Appeal",
+        "purpose": "Appeal enrollment deadlines or policy exceptions",
+        "link": "https://app.smartsheet.com/b/form/8d1182d85e3f4e2abb05ad8bffe9bde3",
+        "processing_time": "Up to 30 business days"
+      },
+      {
+        "name": "Personal Information Update Request",
+        "purpose": "Update legal name, DOB, address, gender, SSN",
+        "link": "https://app.smartsheet.com/b/form/beddfd4c3dbf4a2fa6a7c7da2d56d8da",
+        "processing_time": "1-3 business days"
+      }
+    ],
+    "transcripts_and_diplomas": [
+      {
+        "name": "Official Transcript Request",
+        "purpose": "Order official transcripts to be sent to other institutions or employers",
+        "link": "https://exchange.parchment.com/send/adds/index.php?main_page=login&s_id=Q5pVp1evsSONeku3",
+        "processing_time": "15 minutes to 3 business days"
+      },
+      {
+        "name": "Unofficial Transcript",
+        "purpose": "View or print your unofficial transcript",
+        "access": "WebSIS Student Self-Service"
+      },
+      {
+        "name": "Duplicate Diploma Request",
+        "purpose": "Order a replacement diploma",
+        "link": "https://www.parchment.com/u/registration/33356/institution",
+        "processing_time": "1-30 business days"
+      }
+    ]
+  },
+  "computer_science_department_forms": {
+    "description": "Forms specific to the Computer Science Department. Contact Ms. Wendy Smith for assistance.",
+    "contact": {
+      "name": "Wendy Smith",
+      "title": "Administrative Assistant",
+      "office": "McMechen Hall 507A",
+      "phone": "(443) 885-3962",
+      "email": "Wendy.Smith@morgan.edu"
+    },
+    "forms": [
+      {
+        "name": "COSC Course Registration Override Request",
+        "purpose": "Request override for prerequisite or enrollment restrictions",
+        "process": "Contact your academic advisor to submit the request",
+        "notes": "Overrides are NOT guaranteed. The department chairperson's decision is final. Time-conflict overrides require approval from both instructors AND chairpersons."
+      },
+      {
+        "name": "COSC Internal Course Substitution Request",
+        "purpose": "Request to substitute one course for another in your degree requirements",
+        "process": "Contact your academic advisor to submit the request",
+        "notes": "Core courses CANNOT be substituted"
+      },
+      {
+        "name": "COSC Advisor/Faculty Recommendation Request",
+        "purpose": "Request a recommendation letter from a CS faculty member",
+        "process": "Contact Ms. Wendy at Wendy.Smith@morgan.edu"
+      },
+      {
+        "name": "COSC Action Conference Request",
+        "purpose": "Request a meeting/conference with department leadership",
+        "process": "Contact Ms. Wendy at Wendy.Smith@morgan.edu"
+      },
+      {
+        "name": "Grade Appeal Form",
+        "purpose": "Appeal a grade you received in a course",
+        "process": "Contact Ms. Wendy Smith to obtain and submit the formal appeal form"
+      }
+    ]
+  },
+  "scmns_forms": {
+    "description": "Forms for the School of Computer, Mathematical & Natural Sciences",
+    "contact": {
+      "office": "SCMNS Dean's Office",
+      "location": "Dixon Science Research Center, Room 200",
+      "phone": "443-885-4515",
+      "email": "scmns-deans-office@morgan.edu"
+    },
+    "forms": [
+      {
+        "name": "SCMNS Internship and Work Experience Form",
+        "purpose": "Report internship or work experience to your academic advisors",
+        "link": "https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/scmns-advising/internship-form",
+        "processing_time": "Immediate email confirmation"
+      },
+      {
+        "name": "SCMNS Academic Advising Form",
+        "purpose": "Complete before meeting with your advisor - ensures proper advising and timely registration",
+        "link": "https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/scmns-advising/advising-form"
+      },
+      {
+        "name": "SCMNS Academic Appeals Form",
+        "purpose": "Appeal decisions made by department chairpersons in SCMNS",
+        "instructions_pdf": "https://www.morgan.edu/Documents/ACADEMIA/SCHOOLS/SCMNS/SCMNS%20Academic%20Appeals%20Process.pdf",
+        "appeals_form_pdf": "https://www.morgan.edu/Documents/ACADEMIA/SCHOOLS/SCMNS/SCMNS%20Academic%20Appeals%20Form.pdf",
+        "cares_form_link": "https://powerforms.docusign.net/95de2ecc-bb63-4e7d-9d77-30699f16b044?env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&accountId=91e00bed-fb84-48ab-9c47-f3a2c0621225",
+        "notes": "The Department C.A.R.E.S. Form must be completed and reviewed by the Chairperson BEFORE completing the appeals form"
+      }
+    ]
+  },
+  "advising_forms": {
+    "description": "Forms related to academic advising and student support",
+    "forms": [
+      {
+        "name": "Academic Advising Hotline Form",
+        "purpose": "Report advising concerns or request additional assistance",
+        "link": "https://forms.gle/9Rt3PcGJ1deNVPuA9",
+        "process": [
+          "First attempt to resolve concerns directly with your assigned academic advisor",
+          "Allow 3 business days for advisor to respond",
+          "If unresolved, submit this form"
+        ]
+      },
+      {
+        "name": "Academic Advising Kudos Form",
+        "purpose": "Recognize an outstanding academic advisor",
+        "link": "https://forms.gle/Tbr9LGhLdq7mkuvz9"
+      },
+      {
+        "name": "Peer B.E.A.R.S. Mentee Application",
+        "purpose": "Apply to be matched with an upperclassman mentor (for freshmen)",
+        "link": "https://docs.google.com/forms/d/e/1FAIpQLSeUo9sp1UdKXTzagrODOaj7ttVKySFTlQLAfqA-MxiP470keQ/closedform"
+      }
+    ]
+  },
+  "graduate_student_forms": {
+    "description": "Forms for graduate students in the School of Graduate Studies",
+    "contact": {
+      "office": "School of Graduate Studies",
+      "location": "Earl G. Graves Business Center, 4200 Hillen Road, Suite 401, Baltimore, MD 21218",
+      "phone": "443-885-3185",
+      "fax": "443-885-8226",
+      "email": "gradapply@morgan.edu"
+    },
+    "application_portal": "https://morgan.elluciancrmrecruit.com/ApplyGRAD/Account/Login",
+    "forms": [
+      {
+        "name": "Appeal / Grievance Form",
+        "purpose": "Appeal grades or program-related matters to ensure fair treatment",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=44f0db56-00f6-46fd-9b4f-b1a949fb3493&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2"
+      },
+      {
+        "name": "Extension of 5- or 7-Year Statute of Limitations",
+        "purpose": "Request time extension if you haven't completed your degree within the allowed window",
+        "link": "https://app.smartsheet.com/b/form/96386144d69e4be8ac1e6ea6a50fb5d9"
+      },
+      {
+        "name": "Leave of Absence Request",
+        "purpose": "Request temporary leave from the university",
+        "link": "https://app.smartsheet.com/b/form/53574dd64462456bbe572311ce848eea"
+      },
+      {
+        "name": "Program Withdrawal",
+        "purpose": "Withdraw from your graduate program",
+        "link": "https://app.smartsheet.com/b/form/cc9e8b3dcfc24d7ba02f11c2b356532e"
+      },
+      {
+        "name": "Transfer of Credit Request",
+        "purpose": "Transfer credits from another institution to Morgan State",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=44f0db56-00f6-46fd-9b4f-b1a949fb3493&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2"
+      },
+      {
+        "name": "Graduate Student Request to Take Undergraduate Course",
+        "purpose": "Request permission to take an undergraduate course (rare circumstances)",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=44f0db56-00f6-46fd-9b4f-b1a949fb3493&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2"
+      },
+      {
+        "name": "Reinstatement of Past Course",
+        "purpose": "Restore previously taken courses to your schedule",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=44f0db56-00f6-46fd-9b4f-b1a949fb3493&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2"
+      }
+    ]
+  },
+  "financial_aid_forms": {
+    "description": "Forms required for financial aid applications and verification",
+    "contact": {
+      "office": "Office of Financial Aid",
+      "location": "Tyler Hall, Suite 206",
+      "phone": "443-885-3170",
+      "fax": "443-885-8272",
+      "email": "finaid@morgan.edu",
+      "hours": "Monday-Friday, 8am-5pm"
+    },
+    "fafsa_info": {
+      "link": "https://studentaid.gov/h/apply-for-aid/fafsa",
+      "school_code": "002083",
+      "phone": "1-800-433-3243"
+    },
+    "verification_portal": "https://morganstate.verificationgateway.org",
+    "forms_2026_2027": [
+      {
+        "name": "Verification (V1, V4, V5)",
+        "purpose": "Federal verification of financial aid information",
+        "link": "https://morganstate.verificationgateway.org"
+      },
+      {
+        "name": "Documentation of Legal Dependent (LDEPEN)",
+        "purpose": "Document dependents for financial aid purposes",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=c6bd4e86-f9dd-45cb-82e1-6390c7978ab2"
+      },
+      {
+        "name": "Documentation of Independent Status (INDSTA)",
+        "purpose": "Document independent student status",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=c699954d-9dae-40bc-8a33-b4c8f902a95f"
+      },
+      {
+        "name": "Documentation of Citizenship (CITIZN)",
+        "purpose": "Verify citizenship status for aid eligibility",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=72dec6b9-67d6-47fa-bc5e-2d62eccf3041"
+      },
+      {
+        "name": "Satisfactory Academic Progress Appeal (APELF)",
+        "purpose": "Appeal loss of financial aid due to SAP",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=8c16b208-62d8-4243-8123-648db63959e6"
+      },
+      {
+        "name": "Unusual Enrollment History Appeal (UEH)",
+        "purpose": "Appeal flagged enrollment history",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=d2b9cf9a-49f0-4369-9c71-5e1ae79f781d"
+      },
+      {
+        "name": "Dependency Override Request (DEPRE)",
+        "purpose": "Request to be considered independent from parents",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=05ba464f-7982-4ca7-9e25-3093651da5a5"
+      },
+      {
+        "name": "Unaccompanied Homeless Youth (HOME1, HOME2, HOME3)",
+        "purpose": "Document unaccompanied homeless youth status",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=f0b5a8dc-d9bd-45b2-a041-14a751288d53"
+      },
+      {
+        "name": "Total and Permanent Disability Acknowledgement (TPD)",
+        "purpose": "Acknowledge disability status for loan purposes",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=cfa3d8a5-ff6a-4ef5-b5cc-d66c2237f150"
+      },
+      {
+        "name": "Credit Evaluation Form (AUDIT)",
+        "purpose": "Request credit evaluation for financial aid",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=312127b3-e378-42fd-a27f-5c75f4345573"
+      },
+      {
+        "name": "Title IV Authorization Form",
+        "purpose": "Authorize use of Title IV funds",
+        "link": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=070bfe85-19ae-4295-9dd9-70ae30667a09"
+      }
+    ]
+  },
+  "student_portals": {
+    "description": "Key online systems and portals for students",
+    "portals": [
+      {
+        "name": "WebSIS (Student Self-Service Banner)",
+        "purpose": "Register for classes, view grades, access financial aid records, manage personal information",
+        "link": "https://lbpsso.morgan.edu/cas/login?TARGET=https://gateway.morgan.edu/casban.xml"
+      },
+      {
+        "name": "DegreeWorks",
+        "purpose": "Track degree progress, view completed/remaining requirements, plan courses",
+        "access": "WebSIS > Student > Degree Works",
+        "info_link": "https://www.morgan.edu/registrar/degreeworks"
+      },
+      {
+        "name": "Navigate360 (EAB)",
+        "purpose": "Schedule advising appointments, access academic support resources",
+        "link": "https://morgan.navigate.eab.com",
+        "note": "Login required with MSU credentials"
+      },
+      {
+        "name": "Bear Essentials Student Portal",
+        "purpose": "Student account access and self-service",
+        "link": "https://morgan.studentesp.com"
+      },
+      {
+        "name": "Parent Portal",
+        "purpose": "Family access to student information (with student authorization)",
+        "link": "https://morgan.campusesp.com"
+      },
+      {
+        "name": "Canvas",
+        "purpose": "Learning management system for courses",
+        "link": "https://www.morgan.edu/canvas"
+      },
+      {
+        "name": "Morgan Gateway",
+        "purpose": "Central hub for all Morgan State online services",
+        "link": "https://gateway.morgan.edu"
+      },
+      {
+        "name": "ScholarshipUniverse",
+        "purpose": "Find and apply for internal and external scholarships",
+        "link": "https://morgan.scholarshipuniverse.com"
+      }
+    ]
+  },
+  "tutoring_appointments": {
+    "description": "Links to schedule tutoring and academic support",
+    "resources": [
+      {
+        "name": "CASA (Center for Academic Success and Achievement)",
+        "purpose": "General tutoring and academic support",
+        "appointment_link": "https://morgan.navigate.eab.com/",
+        "email": "tutoring@morgan.edu",
+        "hours": "Monday-Friday, 9 AM - 5 PM",
+        "location": "Tyler Hall 117J (in-person) and Google Meet (online)"
+      },
+      {
+        "name": "Academic Enrichment Program (AEP)",
+        "purpose": "Tutoring, living and learning communities, leadership development",
+        "appointment_link": "https://aepatmsu.simplybook.me/v2/",
+        "phone": "443-885-4452",
+        "email": "aeptutor@morgan.edu"
+      },
+      {
+        "name": "NetTutor (24/7 Online)",
+        "purpose": "24/7 online tutoring access",
+        "access": "Available through Canvas",
+        "link": "https://www.morgan.edu/canvas"
+      },
+      {
+        "name": "Writing Center",
+        "purpose": "Writing assistance for all levels and disciplines",
+        "email": "writingcenter@morgan.edu",
+        "website": "https://www.morgan.edu/writingcenter"
+      }
+    ]
+  }
+}

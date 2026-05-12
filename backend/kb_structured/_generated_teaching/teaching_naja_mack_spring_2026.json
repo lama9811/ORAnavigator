@@ -1,0 +1,15 @@
+{
+  "doc_id": "teaching_naja_mack_spring_2026",
+  "title": "Teaching: Naja Mack (Spring 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Naja Mack",
+  "semester": "Spring 2026",
+  "course_codes": [
+    "COSC111",
+    "COSC459"
+  ],
+  "section_count": 2,
+  "content": "Naja Mack - Teaching Schedule for Spring 2026\n\nCourses:\n  - COSC111 INTRO TO COMPUTER SCIENCE I | Section H01 | MWF 10:00AM-10:50AM, TBA | Room: MCMN-404, WEB-001 | 4 cr | Non-Traditional\n  - COSC459 DATABASE DESIGN | Section 1 | MWF 12:00PM-12:50PM | Room: MCMN-516 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

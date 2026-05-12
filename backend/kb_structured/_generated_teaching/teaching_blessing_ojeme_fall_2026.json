@@ -1,0 +1,15 @@
+{
+  "doc_id": "teaching_blessing_ojeme_fall_2026",
+  "title": "Teaching: Blessing Ojeme (Fall 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Blessing Ojeme",
+  "semester": "Fall 2026",
+  "course_codes": [
+    "COSC111",
+    "COSC470"
+  ],
+  "section_count": 2,
+  "content": "Blessing Ojeme - Teaching Schedule for Fall 2026\n\nCourses:\n  - COSC111 INTRO TO COMPUTER SCIENCE I | Section 7 | TR 1:00PM-2:40PM | Room: MCMN-519 | 4 cr | Traditional\n  - COSC470 ARTIFICAL INTELLIGENCE | Section 1 | TR 3:00PM-4:20PM | Room: MCMN-515 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

@@ -1,0 +1,211 @@
+MORGAN STATE UNIVERSITY COMPUTER SCIENCE COURSES
+
+REQUIRED COURSES:
+
+COSC 111 - Introduction to Computer Science I
+Credits: 4
+Prerequisites: None
+Offered: Fall, Spring
+Also satisfies General Education IM requirement.
+
+COSC 112 - Introduction to Computer Science II
+Credits: 4
+Prerequisites: COSC 111 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 220 - Data Structures and Algorithms
+Credits: 4
+Prerequisites: COSC 112 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 241 - Computer Systems and Digital Logic
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher), MATH 241 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 281 - Discrete Structures
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 349 - Computer Networks
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 351 - Cybersecurity
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 352 - Organization of Programming Languages
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 354 - Operating Systems
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher), COSC 241 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 458 - Software Engineering
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher)
+Offered: Fall, Spring
+The prerequisites for COSC 458 are COSC 220 with a grade of C or higher.
+
+COSC 459 - Database Design
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher)
+Offered: Fall, Spring
+
+COSC 001 - Computer Science Senior Comprehensive Exam
+Credits: 0
+Prerequisites: Senior standing, completion of all required major courses
+Offered: Fall, Spring
+Note: Required for graduation. Must be passed to receive the B.S. in Computer Science.
+
+COSC 490 - Senior Project
+Credits: 3
+Prerequisites: Senior standing, Department Chair permission
+Offered: Fall, Spring
+
+SUPPORTING COURSES:
+
+COSC 201 - Computer Ethics
+Credits: 1
+Prerequisites: None
+Offered: Fall, Spring
+
+MATH 241 - Calculus I
+Credits: 4
+Prerequisites: ENGR 101, MATH 114, MATH 141, or Departmental permission
+Offered: Fall, Spring
+Also satisfies General Education MQ requirement.
+
+MATH 242 - Calculus II
+Credits: 4
+Prerequisites: MATH 241 (Grade C or higher)
+Offered: Fall, Spring
+
+MATH 312 - Linear Algebra I
+Credits: 3
+Prerequisites: MATH 241 (Grade C or higher)
+Offered: Fall, Spring
+
+MATH 331 - Applied Probability and Statistics
+Credits: 3
+Prerequisites: MATH 242 (Grade C or higher)
+Offered: Fall, Spring
+
+GROUP A ELECTIVES (Choose 3):
+
+COSC 238 - Object Oriented Programming
+Credits: 4
+Prerequisites: COSC 112 (Grade C or higher)
+
+COSC 239 - Java Programming
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+
+COSC 243 - Computer Architecture
+Credits: 3
+Prerequisites: COSC 241 (Grade C or higher)
+
+COSC 251 - Introduction to Data Science
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+
+CLCO 261 - Introduction to Cloud Computing
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+
+GROUP B ELECTIVES (Choose 2):
+
+COSC 320 - Algorithm Design and Analysis
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher), COSC 281 (Grade C or higher)
+
+COSC 323 - Introduction to Cryptography
+Credits: 3
+Prerequisites: COSC 238 (Grade C or higher), MATH 312 (Grade C or higher)
+
+COSC 332 - Introduction to Game Design and Development
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher)
+
+COSC 338 - Mobile App Design and Development
+Credits: 3
+Prerequisites: COSC 238 (Grade C or higher)
+
+COSC 383 - Numerical Methods and Programming
+Credits: 3
+Prerequisites: MATH 242 (Grade C or higher)
+
+COSC 385 - Theory of Languages and Automata
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher), COSC 281 (Grade C or higher)
+
+COSC 386 - Introduction to Quantum Computing
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher), MATH 312 (Grade C or higher)
+
+EEGR 317 - Electronic Circuits
+Credits: 4
+Prerequisites: PHYS 206, MATH 242
+
+GROUP C ELECTIVES (Choose 4, COSC 470 OR COSC 472 only one counts):
+
+COSC 470 - Artificial Intelligence
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher)
+
+COSC 472 - Introduction to Machine Learning
+Credits: 3
+Prerequisites: COSC 112 (Grade C or higher), MATH 312 (Grade C or higher)
+
+COSC 460 - Computer Graphics
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher), MATH 241 (Grade C or higher)
+
+COSC 480 - Introduction to Image Processing and Analysis
+Credits: 3
+Prerequisites: COSC 220 (Grade C or higher)
+
+COSC 486 - Applied Quantum Computing
+Credits: 3
+Prerequisites: COSC 386 (Grade C or higher)
+
+COSC 491 - Conference Course
+Credits: 3
+Prerequisites: Department approval
+
+COSC 498 - Senior Internship
+Credits: 3
+Prerequisites: 3.0 GPA, Senior standing, Department Chair permission
+
+COSC 499 - Senior Research or Teaching/Tutorial Assistantship
+Credits: 3
+Prerequisites: 3.0 GPA, Senior standing, Department Chair permission
+
+CLCO 471 - Data Analytics in Cloud
+Credits: 3
+Prerequisites: CLCO 261 (Grade C or higher)
+
+GROUP D ELECTIVES (Choose 1):
+
+INSS 391 - IT Infrastructure and Security
+Credits: 3
+Prerequisites: INSS 360 (Grade C or higher)
+
+INSS 494 - Information Security and Risk Management
+Credits: 3
+Prerequisites: INSS 391 (Grade C or higher)
+
+EEGR 481 - Introduction to Network Security
+Credits: 3
+Prerequisites: EEGR 317 (Grade C or higher)
+
+EEGR 483 - Introduction to Security Management
+Credits: 3
+Prerequisites: EEGR 317 (Grade C or higher)

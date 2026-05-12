@@ -1,0 +1,17 @@
+{
+  "doc_id": "department_cs_overview",
+  "title": "Department of Computer Science - Official Overview",
+  "category": "academic",
+  "subcategory": "department_overview",
+  "department_name": "Computer Science",
+  "chair": "Shuangbao 'Paul' Wang",
+  "phone": "(443) 885-3962",
+  "address": "1700 East Cold Spring Lane, Baltimore, Maryland 21251",
+  "programs_offered": [
+    "BS Computer Science",
+    "BS Cloud Computing",
+    "CS Minor"
+  ],
+  "content": "Department of Computer Science - Overview\nSource: Morgan State University Undergraduate Catalog 2024-2026 (catalog.morgan.edu)\nAccessed: 2026-05-06\n\nCHAIRPERSON: Shuangbao \"Paul\" Wang\n\nCONTACT:\n  - Address: 1700 East Cold Spring Lane, Baltimore, Maryland 21251\n  - Department phone: (443) 885-3962 (admin office, Wendy Smith)\n  - Chair phone: (443) 885-4503 (Dr. Wang)\n\nDEGREE PROGRAMS OFFERED:\n  - B.S. in Computer Science (120 credits) - see program_bs_computer_science doc\n  - B.S. in Cloud Computing (120 credits) - see program_bs_cloud_computing doc\n  - Computer Science Minor (18 credits) - see program_cs_minor doc\n\nDEPARTMENT MISSION:\nThe program prepares students for entry into the computing profession and for graduate study in\ncomputer, computational, and data sciences. Students develop problem-solving capabilities across\nthe full software development lifecycle from definition through documentation, with emphasis on\nteamwork and interdisciplinary communication.\n\nDEPARTMENT-WIDE GRADUATION REQUIREMENTS (all CS programs):\n  - Cumulative GPA of 2.0 or higher\n  - Major GPA of 2.0 or higher\n  - No grade below \"C\" in major courses\n  - Complete General Education Requirements\n  - Earn 6 credits in the Complementary Studies Program\n  - Pass the Senior Departmental Comprehensive Examination\n  - Complete junior and senior coursework at Morgan State (unless prior written Dean approval)\n\nLEADERSHIP ROLES:\n  - Chair: Shuangbao \"Paul\" Wang\n  - Associate Chair / Director PhD Advanced Computing: Md Rahman\n  - Director of Undergraduate Studies: Radhouane Chouchane\n  - Director of MS Advanced Computing: Guobin Xu\n  - Coordinator of MS Bioinformatics Program: Roshan Paudel\n  - Administrative Assistant: Wendy Smith (McMechen 507A)\n  - Engineer in Residence (CodePath): Rahmel Bailey\n\nCatalog page: https://catalog.morgan.edu/preview_entity.php?catoid=26&ent_oid=1618",
+  "source_file": "catalog.morgan.edu/preview_entity.php?ent_oid=1618"
+}

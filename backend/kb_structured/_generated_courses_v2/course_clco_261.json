@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_clco_261",
+  "title": "Course: CLCO 261 - Introduction to Cloud Computing",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "CLCO 261",
+  "course_name": "Introduction to Cloud Computing",
+  "credits": 3,
+  "description": "Overview of cloud computing, enabling technologies, and building blocks with hands-on projects using public cloud infrastructures like Amazon Web Services. Topics include cloud infrastructures, virtualization, software-defined networks and storage, cloud storage, and programming models.",
+  "prerequisites_text": "COSC 112 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 112"
+  ],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57241",
+  "content": "CLCO 261 - Introduction to Cloud Computing\nCredits: 3\nPrerequisites: COSC 112 completed with a grade of C or higher\n\nDescription: Overview of cloud computing, enabling technologies, and building blocks with hands-on projects using public cloud infrastructures like Amazon Web Services. Topics include cloud infrastructures, virtualization, software-defined networks and storage, cloud storage, and programming models.\n\nCurriculum role:\n  - BS Computer Science: Group A\n  - BS Cloud Computing: Core\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57241",
+  "source_file": "catalog.morgan.edu (coid=57241, accessed 2026-05-06)",
+  "bs_cs_role": "group_a",
+  "bs_cloud_role": "core",
+  "in_cs_minor": false
+}

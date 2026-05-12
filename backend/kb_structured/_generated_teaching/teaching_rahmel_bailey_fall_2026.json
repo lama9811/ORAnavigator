@@ -1,0 +1,14 @@
+{
+  "doc_id": "teaching_rahmel_bailey_fall_2026",
+  "title": "Teaching: Rahmel Bailey (Fall 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Rahmel Bailey",
+  "semester": "Fall 2026",
+  "course_codes": [
+    "COSC111"
+  ],
+  "section_count": 1,
+  "content": "Rahmel Bailey - Teaching Schedule for Fall 2026\n\nCourses:\n  - COSC111 INTRO TO COMPUTER SCIENCE I | Section 3 | TR 1:00PM-2:40PM | Room: MCMN-517 | 4 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

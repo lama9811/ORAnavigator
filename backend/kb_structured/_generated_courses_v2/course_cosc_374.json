@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_374",
+  "title": "Course: COSC 374 - Introduction to Bioprogramming",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 374",
+  "course_name": "Introduction to Bioprogramming",
+  "credits": 3,
+  "description": "Course involves students doing projects with computer programming in a language of their choice. No background in genetics or biology is assumed.",
+  "prerequisites_text": "COSC 373 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 373"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55596",
+  "content": "COSC 374 - Introduction to Bioprogramming\nCredits: 3\nPrerequisites: COSC 373 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Course involves students doing projects with computer programming in a language of their choice. No background in genetics or biology is assumed.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55596",
+  "source_file": "catalog.morgan.edu (coid=55596, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

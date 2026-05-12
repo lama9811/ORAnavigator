@@ -1,0 +1,341 @@
+/* ============================================================
+   CS NAVIGATOR - Design System v6.0
+   Google AI-Inspired Theme
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Google Brand Colors */
+  --msu-blue: #4285F4;
+  --msu-blue-hover: #3367D6;
+  --msu-blue-light: #669DF6;
+  --msu-blue-50: rgba(66, 133, 244, 0.06);
+  --msu-blue-100: rgba(66, 133, 244, 0.12);
+  --msu-gold: #FBBC05;
+  --msu-gold-hover: #F9AB00;
+  --msu-gold-50: rgba(251, 188, 5, 0.08);
+
+  /* Google Extended Palette */
+  --google-red: #EA4335;
+  --google-yellow: #FBBC05;
+  --google-green: #34A853;
+  --google-blue: #4285F4;
+  --accent-teal: #00BCD4;
+  --accent-emerald: #34A853;
+  --accent-violet: #A142F4;
+  --accent-rose: #EA4335;
+  --accent-amber: #FBBC05;
+
+  /* Modern Gradients */
+  --gradient-primary: linear-gradient(135deg, #4285F4 0%, #669DF6 100%);
+  --gradient-gold: linear-gradient(135deg, #FBBC05 0%, #F9AB00 100%);
+  --gradient-subtle: linear-gradient(180deg, #f8f9fa 0%, #f1f3f4 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.75) 100%);
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(66, 133, 244, 0.04) 0px, transparent 50%),
+                   radial-gradient(at 80% 0%, rgba(52, 168, 83, 0.03) 0px, transparent 50%),
+                   radial-gradient(at 0% 50%, rgba(234, 67, 53, 0.02) 0px, transparent 50%);
+  --gradient-google: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335);
+
+  /* Light Mode Colors */
+  --bg-body: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f3f4;
+  --bg-elevated: #ffffff;
+  --bg-input: #f1f3f4;
+  --text-main: #202124;
+  --text-secondary: #5f6368;
+  --text-tertiary: #9aa0a6;
+  --border-color: #dadce0;
+  --border-subtle: #e8eaed;
+  --border-focus: #4285F4;
+
+  /* Refined Shadows (Google Material) */
+  --shadow-xs: 0 1px 2px rgba(60, 64, 67, 0.1);
+  --shadow-sm: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.1);
+  --shadow-md: 0 4px 8px rgba(60, 64, 67, 0.15), 0 1px 3px rgba(60, 64, 67, 0.1);
+  --shadow-lg: 0 8px 20px rgba(60, 64, 67, 0.12), 0 2px 6px rgba(60, 64, 67, 0.08);
+  --shadow-xl: 0 16px 32px rgba(60, 64, 67, 0.14), 0 4px 8px rgba(60, 64, 67, 0.08);
+  --shadow-2xl: 0 24px 48px rgba(60, 64, 67, 0.18);
+  --shadow-glow: 0 0 16px rgba(66, 133, 244, 0.15);
+  --shadow-gold-glow: 0 0 16px rgba(251, 188, 5, 0.15);
+  --shadow-inner: inset 0 1px 3px rgba(60, 64, 67, 0.08);
+
+  /* Animation Timing (Material Motion) */
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Typography */
+  --font-sans: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+
+  /* Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Border Radius (Material You - rounder) */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-full: 9999px;
+}
+
+/* Dark Mode - Google Dark Theme */
+body.dark {
+  --bg-body: #1f1f1f;
+  --bg-card: #2d2d2d;
+  --bg-card-hover: #3c3c3c;
+  --bg-elevated: #333333;
+  --bg-input: #3c3c3c;
+  --text-main: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-tertiary: #5f6368;
+  --border-color: #3c4043;
+  --border-subtle: #2d2d2d;
+  --border-focus: #8ab4f8;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.45);
+  --shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 16px rgba(138, 180, 248, 0.12);
+  --shadow-gold-glow: 0 0 16px rgba(253, 214, 99, 0.12);
+  --shadow-inner: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  --gradient-subtle: linear-gradient(180deg, #2d2d2d 0%, #1f1f1f 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(45, 45, 45, 0.95) 0%, rgba(31, 31, 31, 0.9) 100%);
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(138, 180, 248, 0.05) 0px, transparent 50%),
+                   radial-gradient(at 80% 0%, rgba(129, 201, 149, 0.04) 0px, transparent 50%),
+                   radial-gradient(at 0% 50%, rgba(242, 139, 130, 0.03) 0px, transparent 50%);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  font-family: var(--font-sans);
+  background: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01';
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* Smooth theme transitions (only on colors, not layout) */
+body * {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(66, 133, 244, 0.2);
+}
+
+.btn-primary:hover::before {
+  opacity: 1;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-main);
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-color);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.btn-secondary:hover {
+  border-color: var(--msu-blue);
+  color: var(--msu-blue);
+  background: var(--msu-blue-50);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Card styles */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Input styles */
+input, textarea, select {
+  background: var(--bg-input);
+  color: var(--text-main);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  transition: all var(--transition-normal);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--msu-blue-50);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Dark mode scrollbar */
+body.dark ::-webkit-scrollbar-thumb {
+  background: #3c4043;
+}
+
+body.dark ::-webkit-scrollbar-thumb:hover {
+  background: #5f6368;
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.app-layout {
+  display: flex;
+  min-height: calc(100vh - 70px);
+  margin-top: 70px;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: var(--bg-body);
+}
+
+/* Page content wrapper (for pages with sidebar) */
+.page-content {
+  position: fixed;
+  top: 70px;
+  left: 280px;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-body);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1;
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.sidebar-collapsed .page-content {
+  left: 64px;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    left: 0 !important;
+  }
+}
+
+/* ============================================================
+   SELECTION HIGHLIGHT
+   ============================================================ */
+::selection {
+  background: rgba(66, 133, 244, 0.15);
+  color: var(--text-main);
+}
+
+body.dark ::selection {
+  background: rgba(138, 180, 248, 0.2);
+}

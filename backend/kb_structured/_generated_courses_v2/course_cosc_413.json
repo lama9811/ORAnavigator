@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_413",
+  "title": "Course: COSC 413 - Parallel Algorithms",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 413",
+  "course_name": "Parallel Algorithms",
+  "credits": 3,
+  "description": "Covers fundamental concepts of concurrent programming; synchronization mechanisms based on shared variables and message passing; systematic development of correct programs; and paradigms for distributed programming.",
+  "prerequisites_text": "COSC 220 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 220"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55600",
+  "content": "COSC 413 - Parallel Algorithms\nCredits: 3\nPrerequisites: COSC 220 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Covers fundamental concepts of concurrent programming; synchronization mechanisms based on shared variables and message passing; systematic development of correct programs; and paradigms for distributed programming.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55600",
+  "source_file": "catalog.morgan.edu (coid=55600, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

@@ -1,0 +1,18 @@
+{
+  "doc_id": "teaching_roshan_paudel_spring_2025",
+  "title": "Teaching: Roshan Paudel (Spring 2025)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Roshan Paudel",
+  "semester": "Spring 2025",
+  "course_codes": [
+    "BIOI512",
+    "BIOI797",
+    "BIOI799",
+    "COSC112",
+    "COSC499"
+  ],
+  "section_count": 5,
+  "content": "Roshan Paudel - Teaching Schedule for Spring 2025\n\nCourses:\n  - BIOI512 STRUCTURAL BIOINFORMATICS | Section M01 | T 5:00PM-7:30PM | Room: CLWY-212 | 3 cr | Traditional\n  - BIOI797 THESIS GUIDANCE | Section W01 | TBA | Room: WEB-001 | 9 cr | Web\n  - BIOI799 THESIS DEFENSE | Section W01 | TBA | Room: WEB-001 | 9 cr | Web\n  - COSC112 INTRO TO COMPUTER SCIENCE II | Section 3 | TR 1:00PM-2:40PM | Room: MCMN-519 | 4 cr | Traditional\n  - COSC499 SENIOR RSCH OR TCHG/TUTOR ASST | Section W01 | TBA | Room: WEB-001 | 3 cr | Web",
+  "source_file": "schedule_*.txt"
+}

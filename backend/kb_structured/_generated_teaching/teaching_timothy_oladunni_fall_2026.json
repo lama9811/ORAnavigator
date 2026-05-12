@@ -1,0 +1,15 @@
+{
+  "doc_id": "teaching_timothy_oladunni_fall_2026",
+  "title": "Teaching: Timothy Oladunni (Fall 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Timothy Oladunni",
+  "semester": "Fall 2026",
+  "course_codes": [
+    "COSC281",
+    "COSC320"
+  ],
+  "section_count": 2,
+  "content": "Timothy Oladunni - Teaching Schedule for Fall 2026\n\nCourses:\n  - COSC281 DISCRETE STRUCTURES | Section 2 | MWF 2:00PM-2:50PM | Room: MCMN-303 | 3 cr | Traditional\n  - COSC320 ALGORITHM DESIGN & ANALYSIS | Section 1 | MWF 1:00PM-1:50PM | Room: MCMN-516 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

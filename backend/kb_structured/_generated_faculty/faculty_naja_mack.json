@@ -1,0 +1,23 @@
+{
+  "doc_id": "faculty_naja_mack",
+  "title": "Faculty: Dr. Naja Mack",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Naja Mack",
+  "faculty_title": "Assistant Professor",
+  "office": "McMechen Hall 623",
+  "phone": "(443) 885-2402",
+  "email": "Naja.Mack@morgan.edu",
+  "research_summary": "human-centered computing, AI, machine learning, adaptive learning technologies, conversational user interfaces, CS education, virtual reality, robotics.",
+  "research_keywords": [
+    "human-centered computing",
+    "machine learning",
+    "adaptive learning technologies",
+    "conversational user interfaces",
+    "cs education",
+    "virtual reality",
+    "robotics"
+  ],
+  "content": "Dr. Naja Mack - Assistant Professor\nOffice: McMechen Hall 623\nPhone: (443) 885-2402\nEmail: Naja.Mack@morgan.edu\nResearch interests: human-centered computing, AI, machine learning, adaptive learning technologies, conversational user interfaces, CS education, virtual reality, robotics.",
+  "source_file": "academic_faculty.txt"
+}

@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_281",
+  "title": "Course: COSC 281 - Discrete Structure",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 281",
+  "course_name": "Discrete Structure",
+  "credits": 3,
+  "description": "Introduction to discrete mathematics with focus on techniques important to theoretical computer science. Topics include Boolean algebra, partially ordered structures, propositional logic, predicate logic, graphs, and coding theory.",
+  "prerequisites_text": "COSC 112 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 112"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55581",
+  "content": "COSC 281 - Discrete Structure\nCredits: 3\nPrerequisites: COSC 112 completed with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: Introduction to discrete mathematics with focus on techniques important to theoretical computer science. Topics include Boolean algebra, partially ordered structures, propositional logic, predicate logic, graphs, and coding theory.\n\nCurriculum role:\n  - BS Computer Science: Core\n  - BS Cloud Computing: Group A\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55581",
+  "source_file": "catalog.morgan.edu (coid=55581, accessed 2026-05-06)",
+  "bs_cs_role": "core",
+  "bs_cloud_role": "group_a",
+  "in_cs_minor": false
+}

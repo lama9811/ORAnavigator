@@ -1,0 +1,14 @@
+{
+  "doc_id": "teaching_paul_oriala_fall_2026",
+  "title": "Teaching: Paul Oriala (Fall 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Paul Oriala",
+  "semester": "Fall 2026",
+  "course_codes": [
+    "COSC241"
+  ],
+  "section_count": 1,
+  "content": "Paul Oriala - Teaching Schedule for Fall 2026\n\nCourses:\n  - COSC241 COMPUTER ORGANIZATION | Section R02 | MWF 9:00AM-9:50AM | Room: REM-001 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

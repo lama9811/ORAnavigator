@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_clco_312",
+  "title": "Course: CLCO 312 - Data Science for Social Good",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "CLCO 312",
+  "course_name": "Data Science for Social Good",
+  "credits": 3,
+  "description": "Prepares students to work as practitioners in data science for social good. Covers statistical methods and programming for designing, developing and deploying responsible machine learning models to address social problems such as racism, addiction and domestic violence. Topics include social work data collection and processing, model training, testing and cloud deployment for use by social work professionals and the public.",
+  "prerequisites_text": "COSC 251 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 251"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68012",
+  "content": "CLCO 312 - Data Science for Social Good\nCredits: 3\nPrerequisites: COSC 251 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Prepares students to work as practitioners in data science for social good. Covers statistical methods and programming for designing, developing and deploying responsible machine learning models to address social problems such as racism, addiction and domestic violence. Topics include social work data collection and processing, model training, testing and cloud deployment for use by social work professionals and the public.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68012",
+  "source_file": "catalog.morgan.edu (coid=68012, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

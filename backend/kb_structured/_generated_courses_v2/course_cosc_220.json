@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_220",
+  "title": "Course: COSC 220 - Data Structures and Algorithms",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 220",
+  "course_name": "Data Structures and Algorithms",
+  "credits": 4,
+  "description": "Focuses on fundamental data structures and algorithms including strings, lists, arrays, stacks, queues, dictionaries, maps, trees, and graphs. Covers operations such as inserting, deleting, updating, traversing, searching, and sorting with time/space complexity analysis through programming implementations.",
+  "prerequisites_text": "COSC 112 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 112"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55568",
+  "content": "COSC 220 - Data Structures and Algorithms\nCredits: 4\nPrerequisites: COSC 112 completed with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: Focuses on fundamental data structures and algorithms including strings, lists, arrays, stacks, queues, dictionaries, maps, trees, and graphs. Covers operations such as inserting, deleting, updating, traversing, searching, and sorting with time/space complexity analysis through programming implementations.\n\nCurriculum role:\n  - BS Computer Science: Core\n  - BS Cloud Computing: Core\n  - Required for CS Minor\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55568",
+  "source_file": "catalog.morgan.edu (coid=55568, accessed 2026-05-06)",
+  "bs_cs_role": "core",
+  "bs_cloud_role": "core",
+  "in_cs_minor": true
+}

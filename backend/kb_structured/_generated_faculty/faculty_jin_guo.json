@@ -1,0 +1,19 @@
+{
+  "doc_id": "faculty_jin_guo",
+  "title": "Faculty: Dr. Jin Guo",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Jin Guo",
+  "faculty_title": "Professor of Practice",
+  "office": "McMechen Hall 502",
+  "phone": "",
+  "email": "jin.guo@morgan.edu",
+  "research_summary": "cloud computing, enterprise IT architecture, IT management.",
+  "research_keywords": [
+    "cloud computing",
+    "enterprise it architecture",
+    "it management"
+  ],
+  "content": "Dr. Jin Guo - Professor of Practice\nOffice: McMechen Hall 502\nEmail: jin.guo@morgan.edu\nResearch interests: cloud computing, enterprise IT architecture, IT management.",
+  "source_file": "academic_faculty.txt"
+}

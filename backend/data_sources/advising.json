@@ -1,0 +1,198 @@
+{
+    "academic_advising": {
+      "overview": {
+        "description": "Academic advising is a crucial part of students' academic journey at the School of Computer, Mathematical, and Natural Sciences (SCMNS). It is a collaborative and interactive process where students work closely with their academic advisors to plan and navigate their educational path. To support you, we've developed a roadmap that outlines the advising process. Please note that advising opens at different times throughout the semester, and class registration dates vary based on student classification (freshman, sophomore, junior, senior). For the most up-to-date class registration timeline, refer to the link below.",
+        "registration_link": "https://www.morgan.edu/office-of-the-registrar/priority-registration-time-ticket-groupings",
+        "fall_2026_registration_dates": {
+          "seniors_90_plus_credits": "March 30, 2026",
+          "graduate_students": "March 30, 2026",
+          "honors_athletes_veterans_sdss": "March 30, 2026",
+          "juniors_56_to_89_credits": "April 6, 2026",
+          "sophomores_25_to_55_credits": "April 13, 2026",
+          "freshmen_0_to_24_credits": "April 13, 2026",
+          "general_registration_all_students": "April 27 - September 8, 2026"
+        },
+        "additional_advising_info": {
+            "general_advising": "For more details about academic advising, please visit the general advising page: https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/scmns-advising",
+            "computer_science_advising": "For specific advising related to Computer Science, visit the Computer Science advising page: https://www.morgan.edu/computer-science/current-students"
+        }
+        },
+      "steps_to_register": [
+        {
+          "step_number": 1,
+          "step_title": "Complete the Internship Form",
+          "description": "Internships are a great way to explore career options, to gain experience in your area of interest, and to network with other individuals in the field. Your academic advisor is a resource person to help you explore and discuss various internship options. Completing the Internship and Work Experience Form will help us to share internship opportunities with you and to learn from you what opportunities you have already engaged in.",
+          "link": "https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/scmns-advising/internship-form"
+        },
+        {
+          "step_number": 2,
+          "step_title": "Complete the Academic Advising Form",
+          "link": "https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/scmns-advising/advising-form"
+        },
+        {
+          "step_number": 3,
+          "step_title": "Meet with Your Assigned Academic Advisor",
+          "description": "Each student is assigned an academic advisor based on the last name of the student. For graduating seniors, if you have graduation inquiries or need help with career planning, you can make an appointment with the department chair directly. Otherwise, please contact your academic advisor.It is extremely important that you meet with your academic advisor each semester for advisement. The partnership between you and your advisor is essential to you successfully nagivating college and graduating on time. Your academic advisor provides guidance on class selection, internships, research, and other key resources just for you.",
+          "link": "https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/scmns-advising/academic-advisors"
+        },
+        {
+          "step_number": 4,
+          "step_title": "Register for Classes Using Student Self Service",
+          "description": "Registration pins are needed for class registration. Once advised, you will receive your Registration PIN from your academic advisor, allowing you to register for courses. Only the assigned advisor or their designee can provide the registration pin. The Office of the Registrar does not provide registration pins to students.",
+          "link": "https://lbpsso.morgan.edu/cas/login?TARGET=https://gateway.morgan.edu/casban.xml"
+        }
+      ],
+     "advisor_assignment": {
+        "computer_science": [
+            { "last_name_range": "A", "advisor_last_name": "Dr. Md Rahman" },
+            { "last_name_range": "B", "advisor_last_name": "Dr. Monireh Dabaghchian" },
+            { "last_name_range": "C", "advisor_last_name": "Dr. Eric Sakk" },
+            { "last_name_range": "D,E,F", "advisor_last_name": "Dr. Vahid Heydari" },
+            { "last_name_range": "G", "advisor_last_name": "Dr. Guobin Xu" },
+            { "last_name_range": "H", "advisor_last_name": "Dr. Jamell Dacon" },
+            { "last_name_range": "I-L", "advisor_last_name": "Dr. Naja Mack" },
+            { "last_name_range": "M", "advisor_last_name": "Dr. Timothy Oladunni or Adetifa Oluwole" },
+            { "last_name_range": "N", "advisor_last_name": "Dr. Sam Tannouri" },
+            { "last_name_range": "O", "advisor_last_name": "Dr. Jin Guo" },
+            { "last_name_range": "PQR", "advisor_last_name": "Ms. Grace Steele" },
+            { "last_name_range": "S", "advisor_last_name": "Dr. Vojislav Stojkovic" },
+            { "last_name_range": "T", "advisor_last_name": "Dr. Amjad Ali" },
+            { "last_name_range": "U-Z", "advisor_last_name": "Dr. Roshan Paudel" }
+        ],
+        "cloud_computing": [
+            { "last_name_range": "A-O", "advisor_last_name": "Dr. Radhouane Chouchane (Radwan Shushane)" },
+            { "last_name_range": "P-Z", "advisor_last_name": "Dr. Blessing Ojeme" }
+        ],
+        "note": {
+            "advising_subject_to_change": "Please note that advisor assignments may be subject to change. Always check the Computer Science website for the most up-to-date information on how to find your advisor. Visit: https://www.morgan.edu/computer-science/current-students/academic-advisers.",
+            "contact_information": "You can also find your advisor's contact information in Degree Works or Navigate (EAB)."
+        }
+        },
+      "contact_info": {
+        "advisor_contact": "Each SCMNS department also has a dedicated academic advising email address to assist you. You can find your advisor's contact information in Degree Works or Navigate (EAB).",
+        "contact_email": {
+          "all_scmns_freshmen": "SCMNS-Retention@morgan.edu",
+          "cloud_computing": "compsci@morgan.edu",
+          "computer_science": "compsci@morgan.edu"
+        }
+      },
+      "degree_works": {
+        "description": "Degree Works is an online advising audit tool that helps you track your progress towards graduation. It provides a snapshot of completed, in-progress, and pending courses.",
+        "link": "https://www.morgan.edu/registrar/degreeworks"
+      },
+        "advising_hotline": {
+        "description": "The Academic Advising Hotline is a resource to help students resolve academic advising concerns or request additional assistance for academic advising matters. It is also a resource for students who wish to recognize an outstanding advisor for their service and commitment to student success.",
+        "forms": {
+            "hotline_form": "https://forms.gle/9Rt3PcGJ1deNVPuA9",
+            "kudos_form": "https://forms.gle/Tbr9LGhLdq7mkuvz9"
+        }
+        },
+        "advising_concerns_process": {
+        "description": "Students are encouraged to attempt to first resolve any advising concerns directly with their assigned academic advisor. If issues persist, students can submit an Academic Advising Hotline Form to request additional assistance.",
+        "steps": [
+            "Check Navigate360, WebSIS, and/or Degree Works for the advisor's contact information.",
+            "Contact the assigned academic advisor to resolve the concern.",
+            "Allow three (3) business days for the academic advisor to respond.",
+            "If unresolved, submit the Academic Advising Hotline Form."
+        ]
+        },
+        "advising_hotline_form_submission": {
+        "description": "The Academic Advising Hotline Form requires a Morgan State University email and student ID number. Students must provide detailed information about their advising concern and any measures they have taken to resolve the issue. Relevant documentation can be attached as needed. While the form will collect your information (name, email, and ID), you can request that your name be omitted when forwarding the concern to the relevant individual or office.",
+        "what_to_expect": {
+            "description": "After submitting an Academic Advising Hotline Form, the student will receive an automatic acknowledgment of receipt. Within 3 business days, an advising hotline administrator will review the form, contact the student if further details are needed, and attempt to resolve the concern. Once a resolution is reached, the student will receive an email detailing the outcome from advising@morgan.edu."
+        }
+        },
+        "advising_kudos": {
+        "description": "Students can acknowledge an academic advisor for their outstanding efforts and commitment by submitting an Academic Advising Kudos Form. This may include a freshman academic advisor or a faculty/departmental advisor.",
+        "form_submission": {
+            "description": "When submitting an Academic Advising Kudos Form, students should provide comments on the qualities that make the advisor outstanding. Students may refer to the Academic Advising Syllabus for the responsibilities of an academic advisor. If the advisor deserves recognition, submit the form to acknowledge their exceptional support."
+        },
+        "what_to_expect_kudos": {
+            "description": "After submitting the Academic Advising Kudos Form, the student will receive an automatic acknowledgment of receipt. An advising hotline administrator will review the form, and the academic advisor will be notified by email that they have been acknowledged for providing great advising support."
+        }
+        },
+      "forms_and_links": {
+        "change_of_major_form": {
+            "description": "Request to change your major, minor, or concentration. Please refer to the tutorial for help on submitting the form.",
+            "video_link": "https://youtu.be/Qjl2h9Z6SGo?si=EuQ8pWY8cqa08f2Q"
+        },
+        "excess_credit_request_form": {
+            "description": "Request to take additional credits for the semester. Please refer to the tutorial for help on submitting the form.",
+            "video_link": "https://www.morgan.edu/office-of-the-registrar/priority-registration-time-ticket-groupings"
+        },
+        "permission_to_take_courses_off_campus": {
+            "description": "Request to take courses off-campus. Please refer to the tutorial for help on submitting the form.",
+            "video_link": "https://youtu.be/4LlY9yyD9o0",
+            "policy": {
+            "general": "Off-campus course enrollment is restricted with a few exceptions. You must submit the official form on the Registrar’s website.",
+            "core_courses": "Core Computer Science courses must be taken on campus and are not eligible for off-campus credit.",
+            "senior_students": "Seniors are generally NOT allowed to take courses off-campus except under very specific circumstances—please discuss with the department chair directly.",
+            "non_senior_students": "Non-seniors may pursue an articulation agreement with Morgan State University for off-campus courses; check the form instructions for details."
+  }
+        },
+        "withdrawal_cancellation_form": {
+            "description": "Available via WebSIS Student Self-Service. Follow the instructions to withdraw or cancel your courses.",
+            "link": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/registrar/Student%20Communication.pdf"
+        }
+        },
+        "department_forms": {
+        "cosc_course_registration_override": {
+            "description": "Override requests must be submitted to the academic department of the course. Overrides are not guaranteed, and the department chairperson's decision is finaL. Contact your advisor to submit the request or Contact Ms.Wendy about the steps and form for overrides. For updates, contact Ms. Wendy. Time-conflict override requests (for courses with overlapping schedules) require the approval of both instructors and chairpersons for the courses",
+            "contact": "Ms. Wendy at Wendy.Smith@morgan.edu"
+        },
+        "cosc_internal_course_substitution": {
+            "description": "Contact your advisor to submit the request. Core courses cannot be substituted. For updates, contact Ms. Wendy.",
+            "contact": "Ms. Wendy at Wendy.Smith@morgan.edu"
+        },
+        "cosc_advisor_recommendation_request": {
+            "description": "Contact Ms. Wendy for the recommendation request.",
+            "contact": "Ms. Wendy at Wendy.Smith@morgan.edu"
+        },
+        "cosc_action_conference_request": {
+            "description": "Contact Ms. Wendy for the conference request.",
+            "contact": "Ms. Wendy at Wendy.Smith@morgan.edu"
+        }
+        },
+        "how_to_access_registrar_forms": {
+        "description": "To access all of these forms, they are affiliated with the Office of the Registrar. Follow the instructions below to access them:",
+        "steps": [
+            "Go to Websis Student Self-Service and click 'Service Requests'.",
+            "Enter your Morgan State University email and click 'Continue'. Do NOT click 'Sign in with Google', 'Microsoft', or 'Apple'. There may be a prompt to click 'Sign in with your company account'. Enter your MSU credentials on the landing page.",
+            "Launch the Dashboard."
+        ],
+        "link": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/registrar/Student%20Communication.pdf"
+        },
+      "contact_wendy": {
+        "name": "Wendy Smith",
+        "title": "Administrative Assistant",
+        "office": "McMechen Hall 507A",
+        "phone": "(443) 885-3962",
+        "email": "Wendy.Smith@morgan.edu"
+      },
+
+        "grade_appeals": {
+    "description": "If you need to appeal a grade, contact Wendy Smith to obtain and submit the formal appeal form.",
+    "contact": {
+      "name": "Wendy Smith",
+      "title": "Administrative Assistant, Computer Science",
+      "office": "McMechen Hall 507A",
+      "phone": "(443) 885-3962",
+      "email": "Wendy.Smith@morgan.edu"
+    }
+  },
+  "complaints": {
+    "description": "For any complaints regarding your courses or instructional issues, please reach out to Wendy Smith.",
+    "contact": {
+      "name": "Wendy Smith",
+      "title": "Administrative Assistant, Computer Science",
+      "office": "McMechen Hall 507A",
+      "phone": "(443) 885-3962",
+      "email": "Wendy.Smith@morgan.edu"
+    }
+  }
+
+
+      
+    }
+  }
+  

@@ -1,0 +1,15 @@
+{
+  "doc_id": "teaching_naja_mack_fall_2026",
+  "title": "Teaching: Naja Mack (Fall 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Naja Mack",
+  "semester": "Fall 2026",
+  "course_codes": [
+    "COSC332",
+    "COSC459"
+  ],
+  "section_count": 2,
+  "content": "Naja Mack - Teaching Schedule for Fall 2026\n\nCourses:\n  - COSC332 INTRO TO GAME DESIGN & DEV. | Section 1 | MWF 1:00PM-1:50PM | Room: MCMN-404 | 3 cr | Traditional\n  - COSC459 DATABASE DESIGN | Section 1 | MWF 12:00PM-12:50PM | Room: MCMN-516 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_math_331",
+  "title": "Course: MATH 331 - Applied Probability and Statistics",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "MATH 331",
+  "course_name": "Applied Probability and Statistics",
+  "credits": 3,
+  "prerequisites_text": "MATH 242 (Grade C or higher)",
+  "prerequisite_codes": [
+    "MATH 242"
+  ],
+  "offered": "Fall, Spring",
+  "content": "MATH 331 - Applied Probability and Statistics\nCredits: 3\nPrerequisites: MATH 242 (Grade C or higher)\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

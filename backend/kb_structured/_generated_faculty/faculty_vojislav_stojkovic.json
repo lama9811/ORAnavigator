@@ -1,0 +1,24 @@
+{
+  "doc_id": "faculty_vojislav_stojkovic",
+  "title": "Faculty: Dr. Vojislav Stojkovic",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Vojislav Stojkovic",
+  "faculty_title": "Associate Professor",
+  "office": "McMechen Hall 507E",
+  "phone": "(443) 885-1054",
+  "email": "Vojislav.Stojkovic@morgan.edu",
+  "research_summary": "bioinformatics, cybersecurity, information assurance, artificial intelligence, formal languages, programming languages, quantum and DNA computing, data science.",
+  "research_keywords": [
+    "bioinformatics",
+    "cybersecurity",
+    "information assurance",
+    "artificial intelligence",
+    "formal languages",
+    "programming languages",
+    "quantum and dna computing",
+    "data science"
+  ],
+  "content": "Dr. Vojislav Stojkovic - Associate Professor\nOffice: McMechen Hall 507E\nPhone: (443) 885-1054\nEmail: Vojislav.Stojkovic@morgan.edu\nResearch interests: bioinformatics, cybersecurity, information assurance, artificial intelligence, formal languages, programming languages, quantum and DNA computing, data science.",
+  "source_file": "academic_faculty.txt"
+}

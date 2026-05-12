@@ -1,0 +1,15 @@
+{
+  "doc_id": "teaching_grace_steele_fall_2025",
+  "title": "Teaching: Grace Steele (Fall 2025)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Grace Steele",
+  "semester": "Fall 2025",
+  "course_codes": [
+    "COSC110",
+    "COSC150"
+  ],
+  "section_count": 6,
+  "content": "Grace Steele - Teaching Schedule for Fall 2025\n\nCourses:\n  - COSC110 INTRODUCTION TO COMPUTING (IM) | Section 300 | TBA | Room: TBD-1 | 3 cr | Traditional\n  - COSC110 INTRODUCTION TO COMPUTING (IM) | Section W10 | TBA | Room: WEB-001 | 3 cr | Web\n  - COSC150 COMP SCI & DATA ANALYSIS (IM) | Section 1 | TR 9:00AM-10:20AM | Room: CLWY-312 | 3 cr | Traditional\n  - COSC150 COMP SCI & DATA ANALYSIS (IM) | Section 2 | TR 1:00PM-2:20PM | Room: CLWY-312 | 3 cr | Traditional\n  - COSC150 COMP SCI & DATA ANALYSIS (IM) | Section 3 | TR 4:00PM-5:20PM | Room: CLWY-312 | 3 cr | Traditional\n  - COSC150 COMP SCI & DATA ANALYSIS (IM) | Section R04 | MW 3:00PM-4:20PM | Room: REM-001 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

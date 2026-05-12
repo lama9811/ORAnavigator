@@ -1,0 +1,33 @@
+{
+  "earl s. richardson library": {
+    "description": "The Earl S. Richardson Library provides comprehensive research support, print and digital collections, study spaces, and multimedia services for all MSU students and faculty.",
+    "features": [
+      {
+        "name": "Library Card Registration",
+        "url": "https://www.morgan.edu/library/borrow/library-card-registration.html",
+        "detail": "Register your MSU BearCard as your library card to access resources both on and off campus."
+      },
+      {
+        "name": "Research",
+        "url": "https://www.morgan.edu/library/borrow/umd-university-system.html",
+        "detail": "Borrow books and reference materials from our library and others in the University of Maryland Library System."
+      },
+      {
+        "name": "READ (Online Collections)",
+        "url": "https://www.morgan.edu/library/collections/databases-a-z.html",
+        "detail": "View online collections, periodicals, and databases."
+      },
+      {
+        "name": "Special Collections Visit",
+        "url": "https://www.morgan.edu/library/collections/special-collections.html",
+        "detail": "Visit the Beulah Davis Research Room for archival materials and rare books."
+      },
+      {
+        "name": "Kanopy Streaming",
+        "url": "https://www.kanopy.com/morgan-state-university",
+        "detail": "Watch movies, documentaries, and award-winning films for free via Kanopy."
+      }
+    ],
+    "website": "https://www.morgan.edu/library"
+  }
+}

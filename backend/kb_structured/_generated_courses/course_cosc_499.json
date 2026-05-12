@@ -1,0 +1,14 @@
+{
+  "doc_id": "course_cosc_499",
+  "title": "Course: COSC 499 - Senior Research or Teaching/Tutorial Assistantship",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 499",
+  "course_name": "Senior Research or Teaching/Tutorial Assistantship",
+  "credits": 3,
+  "prerequisites_text": "3.0 GPA, Senior standing, Department Chair permission",
+  "prerequisite_codes": [],
+  "offered": "",
+  "content": "COSC 499 - Senior Research or Teaching/Tutorial Assistantship\nCredits: 3\nPrerequisites: 3.0 GPA, Senior standing, Department Chair permission",
+  "source_file": "academic_courses.txt"
+}

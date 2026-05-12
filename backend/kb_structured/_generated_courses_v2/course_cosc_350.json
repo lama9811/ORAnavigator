@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_350",
+  "title": "Course: COSC 350 - Foundations of Computer Security and Information Assurance",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 350",
+  "course_name": "Foundations of Computer Security and Information Assurance",
+  "credits": 3,
+  "description": "Principles of information security relating to computer science are addressed. Topics include identification and authentication, access control, and security models. Practical aspects of security and assurance are covered for UNIX, Windows NT, and security attainment approaches.",
+  "prerequisites_text": "COSC 241 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 241"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55587",
+  "content": "COSC 350 - Foundations of Computer Security and Information Assurance\nCredits: 3\nPrerequisites: COSC 241 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Principles of information security relating to computer science are addressed. Topics include identification and authentication, access control, and security models. Practical aspects of security and assurance are covered for UNIX, Windows NT, and security attainment approaches.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55587",
+  "source_file": "catalog.morgan.edu (coid=55587, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

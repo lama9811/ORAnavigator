@@ -1,0 +1,22 @@
+{
+  "doc_id": "course_cosc_349",
+  "title": "Course: COSC 349 - Computer Networks",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 349",
+  "course_name": "Computer Networks",
+  "credits": 3,
+  "description": "Covers theory and practice of computer networks, emphasizing design principles of network software and communications systems in distributed computing. Topics include network architecture, packet switching, network programming, wireless networks, data representation, channels, synchronization, and resource management.",
+  "prerequisites_text": "COSC 243 (grade C or higher, Fall 2024) OR COSC 112 (grade C or higher, Spring 2025 onward)",
+  "prerequisite_codes": [
+    "COSC 243",
+    "COSC 112"
+  ],
+  "terms_offered": "As Needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55586",
+  "content": "COSC 349 - Computer Networks\nCredits: 3\nPrerequisites: COSC 243 (grade C or higher, Fall 2024) OR COSC 112 (grade C or higher, Spring 2025 onward)\nOffered: As Needed\n\nDescription: Covers theory and practice of computer networks, emphasizing design principles of network software and communications systems in distributed computing. Topics include network architecture, packet switching, network programming, wireless networks, data representation, channels, synchronization, and resource management.\n\nCurriculum role:\n  - BS Computer Science: Core\n  - BS Cloud Computing: Core\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55586",
+  "source_file": "catalog.morgan.edu (coid=55586, accessed 2026-05-06)",
+  "bs_cs_role": "core",
+  "bs_cloud_role": "core",
+  "in_cs_minor": false
+}

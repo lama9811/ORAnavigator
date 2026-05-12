@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin: Update JSON Data Source</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    form { margin-bottom: 1.5rem; }
+    input[type="text"], select, input[type="file"], button {
+      display: block;
+      width: 100%;
+      margin: .5rem 0;
+      padding: .5rem;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    #editor {
+      width: 100%;
+      min-height: 200px;
+      max-height: 400px;       /* <-- limit height */
+      border: 1px solid #ccc;
+      padding: .5rem;
+      font-family: monospace;
+      white-space: pre-wrap;
+      overflow-y: auto;        /* <-- scroll only vertically */
+      margin-bottom: 1rem;
+    }
+    mark { background: yellow; }
+    button { cursor: pointer; }
+    ul { margin-left: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Admin: Update JSON Data Source</h1>
+
+  <!--—— Search ——-->
+  <form method="get" action="/admin/update">
+    <label for="query">Search JSON content:</label>
+    <input type="text" id="query" name="query"
+           placeholder="e.g. phone, credit, email"
+           value="{{ query }}" />
+    <button type="submit">Search</button>
+  </form>
+
+  <!--—— Matching Files ——-->
+  <p><strong>Matching files ({{ matched|length }}):</strong></p>
+  <ul>
+    {% for f in matched %}
+      <li>{{ f }}</li>
+    {% else %}
+      <li><em>No files match your search.</em></li>
+    {% endfor %}
+  </ul>
+
+  <!--—— File Selector ——-->
+  <form method="get" action="/admin/update">
+    <input type="hidden" name="query" value="{{ query }}" />
+    <label for="filename">Choose file to edit:</label>
+    <select name="filename" id="filename" onchange="this.form.submit()">
+      <option value="">-- select file --</option>
+      {% for f in all_files %}
+        <option value="{{ f }}" {% if selected == f %}selected{% endif %}>
+          {{ f }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <!--—— Editor Form ——-->
+  <form method="post" action="/admin/update" enctype="multipart/form-data" id="edit-form">
+    <input type="hidden" name="query" value="{{ query }}" />
+    <input type="hidden" name="filename" value="{{ selected or '' }}" />
+
+    <label for="file">Or upload new JSON file:</label>
+    <input type="file" id="file" name="file" accept=".json" />
+
+    <label for="editor">Edit JSON below (matches highlighted):</label>
+    <div id="editor" contenteditable="true">{{ content }}</div>
+
+    <!-- Hidden textarea to carry edited JSON -->
+    <textarea id="raw_json" name="raw_json" style="display:none"></textarea>
+
+    <button type="submit">Ingest &amp; Upsert</button>
+  </form>
+
+  <script>
+    const form = document.getElementById('edit-form');
+    const editor = document.getElementById('editor');
+    const textarea = document.getElementById('raw_json');
+    const query = "{{ query }}".trim().toLowerCase();
+
+    // Highlight matches on load
+    if (query) {
+      const highlighted = editor.textContent.replace(
+        new RegExp(query, 'gi'),
+        match => `<mark>${match}</mark>`
+      );
+      editor.innerHTML = highlighted;
+    }
+
+    // On submit: strip HTML tags, copy text back to textarea
+    form.addEventListener('submit', () => {
+      textarea.value = editor.innerText;
+    });
+  </script>
+</body>
+</html>

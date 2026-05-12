@@ -1,0 +1,9 @@
+{
+  "doc_id": "procedures_student_correction",
+  "title": "Make a Correction - Student Version",
+  "category": "procedures",
+  "subcategory": "student_correction",
+  "content": "Make a Correction to a Submitted Form - Student Version\nMorgan State University - Office of the Registrar\n\nThis guide is for STUDENTS. It explains how to make a correction to a form you previously submitted through the Service Request system.\n\n---\n\nSTEP 1: ACCESS SERVICE REQUESTS\nFrom Websis Student Self-Service, click \"Service Request\".\n\n---\n\nSTEP 2: ENTER YOUR EMAIL\nEnter your MSU email address and press continue. You will be logged into Smartsheet.\n\n---\n\nSTEP 3: SIGN IN AND LAUNCH DASHBOARD\nSign in with your Morgan credentials and launch the dashboard: Office of Registrar - Student Dashboard.\n\n---\n\nSTEP 4: LOCATE YOUR SUBMISSION\nFind the request type you previously submitted and click on it to view the details.\n\n---\n\nSTEP 5A: IF THE CURRENT APPROVER IS NOT THE FINAL APPROVER\nYou can make corrections or cancel the request. The options are:\n- \"I need to make a correction\"\n- \"Please cancel request\"\n\nCheck the appropriate option, click SAVE, and refresh the page.\n\n---\n\nSTEP 5B: IF THE CURRENT APPROVER IS \"STUDENT\"\nThis means the request has been returned to you. You will have received an email notification. The reason for the return is listed under COMMENTS/ACTION ITEMS. Review the reason and make the necessary corrections in the details field.\n\n---\n\nSTEP 6: RESUBMIT\nClick \"I have made all necessary corrections\" and save to resubmit the form. The request will re-enter the approval workflow.\n\nFor the full official guide with screenshots, view: [Student Correction Guide](https://drive.google.com/file/d/1gjyk5iVkQ5qkjY1RkPPrTvgll3mh8U6T/view)",
+  "source_file": "procedures_student_correction.json",
+  "size_bytes": 0
+}

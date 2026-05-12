@@ -1,0 +1,22 @@
+{
+  "doc_id": "course_cosc_460",
+  "title": "Course: COSC 460 - Computer Graphics",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 460",
+  "course_name": "Computer Graphics",
+  "credits": 3,
+  "description": "Course covering basic computer graphic devices, graphics and text modes, point plotting and line drawing, area filling, image array plotting, and mathematical generation of two and three dimensional transformations including translations, rotations, scaling, reflections, and orthogonal and perspective projections.",
+  "prerequisites_text": "COSC 220 and MATH 241 completed with grades of C or higher",
+  "prerequisite_codes": [
+    "COSC 220",
+    "MATH 241"
+  ],
+  "terms_offered": "As Needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55602",
+  "content": "COSC 460 - Computer Graphics\nCredits: 3\nPrerequisites: COSC 220 and MATH 241 completed with grades of C or higher\nOffered: As Needed\n\nDescription: Course covering basic computer graphic devices, graphics and text modes, point plotting and line drawing, area filling, image array plotting, and mathematical generation of two and three dimensional transformations including translations, rotations, scaling, reflections, and orthogonal and perspective projections.\n\nCurriculum role:\n  - BS Computer Science: Group C\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55602",
+  "source_file": "catalog.morgan.edu (coid=55602, accessed 2026-05-06)",
+  "bs_cs_role": "group_c",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

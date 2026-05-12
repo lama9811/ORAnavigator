@@ -1,0 +1,16 @@
+{
+  "doc_id": "teaching_sam_tannouri_spring_2025",
+  "title": "Teaching: Sam Tannouri (Spring 2025)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Sam Tannouri",
+  "semester": "Spring 2025",
+  "course_codes": [
+    "COSC110",
+    "COSC281",
+    "COSC480"
+  ],
+  "section_count": 3,
+  "content": "Sam Tannouri - Teaching Schedule for Spring 2025\n\nCourses:\n  - COSC110 INTRODUCTION TO COMPUTING (IM) | Section W04 | TBA | Room: WEB-001 | 3 cr | Web\n  - COSC281 DISCRETE STRUCTURES | Section 1 | MWF 2:00PM-2:50PM | Room: CLWY-303 | 3 cr | Traditional\n  - COSC480 INTRO TO IMAGE PROC & ANALYSIS | Section 1 | MWF 12:00PM-12:50PM | Room: CLWY-318 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

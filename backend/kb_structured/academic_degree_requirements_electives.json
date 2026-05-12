@@ -1,0 +1,9 @@
+{
+  "doc_id": "academic_degree_requirements_electives",
+  "title": "Academic Degree Requirements Electives",
+  "category": "academic",
+  "subcategory": "degree_requirements_electives",
+  "content": "Bachelor of Science in Computer Science - Electives and Tracks\nMorgan State University\n\n---\n\nELECTIVE COURSES\n\nCOSC 239 - Java Programming\nCredits: 3\nPrerequisite: COSC 112 with a grade of \"C\" or higher\n\nCOSC 301 - Web Technologies\nCredits: 3\nPrerequisite: COSC 112 with a grade of \"C\" or higher\n\nCOSC 470 - Artificial Intelligence\nCredits: 3\nPrerequisite: COSC 220 with a grade of \"C\" or higher\n\nCOSC 472 - Introduction to Machine Learning\nCredits: 3\nPrerequisite: COSC 112 with a grade of \"C\" or higher, MATH 312 with a grade of \"C\" or higher\n\nCOSC 460 - Computer Graphics\nCredits: 3\nPrerequisite: COSC 220 with a grade of \"C\" or higher\n\n---\n\nNEW TRACKS AVAILABLE\n\n1. Quantum Computing Track\n2. Cybersecurity and AI Track\n\nNote: There are no additional courses required, but students need to select electives that fall under each track to meet the requirements.\n",
+  "source_file": "academic_degree_requirements_electives.txt",
+  "size_bytes": 864
+}

@@ -1,0 +1,603 @@
+{
+  "degrees_offered": [
+    {
+      "degree_name": "Bachelor of Science (B.S.) in Computer Science",
+      "school_wide_requirements": {
+        "requirements": [
+          "Earned six (6) credits in the Complementary Studies Program required for all majors in the School of Computer, Mathematical and Natural Sciences.",
+          "Passed the Senior Departmental Comprehensive Examination.",
+          "Taken all of their junior and senior-level requirements in the major at Morgan State University (unless granted prior written permission by the Dean to take courses elsewhere).",
+          "Earned a cumulative average of 2.0 or better and a major average of 2.0 or better, with no outstanding grades below 'C' in the major (which includes all courses required for the major and required supporting courses)."
+        ]
+      },
+      "total_credits": 120,
+      "general_education_requirements": {
+        "credits": 44,
+        "courses": [
+          { "course_code": "ENGL 101", "course_name": "Composition I", "credits": 3 },
+          { "course_code": "ENGL 102", "course_name": "Composition II", "credits": 3 },
+          { "course_code": "MATH 241", "course_name": "Calculus I", "credits": 4 },
+          { "course_code": "COSC 111", "course_name": "Introduction to Computer Science I", "credits": 4 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (HH)", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (AH)", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (BP)", "credits": 4 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (SB)", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (CI)", "credits": 3 },
+          { "course_code": "NS 106", "course_name": "Freshman Orientation", "credits": 1 },
+          { "course_code": "XXXX", "course_name": "Physical Activity or FIN 101", "credits": 1 }
+        ]
+      },
+      "supporting_courses": {
+        "credits": 11,
+        "courses": [
+          { "course_code": "MATH 241", "course_name": "Calculus I", "credits": 4 },
+          { "course_code": "MATH 242", "course_name": "Calculus II", "credits": 4 },
+          { "course_code": "MATH 312", "course_name": "Linear Algebra I", "credits": 3 },
+          { "course_code": "MATH 331", "course_name": "Applied Probability and Statistics", "credits": 3 },
+          { "course_code": "COSC 201", "course_name": "Computer Ethics", "credits": 1 }
+        ]
+      },
+      "computer_science_major_requirements": {
+        "credits": 65,
+        "courses": [
+          { "course_code": "COSC 111", "course_name": "Introduction to Computer Science I", "credits": 4 },
+          { "course_code": "COSC 112", "course_name": "Introduction to Computer Science II", "credits": 4 },
+          { "course_code": "COSC 220", "course_name": "Data Structures and Algorithms", "credits": 4 },
+          { "course_code": "COSC 241", "course_name": "Computer Systems and Digital Logic", "credits": 3 },
+          { "course_code": "COSC 281", "course_name": "Discrete Structure", "credits": 3 },
+          { "course_code": "COSC 349", "course_name": "Computer Networks", "credits": 3 },
+          { "course_code": "COSC 351", "course_name": "Cybersecurity", "credits": 3 },
+          { "course_code": "COSC 352", "course_name": "Organization of Programming Languages", "credits": 3 },
+          { "course_code": "COSC 354", "course_name": "Operating Systems", "credits": 3 },
+          { "course_code": "COSC 458", "course_name": "Software Engineering", "credits": 3 },
+          { "course_code": "COSC 459", "course_name": "Database Design", "credits": 3 },
+          { "course_code": "COSC 490", "course_name": "Senior Project", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group A Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group A Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group A Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group B Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group B Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "COSC Group D Elective", "credits": 3 }
+        ]
+      },
+      "suggested_curriculum_sequence": {
+        "first_year": [
+          {
+            "semester": "First Year (Semester One)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "COSC 111", "course_name": "Introduction to Computer Science I", "credits": 4 },
+              { "course_code": "ENGL 101", "course_name": "Composition I", "credits": 3 },
+              { "course_code": "MATH 241", "course_name": "Calculus I", "credits": 4 },
+              { "course_code": "XXXX", "course_name": "CT General Education Requirement", "credits": 3 },
+              { "course_code": "ORNS 106", "course_name": "Freshman Orientation for Majors", "credits": 1 }
+            ]
+          },
+          {
+            "semester": "First Year (Semester Two)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "ENGL 102", "course_name": "Composition II", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "HH General Education Requirement", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Physical Education or FIN 101", "credits": 1 },
+              { "course_code": "COSC 112", "course_name": "Introduction to Computer Science II", "credits": 4 },
+              { "course_code": "MATH 242", "course_name": "Calculus II", "credits": 4 }
+            ]
+          }
+        ],
+        "second_year": [
+          {
+            "semester": "Second Year (Semester One)",
+            "credits": 16,
+            "courses": [
+              { "course_code": "COSC 220", "course_name": "Data Structures and Algorithms", "credits": 4 },
+              { "course_code": "COSC 241", "course_name": "Computer Systems and Digital Logic", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "AH General Education Requirement", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group A Elective", "credits": 3 }
+            ]
+          },
+          {
+            "semester": "Second Year (Semester Two)",
+            "credits": 16,
+            "courses": [
+              { "course_code": "COSC 281", "course_name": "Discrete Structure", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group A Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group A Elective", "credits": 3 },
+              { "course_code": "MATH 312", "course_name": "Linear Algebra I", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "AH General Education Requirement", "credits": 3 }
+            ]
+          }
+        ],
+        "third_year": [
+          {
+            "semester": "Third Year (Semester One)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "COSC 349", "course_name": "Computer Networks", "credits": 3 },
+              { "course_code": "COSC 351", "course_name": "Cybersecurity", "credits": 3 },
+              { "course_code": "COSC 352", "course_name": "Organization of Programming Languages", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group B Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "BP General Education Requirement", "credits": 4 }
+            ]
+          },
+          {
+            "semester": "Third Year (Semester Two)",
+            "credits": 16,
+            "courses": [
+              { "course_code": "COSC 354", "course_name": "Operating Systems", "credits": 3 },
+              { "course_code": "MATH 331", "course_name": "Applied Probability and Statistics", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group B Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "CI General Education Requirement", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "BP General Education Requirement (No lab)", "credits": 3 }
+            ]
+          }
+        ],
+        "fourth_year": [
+          {
+            "semester": "Fourth Year (Semester One)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "COSC 458", "course_name": "Software Engineering", "credits": 3 },
+              { "course_code": "COSC 459", "course_name": "Database Design", "credits": 3 },
+              { "course_code": "COSC 490", "course_name": "Senior Project", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "SB General Education Requirement", "credits": 3 }
+            ]
+          },
+          {
+            "semester": "Fourth Year (Semester Two)",
+            "credits": 12,
+            "courses": [
+              { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "COSC Group D Elective", "credits": 3 }
+            ]
+          }
+        ]
+      },
+      "additional_information": {
+        "website": "https://catalog.morgan.edu/preview_program.php?catoid=26&poid=5968&returnto=1880",
+        "note": "For more detailed information, including course descriptions and prerequisites, please refer to the Morgan State University Undergraduate Catalog. For CS majors, we follow the university policy that on-site classes require in-person attendance. At this time, we haven’t received any directions that students can study online. You must follow the syllabus set up by the instructors."
+      }
+    },
+    {
+      "degree_name": "Bachelor of Science (B.S.) in Cloud Computing",
+      "educational_objectives": [
+        "Provide students with the knowledge to understand principles, developments, applications, power, and importance of cloud computing.",
+        "Equip students with skills suitable for work in cloud computing and necessary for advancement in a career in cloud computing.",
+        "Develop proficiency in cloud computing technologies to solve real-world computing-oriented problems."
+      ],
+      "learning_outcomes": [
+        "Solve real-world Cloud Computing oriented problems.",
+        "Apply cloud computing techniques, skills, and services necessary for practice.",
+        "Analyze the local and global impact of cloud computing on individuals, organizations, and society.",
+        "Examine and follow trends in cloud computing.",
+        "Analyze a problem and identify and define the computing requirements appropriate to its solution.",
+        "Function effectively in a team to accomplish a common goal.",
+        "Exhibit professional, ethical, legal, security, and social issues and responsibilities.",
+        "Communicate effectively with a range of audiences.",
+        "Recognize the need for and an ability to engage in continuing professional development."
+      ],
+      "school_wide_requirements": {
+        "requirements": [
+          "Earned six (6) credits in the Complementary Studies Program required for all majors in the School of Computer, Mathematical and Natural Sciences.",
+          "Passed the Senior Departmental Comprehensive Examination.",
+          "Taken all of their junior and senior level requirements in the major at Morgan State University (unless granted prior written permission by the Dean to take courses elsewhere).",
+          "Earned a cumulative average of 2.0 or better and a major average of 2.0 or better, with no outstanding grades below 'C' in the major (which includes all courses required for the major and required supporting courses)."
+        ]
+      },
+      "total_credits": 120,
+      "general_education_requirements": {
+        "credits": 44,
+        "courses": [
+          { "course_code": "ENGL 101", "course_name": "Composition I", "credits": 3 },
+          { "course_code": "ENGL 102", "course_name": "Composition II", "credits": 3 },
+          { "course_code": "MATH 113", "course_name": "Introduction to Mathematical Analysis I", "credits": 4 },
+          { "course_code": "COSC 111", "course_name": "Introduction to Computer Science I", "credits": 4 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (HH)", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (BP)", "credits": 4 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (SB)", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (AH)", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "General Education Requirement (CI)", "credits": 3 },
+          { "course_code": "ORNS 106", "course_name": "Freshman Orientation", "credits": 1 },
+          { "course_code": "XXXX", "course_name": "Physical Activity or FIN 101", "credits": 1 }
+        ]
+      },
+      "supporting_courses": {
+        "credits": 14,
+        "courses": [
+          { "course_code": "MATH 113", "course_name": "Introduction to Mathematical Analysis I", "credits": 4 },
+          { "course_code": "MATH 114", "course_name": "Introduction to Mathematical Analysis II", "credits": 4 },
+          { "course_code": "MATH 241", "course_name": "Calculus I", "credits": 4 },
+          { "course_code": "MATH 312", "course_name": "Linear Algebra I", "credits": 3 },
+          { "course_code": "MGBU 200", "course_name": "Introduction to Business for Non-Business Majors", "credits": 3 }
+        ]
+      },
+      "cloud_computing_major_requirements": {
+        "credits": 62,
+        "courses": [
+          { "course_code": "COSC 111", "course_name": "Introduction to Computer Science I", "credits": 4 },
+          { "course_code": "COSC 112", "course_name": "Introduction to Computer Science II", "credits": 4 },
+          { "course_code": "COSC 220", "course_name": "Data Structures and Algorithms", "credits": 4 },
+          { "course_code": "COSC 241", "course_name": "Computer Systems and Digital Logic", "credits": 3 },
+          { "course_code": "COSC 349", "course_name": "Computer Networks", "credits": 3 },
+          { "course_code": "COSC 351", "course_name": "Cybersecurity", "credits": 3 },
+          { "course_code": "COSC 354", "course_name": "Operating Systems", "credits": 3 },
+          { "course_code": "CLCO 261", "course_name": "Introduction to Cloud Computing", "credits": 3 },
+          { "course_code": "CLCO 401", "course_name": "Cloud Applications", "credits": 3 },
+          { "course_code": "CLCO 490", "course_name": "Senior Project in Cloud Computing", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group A Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group A Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group B Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group B Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group C Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group C Elective", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "CLCO Group D Elective", "credits": 3 }
+        ]
+      },
+      "suggested_curriculum_sequence": {
+        "first_year": [
+          {
+            "semester": "First Year (Semester One)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "MATH 113", "course_name": "Introduction to Mathematical Analysis I", "credits": 4 },
+              { "course_code": "COSC 111", "course_name": "Introduction to Computer Science I", "credits": 4 },
+              { "course_code": "ENGL 101", "course_name": "Composition I", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "CT General Education Requirement", "credits": 3 },
+              { "course_code": "ORNS 106", "course_name": "Freshman Orientation", "credits": 1 }
+            ]
+          },
+          {
+            "semester": "First Year (Semester Two)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "MATH 114", "course_name": "Introduction to Mathematical Analysis II", "credits": 4 },
+              { "course_code": "COSC 112", "course_name": "Introduction to Computer Science II", "credits": 4 },
+              { "course_code": "ENGL 102", "course_name": "Composition II", "credits": 3 },
+              { "course_code": "MGBU 200", "course_name": "Introduction to Business for Non-Business Majors", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Physical Activity or FIN 101", "credits": 1 }
+            ]
+          }
+        ],
+        "second_year": [
+          {
+            "semester": "Second Year (Semester One)",
+            "credits": 14,
+            "courses": [
+              { "course_code": "MATH 241", "course_name": "Calculus I", "credits": 4 },
+              { "course_code": "COSC 220", "course_name": "Data Structures and Algorithms", "credits": 4 },
+              { "course_code": "COSC 241", "course_name": "Computer Systems and Digital Logic", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "AH General Education Requirement", "credits": 3 }
+            ]
+          },
+          {
+            "semester": "Second Year (Semester Two)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "XXXX", "course_name": "Group A Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group A Elective", "credits": 3 },
+              { "course_code": "CLCO 261", "course_name": "Introduction to Cloud Computing", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "HH General Education Requirement", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "AH General Education Requirement", "credits": 3 }
+            ]
+          }
+        ],
+        "third_year": [
+          {
+            "semester": "Third Year (Semester One)",
+            "credits": 16,
+            "courses": [
+              { "course_code": "COSC 349", "course_name": "Computer Networks", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group B Elective", "credits": 3 },
+              { "course_code": "COSC 351", "course_name": "Cybersecurity", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group B Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "BP General Education Requirement with Lab", "credits": 4 }
+            ]
+          },
+          {
+            "semester": "Third Year (Semester Two)",
+            "credits": 16,
+            "courses": [
+              { "course_code": "MATH 312", "course_name": "Linear Algebra I", "credits": 3 },
+              { "course_code": "COSC 354", "course_name": "Operating Systems", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group B Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "CI General Education Requirement", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "BP General Education Requirement (No lab)", "credits": 3 }
+            ]
+          }
+        ],
+        "fourth_year": [
+          {
+            "semester": "Fourth Year (Semester One)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "CLCO 490", "course_name": "Senior Project in Cloud Computing", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "SB General Education Requirement", "credits": 3 }
+            ]
+          },
+          {
+            "semester": "Fourth Year (Semester Two)",
+            "credits": 15,
+            "courses": [
+              { "course_code": "CLCO 401", "course_name": "Cloud Applications", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group C Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Group D Elective", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "SB General Education Requirement", "credits": 3 }
+            ]
+          }
+        ]
+      },
+      "additional_information": {
+        "website": "https://catalog.morgan.edu/preview_program.php?catoid=26&poid=6172&returnto=1880",
+        "note": "For more detailed information, including course descriptions and prerequisites, please refer to the Morgan State University Undergraduate Catalog."
+      }
+    },
+    {
+      "degree_name": "Master of Science (M.S.) in Advanced Computing",
+      "program_description": "The MS in Advanced Computing program preserves the core of Computer Science (CS) while possessing unique strength in emerging interdisciplinary areas in Cybersecurity, Artificial Intelligence, Data Science, and Cloud Computing. The program is delivered in both online and face-to-face formats. Students take ten courses and can complete the degree program in a 12-month period, or they can choose to work on a project or conduct research and write a thesis under the guidance of CS faculty.",
+      "target_audience": [
+        "Students who have recently completed a bachelor's degree in Computer Science or a related field.",
+        "Students already in the workforce who wish to update or improve their knowledge in current computer science fields."
+      ],
+      "total_credits": 30,
+      "degree_options": [
+        {
+          "option_name": "Course Only",
+          "description": "10 graduate courses: 4 core + 6 electives"
+        },
+        {
+          "option_name": "Course+Project",
+          "description": "4 core courses + 5 electives + 1 project (3 credits)"
+        },
+        {
+          "option_name": "Course+Thesis",
+          "description": "4 core courses + 4 electives + 1 research seminar (3 credits) + 1 thesis (3 credits)"
+        }
+      ],
+      "curriculum": {
+        "core_courses": [
+          { "course_code": "EEGR 580/COSC 551", "course_name": "Cybersecurity", "credits": 3 },
+          { "course_code": "COSC 502", "course_name": "Data Science and Artificial Intelligence", "credits": 3 },
+          { "course_code": "EEGR 581/COSC 558", "course_name": "Network Security", "credits": 3 },
+          { "course_code": "COSC 504", "course_name": "Secure Cloud Computing", "credits": 3 }
+        ],
+        "elective_courses": [
+          { "course_code": "COSC 511", "course_name": "Design and Analysis of Algorithms", "credits": 3 },
+          { "course_code": "COSC 512", "course_name": "Software Engineering", "credits": 3 },
+          { "course_code": "COSC 513", "course_name": "Cloud Computing Applications", "credits": 3 },
+          { "course_code": "EEGR 583", "course_name": "Security Management", "credits": 3 },
+          { "course_code": "COSC 586", "course_name": "Quantum Cryptography", "credits": 3 },
+          { "course_code": "COSC 611", "course_name": "Big Data Analytics", "credits": 3 },
+          { "course_code": "COSC 612", "course_name": "Deep Learning in the Cloud", "credits": 3 },
+          { "course_code": "COSC 614", "course_name": "Cryptology and Cryptography", "credits": 3 },
+          { "course_code": "EEGR 679", "course_name": "Security in Network and Link Applications", "credits": 3 },
+          { "course_code": "INSS 696", "course_name": "Current Issues in Information Technology", "credits": 3 },
+          { "course_code": "PSYC 691", "course_name": "Human Factor and Behavior", "credits": 3 }
+        ],
+        "culminating_courses": [
+          { "course_code": "COSC 690", "course_name": "Independent Study", "credits": 3 },
+          { "course_code": "COSC 691", "course_name": "Special Topics in Computer Science", "credits": 3 },
+          { "course_code": "COSC 692", "course_name": "Research Seminar", "credits": 3 },
+          { "course_code": "COSC 699", "course_name": "Master's Project", "credits": 3 },
+          { "course_code": "COSC 797/799", "course_name": "Thesis Guidance/Thesis Defense", "credits": "3/9" }
+        ]
+      },
+      "suggested_course_sequence": {
+        "first_semester": [
+          { "course_code": "EEGR 580/COSC 551", "course_name": "Cybersecurity", "credits": 3 },
+          { "course_code": "COSC 502", "course_name": "Data Science and Artificial Intelligence", "credits": 3 },
+          { "course_code": "COSC 511", "course_name": "Design and Analysis of Algorithms", "credits": 3 },
+          { "course_code": "COSC 513", "course_name": "Cloud Computing Applications", "credits": 3 }
+        ],
+        "second_semester": [
+          { "course_code": "EEGR 581/COSC 558", "course_name": "Network Security", "credits": 3 },
+          { "course_code": "COSC 504", "course_name": "Secure Cloud Computing", "credits": 3 },
+          { "course_code": "COSC 611", "course_name": "Big Data Analytics", "credits": 3 },
+          { "course_code": "COSC 612", "course_name": "Deep Learning in the Cloud", "credits": 3 }
+        ],
+        "summer": [
+          { "course_code": "COSC 512", "course_name": "Software Engineering", "credits": 3 },
+          { "course_code": "COSC 614", "course_name": "Cryptology and Cryptography", "credits": 3 }
+        ]
+      },
+      "additional_information": {
+        "website": "https://www.morgan.edu/computer-science/degrees-and-programs/ms_advancedcomputing",
+        "note": "For more detailed information, including course descriptions and prerequisites, please refer to the Morgan State University Graduate Catalog."
+      }
+    },
+    {
+      "degree_name": "Master of Science (M.S.) in Bioinformatics",
+      "program_description": "The M.S. in Bioinformatics program at Morgan State University prepares professionals with an interdisciplinary background blending biology and computer science. The program provides students with a strong foundation in computer programming, biostatistics, computational biology, and database management. Graduates are well prepared for careers in academia, as well as in the biotechnology, bioinformatics, pharmaceutical, and drug design industries.",
+      "program_objectives": [
+        "Integrate computer science, mathematics, statistics, and biological methods to solve bioinformatics problems.",
+        "Offer interdisciplinary research training necessary for professional work in the bioinformatics field.",
+        "Prepare students for careers in bioinformatics and related fields, including the biotechnology and pharmaceutical industries."
+      ],
+      "general_requirements": {
+        "total_credits": 30,
+        "courses": [
+          { "course_code": "BIOI 511", "course_name": "Introduction to Bioinformatics", "credits": 3 },
+          { "course_code": "BIOI 512", "course_name": "Structural Bioinformatics", "credits": 3 },
+          { "course_code": "BIOI 513", "course_name": "Computational Genomics", "credits": 3 },
+          { "course_code": "BIOI 531", "course_name": "Bioinformatics Programming", "credits": 3 },
+          { "course_code": "COSC 502", "course_name": "Data Science and Artificial Intelligence", "credits": 3 },
+          { "course_code": "MATH 631", "course_name": "Biostatistics", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "Elective Course 1", "credits": 3 },
+          { "course_code": "XXXX", "course_name": "Elective Course 2", "credits": 3 },
+          { "course_code": "BIOI 797", "course_name": "Thesis Guidance", "credits": 3 },
+          { "course_code": "BIOI 799", "course_name": "Thesis Defense", "credits": 9 }
+        ]
+      },
+      "elective_courses": [
+        { "course_code": "COSC 511", "course_name": "Design and Analysis of Algorithms", "credits": 3 },
+        { "course_code": "COSC 512", "course_name": "Software Engineering", "credits": 3 },
+        { "course_code": "COSC 513", "course_name": "Cloud Computing Applications", "credits": 3 },
+        { "course_code": "EEGR 583", "course_name": "Security Management", "credits": 3 },
+        { "course_code": "COSC 586", "course_name": "Applied Quantum Cryptography", "credits": 3 },
+        { "course_code": "COSC 611", "course_name": "Big Data Analytics", "credits": 3 },
+        { "course_code": "COSC 612", "course_name": "Deep Learning in the Cloud", "credits": 3 },
+        { "course_code": "COSC 614", "course_name": "Cryptology and Cryptography", "credits": 3 },
+        { "course_code": "EEGR 679", "course_name": "Security in Network and Link Applications", "credits": 3 },
+        { "course_code": "INSS 696", "course_name": "Current Issues in Information Technology", "credits": 3 },
+        { "course_code": "PSYC 691", "course_name": "Human Factor and Behavior", "credits": 3 }
+      ],
+      "curriculum_sequence": {
+        "year_1": [
+          {
+            "semester": "Fall",
+            "credits": 9,
+            "courses": [
+              { "course_code": "BIOI 511", "course_name": "Introduction to Bioinformatics", "credits": 3 },
+              { "course_code": "BIOI 531", "course_name": "Bioinformatics Programming", "credits": 3 },
+              { "course_code": "MATH 631", "course_name": "Biostatistics", "credits": 3 }
+            ]
+          },
+          {
+            "semester": "Spring",
+            "credits": 9,
+            "courses": [
+              { "course_code": "BIOI 512", "course_name": "Structural Bioinformatics", "credits": 3 },
+              { "course_code": "BIOI 692", "course_name": "Research Seminar in Bioinformatics", "credits": 3 },
+              { "course_code": "COSC 502", "course_name": "Data Science and Artificial Intelligence", "credits": 3 }
+            ]
+          }
+        ],
+        "year_2": [
+          {
+            "semester": "Fall",
+            "credits": 9,
+            "courses": [
+              { "course_code": "BIOI 513", "course_name": "Computational Genomics", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Elective Course 1", "credits": 3 },
+              { "course_code": "XXXX", "course_name": "Elective Course 2", "credits": 3 }
+            ]
+          },
+          {
+            "semester": "Spring",
+            "credits": 3,
+            "courses": [
+              { "course_code": "BIOI 797", "course_name": "Thesis Guidance", "credits": 3 }
+            ]
+          }
+        ]
+      },
+      "additional_information": {
+        "catalog website": "https://catalog.morgan.edu/preview_program.php?catoid=27&poid=6247&returnto=1989",
+        "website": "https://www.morgan.edu/computer-science/degrees-and-programs/phd_advcomputing",
+        "note": "For more detailed information, including course descriptions and prerequisites, please refer to the Morgan State University Graduate Catalog."
+      }
+    },
+    {
+      "degree_name": "Ph.D. in Advanced Computing",
+      "program_description": "The Ph.D. in Advanced Computing program covers emerging areas in Computer Science and seeks to enhance research capacity while applying advanced computing approaches to solve real-world problems. The program focuses on quantum cryptography, cybersecurity, and the development of equitable, emotional, responsible, resilient, and empathic AI/ML. It is an extension of the Master of Science (M.S.) in Advanced Computing program and offers both theoretical and applied approaches to computing.",
+      "program_objectives": [
+        "Advance research capacity in emerging areas of computing, including quantum cryptography and cybersecurity.",
+        "Address real-world challenges through equitable, ethical, and empathetic AI/ML.",
+        "Prepare students for leadership in the evolving field of advanced computing through cutting-edge research and development."
+      ],
+      "total_credits": {
+        "beyond_bachelor": 60,
+        "beyond_master": 36
+      },
+      "degree_options": [
+        {
+          "option_name": "Onsite",
+          "description": "Traditional in-person format for students."
+        },
+        {
+          "option_name": "Remote/Online",
+          "description": "Online format offering flexibility for students."
+        }
+      ],
+      "admission_requirements": {
+        "gpa": "Minimum GPA as per School of Graduate Studies requirements.",
+        "degree": "BS, MS degrees in computer science, computer engineering, information science, or a closely related field.",
+        "assessment": "Assessment and approval by the program director or the department chair."
+      },
+      "core_courses": [
+        { "course_code": "COSC 502", "course_name": "Artificial Intelligence", "credits": 3 },
+        { "course_code": "COSC 586", "course_name": "Quantum Computing", "credits": 3 },
+        { "course_code": "COSC 614", "course_name": "Cryptography and Cryptology", "credits": 3 },
+        { "course_code": "COSC 672", "course_name": "Reinforcement Learning", "credits": 3 },
+        { "course_code": "COSC 680", "course_name": "Image Understanding and Computer Vision", "credits": 3 },
+        { "course_code": "COSC 686", "course_name": "Quantum Algorithms and Architecture", "credits": 3 },
+        { "course_code": "COSC 724", "course_name": "Post Quantum Cryptography", "credits": 3 },
+        { "course_code": "COSC 726", "course_name": "Explainability and Fairness in Machine Learning", "credits": 3 }
+      ],
+      "elective_courses": [
+        { "course_code": "COSC 511", "course_name": "Design and Analysis of Algorithms", "credits": 3 },
+        { "course_code": "COSC 512", "course_name": "Software Engineering and Formal Methods", "credits": 3 },
+        { "course_code": "COSC 558", "course_name": "Advanced Network Security", "credits": 3 },
+        { "course_code": "COSC 612", "course_name": "Deep Learning in the Cloud", "credits": 3 },
+        { "course_code": "COSC 711", "course_name": "Quantum Algorithms and Applications", "credits": 3 },
+        { "course_code": "COSC 721", "course_name": "High-Performance Computing", "credits": 3 },
+        { "course_code": "COSC 722", "course_name": "Machine Learning Applications", "credits": 3 },
+        { "course_code": "EEGR 750", "course_name": "Trustworthy Machine Learning", "credits": 3 },
+        { "course_code": "EEGR 755", "course_name": "Advanced Software Assurance", "credits": 3 },
+        { "course_code": "INSS 854", "course_name": "Information Systems Security", "credits": 3 }
+      ],
+      "research_and_seminar_courses": [
+        { "course_code": "COSC 790", "course_name": "Independent Study", "credits": 3 },
+        { "course_code": "COSC 791", "course_name": "Special Topics in Computer Science", "credits": 3 },
+        { "course_code": "COSC 792", "course_name": "Research Seminar", "credits": 3 },
+        { "course_code": "COSC 801", "course_name": "Dissertation Research I", "credits": 3 },
+        { "course_code": "COSC 802", "course_name": "Dissertation Research II", "credits": 3 },
+        { "course_code": "COSC 803", "course_name": "Dissertation Research III", "credits": 3 },
+        { "course_code": "COSC 804", "course_name": "Dissertation Research IV", "credits": 3 },
+        { "course_code": "COSC 997/998", "course_name": "Dissertation Guidance/Dissertation Defense", "credits": "3/9", "note": "Repeatable until thesis is completed." }
+      ],
+      "dissertation_requirements": {
+        "description": "Upon achieving candidacy, students register for Dissertation Research courses and Dissertation Defense until their thesis is completed and defended. The thesis must be successfully defended at a public thesis defense session."
+      },
+      "contact_information": {
+        "program_director": "Dr. Md Rahman",
+        "email": "md.rahman@morgan.edu",
+        "phone": "(443) 885-1056",
+        "admission_inquiries": "For admission-related questions, please visit the School of Graduate Studies website."
+      },
+      "inclusion_and_diversity": "The program values inclusion and diversity and welcomes international students. We encourage sharing of life, culture, and experiences, enhancing the collaborative and supportive academic environment.",
+      "additional_information": {
+        "website": "https://catalog.morgan.edu/preview_program.php?catoid=27&poid=6247&returnto=1989",
+        "note": "For more detailed information, including course descriptions and prerequisites, please refer to the Morgan State University Graduate Catalog."
+      }
+    },
+    {
+      "degree_name": "4+1 Bachelor’s and Master’s Program in Computer Science",
+      "program_description": "The 4+1 Bachelor’s and Master’s Program in Computer Science is an accelerated degree track designed for highly motivated students. This unique program allows students to complete both a Bachelor's and a Master's degree in Computer Science in just five years, saving time and cost while advancing their academic and professional goals. It combines undergraduate and graduate-level coursework, giving students an opportunity to dive deeper into the field of Computer Science while earning both degrees simultaneously.",
+      "benefits_of_program": [
+        "Accelerates your academic journey by combining both Bachelor's and Master's degrees in just five years.",
+        "Provides an opportunity to specialize in advanced topics in computer science and gain a competitive edge in the job market.",
+        "Enables students to begin working on graduate-level research and projects while still completing their undergraduate degree.",
+        "Saves time and tuition costs, making it an excellent option for students looking to fast-track their careers in computer science.",
+        "Instead of taking some 400-level COSC/CLCO classes, you may take the corresponding 500-level courses that are already cross-listed with them."
+      ],
+      "contact_information": {
+        "program_inquiries": "For more details about the 4+1 program, students can reach out to their advisor for more details. You can also reach out to the Department Chair, Dr. Shuangbao 'Paul' Wang.",
+        "contact_details": {
+          "name": "Shuangbao 'Paul' Wang",
+          "title": "Professor and Chair",
+          "office": "McMechen Hall 507",
+          "phone": "(443) 885-4503",
+          "email": "shuangbao.wang@morgan.edu"
+        }
+      },
+      "additional_information": {
+        "note": "More detailed information about the 4+1 Bachelor’s and Master’s Program in Computer Science will be provided soon. Please reach out to Dr. Wang in McMechen Suite 507 for further details about the program."
+      }
+
+      
+    }
+  ]
+}
+
+  

@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_315",
+  "title": "Course: COSC 315 - Quantum Computing II",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 315",
+  "course_name": "Quantum Computing II",
+  "credits": 3,
+  "description": "Advanced exploration of quantum computation beyond introductory concepts. Covers applications including machine learning, linear equation solutions, search algorithms, and cryptography. Examines quantum information and computational complexity.",
+  "prerequisites_text": "COSC 215 with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 215"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68043",
+  "content": "COSC 315 - Quantum Computing II\nCredits: 3\nPrerequisites: COSC 215 with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: Advanced exploration of quantum computation beyond introductory concepts. Covers applications including machine learning, linear equation solutions, search algorithms, and cryptography. Examines quantum information and computational complexity.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68043",
+  "source_file": "catalog.morgan.edu (coid=68043, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

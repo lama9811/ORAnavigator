@@ -1,0 +1,17 @@
+{
+  "doc_id": "teaching_vojislav_stojkovic_spring_2025",
+  "title": "Teaching: Vojislav Stojkovic (Spring 2025)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "Vojislav Stojkovic",
+  "semester": "Spring 2025",
+  "course_codes": [
+    "CLCO401",
+    "COSC352",
+    "COSC385",
+    "COSC472"
+  ],
+  "section_count": 5,
+  "content": "Vojislav Stojkovic - Teaching Schedule for Spring 2025\n\nCourses:\n  - CLCO401 CLOUD APPLICATIONS | Section 1 | MWF 1:00PM-1:50PM | Room: MCMN-404 | 3 cr | Traditional\n  - CLCO401 CLOUD APPLICATIONS | Section W02 | TBA | Room: WEB-001 | 3 cr | Web\n  - COSC352 ORGAN OF PROGRAMMING LANGUAGES | Section 1 | MWF 4:00PM-4:50PM | Room: MCMN-519 | 3 cr | Traditional\n  - COSC385 THRY OF LANGUAGES & AUTOMATA | Section 1 | MWF 3:00PM-3:50PM | Room: MCMN-404 | 3 cr | Traditional\n  - COSC472 INTRO TO MACHINE LEARNING | Section 1 | MWF 11:00AM-11:50AM | Room: MCMN-404 | 3 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

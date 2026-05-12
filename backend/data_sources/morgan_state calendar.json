@@ -1,0 +1,57 @@
+{
+  "academic_calendar": [
+    {
+      "term": "Fall 2025",
+      "events": [
+        { "name": "First Day of Class",       "date": "2025-08-27" },
+        { "name": "Labor Day",       "date": "2025-09-01" },
+        { "name": "Wellness Day",       "date": "2025-10-7" },
+        { "name": "Midterm Examination week",       "start_date": "2025-10-13", "end_date": "2025-10-18" },
+        { "name": "Wellness Day",       "date": "2025-11-26" },
+        { "name": "Thanksgiving Break",  "start_date": "2025-11-27", "end_date": "2025-11-30" },
+        { "name": "Last Day of Class",         "date": "2025-12-10" },
+        { "name": "Final Exams",         "start_date": "2025-12-11", "end_date": "2025-12-18" },
+        { "name": "Commencement",       "date": "2025-12-19" },
+        { "name": "Winter Recess", "start_date": "2025-12-24", "end_date": "2026-01-04" },
+        { "name": "Dates and Dealines Fall 2025", "link": "https://docs.google.com/spreadsheets/d/1m-oL6NwTnoGcP4L1wmbeL0OtJC2b8HjuW3jSipWC4nM/edit?gid=378227356#gid=378227356" }
+      ]
+    },
+    {
+      "term": "Winter 2026",
+      "events": [
+        { "name": "First Day of Class",       "date": "2026-01-05" },
+        { "name": "Dr. Martin Luther King Jr. Day",         "date": "2026-01-19" },
+        { "name": "Last Day of Class",         "date": "2026-01-20" }
+      ]
+    },
+    {
+      "term": "Spring 2026",
+      "events": [
+        { "name": "First Day of Class",       "date": "2026-01-21" },
+        { "name": "Wellness Day",       "date": "2026-02-16" },
+        { "name": "Midterm Exams",        "start_date": "2026-03-07", "end_date": "2026-03-13" },
+        { "name": "Spring Break",        "start_date": "2026-03-15", "end_date": "2026-03-20" },
+        { "name": "Wellness Day",       "date": "2026-04-10" },
+        { "name": "Last Day of Class",         "date": "2026-05-07" },
+        { "name": "Reading Day",         "date": "2026-05-08" },
+        { "name": "Final Exams",         "start_date": "2026-05-09", "end_date": "2026-05-15" },
+        { "name": "Commencement",        "date": "2026-05-16" }
+      ]
+    },
+    {
+      "term": "Summer 2026",
+      "events": [
+        { "name": "Memorial Day",       "date": "2026-05-25" },
+        { "name": "Session I & full summer (8 weeks) session begins",       "date": "2026-06-02" },
+        { "name": "Juneeth Day",         "date": "2026-06-19" },
+        { "name": "Last Day of Class",         "date": "2026-07-03" },
+        { "name": "Final Exams",         "start_date": "2026-07-06", "end_date": "2026-07-10" }
+      ]
+    },                                      
+    {
+      "term": "Academic Calendar Link",
+      "events": [],
+      "link": "https://docs.google.com/document/d/12czwe1xFu7n9I2r-NeuvvtdV-EmtiKGNi3O9l2-tcnQ/edit?tab=t.0"
+    }
+  ]
+}

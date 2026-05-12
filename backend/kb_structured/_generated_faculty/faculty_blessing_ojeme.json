@@ -1,0 +1,23 @@
+{
+  "doc_id": "faculty_blessing_ojeme",
+  "title": "Faculty: Dr. Blessing Ojeme",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Blessing Ojeme",
+  "faculty_title": "Assistant Professor",
+  "office": "McMechen Hall 621",
+  "phone": "",
+  "email": "blessing.ojeme@morgan.edu",
+  "research_summary": "artificial intelligence, machine learning, deep learning, image processing, computer vision, bioinformatics, human-computer interaction.",
+  "research_keywords": [
+    "artificial intelligence",
+    "machine learning",
+    "deep learning",
+    "image processing",
+    "computer vision",
+    "bioinformatics",
+    "human-computer interaction"
+  ],
+  "content": "Dr. Blessing Ojeme - Assistant Professor\nOffice: McMechen Hall 621\nEmail: blessing.ojeme@morgan.edu\nResearch interests: artificial intelligence, machine learning, deep learning, image processing, computer vision, bioinformatics, human-computer interaction.",
+  "source_file": "academic_faculty.txt"
+}

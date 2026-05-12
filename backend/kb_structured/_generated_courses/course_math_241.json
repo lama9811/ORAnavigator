@@ -1,0 +1,17 @@
+{
+  "doc_id": "course_math_241",
+  "title": "Course: MATH 241 - Calculus I",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "MATH 241",
+  "course_name": "Calculus I",
+  "credits": 4,
+  "prerequisites_text": "ENGR 101, MATH 114, MATH 141, or Departmental permission",
+  "prerequisite_codes": [
+    "MATH 114",
+    "MATH 141"
+  ],
+  "offered": "Fall, Spring",
+  "content": "MATH 241 - Calculus I\nCredits: 4\nPrerequisites: ENGR 101, MATH 114, MATH 141, or Departmental permission\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

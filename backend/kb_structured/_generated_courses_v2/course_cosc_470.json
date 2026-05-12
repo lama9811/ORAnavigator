@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_470",
+  "title": "Course: COSC 470 - Artificial Intelligence",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 470",
+  "course_name": "Artificial Intelligence",
+  "credits": 3,
+  "description": "An introduction to agent-oriented artificial intelligence covering foundations and history, intelligent agents, search techniques, knowledge and reasoning, propositional and predicate logic, forward and backward chaining, resolution, and applications including mechanical theorem proving and expert systems.",
+  "prerequisites_text": "COSC 220 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 220"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55603",
+  "content": "COSC 470 - Artificial Intelligence\nCredits: 3\nPrerequisites: COSC 220 completed with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: An introduction to agent-oriented artificial intelligence covering foundations and history, intelligent agents, search techniques, knowledge and reasoning, propositional and predicate logic, forward and backward chaining, resolution, and applications including mechanical theorem proving and expert systems.\n\nCurriculum role:\n  - BS Computer Science: Group C\n  - BS Cloud Computing: Group C\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55603",
+  "source_file": "catalog.morgan.edu (coid=55603, accessed 2026-05-06)",
+  "bs_cs_role": "group_c",
+  "bs_cloud_role": "group_c",
+  "in_cs_minor": false
+}

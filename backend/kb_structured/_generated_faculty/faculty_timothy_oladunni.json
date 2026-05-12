@@ -1,0 +1,21 @@
+{
+  "doc_id": "faculty_timothy_oladunni",
+  "title": "Faculty: Dr. Timothy Oladunni",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Timothy Oladunni",
+  "faculty_title": "Assistant Professor",
+  "office": "McMechen Hall 617",
+  "phone": "",
+  "email": "Timothy.Oladunni@morgan.edu",
+  "research_summary": "artificial intelligence, natural language processing, computer vision, data science, pattern recognition.",
+  "research_keywords": [
+    "artificial intelligence",
+    "natural language processing",
+    "computer vision",
+    "data science",
+    "pattern recognition"
+  ],
+  "content": "Dr. Timothy Oladunni - Assistant Professor\nOffice: McMechen Hall 617\nEmail: Timothy.Oladunni@morgan.edu\nResearch interests: artificial intelligence, natural language processing, computer vision, data science, pattern recognition.",
+  "source_file": "academic_faculty.txt"
+}

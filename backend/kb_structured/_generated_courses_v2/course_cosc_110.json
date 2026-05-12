@@ -1,0 +1,19 @@
+{
+  "doc_id": "course_cosc_110",
+  "title": "Course: COSC 110 - Introduction to Computing",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 110",
+  "course_name": "Introduction to Computing",
+  "credits": 3,
+  "description": "Introduces students with no prior computing experience to digital computer organization and characteristics. Covers everyday computer uses and may include electronic mail and programming in a high-level language.",
+  "prerequisites_text": "None",
+  "prerequisite_codes": [],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55564",
+  "content": "COSC 110 - Introduction to Computing\nCredits: 3\nPrerequisites: None\nOffered: Fall, Spring\n\nDescription: Introduces students with no prior computing experience to digital computer organization and characteristics. Covers everyday computer uses and may include electronic mail and programming in a high-level language.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55564",
+  "source_file": "catalog.morgan.edu (coid=55564, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

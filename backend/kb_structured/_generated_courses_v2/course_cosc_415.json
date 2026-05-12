@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_415",
+  "title": "Course: COSC 415 - Capstone in Quantum Information Science",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 415",
+  "course_name": "Capstone in Quantum Information Science",
+  "credits": 3,
+  "description": "Students collaborate with professors on projects applying computer science to quantum phenomena or applications. Work may involve repurposing lab equipment from quantum science coursework or developing theoretical projects demonstrating quantum physics comprehension. An advisor guides project development and mentorship.",
+  "prerequisites_text": "COSC 410 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 410"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68047",
+  "content": "COSC 415 - Capstone in Quantum Information Science\nCredits: 3\nPrerequisites: COSC 410 completed with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: Students collaborate with professors on projects applying computer science to quantum phenomena or applications. Work may involve repurposing lab equipment from quantum science coursework or developing theoretical projects demonstrating quantum physics comprehension. An advisor guides project development and mentorship.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=68047",
+  "source_file": "catalog.morgan.edu (coid=68047, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

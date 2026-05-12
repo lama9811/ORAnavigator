@@ -1,0 +1,9 @@
+{
+  "doc_id": "general_cs_navigator",
+  "title": "CS Navigator - About This Application",
+  "category": "general",
+  "subcategory": "cs_navigator",
+  "content": "CS NAVIGATOR - ABOUT THIS APPLICATION\n\nCS Navigator is a chatbot developed by Morgan State University students for students in the Computer Science Department.\n\nWebsite: https://cs.inavigator.ai\n\nCS Navigator can help answer questions about:\n- Courses, prerequisites, and schedules\n- Degree requirements and registration\n- Faculty and staff contact information\n- Financial aid, scholarships, and tuition\n- Campus resources and student organizations\n- DegreeWorks degree progress\n- Canvas LMS grades and assignments\n\nFor questions or feedback about CS Navigator, contact the CS department at (443) 885-3962 or compsci@morgan.edu.\n",
+  "source_file": "general_cs_navigator.txt",
+  "size_bytes": 650
+}

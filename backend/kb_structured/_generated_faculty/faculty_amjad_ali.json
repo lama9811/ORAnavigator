@@ -1,0 +1,24 @@
+{
+  "doc_id": "faculty_amjad_ali",
+  "title": "Faculty: Dr. Amjad Ali",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Amjad Ali",
+  "faculty_title": "Professor",
+  "office": "McMechen Hall 502",
+  "phone": "",
+  "email": "amjad.ali@morgan.edu",
+  "research_summary": "cybersecurity, artificial intelligence, critical infrastructure security, security policy and privacy, BYOD security, smart cities security, mobile security, cloud security.",
+  "research_keywords": [
+    "cybersecurity",
+    "artificial intelligence",
+    "critical infrastructure security",
+    "security policy and privacy",
+    "byod security",
+    "smart cities security",
+    "mobile security",
+    "cloud security"
+  ],
+  "content": "Dr. Amjad Ali - Professor\nOffice: McMechen Hall 502\nEmail: amjad.ali@morgan.edu\nResearch interests: cybersecurity, artificial intelligence, critical infrastructure security, security policy and privacy, BYOD security, smart cities security, mobile security, cloud security.",
+  "source_file": "academic_faculty.txt"
+}

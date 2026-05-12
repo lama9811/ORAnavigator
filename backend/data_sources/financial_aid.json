@@ -1,0 +1,63 @@
+{
+  "financial_aid": {
+    "office": {
+      "name": "Office of Financial Aid",
+      "location": "Tyler Hall, Suite 206",
+      "phone": "443-885-3170",
+      "email": "finaid@morgan.edu",
+      "fafsa_code": "002083",
+      "hours": "Monday-Friday, 8am-5pm"
+    },
+    "key_deadlines_fall_2025": {
+      "sap_appeals_deadline": "November 21, 2025",
+      "loan_acceptance_deadline": "December 5, 2025",
+      "work_study_last_day": "December 9, 2025",
+      "plus_loans_due": "December 12, 2025",
+      "winter_aid_applications": "December 19, 2025"
+    },
+    "fafsa_2025_2026": {
+      "opens": "December 2024",
+      "requirements": [
+        "All contributors need Studentaid.gov accounts",
+        "IRS tax information sharing consent required",
+        "Use Morgan State's Federal School Code: 002083"
+      ]
+    },
+    "scholarships": {
+      "scholarship_universe": {
+        "name": "Scholarship Universe",
+        "url": "https://morgan.scholarshipuniverse.com/",
+        "description": "Morgan State's centralized scholarship application portal"
+      },
+      "uncf": {
+        "name": "UNCF Scholarships",
+        "url": "https://www.uncf.org/scholarships",
+        "description": "United Negro College Fund scholarships for students at HBCUs"
+      },
+      "collegeBound": {
+        "name": "CollegeBound Foundation",
+        "description": "Scholarships available for Baltimore City students"
+      }
+    },
+    "financial_aid_types": {
+      "grants": "Free money that doesn't need to be repaid (Federal Pell Grant, Maryland State Grants)",
+      "scholarships": "Merit or need-based awards that don't require repayment",
+      "work_study": "Part-time employment program for students with financial need",
+      "loans": "Borrowed money that must be repaid (Federal Direct Loans, PLUS Loans)"
+    },
+    "satisfactory_academic_progress": {
+      "description": "Students must maintain Satisfactory Academic Progress (SAP) to remain eligible for financial aid",
+      "requirements": [
+        "Maintain minimum cumulative GPA",
+        "Complete at least 67% of attempted credit hours",
+        "Complete degree within 150% of program length"
+      ],
+      "appeals": "SAP appeals can be submitted through the Financial Aid office"
+    },
+    "contact_for_questions": {
+      "general_inquiries": "finaid@morgan.edu or 443-885-3170",
+      "in_person": "Tyler Hall, Suite 206",
+      "web": "https://www.morgan.edu/financial-aid"
+    }
+  }
+}

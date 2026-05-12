@@ -1,0 +1,17 @@
+{
+  "doc_id": "track_bioinformatics",
+  "title": "Track Overview: Bioinformatics Track",
+  "category": "academic",
+  "subcategory": "track_overview",
+  "track_name": "Bioinformatics Track",
+  "course_codes": [
+    "COSC 373",
+    "COSC 374"
+  ],
+  "faculty_names": [
+    "Dr. Roshan Paudel"
+  ],
+  "description": "Bioinformatics courses bridge computer science and biology. Most are part of the MS in Bioinformatics program but undergrads can take introductory courses.",
+  "content": "Bioinformatics Track\n\nBioinformatics courses bridge computer science and biology. Most are part of the MS in Bioinformatics program but undergrads can take introductory courses.\n\nRELEVANT COURSES:\n  - COSC 373 Foundations of Bioinformatics: Computational methods, sequence analysis, protein structure.\n  - COSC 374 Introduction to Bioprogramming: Programming projects in computational biology.\n\nRELEVANT FACULTY:\n  - Dr. Roshan Paudel: Coordinator of MS in Bioinformatics. Teaches BIOI courses across all semesters.\n\nRECOMMENDED PROGRESSION:\n  - Take COSC 111 \u2192 COSC 112 first\n  - COSC 373 Foundations of Bioinformatics (no biology background assumed)\n  - COSC 374 Introduction to Bioprogramming (after COSC 373)\n  - If interested in graduate study: explore the MS in Bioinformatics program with Dr. Paudel",
+  "source_file": "synthesized 2026-05-06 from catalog + dept website"
+}

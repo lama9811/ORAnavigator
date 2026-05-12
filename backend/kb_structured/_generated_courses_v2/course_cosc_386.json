@@ -1,0 +1,22 @@
+{
+  "doc_id": "course_cosc_386",
+  "title": "Course: COSC 386 - Introduction to Quantum Computing",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 386",
+  "course_name": "Introduction to Quantum Computing",
+  "credits": 3,
+  "description": "Introductory course covering quantum computing basics, quantum architecture, programming levels, quantum algorithms, and software development kits including Qiskit, Q#, Cirq, and Forest.",
+  "prerequisites_text": "COSC 220 and MATH 312 completed with grades of C or higher",
+  "prerequisite_codes": [
+    "COSC 220",
+    "MATH 312"
+  ],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57279",
+  "content": "COSC 386 - Introduction to Quantum Computing\nCredits: 3\nPrerequisites: COSC 220 and MATH 312 completed with grades of C or higher\n\nDescription: Introductory course covering quantum computing basics, quantum architecture, programming levels, quantum algorithms, and software development kits including Qiskit, Q#, Cirq, and Forest.\n\nCurriculum role:\n  - BS Computer Science: Group B\n  - BS Cloud Computing: Group B\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57279",
+  "source_file": "catalog.morgan.edu (coid=57279, accessed 2026-05-06)",
+  "bs_cs_role": "group_b",
+  "bs_cloud_role": "group_b",
+  "in_cs_minor": false
+}

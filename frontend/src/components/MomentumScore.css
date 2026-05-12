@@ -1,0 +1,63 @@
+.ms-loading { display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ms-spin { animation: msSpin 1s linear infinite; }
+@keyframes msSpin { to { transform: rotate(360deg); } }
+
+/* Card */
+.ms-card { background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: 18px; padding: 20px 24px; cursor: pointer; transition: box-shadow 0.2s, transform 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+.ms-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-1px); }
+
+.ms-main { display: flex; align-items: center; gap: 20px; }
+
+/* Gauge */
+.ms-gauge { position: relative; width: 90px; height: 90px; flex-shrink: 0; }
+.ms-gauge-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ms-gauge-bg { fill: none; stroke: var(--border-light); stroke-width: 8; }
+.ms-gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s; }
+.ms-gauge-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ms-gauge-num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.ms-gauge-label { font-size: 0.55rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+/* Right info */
+.ms-info { flex: 1; min-width: 0; }
+.ms-title { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.ms-subtitle { font-size: 0.72rem; color: var(--text-tertiary); margin-top: 2px; text-transform: capitalize; }
+.ms-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.ms-trend.up { background: #e6f4ea; color: #1e7e34; }
+.ms-trend.down { background: #fce8e6; color: #d93025; }
+.ms-trend.stable { background: #e8f0fe; color: #1a73e8; }
+
+/* Mini factor bars */
+.ms-mini-factors { display: flex; gap: 4px; margin-top: 10px; }
+.ms-mini-bar { flex: 1; height: 5px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; }
+.ms-mini-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+
+/* Expanded breakdown */
+.ms-breakdown { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-light); display: flex; flex-direction: column; gap: 12px; animation: msExpand 0.25s ease; }
+@keyframes msExpand { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 500px; } }
+
+.ms-factor { }
+.ms-factor.penalty { opacity: 0.85; }
+.ms-factor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.ms-factor-name { font-size: 0.78rem; font-weight: 700; color: var(--text-primary); }
+.ms-factor-score { font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.ms-factor-bar { height: 6px; background: var(--bg-secondary); border-radius: 3px; overflow: hidden; margin-bottom: 2px; }
+.ms-factor-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+.ms-factor-detail { font-size: 0.68rem; color: var(--text-tertiary); }
+
+/* Compact mode (for NavBar) */
+.ms-compact { position: relative; width: 32px; height: 32px; cursor: pointer; }
+.ms-compact .ms-gauge-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ms-compact .ms-gauge-bg { stroke-width: 5; }
+.ms-compact .ms-gauge-fill { stroke-width: 5; stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+.ms-compact-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 800; }
+
+/* Dark mode */
+body.dark .ms-card { background: var(--bg-secondary); border-color: var(--border-dark, #444); }
+body.dark .ms-gauge-bg { stroke: var(--border-dark, #444); }
+body.dark .ms-breakdown { border-color: var(--border-dark, #444); }
+
+@media (max-width: 640px) {
+  .ms-card { padding: 16px; }
+  .ms-gauge { width: 72px; height: 72px; }
+  .ms-gauge-num { font-size: 1.3rem; }
+}

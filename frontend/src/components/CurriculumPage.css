@@ -1,0 +1,1086 @@
+/* Curriculum Page Container */
+.curriculum-page {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-body);
+  overflow-x: hidden;
+}
+
+/* Header Section */
+.curriculum-header {
+  background: linear-gradient(135deg, var(--msu-blue) 0%, #001a4d 100%);
+  color: white;
+  padding: 40px 24px;
+  border-bottom: 4px solid var(--msu-gold);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  width: 100%;
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  margin-bottom: 24px;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(-4px);
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-icon {
+  color: var(--msu-gold);
+  flex-shrink: 0;
+}
+
+.header-title h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: white;
+}
+
+.header-title p {
+  font-size: 1.1rem;
+  margin: 8px 0 0 0;
+  opacity: 0.95;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ========================================
+   DEGREE PROGRESS SECTION - GLOWING GRADIENT
+   ======================================== */
+.progress-section {
+  max-width: 1400px;
+  margin: 24px auto 24px auto;
+  padding: 0 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.progress-card {
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.progress-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-icon {
+  color: var(--msu-gold);
+}
+
+.progress-info h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-main);
+}
+
+.progress-info p {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.progress-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.credits-text {
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.credits-text strong {
+  font-size: 1.4rem;
+  color: var(--msu-blue);
+}
+
+body.dark .credits-text strong {
+  color: #60a5fa;
+}
+
+.gpa-badge {
+  background: linear-gradient(135deg, var(--msu-gold), #fbbf24);
+  color: #1a1a2e;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.gpa-badge strong {
+  font-size: 1.1rem;
+}
+
+/* Progress Bar with Glowing Gradient */
+.progress-bar-container {
+  width: 100%;
+  height: 32px;
+  background: var(--bg-body);
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid var(--border-color);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  min-width: 60px;
+  background: linear-gradient(
+    90deg,
+    #4285F4 0%,
+    #5a95f5 25%,
+    #669DF6 50%,
+    #8ab4f8 75%,
+    #34A853 100%
+  );
+  background-size: 200% 100%;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+  transition: width 1s ease-out;
+  position: relative;
+  animation: gradientShift 3s ease infinite, glow 2s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 20px rgba(66, 133, 244, 0.5),
+    0 0 40px rgba(59, 130, 246, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow:
+      0 0 15px rgba(66, 133, 244, 0.4),
+      0 0 30px rgba(59, 130, 246, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  to {
+    box-shadow:
+      0 0 25px rgba(66, 133, 244, 0.6),
+      0 0 50px rgba(59, 130, 246, 0.4),
+      0 0 70px rgba(245, 158, 11, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+.progress-percentage {
+  color: white;
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Progress Legend */
+.progress-legend {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.legend-item.completed svg {
+  color: #22c55e;
+}
+
+.legend-item.in-progress svg {
+  color: #f59e0b;
+}
+
+.legend-item.pending svg {
+  color: var(--text-secondary);
+}
+
+/* Stats Section */
+.stats-section {
+  max-width: 1400px;
+  margin: 0 auto 24px auto;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--msu-blue);
+}
+
+.stat-card svg {
+  color: var(--msu-blue);
+  flex-shrink: 0;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* ========================================
+   TAB NAVIGATION
+   ======================================== */
+.tab-navigation {
+  max-width: 1400px;
+  margin: 0 auto 24px auto;
+  padding: 0 24px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  border-color: var(--msu-blue);
+  color: var(--msu-blue);
+  background: rgba(66, 133, 244, 0.05);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--msu-blue) 0%, #003d9e 100%);
+  border-color: var(--msu-blue);
+  color: white;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.tab-btn.active svg {
+  color: var(--msu-gold);
+}
+
+body.dark .tab-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+/* Filters Section */
+.filters-section {
+  max-width: 1400px;
+  margin: 0 auto 24px auto;
+  padding: 0 24px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-bar {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 14px 16px 14px 48px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--msu-blue);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 12px;
+}
+
+.filter-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.filter-select {
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  cursor: pointer;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+.filter-select:focus {
+  outline: none;
+}
+
+body.dark .filter-select {
+  color-scheme: dark;
+}
+
+/* Table Container */
+.table-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px 40px 24px;
+  overflow-x: auto;
+}
+
+/* Curriculum Table */
+.curriculum-table {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border-collapse: collapse;
+}
+
+.curriculum-table thead {
+  background: linear-gradient(135deg, var(--msu-blue) 0%, #003380 100%);
+  color: white;
+}
+
+.curriculum-table th {
+  padding: 18px 12px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 3px solid var(--msu-gold);
+  color: white;
+}
+
+.curriculum-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.curriculum-table tbody tr:hover {
+  background: rgba(66, 133, 244, 0.08);
+}
+
+body.dark .curriculum-table tbody tr:hover {
+  background: rgba(66, 133, 244, 0.2);
+}
+
+/* Row status styling */
+.course-row.completed {
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.course-row.in-progress {
+  background: rgba(245, 158, 11, 0.05);
+}
+
+body.dark .course-row.completed {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+body.dark .course-row.in-progress {
+  background: rgba(52, 168, 83, 0.1);
+}
+
+.curriculum-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.curriculum-table td {
+  padding: 14px 12px;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+/* Status Badge */
+.course-status {
+  text-align: center;
+  width: 50px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1rem;
+}
+
+.status-badge.completed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.status-badge.in-progress {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  animation: pulse 2s infinite;
+}
+
+.status-badge.pending {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.course-code {
+  font-weight: 700;
+  color: var(--msu-blue);
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+body.dark .course-code {
+  color: #4dabf7;
+}
+
+.course-name {
+  font-weight: 600;
+  color: var(--text-main);
+  min-width: 180px;
+}
+
+.course-credits {
+  text-align: center;
+  font-weight: 700;
+  color: var(--msu-blue);
+  font-size: 1rem;
+}
+
+body.dark .course-credits {
+  color: var(--msu-gold);
+}
+
+/* Grade Badge */
+.course-grade {
+  text-align: center;
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  min-width: 40px;
+  text-align: center;
+}
+
+.grade-badge.in-progress {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.grade-na {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.course-prereq {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  max-width: 300px;
+}
+
+.course-offered {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Category Badges */
+.category-badge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.category-badge.mathematics {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+body.dark .category-badge.mathematics {
+  background: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
+}
+
+.category-badge.core-cs {
+  background: rgba(66, 133, 244, 0.15);
+  color: var(--msu-blue);
+  border: 1px solid rgba(66, 133, 244, 0.3);
+}
+
+body.dark .category-badge.core-cs {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+.category-badge.advanced-cs {
+  background: rgba(147, 51, 234, 0.15);
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+}
+
+body.dark .category-badge.advanced-cs {
+  background: rgba(147, 51, 234, 0.25);
+  color: #c084fc;
+}
+
+.category-badge.specialized {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+body.dark .category-badge.specialized {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+}
+
+.category-badge.cloud-computing {
+  background: rgba(6, 182, 212, 0.15);
+  color: #06b6d4;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+body.dark .category-badge.cloud-computing {
+  background: rgba(6, 182, 212, 0.25);
+  color: #22d3ee;
+}
+
+.category-badge.related {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+body.dark .category-badge.related {
+  background: rgba(34, 197, 94, 0.25);
+  color: #4ade80;
+}
+
+.category-badge.other {
+  background: rgba(107, 114, 128, 0.15);
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+body.dark .category-badge.other {
+  background: rgba(107, 114, 128, 0.25);
+  color: #9ca3af;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px !important;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-style: italic;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.loading-state p {
+  margin-top: 16px;
+  font-size: 1.1rem;
+}
+
+.spinner {
+  color: var(--msu-blue);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #ef4444;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.error-state p {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.retry-btn {
+  background: var(--msu-blue);
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #003380;
+  transform: translateY(-2px);
+}
+
+/* Degree Summary */
+.degree-summary {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.summary-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.summary-item.total {
+  padding-left: 24px;
+  border-left: 2px solid var(--msu-gold);
+}
+
+.summary-item.total .summary-value {
+  color: var(--msu-blue);
+  font-size: 1.3rem;
+}
+
+body.dark .summary-item.total .summary-value {
+  color: var(--msu-gold);
+}
+
+/* Category Sections */
+.category-section {
+  margin-bottom: 32px;
+}
+
+.category-header {
+  margin-bottom: 16px;
+}
+
+.category-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-main);
+}
+
+.category-title.supporting {
+  color: #3b82f6;
+}
+
+.category-title.required {
+  color: var(--msu-blue);
+}
+
+body.dark .category-title.required {
+  color: #60a5fa;
+}
+
+.category-title.group-a-elective {
+  color: #22c55e;
+}
+
+.category-title.group-b-elective {
+  color: #f59e0b;
+}
+
+.category-title.group-c-elective {
+  color: #8b5cf6;
+}
+
+.category-title.group-d-elective {
+  color: #06b6d4;
+}
+
+.course-count {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.category-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0;
+  font-style: italic;
+}
+
+.course-note {
+  color: var(--msu-gold);
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.empty-state-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+/* Connect Prompt */
+.connect-prompt {
+  max-width: 1400px;
+  margin: 0 auto 40px auto;
+  padding: 0 24px;
+}
+
+.connect-prompt > div,
+.connect-prompt {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(52, 168, 83, 0.1));
+  border: 2px dashed var(--msu-blue);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+
+.connect-prompt p {
+  color: var(--text-main);
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.connect-btn {
+  background: linear-gradient(135deg, var(--msu-blue) 0%, #003d9e 100%);
+  color: white;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.connect-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(66, 133, 244, 0.4);
+}
+
+/* Scrollbar for table */
+.table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: var(--bg-body);
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .header-title h1 {
+    font-size: 2rem;
+  }
+
+  .header-title p {
+    font-size: 1rem;
+  }
+
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .curriculum-table th,
+  .curriculum-table td {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+  }
+
+  .course-prereq {
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .curriculum-header {
+    padding: 24px 16px;
+  }
+
+  .header-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-title h1 {
+    font-size: 1.5rem;
+  }
+
+  .progress-section {
+    padding: 0 16px;
+    margin-top: -20px;
+  }
+
+  .progress-card {
+    padding: 20px;
+  }
+
+  .progress-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .progress-bar-container {
+    height: 24px;
+  }
+
+  .progress-legend {
+    gap: 16px;
+  }
+
+  .stats-section {
+    padding: 0 16px;
+  }
+
+  .tab-navigation {
+    padding: 0 16px;
+  }
+
+  .tab-btn {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+  }
+
+  .filters-section {
+    padding: 0 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-bar {
+    min-width: 100%;
+  }
+
+  .filter-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-select {
+    flex: 1;
+  }
+
+  .table-container {
+    padding: 0 16px 40px 16px;
+  }
+
+  .curriculum-table {
+    font-size: 0.8rem;
+  }
+
+  .curriculum-table th,
+  .curriculum-table td {
+    padding: 10px 6px;
+  }
+
+  .course-prereq {
+    font-size: 0.75rem;
+    max-width: 150px;
+  }
+
+  .connect-prompt {
+    padding: 0 16px;
+  }
+}

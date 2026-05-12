@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_cosc_352",
+  "title": "Course: COSC 352 - Organization of Programming Languages",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 352",
+  "course_name": "Organization of Programming Languages",
+  "credits": 3,
+  "prerequisites_text": "COSC 220 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 220"
+  ],
+  "offered": "Fall, Spring",
+  "content": "COSC 352 - Organization of Programming Languages\nCredits: 3\nPrerequisites: COSC 220 (Grade C or higher)\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

@@ -1,0 +1,19 @@
+{
+  "doc_id": "course_cosc_499",
+  "title": "Course: COSC 499 - Senior Research or Teaching/Tutorial Assistantship",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 499",
+  "course_name": "Senior Research or Teaching/Tutorial Assistantship",
+  "credits": 3,
+  "description": "Opportunity for students to gain hands-on research or teaching/tutorial experience under faculty supervision and mentorship. Limited to seniors meeting academic requirements with department approval.",
+  "prerequisites_text": "Minimum 3.0 cumulative and major GPA; senior standing; Department Chair permission required",
+  "prerequisite_codes": [],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55608",
+  "content": "COSC 499 - Senior Research or Teaching/Tutorial Assistantship\nCredits: 3\nPrerequisites: Minimum 3.0 cumulative and major GPA; senior standing; Department Chair permission required\nOffered: As needed\n\nDescription: Opportunity for students to gain hands-on research or teaching/tutorial experience under faculty supervision and mentorship. Limited to seniors meeting academic requirements with department approval.\n\nCurriculum role:\n  - BS Computer Science: Group C\n  - BS Cloud Computing: Group C\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55608",
+  "source_file": "catalog.morgan.edu (coid=55608, accessed 2026-05-06)",
+  "bs_cs_role": "group_c",
+  "bs_cloud_role": "group_c",
+  "in_cs_minor": false
+}

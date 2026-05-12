@@ -1,0 +1,26 @@
+# Python junk
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+.venv/
+venv/
+
+
+
+.env.*
+*.env
+__pycache__/
+*.pyc
+
+# Logs & misc
+*.log
+
+# Do NOT send secrets
+.env
+.env.*
+*.env
+
+# Not needed in image
+tests/
+docs/

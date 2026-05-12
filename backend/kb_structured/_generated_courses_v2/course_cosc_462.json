@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_462",
+  "title": "Course: COSC 462 - Introduction to Database Security",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 462",
+  "course_name": "Introduction to Database Security",
+  "credits": 3,
+  "description": "Focuses on security knowledge integration within organizations. Covers secure network protocol design, vulnerability discovery, ACID testing, and system vulnerability effects. Details protocols including TCP/IP, SSL/TLS, IPsec, SSH, firewalls, password policies, privileges, roles, Virtual Private Databases, and auditing. Advanced topics encompass SQL injection and DBMS security issues.",
+  "prerequisites_text": "COSC 459 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 459"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55595",
+  "content": "COSC 462 - Introduction to Database Security\nCredits: 3\nPrerequisites: COSC 459 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Focuses on security knowledge integration within organizations. Covers secure network protocol design, vulnerability discovery, ACID testing, and system vulnerability effects. Details protocols including TCP/IP, SSL/TLS, IPsec, SSH, firewalls, password policies, privileges, roles, Virtual Private Databases, and auditing. Advanced topics encompass SQL injection and DBMS security issues.\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55595",
+  "source_file": "catalog.morgan.edu (coid=55595, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

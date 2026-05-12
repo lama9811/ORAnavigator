@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_cosc_112",
+  "title": "Course: COSC 112 - Introduction to Computer Science II",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 112",
+  "course_name": "Introduction to Computer Science II",
+  "credits": 4,
+  "prerequisites_text": "COSC 111 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 111"
+  ],
+  "offered": "Fall, Spring",
+  "content": "COSC 112 - Introduction to Computer Science II\nCredits: 4\nPrerequisites: COSC 111 (Grade C or higher)\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

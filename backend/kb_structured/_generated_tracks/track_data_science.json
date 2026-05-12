@@ -1,0 +1,23 @@
+{
+  "doc_id": "track_data_science",
+  "title": "Track Overview: Data Science / Analytics Track",
+  "category": "academic",
+  "subcategory": "track_overview",
+  "track_name": "Data Science / Analytics Track",
+  "course_codes": [
+    "COSC 251",
+    "COSC 472",
+    "COSC 459",
+    "CLCO 312",
+    "CLCO 471",
+    "MATH 331"
+  ],
+  "faculty_names": [
+    "Dr. Md Rahman",
+    "Dr. Guobin Xu",
+    "Dr. Timothy Oladunni"
+  ],
+  "description": "Data Science is offered through specific courses within the BS CS curriculum. Useful for students interested in data analytics, big data, and statistical computing.",
+  "content": "Data Science / Analytics Track\n\nData Science is offered through specific courses within the BS CS curriculum. Useful for students interested in data analytics, big data, and statistical computing.\n\nRELEVANT COURSES:\n  - COSC 251 Introduction to Data Science: Data analysis, modeling, mining, visualization, search.\n  - COSC 472 Introduction to Machine Learning: Statistical learning, decision trees, deep learning.\n  - COSC 459 Database Design: Required CS core \u2014 data modeling, query languages, optimization.\n  - CLCO 312 Data Science for Social Good: Responsible ML for social problems.\n  - CLCO 471 Data Analytics in Cloud: Big data: Hadoop, MapReduce, Spark.\n  - MATH 331 Applied Probability and Statistics: Required CS supporting course \u2014 statistical foundation.\n\nRELEVANT FACULTY:\n  - Dr. Md Rahman: Machine learning.\n  - Dr. Guobin Xu: Machine learning and intelligent systems.\n  - Dr. Timothy Oladunni: AI/data science.\n\nRECOMMENDED PROGRESSION:\n  - COSC 111 \u2192 COSC 112 (programming foundation)\n  - MATH 241 \u2192 MATH 312 \u2192 MATH 331 (math/stats foundation)\n  - COSC 251 Intro to Data Science\n  - COSC 459 Database Design\n  - COSC 472 Machine Learning\n  - Cap with CLCO 471 Data Analytics in Cloud or capstone project",
+  "source_file": "synthesized 2026-05-06 from catalog + dept website"
+}

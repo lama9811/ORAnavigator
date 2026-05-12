@@ -1,0 +1,19 @@
+{
+  "doc_id": "course_cosc_201",
+  "title": "Course: COSC 201 - Computer Ethics",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 201",
+  "course_name": "Computer Ethics",
+  "credits": 1,
+  "description": "Examines humanitarian, social, and professional impacts of IT, focusing on ethical issues related to networking and the Internet, IT-configured societies, moral accountability, responsibility, and liability of IT-professionals, intellectual property, privacy, security, cybercrime, theft and piracy concerns.",
+  "prerequisites_text": "None",
+  "prerequisite_codes": [],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57281",
+  "content": "COSC 201 - Computer Ethics\nCredits: 1\nPrerequisites: None\n\nDescription: Examines humanitarian, social, and professional impacts of IT, focusing on ethical issues related to networking and the Internet, IT-configured societies, moral accountability, responsibility, and liability of IT-professionals, intellectual property, privacy, security, cybercrime, theft and piracy concerns.\n\nCurriculum role:\n  - BS Computer Science: Supporting\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57281",
+  "source_file": "catalog.morgan.edu (coid=57281, accessed 2026-05-06)",
+  "bs_cs_role": "supporting",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

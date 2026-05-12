@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_486",
+  "title": "Course: COSC 486 - Applied Quantum Computing",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 486",
+  "course_name": "Applied Quantum Computing",
+  "credits": 3,
+  "description": "Overview of quantum computing applications including quantum instruction sets, software development kits, and programming languages. Topics encompass cryptography, Shor's algorithm, quantum cryptography, optimization, and machine learning.",
+  "prerequisites_text": "COSC 386 with grade C or higher",
+  "prerequisite_codes": [
+    "COSC 386"
+  ],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57280",
+  "content": "COSC 486 - Applied Quantum Computing\nCredits: 3\nPrerequisites: COSC 386 with grade C or higher\n\nDescription: Overview of quantum computing applications including quantum instruction sets, software development kits, and programming languages. Topics encompass cryptography, Shor's algorithm, quantum cryptography, optimization, and machine learning.\n\nCurriculum role:\n  - BS Computer Science: Group C\n  - BS Cloud Computing: Group C\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57280",
+  "source_file": "catalog.morgan.edu (coid=57280, accessed 2026-05-06)",
+  "bs_cs_role": "group_c",
+  "bs_cloud_role": "group_c",
+  "in_cs_minor": false
+}

@@ -1,0 +1,109 @@
+/* Command Palette Overlay */
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 20vh;
+  animation: cmdk-fade-in 0.15s ease;
+}
+
+@keyframes cmdk-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cmdk-container {
+  width: 100%;
+  max-width: 640px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  animation: cmdk-slide-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes cmdk-slide-in {
+  from { opacity: 0; transform: scale(0.96) translateY(-8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* cmdk built-in selectors */
+[cmdk-input] {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-family: inherit;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-main);
+  outline: none;
+}
+
+[cmdk-input]::placeholder {
+  color: var(--text-secondary);
+}
+
+[cmdk-list] {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+[cmdk-group-heading] {
+  padding: 8px 12px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+[cmdk-item] {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  transition: background 0.15s ease;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: var(--msu-blue-50, rgba(66, 133, 244, 0.08));
+}
+
+[cmdk-item]:hover {
+  background: var(--bg-card-hover);
+}
+
+[cmdk-item] svg {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+[cmdk-empty] {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 680px) {
+  .cmdk-container {
+    margin: 0 16px;
+    max-width: calc(100% - 32px);
+  }
+
+  .cmdk-overlay {
+    padding-top: 12vh;
+  }
+}

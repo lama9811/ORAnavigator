@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_112",
+  "title": "Course: COSC 112 - Introduction to Computer Science II",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 112",
+  "course_name": "Introduction to Computer Science II",
+  "credits": 4,
+  "description": "Second computer science course covering data structures including lists, tuples, and dictionaries; functions and modules; string handling; file input/output; exception handling; recursion; and introduction to classes and objects. Includes lab work with programming assignments using editors to compile and execute large programs.",
+  "prerequisites_text": "COSC 111 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 111"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55566",
+  "content": "COSC 112 - Introduction to Computer Science II\nCredits: 4\nPrerequisites: COSC 111 completed with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: Second computer science course covering data structures including lists, tuples, and dictionaries; functions and modules; string handling; file input/output; exception handling; recursion; and introduction to classes and objects. Includes lab work with programming assignments using editors to compile and execute large programs.\n\nCurriculum role:\n  - BS Computer Science: Core\n  - BS Cloud Computing: Core\n  - Required for CS Minor\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55566",
+  "source_file": "catalog.morgan.edu (coid=55566, accessed 2026-05-06)",
+  "bs_cs_role": "core",
+  "bs_cloud_role": "core",
+  "in_cs_minor": true
+}

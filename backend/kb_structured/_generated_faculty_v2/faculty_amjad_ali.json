@@ -1,0 +1,25 @@
+{
+  "doc_id": "faculty_amjad_ali",
+  "title": "Faculty: Amjad Ali",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Amjad Ali",
+  "faculty_title": "Professor",
+  "office": "McMechen Hall 502",
+  "phone": "",
+  "email": "amjad.ali@morgan.edu",
+  "profile_link": "https://www.morgan.edu/computer-science/faculty-and-staff/amjad-ali",
+  "research_summary": "cybersecurity, artificial intelligence, critical infrastructure security, security policy and privacy, BYOD security, smart cities security, mobile security, cloud security.",
+  "research_keywords": [
+    "cybersecurity",
+    "artificial intelligence",
+    "critical infrastructure security",
+    "security policy and privacy",
+    "byod security",
+    "smart cities security",
+    "mobile security",
+    "cloud security"
+  ],
+  "content": "Amjad Ali - Professor\nDepartment: Computer Science, Morgan State University\nOffice: McMechen Hall 502\nEmail: amjad.ali@morgan.edu\nFaculty profile: https://www.morgan.edu/computer-science/faculty-and-staff/amjad-ali\nResearch interests: cybersecurity, artificial intelligence, critical infrastructure security, security policy and privacy, BYOD security, smart cities security, mobile security, cloud security.",
+  "source_file": "morgan.edu/computer-science/faculty-and-staff (2026-05-06)"
+}

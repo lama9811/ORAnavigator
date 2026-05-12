@@ -1,0 +1,19 @@
+{
+  "doc_id": "teaching_md_rahman_spring_2026",
+  "title": "Teaching: MD Rahman (Spring 2026)",
+  "category": "academic",
+  "subcategory": "teaching_schedule",
+  "instructor_name": "MD Rahman",
+  "semester": "Spring 2026",
+  "course_codes": [
+    "COSC251",
+    "COSC502",
+    "COSC692",
+    "COSC791",
+    "COSC792",
+    "COSC797"
+  ],
+  "section_count": 6,
+  "content": "MD Rahman - Teaching Schedule for Spring 2026\n\nCourses:\n  - COSC251 INTRODUCTION TO DATA SCIENCE | Section 1 | TR 1:00PM-2:20PM | Room: MCMN-516 | 3 cr | Traditional\n  - COSC502 DATA SCIE & ART INTELLIGENCE | Section H01 | M 5:00PM-7:20PM, TBA | Room: MCMN-519, WEB-001 | 3 cr | Non-Traditional\n  - COSC692 RESEARCH SEMINAR | Section W85 | TBA | Room: WEB-001 | 3 cr | Web\n  - COSC791 SPECIAL TOPICS in CS | Section W85 | TBA | Room: WEB-001 | 3 cr | Web\n  - COSC792 RESEARCH SEMINAR | Section W85 | TBA | Room: WEB-001 | 3 cr | Web\n  - COSC797 THESIS GUIDANCE | Section H86 | R 3:00PM-4:20PM, TBA | Room: DSTH-1, WEB-001 | 9 cr | Traditional",
+  "source_file": "schedule_*.txt"
+}

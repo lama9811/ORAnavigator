@@ -1,0 +1,19 @@
+{
+  "doc_id": "course_cosc_040",
+  "title": "Course: COSC 040 - Cooperative Work Program",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 040",
+  "course_name": "Cooperative Work Program",
+  "credits": 3,
+  "description": "",
+  "prerequisites_text": "",
+  "prerequisite_codes": [],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55563",
+  "content": "COSC 040 - Cooperative Work Program\nCredits: 3\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55563",
+  "source_file": "catalog.morgan.edu (coid=55563, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

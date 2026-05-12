@@ -1,0 +1,17 @@
+{
+  "doc_id": "course_cosc_472",
+  "title": "Course: COSC 472 - Introduction to Machine Learning",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 472",
+  "course_name": "Introduction to Machine Learning",
+  "credits": 3,
+  "prerequisites_text": "COSC 112 (Grade C or higher), MATH 312 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 112",
+    "MATH 312"
+  ],
+  "offered": "",
+  "content": "COSC 472 - Introduction to Machine Learning\nCredits: 3\nPrerequisites: COSC 112 (Grade C or higher), MATH 312 (Grade C or higher)",
+  "source_file": "academic_courses.txt"
+}

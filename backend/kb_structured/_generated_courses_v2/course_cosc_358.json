@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_358",
+  "title": "Course: COSC 358 - Network Security Fundamentals",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 358",
+  "course_name": "Network Security Fundamentals",
+  "credits": 3,
+  "description": "Introduces security awareness and implementation skills for networks. Covers protocols, security measures in router-based networks across platforms, attack techniques, and defensive responses.",
+  "prerequisites_text": "COSC 349 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 349"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55594",
+  "content": "COSC 358 - Network Security Fundamentals\nCredits: 3\nPrerequisites: COSC 349 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Introduces security awareness and implementation skills for networks. Covers protocols, security measures in router-based networks across platforms, attack techniques, and defensive responses.\n\nCurriculum role:\n  - BS Cloud Computing: Group B\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55594",
+  "source_file": "catalog.morgan.edu (coid=55594, accessed 2026-05-06)",
+  "bs_cs_role": "",
+  "bs_cloud_role": "group_b",
+  "in_cs_minor": false
+}

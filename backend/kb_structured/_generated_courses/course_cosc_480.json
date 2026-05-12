@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_cosc_480",
+  "title": "Course: COSC 480 - Introduction to Image Processing and Analysis",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 480",
+  "course_name": "Introduction to Image Processing and Analysis",
+  "credits": 3,
+  "prerequisites_text": "COSC 220 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 220"
+  ],
+  "offered": "",
+  "content": "COSC 480 - Introduction to Image Processing and Analysis\nCredits: 3\nPrerequisites: COSC 220 (Grade C or higher)",
+  "source_file": "academic_courses.txt"
+}

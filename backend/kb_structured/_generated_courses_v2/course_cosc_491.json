@@ -1,0 +1,19 @@
+{
+  "doc_id": "course_cosc_491",
+  "title": "Course: COSC 491 - Conference Course",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 491",
+  "course_name": "Conference Course",
+  "credits": 3,
+  "description": "Advanced study of a computer science topic undertaken individually under department faculty guidance.",
+  "prerequisites_text": "Permission of Department Chairperson",
+  "prerequisite_codes": [],
+  "terms_offered": "As Needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55606",
+  "content": "COSC 491 - Conference Course\nCredits: 3\nPrerequisites: Permission of Department Chairperson\nOffered: As Needed\n\nDescription: Advanced study of a computer science topic undertaken individually under department faculty guidance.\n\nCurriculum role:\n  - BS Computer Science: Group C\n  - BS Cloud Computing: Group C\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55606",
+  "source_file": "catalog.morgan.edu (coid=55606, accessed 2026-05-06)",
+  "bs_cs_role": "group_c",
+  "bs_cloud_role": "group_c",
+  "in_cs_minor": false
+}

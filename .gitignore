@@ -1,0 +1,107 @@
+# Environment variables
+.env
+backend/.env
+frontend/.env
+
+# Cloud Run service URLs written by deploy script
+.adk-url
+.backend-url
+.frontend-url
+
+# Virtual environments
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+**/__pycache__/
+
+# Uploads (user profile pictures)
+backend/uploads/
+uploads/
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build files
+frontend/dist/
+frontend/build/
+
+# Logs
+*.log
+
+# Keys (AWS / SSH / TLS)
+*.pem
+*.key
+app_bundle.tar.gz
+
+# Internal documentation (not for public repo)
+COMPREHENSIVE_DOCUMENTATION.md
+FUTURE_ROADMAP_AND_RESEARCH.md
+VISUAL_DIAGRAMS_REFERENCE.md
+README_DOCUMENTATION.md
+AI_AGENTS_PLAN.md
+CLAUDE.md
+
+# Text extraction service (cloned repo)
+text-extract-api/
+
+# Claude Code
+.claude/
+
+# Duplicate backend folder
+backend/backend/
+
+# PDFs (reports, student data)
+*.pdf
+
+# Test / temp scripts
+generate_report.py
+test_rag.py
+
+# Misc
+*.tar.gz
+*.zip
+jan.txt
+*.docx
+
+# Local database
+*.db
+
+# Workspace artifacts
+.superpowers/
+
+# Test scripts & reports
+stress_test_*.py
+stress_test_*.txt
+stress_test_*.json
+
+# PIDs
+*.pid
+
+# Legacy EC2 deployment (archived)
+deploy.sh
+quickdeploy.sh
+docker-compose.yml
+HOW_TO.md
+cs-chatbot-key.*
+
+# Utility scripts (not part of app)
+generate_audio.py
+generate_pdf.py

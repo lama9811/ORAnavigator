@@ -1,0 +1,24 @@
+{
+  "doc_id": "track_computer_systems",
+  "title": "Track Overview: Systems / Architecture Track",
+  "category": "academic",
+  "subcategory": "track_overview",
+  "track_name": "Systems / Architecture Track",
+  "course_codes": [
+    "COSC 241",
+    "COSC 243",
+    "COSC 247",
+    "COSC 343",
+    "COSC 345",
+    "COSC 354",
+    "COSC 349",
+    "COSC 413"
+  ],
+  "faculty_names": [
+    "Dr. Eric Sakk",
+    "Dr. Shuangbao 'Paul' Wang"
+  ],
+  "description": "For students interested in low-level systems, computer architecture, networks, and high-performance computing.",
+  "content": "Systems / Architecture Track\n\nFor students interested in low-level systems, computer architecture, networks, and high-performance computing.\n\nRELEVANT COURSES:\n  - COSC 241 Computer Systems and Digital Logic: Required CS core \u2014 Boolean algebra, gates, digital circuits.\n  - COSC 243 Computer Architecture: CPU, memory, I/O, ISA, parallel architectures.\n  - COSC 247 Digital Logic: Advanced digital systems design.\n  - COSC 343 Microprocessor Systems and Applications: Hands-on microcomputer hardware.\n  - COSC 345 Introduction to High Performance Computing: Parallel/distributed computing, HPC platforms.\n  - COSC 354 Operating Systems: Required CS core \u2014 concurrency, scheduling, memory management.\n  - COSC 349 Computer Networks: Required CS core \u2014 protocols, networking, distributed systems.\n  - COSC 413 Parallel Algorithms: Concurrent programming, distributed algorithms.\n\nRELEVANT FACULTY:\n  - Dr. Eric Sakk: Computer organization, cryptology.\n  - Dr. Shuangbao 'Paul' Wang: Secure architecture, IoT.\n\nRECOMMENDED PROGRESSION:\n  - COSC 111 \u2192 COSC 112 \u2192 COSC 220 \u2192 COSC 241 (foundation)\n  - COSC 243 Computer Architecture (CS Group A)\n  - COSC 354 Operating Systems (CS core)\n  - COSC 349 Computer Networks (CS core)\n  - Advanced: COSC 343 Microprocessors, COSC 345 HPC, or COSC 413 Parallel Algorithms",
+  "source_file": "synthesized 2026-05-06 from catalog + dept website"
+}

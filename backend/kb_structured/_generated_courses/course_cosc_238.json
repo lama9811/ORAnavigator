@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_cosc_238",
+  "title": "Course: COSC 238 - Object Oriented Programming",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 238",
+  "course_name": "Object Oriented Programming",
+  "credits": 4,
+  "prerequisites_text": "COSC 112 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 112"
+  ],
+  "offered": "",
+  "content": "COSC 238 - Object Oriented Programming\nCredits: 4\nPrerequisites: COSC 112 (Grade C or higher)",
+  "source_file": "academic_courses.txt"
+}

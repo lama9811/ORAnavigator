@@ -1,0 +1,163 @@
+{
+  "academic_and_student_support": {
+    "scmns_honors_program": {
+      "description": "The Honors Program within the School of Computer, Mathematical and Natural Sciences (SCMNS) offers an enhanced level of academic challenge and enrichment for academically distinguished students. Honors courses are designed to push students to perform at their highest potential, strengthening their critical thinking and independent learning skills. Additional program components focus on developing leadership skills and preparing students for future careers. Honors students receive specialized academic advising from the Honors Coordinator starting from their freshman year.",
+      "features": [
+        "Priority registration",
+        "Honors courses tailored for SCMNS Honors students",
+        "Honors academic advising",
+        "Community service opportunities",
+        "Senior Honors thesis",
+        "Social events",
+        "Professional workshops",
+        "Assistance in identifying internship opportunities",
+        "Special opportunities within the Pre-Professional Programs office",
+        "Support for competitive applications to postgraduate programs, professional schools, fellowships, and scholarships"
+      ],
+      "contact": {
+        "name": "Lisa D. Brown, Ph.D.",
+        "title": "Associate Professor, Biology",
+        "role": "SCMNS Honors Program Coordinator",
+        "office_phone": "443-885-3631",
+        "fax": "443-885-8285",
+        "email": "lisa.brown@morgan.edu",
+        "website": "https://www.morgan.edu/school-of-computer-mathematical-and-natural-sciences/students/academic-support/honors-program"
+      }
+    },
+    "clara_i_adams_honors_college": {
+      "description": "The Clara I. Adams Honors College recruits, retains, and empowers high-achieving students from Maryland and beyond, helping them graduate with a strong academic and leadership foundation. The college supports students’ personal development, service leadership, and academic growth beyond the classroom. This aligns with Morgan State University's commitment to 'Growing the Future, Leading the World.'",
+      "website": "https://www.morgan.edu/honorscollege"
+    },
+    "peer_bears_mentoring_program": {
+      "description": "The Peer B.E.A.R.S. (Bringing Enrichment and Rearing Success) Program showcases the talents and passions of upperclassmen in the SCMNS who mentor first-year students. The program aims to enhance student engagement and persistence through graduation by guiding freshmen as they navigate a new environment, rigorous coursework, and independence.",
+      "mentors": {
+        "description": "Peer BEARS mentors are upperclassmen (sophomores, juniors, seniors) who are certified College Reading and Learning Association (CRLA) Level 1 Peer Educators. They provide support to freshmen SCMNS majors throughout their first year.",
+        "contact_email": "SCMNS-PeerBEARS@morgan.edu"
+      },
+      "mentees": {
+        "description": "Mentees are freshmen with majors in SCMNS, mentored throughout their first year. To apply, complete the mentee application form. After review, the Student Success Coordinator will contact you if a mentor is assigned.",
+        "application_form": "https://docs.google.com/forms/d/e/1FAIpQLSeUo9sp1UdKXTzagrODOaj7ttVKySFTlQLAfqA-MxiP470keQ/closedform"
+      }
+    },
+    "tutoring_at_morgan": {
+      "casa": {
+        "mission": "The Center for Academic Success and Achievement (CASA) is dedicated to promoting academic success and retention by providing structured support for MSU students. The center offers services such as the CASA Academy Program, First-Year Student Program, Resource/Tutoring Center, and advising for exploratory students. CASA’s mission is to support students in achieving their academic and social goals by providing a bridge to where they want to be academically.",
+        "appointment_link": "https://morgan.navigate.eab.com/",
+        "email": "tutoring@morgan.edu",
+        "hours": "Mondays - Fridays 9 AM - 5 PM",
+        "location": "Tyler Hall 117J (in-person) and Google Meet (online)",
+        "more_info": "https://www.morgan.edu/tutoring"
+      },
+      "academic_enrichment_program": {
+        "mission": "The Academic Enrichment Program (AEP) supports students’ academic success by providing a holistic college experience, with a focus on academic success. AEP offers tutoring services, living and learning communities, leadership development, and personal growth opportunities.",
+        "contact_info": {
+          "phone": "443-885-4452",
+          "email": "aeptutor@morgan.edu"
+        },
+        "schedule": {
+          "main_office": {
+            "location": "Rawlings Hall, 128-B",
+            "tutoring_link": "https://aepatmsu.simplybook.me/v2/"
+          }
+        },
+        "labs": [
+          {
+            "location": "Blount Towers, Room 150",
+            "hours": "Sunday - Thursday 4 PM - 12 AM"
+          },
+          {
+            "location": "Cummings House, Room 020",
+            "hours": "Monday - Saturday 8 AM - 4 PM & 12 AM - 2 AM"
+          },
+          {
+            "location": "Marble Hall Academic Resource Center",
+            "hours": "Sunday - Friday 12 PM - 8 PM"
+          }
+        ]
+      },
+      "computer_science_tutors": {
+        "description": "The Computer Science Department provides tutoring services to students, reinforcing learning outside of the classroom. This service is designed to enhance understanding of core computer science concepts and improve problem-solving skills.",
+        "tutor_information": {
+          "location": "McMechen Suite 507",
+          "contact": {
+            "name": "Dr. Roshan Paudel",
+            "title": "Coordinator of the MS in Bioinformatics Program, Professor of Practice",
+            "office": "McMechen Hall 507D",
+            "phone": "(443) 885-3096",
+            "email": "Roshan.Paudel@morgan.edu"
+          }
+        }
+      }
+    },
+    "writing_center": {
+      "description": "The Writing Center supports undergraduate and graduate students across all disciplines to improve their writing and communication skills. The center offers free tutoring services for a variety of writing assignments, from first-year papers to graduate theses.",
+      "contact_email": "writingcenter@morgan.edu",
+      "appointment_process": "Schedule a session in advance, email your availability, and provide details of what you'd like to work on. Tutors are available for writing assistance across all levels.",
+      "walk_in_availability": "Walk-ins are welcomed, but appointments are preferred.",
+      "website": "https://www.morgan.edu/writingcenter"
+    },
+
+    "helpful_links": {
+  "Office of Financial Aid": {
+    "description": "Find support for funding your education.",
+    "url": "https://www.morgan.edu/financialaid"
+  },
+  "tuition_and_fees": {
+  "description": "View current undergraduate and graduate tuition rates, mandatory fees, and billing information.",
+  "url": "https://www.morgan.edu/tuition-fees"
+},
+  "NetTutor (24/7 Online Tutoring Service)": {
+    "description": "Access academic assistance anytime through your Canvas account.",
+    "url": "https://www.morgan.edu/canvas"
+  },
+  "Office of Residence Life and Housing": {
+    "description": "Learn about on-campus living options.",
+    "url": "https://www.morgan.edu/residencelife"
+  },
+  "Office of Student Disability Support Services": {
+    "description": "Get accommodations and support.",
+    "url": "https://www.morgan.edu/sdss/"
+  },
+  "Tutoring Center": {
+    "description": "Receive in-person academic help.",
+    "url": "https://www.morgan.edu/tutoring"
+  },
+  "Center for Career Development": {
+    "description": "Explore career resources and opportunities.",
+    "url": "https://www.morgan.edu/careerdevelopment/"
+  },
+  "University Counseling Center": {
+    "description": "Access mental health and wellness services.",
+    "url": "https://www.morgan.edu/counselingcenter"
+  },
+  "Office of Student Life and Development": {
+    "description": "Engage in campus activities and leadership opportunities.",
+    "url": "https://www.morgan.edu/studentlife"
+  },
+  "Clara I. Adams Honors College": {
+    "description": "Discover honors programs and benefits.",
+    "url": "https://www.morgan.edu/honorscollege"
+  },
+  "Office of International Student and Faculty Services": {
+    "description": "Support for international students and faculty.",
+    "url": "https://www.morgan.edu/oisfs"
+  },
+
+  "GPA Calculator": {
+    "description": "Calculate your expected grade point average.",
+    "url": "http://www.calculator.net/gpa-calculator.html"
+  },
+
+  
+    "description": "Explore the campus layout and buildings.",
+    "url": "https://map.morgan.edu/?_gl=1*1it00ga*_ga*Mzk1MDAyMTQxLjE2NjkxMzE2MjI.*_ga_T3TCY7Q7D7*MTc0NDIzMDU1NC40MDYuMS4xNzQ0MjM0MjYwLjYwLjAuMA.."
+  },
+  "Events happening at Morgan": {
+    "description": "Stay up to date with all campus events.",
+    "url": "https://events.morgan.edu/?_gl=1*wvobn2*_ga*Mzk1MDAyMTQxLjE2NjkxMzE2MjI.*_ga_T3TCY7Q7D7*MTc0NDIzMDU1NC40MDYuMS4xNzQ0MjM0MzI2LjU2LjAuMA.."
+  }
+
+
+    }
+  
+}

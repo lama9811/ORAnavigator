@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_cosc_486",
+  "title": "Course: COSC 486 - Applied Quantum Computing",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 486",
+  "course_name": "Applied Quantum Computing",
+  "credits": 3,
+  "prerequisites_text": "COSC 386 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 386"
+  ],
+  "offered": "",
+  "content": "COSC 486 - Applied Quantum Computing\nCredits: 3\nPrerequisites: COSC 386 (Grade C or higher)",
+  "source_file": "academic_courses.txt"
+}

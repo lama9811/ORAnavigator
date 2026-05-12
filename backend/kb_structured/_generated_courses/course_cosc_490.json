@@ -1,0 +1,14 @@
+{
+  "doc_id": "course_cosc_490",
+  "title": "Course: COSC 490 - Senior Project",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 490",
+  "course_name": "Senior Project",
+  "credits": 3,
+  "prerequisites_text": "Senior standing, Department Chair permission",
+  "prerequisite_codes": [],
+  "offered": "Fall, Spring",
+  "content": "COSC 490 - Senior Project\nCredits: 3\nPrerequisites: Senior standing, Department Chair permission\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

@@ -1,0 +1,17 @@
+{
+  "doc_id": "course_cosc_241",
+  "title": "Course: COSC 241 - Computer Systems and Digital Logic",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 241",
+  "course_name": "Computer Systems and Digital Logic",
+  "credits": 3,
+  "prerequisites_text": "COSC 112 (Grade C or higher), MATH 141 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 112",
+    "MATH 141"
+  ],
+  "offered": "Fall, Spring",
+  "content": "COSC 241 - Computer Systems and Digital Logic\nCredits: 3\nPrerequisites: COSC 112 (Grade C or higher), MATH 141 (Grade C or higher)\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

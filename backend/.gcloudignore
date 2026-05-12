@@ -1,0 +1,24 @@
+# Virtual environments (top-level and nested)
+.venv/
+venv/
+backend/.venv/
+backend/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+*.env
+
+# Not needed in image
+*.log
+tests/
+docs/
+*.sqlite3
+*.dll
+*.pyd

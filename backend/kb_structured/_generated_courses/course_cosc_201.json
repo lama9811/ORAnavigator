@@ -1,0 +1,14 @@
+{
+  "doc_id": "course_cosc_201",
+  "title": "Course: COSC 201 - Computer Ethics",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 201",
+  "course_name": "Computer Ethics",
+  "credits": 1,
+  "prerequisites_text": "None",
+  "prerequisite_codes": [],
+  "offered": "Fall, Spring",
+  "content": "COSC 201 - Computer Ethics\nCredits: 1\nPrerequisites: None\nOffered: Fall, Spring",
+  "source_file": "academic_courses.txt"
+}

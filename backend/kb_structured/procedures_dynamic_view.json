@@ -1,0 +1,9 @@
+{
+  "doc_id": "procedures_dynamic_view",
+  "title": "Understanding Dynamic View in Smartsheet",
+  "category": "procedures",
+  "subcategory": "dynamic_view",
+  "content": "Understanding Dynamic View in Smartsheet\nMorgan State University - Office of the Registrar\n\nThis guide is for FACULTY AND STAFF use. Dynamic View allows you to see the status of any request submitted through Smartsheet.\n\n---\n\nACCESSING DYNAMIC VIEW\nFrom the Smartsheet Dashboard, Dynamic View is always located after the request type box. It lets you see the status of any request.\n\n---\n\nDASHBOARD LAYOUT\nThe dashboard includes the following sections:\n- Important Links\n- Registrar Dates\n- Faculty Resources Drive\n- Grade Change Form\n- Excess Credit Students\n- Transfer Credit Form\n\n---\n\nDYNAMIC VIEW COLUMNS\nWhen viewing requests in Dynamic View, the following columns are displayed:\n- Comments/Action Name\n- Request\n- Status\n- Current Approver\n- Last Name\n- First Name\n- Current Catalog\n- Proposed Catalog\n\n---\n\nFILTER VIEW\nYou can filter results by specific criteria such as a student's ID number to quickly locate a particular request.\n\n---\n\nCOLOR CODING\n- RED: The request is overdue.\n- GRAY: The request has been voided or cancelled.\n\n---\n\nKEY FIELDS EXPLAINED\n\nRequest Date: The last date the student submitted the request or made corrections to it.\n\nStatus: Shows the overall progress of the request through the approval workflow.\n\nCurrent Approver: Identifies who currently has the request and is responsible for the next action.\n\n---\n\nVIEWING DETAILS\nAdditional data about a request appears when you click on the row. This opens a details panel with more information about the submission.\n\nFor the full official guide with screenshots, view: [Dynamic View Guide](https://drive.google.com/file/d/1PYF2bl0_FE4QvIKo17K5bsbVoQEcoWKQ/view)",
+  "source_file": "procedures_dynamic_view.json",
+  "size_bytes": 0
+}

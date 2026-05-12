@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_351",
+  "title": "Course: COSC 351 - Cybersecurity",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 351",
+  "course_name": "Cybersecurity",
+  "credits": 3,
+  "description": "Presents threats analyzing and prediction, vulnerabilities and risks. Topics include identification and authentication, encryption and certifications, security in UNIX and Windows environments, malicious software, trusted computer systems, network attacks and defenses, firewalls, intrusion detection and prevention, database security.",
+  "prerequisites_text": "COSC 112 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "COSC 112"
+  ],
+  "terms_offered": "Fall, Spring",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55588",
+  "content": "COSC 351 - Cybersecurity\nCredits: 3\nPrerequisites: COSC 112 completed with a grade of C or higher\nOffered: Fall, Spring\n\nDescription: Presents threats analyzing and prediction, vulnerabilities and risks. Topics include identification and authentication, encryption and certifications, security in UNIX and Windows environments, malicious software, trusted computer systems, network attacks and defenses, firewalls, intrusion detection and prevention, database security.\n\nCurriculum role:\n  - BS Computer Science: Core\n  - BS Cloud Computing: Core\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55588",
+  "source_file": "catalog.morgan.edu (coid=55588, accessed 2026-05-06)",
+  "bs_cs_role": "core",
+  "bs_cloud_role": "core",
+  "in_cs_minor": false
+}

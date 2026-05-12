@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_383",
+  "title": "Course: COSC 383 - Numerical Methods and Programming",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 383",
+  "course_name": "Numerical Methods and Programming",
+  "credits": 3,
+  "description": "Derives and applies techniques for approximation of numerical variables and parameters. Analyzes mathematical procedures for computational efficiency and error accumulation. Develops algorithms for numerical methods implementation in high-level computer language.",
+  "prerequisites_text": "MATH 242 completed with a grade of C or higher",
+  "prerequisite_codes": [
+    "MATH 242"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55598",
+  "content": "COSC 383 - Numerical Methods and Programming\nCredits: 3\nPrerequisites: MATH 242 completed with a grade of C or higher\nOffered: As needed\n\nDescription: Derives and applies techniques for approximation of numerical variables and parameters. Analyzes mathematical procedures for computational efficiency and error accumulation. Develops algorithms for numerical methods implementation in high-level computer language.\n\nCurriculum role:\n  - BS Computer Science: Group B\n  - BS Cloud Computing: Group B\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=55598",
+  "source_file": "catalog.morgan.edu (coid=55598, accessed 2026-05-06)",
+  "bs_cs_role": "group_b",
+  "bs_cloud_role": "group_b",
+  "in_cs_minor": false
+}

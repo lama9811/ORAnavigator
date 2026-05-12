@@ -1,0 +1,21 @@
+{
+  "doc_id": "faculty_jianzhou_mao",
+  "title": "Faculty: Dr. Jianzhou Mao",
+  "category": "academic",
+  "subcategory": "faculty_profile",
+  "faculty_name": "Dr. Jianzhou Mao",
+  "faculty_title": "Research Assistant Professor",
+  "office": "McMechen Hall 627",
+  "phone": "",
+  "email": "jianzhou.mao@morgan.edu",
+  "research_summary": "machine learning, deep learning, AI applications in big data analytics and optimization, quantum computing, cybersecurity.",
+  "research_keywords": [
+    "machine learning",
+    "deep learning",
+    "ai applications in big data analytics and optimization",
+    "quantum computing",
+    "cybersecurity"
+  ],
+  "content": "Dr. Jianzhou Mao - Research Assistant Professor\nOffice: McMechen Hall 627\nEmail: jianzhou.mao@morgan.edu\nResearch interests: machine learning, deep learning, AI applications in big data analytics and optimization, quantum computing, cybersecurity.",
+  "source_file": "academic_faculty.txt"
+}

@@ -1,0 +1,123 @@
+.re { padding: 24px 32px; max-width: 1100px; margin: 0 auto; }
+.re-center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; gap: 12px; text-align: center; }
+.re-muted { color: var(--text-secondary); font-size: 0.85rem; }
+.re-primary-btn { background: var(--msu-blue); color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.re-spin { animation: reSpin 1s linear infinite; }
+@keyframes reSpin { to { transform: rotate(360deg); } }
+
+/* Header with progress ring */
+.re-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.re-head h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+.re-progress-ring { position: relative; width: 52px; height: 52px; }
+.re-ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.re-ring-bg { fill: none; stroke: var(--border-light); stroke-width: 3; }
+.re-ring-fill { fill: none; stroke: var(--google-green); stroke-width: 3; stroke-linecap: round; transition: stroke-dasharray 1s ease; }
+.re-ring-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; color: var(--text-primary); }
+
+/* Stats Bar */
+.re-stats { display: flex; gap: 20px; padding: 14px 20px; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: 14px; margin-bottom: 16px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.re-stat { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+.re-stat.danger { color: var(--google-red); }
+.re-stat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.re-stat-dot.completed { background: #34a853; }
+.re-stat-dot.in_progress { background: #4285f4; }
+.re-stat-dot.at_risk { background: #ea4335; }
+.re-stat-dot.future { background: #dadce0; }
+
+/* Danger Paths */
+.re-danger-section { margin-bottom: 16px; }
+.re-danger-section h3 { font-size: 0.9rem; font-weight: 700; color: var(--google-red); display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+.re-danger-card { display: block; width: 100%; text-align: left; padding: 12px 16px; border: 1.5px solid #fce8e6; border-radius: 12px; background: #fff8f7; cursor: pointer; margin-bottom: 8px; transition: all 0.15s; }
+.re-danger-card:hover { border-color: #ea4335; box-shadow: 0 2px 8px rgba(234,67,53,0.1); }
+.re-danger-card.active { border-color: #ea4335; background: #fce8e6; }
+.re-danger-title { font-weight: 700; font-size: 0.85rem; color: #d93025; }
+.re-danger-detail { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* Graph Container */
+.re-graph-container { height: 520px; border: 1px solid var(--border-light); border-radius: 18px; overflow: hidden; background: #fafbfc; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.re-graph-container .react-flow__controls { border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.re-graph-container .react-flow__edge-path { stroke-linecap: round; }
+/* Animated edge flow effect */
+.re-graph-container .react-flow__edge.animated path { animation: reEdgeFlow 1.5s linear infinite; stroke-dasharray: 6 4; }
+@keyframes reEdgeFlow { to { stroke-dashoffset: -20; } }
+
+/* Course Nodes */
+.re-node { padding: 10px 14px; border-radius: 12px; border: 2px solid; cursor: pointer; min-width: 95px; text-align: center; transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), box-shadow 0.2s; position: relative; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.re-node:hover { transform: scale(1.12); box-shadow: 0 6px 20px rgba(0,0,0,0.15); z-index: 10; }
+.re-node.selected { transform: scale(1.15); z-index: 11; }
+.re-node.highlighted { animation: rePulse 1.5s ease-in-out infinite; }
+@keyframes rePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(234,67,53,0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(234,67,53,0); }
+}
+.re-node-code { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.3px; }
+.re-node-score { font-size: 0.7rem; font-weight: 700; margin-top: 2px; }
+.re-node-grade { font-size: 0.65rem; font-weight: 600; opacity: 0.8; margin-top: 1px; }
+.re-node-risk { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; background: #ea4335; color: #fff; border-radius: 50%; font-size: 0.65rem; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(234,67,53,0.3); }
+
+/* ===== Detail Card (below graph) ===== */
+.re-detail { margin-top: 16px; padding: 0; background: var(--bg-primary); border: 1px solid var(--border-light); border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; animation: reDetailIn 0.3s cubic-bezier(0.4,0,0.2,1); position: relative; }
+@keyframes reDetailIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+.re-detail-close { position: absolute; top: 16px; right: 16px; background: var(--bg-secondary); border: none; cursor: pointer; color: var(--text-tertiary); padding: 6px; border-radius: 8px; z-index: 2; transition: all 0.15s; }
+.re-detail-close:hover { color: var(--text-primary); background: var(--border-light); }
+
+/* Top section with status, title, score */
+.re-detail-top { display: flex; align-items: center; gap: 16px; padding: 20px 24px 14px; flex-wrap: wrap; }
+.re-status-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 12px; border-radius: 20px; flex-shrink: 0; }
+.re-status-badge.completed { background: #e6f4ea; color: #1e7e34; }
+.re-status-badge.in_progress { background: #e8f0fe; color: #1a73e8; }
+.re-status-badge.at_risk { background: #fce8e6; color: #d93025; }
+.re-status-badge.future { background: #f1f3f4; color: #5f6368; }
+.re-detail-title { flex: 1; min-width: 0; }
+.re-detail-title h3 { font-size: 1.3rem; font-weight: 800; margin: 0; line-height: 1.2; }
+.re-detail-title span { font-size: 0.85rem; color: var(--text-secondary); }
+.re-detail-badges { display: flex; gap: 8px; flex-shrink: 0; }
+.re-badge-score { font-size: 1.4rem; font-weight: 800; color: var(--google-green); }
+.re-badge-grade { font-size: 1.4rem; font-weight: 800; color: var(--text-primary); }
+
+/* Meta row */
+.re-detail-meta { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 24px 16px; font-size: 0.75rem; }
+.re-detail-meta span { background: var(--bg-secondary); padding: 4px 12px; border-radius: 8px; color: var(--text-secondary); font-weight: 600; }
+
+/* Grid for Prereqs + Unlocks */
+.re-detail-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border-light); }
+.re-detail-col { padding: 16px 24px 20px; }
+.re-detail-col.requires { border-right: 1px solid var(--border-light); }
+.re-detail-col.unlocks { }
+
+.re-col-header { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.re-col-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Clickable course chips */
+.re-chip-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 700; padding: 5px 11px; border-radius: 8px; border: 1.5px solid transparent; cursor: pointer; transition: all 0.15s; }
+.re-chip-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
+.re-chip-btn.completed { background: #e6f4ea; color: #1e7e34; border-color: #c8e6c9; }
+.re-chip-btn.in_progress { background: #e8f0fe; color: #1a73e8; border-color: #bbdefb; }
+.re-chip-btn.at_risk { background: #fce8e6; color: #d93025; border-color: #f8bbd0; }
+.re-chip-btn.future { background: #f1f3f4; color: #5f6368; border-color: #e0e0e0; }
+.re-chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.re-chip-btn.completed .re-chip-dot { background: #34a853; }
+.re-chip-btn.in_progress .re-chip-dot { background: #4285f4; }
+.re-chip-btn.at_risk .re-chip-dot { background: #ea4335; }
+.re-chip-btn.future .re-chip-dot { background: #9aa0a6; }
+.re-chip-grade { font-size: 0.6rem; opacity: 0.8; margin-left: 2px; }
+
+/* Dark mode */
+body.dark .re-stats { background: var(--bg-secondary); border-color: var(--border-dark, #444); }
+body.dark .re-graph-container { background: #1a1a1a; border-color: var(--border-dark, #444); }
+body.dark .re-node { filter: brightness(0.85); }
+body.dark .re-detail { background: var(--bg-secondary); border-color: var(--border-dark, #444); }
+body.dark .re-detail-grid { border-color: var(--border-dark, #444); }
+body.dark .re-detail-col.requires { border-color: var(--border-dark, #444); }
+body.dark .re-danger-card { background: rgba(234,67,53,0.08); border-color: rgba(234,67,53,0.2); }
+body.dark .re-ring-bg { stroke: var(--border-dark, #444); }
+
+@media (max-width: 768px) {
+  .re { padding: 16px; }
+  .re-graph-container { height: 380px; }
+  .re-detail-grid { grid-template-columns: 1fr; }
+  .re-detail-col.requires { border-right: none; border-bottom: 1px solid var(--border-light); }
+  .re-detail-top { gap: 10px; }
+  .re-badge-score, .re-badge-grade { font-size: 1.1rem; }
+}

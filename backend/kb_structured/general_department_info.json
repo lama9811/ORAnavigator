@@ -1,0 +1,9 @@
+{
+  "doc_id": "general_department_info",
+  "title": "General Department Info",
+  "category": "general",
+  "subcategory": "department_info",
+  "content": "======================================================================\nMORGAN STATE UNIVERSITY - COMPUTER SCIENCE DEPARTMENT\n======================================================================\n\nUNIVERSITY LEADERSHIP:\n----------------------------------------\n  President: Dr. David K. Wilson\n    Office: Truth Hall\n    Email: president@morgan.edu\n  Provost: Dr. Hongtao Yu\n    Office: Truth Hall\n    Email: provost@morgan.edu\n  SCMNS Dean: Dr. Paul Tchounwou\n    Office: Dixon Science Research Center, Room 200\n    Phone: 443-885-4515\n    Email: scmns-deans-office@morgan.edu\n\nABOUT THE DEPARTMENT:\n----------------------------------------\nThe Morgan State University Computer Science Program is part of the School of Computer, Mathematics, and Natural Sciences. The program provides students with fundamental computer science knowledge and training, preparing them to apply their skills to solve real-world problems. Students learn problem definition, feasibility analysis, solution strategy development, design, implementation, testing, modification, documentation, and communication. The curriculum balances practical knowledge and theoretical foundations to support career readiness and adaptability in the evolving discipline.\n\nDEGREES OFFERED:\n  - Bachelor of Science (BS) in Computer Science\n  - Master of Science (MS) in Advanced Computing\n  - Ph.D. in Advanced Computing\n  - Bachelor of Science (BS) in Cloud Computing\n  - Master of Science (MS) in Bioinformatics\n  - 4+1 Bachelor\u2019s and Master\u2019s Program in Computer Science\n",
+  "source_file": "general_department_info.txt",
+  "size_bytes": 1539
+}

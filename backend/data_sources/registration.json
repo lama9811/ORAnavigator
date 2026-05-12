@@ -1,0 +1,43 @@
+{
+  "credit_policy": {
+  "max_credits_per_semester": 18,
+  "excess_credit": {
+    "standard_limit": 21,
+    "gpa_requirement": "3.0 or higher",
+    "absolute_max": 24,
+    "note": "To request more than 21 credits, you must submit the Excess Credit Request Form and have a GPA ≥ 3.0. For any permission beyond 21 credits or exceptions, please contact the Department Chair at compsci-chair@morgan.edu."
+  }
+},
+  "office_of_registrar": {
+    "contact_methods": "There are various methods students may utilize to contact the Office of the Registrar for assistance.",
+    "email_addresses": {
+      "transcript_assistance": {
+        "description": "To request assistance for any of our outgoing transcript services",
+        "email": "transcripts@morgan.edu"
+      },
+      "graduation_diploma_assistance": {
+        "description": "To request assistance with graduation clearance and/or duplicate/replacement diploma services",
+        "email": "graduation@morgan.edu"
+      },
+      "registration_assistance": {
+        "description": "To request assistance with course registration and/or general course inquiries",
+        "email": "registration@morgan.edu"
+      },
+      "records_assistance": {
+        "description": "To request assistance with general student records (change/declaration of major/minor/concentration, GPA calculation, course repeats, exclusions, etc.)",
+        "email": "records@morgan.edu"
+      },
+      "transfer_credit_evaluation": {
+        "description": "To request assistance regarding transfer credit evaluation, articulations, and permission to take courses off-campus",
+        "email": "transfer@morgan.edu"
+      },
+      "veterans_assistance": {
+        "description": "To request assistance regarding veteran/military benefits and services",
+        "email": "veterans@morgan.edu"
+      }
+    }
+  }
+
+
+
+}

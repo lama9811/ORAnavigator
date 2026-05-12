@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_cosc_338",
+  "title": "Course: COSC 338 - Mobile App Design & Development",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 338",
+  "course_name": "Mobile App Design & Development",
+  "credits": 3,
+  "description": "Exploration into mobile app development through design and implementation of API clients. Students learn mobile app coding structures and design to develop mobile-based computational solutions.",
+  "prerequisites_text": "COSC 238 completed with a grade of C or higher or department permission",
+  "prerequisite_codes": [
+    "COSC 238"
+  ],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57278",
+  "content": "COSC 338 - Mobile App Design & Development\nCredits: 3\nPrerequisites: COSC 238 completed with a grade of C or higher or department permission\n\nDescription: Exploration into mobile app development through design and implementation of API clients. Students learn mobile app coding structures and design to develop mobile-based computational solutions.\n\nCurriculum role:\n  - BS Computer Science: Group B\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57278",
+  "source_file": "catalog.morgan.edu (coid=57278, accessed 2026-05-06)",
+  "bs_cs_role": "group_b",
+  "bs_cloud_role": "",
+  "in_cs_minor": false
+}

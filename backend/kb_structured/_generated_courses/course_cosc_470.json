@@ -1,0 +1,16 @@
+{
+  "doc_id": "course_cosc_470",
+  "title": "Course: COSC 470 - Artificial Intelligence",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 470",
+  "course_name": "Artificial Intelligence",
+  "credits": 3,
+  "prerequisites_text": "COSC 220 (Grade C or higher)",
+  "prerequisite_codes": [
+    "COSC 220"
+  ],
+  "offered": "",
+  "content": "COSC 470 - Artificial Intelligence\nCredits: 3\nPrerequisites: COSC 220 (Grade C or higher)",
+  "source_file": "academic_courses.txt"
+}

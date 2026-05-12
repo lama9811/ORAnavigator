@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      JWT_SECRET: ci-test-secret
+      DATABASE_URL: sqlite:///./ci_test.db
+      VERTEX_AI_AGENT_URL: http://localhost:8080
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Check backend imports
+        run: |
+          python -c "import main; print('Backend imports OK')"
+          python -c "import vertex_agent; print('Agent client OK')"
+          python -c "import cache; print('Cache module OK')"
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  agent-check:
+    name: ADK Agent Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: adk_agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install google-adk==1.23.0
+      - name: Verify agent loads
+        run: python -c "from cs_navigator_unified.agent import root_agent; print(root_agent.name)"
+
+  health-check:
+    name: Production Health
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: [backend-lint, frontend-build, agent-check]
+    steps:
+      - name: Check backend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.inavigator.ai/health)
+          echo "Backend: $STATUS"
+          test "$STATUS" = "200"
+      - name: Check frontend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://cs.inavigator.ai)
+          echo "Frontend: $STATUS"
+          test "$STATUS" = "200"

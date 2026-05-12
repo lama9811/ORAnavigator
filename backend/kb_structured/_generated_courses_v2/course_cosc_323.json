@@ -1,0 +1,22 @@
+{
+  "doc_id": "course_cosc_323",
+  "title": "Course: COSC 323 - Introduction to Cryptography",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "COSC 323",
+  "course_name": "Introduction to Cryptography",
+  "credits": 3,
+  "description": "Modern cryptography course emphasizing fundamental aspects including digital signatures, pseudo-random number generation, and basic protocols with computational considerations. Self-contained with integrated statistical and mathematical coverage, exposing students to practical open problems in the field.",
+  "prerequisites_text": "COSC 238 and MATH 312 completed with grades of C or higher, or instructor permission",
+  "prerequisite_codes": [
+    "COSC 238",
+    "MATH 312"
+  ],
+  "terms_offered": "As needed",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57147",
+  "content": "COSC 323 - Introduction to Cryptography\nCredits: 3\nPrerequisites: COSC 238 and MATH 312 completed with grades of C or higher, or instructor permission\nOffered: As needed\n\nDescription: Modern cryptography course emphasizing fundamental aspects including digital signatures, pseudo-random number generation, and basic protocols with computational considerations. Self-contained with integrated statistical and mathematical coverage, exposing students to practical open problems in the field.\n\nCurriculum role:\n  - BS Computer Science: Group B\n  - BS Cloud Computing: Group B\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57147",
+  "source_file": "catalog.morgan.edu (coid=57147, accessed 2026-05-06)",
+  "bs_cs_role": "group_b",
+  "bs_cloud_role": "group_b",
+  "in_cs_minor": false
+}

@@ -1,0 +1,21 @@
+{
+  "doc_id": "course_clco_471",
+  "title": "Course: CLCO 471 - Data Analytics in Cloud",
+  "category": "academic",
+  "subcategory": "course_detail",
+  "course_code": "CLCO 471",
+  "course_name": "Data Analytics in Cloud",
+  "credits": 3,
+  "description": "Overview of Big Data applications, OpenStack, Apache Hadoop Ecosystem, MapReduce programming model, and Spark framework. Covers applications in bioinformatics, machine learning, and business domains including marketing analytics, retail, hospitality, consumer goods, and defense. Focuses on cloud computing for manipulating, storing, and analyzing big data.",
+  "prerequisites_text": "CLCO 261 with grade of C or higher",
+  "prerequisite_codes": [
+    "CLCO 261"
+  ],
+  "terms_offered": "",
+  "catalog_url": "https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57244",
+  "content": "CLCO 471 - Data Analytics in Cloud\nCredits: 3\nPrerequisites: CLCO 261 with grade of C or higher\n\nDescription: Overview of Big Data applications, OpenStack, Apache Hadoop Ecosystem, MapReduce programming model, and Spark framework. Covers applications in bioinformatics, machine learning, and business domains including marketing analytics, retail, hospitality, consumer goods, and defense. Focuses on cloud computing for manipulating, storing, and analyzing big data.\n\nCurriculum role:\n  - BS Computer Science: Group C\n  - BS Cloud Computing: Group C\n\nCatalog page: https://catalog.morgan.edu/preview_course_nopop.php?catoid=26&coid=57244",
+  "source_file": "catalog.morgan.edu (coid=57244, accessed 2026-05-06)",
+  "bs_cs_role": "group_c",
+  "bs_cloud_role": "group_c",
+  "in_cs_minor": false
+}

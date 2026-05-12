@@ -1,0 +1,71 @@
+{
+  "scmns": {
+    "name": "School of Computer, Mathematical & Natural Sciences",
+    "acronym": "SCMNS",
+    "dean": {
+      "name": "Dr. Paul Tchounwou",
+      "title": "Dean, School of Computer, Mathematical & Natural Sciences",
+      "office": "Dixon Science Research Center, Room 200",
+      "phone": "443-885-4515",
+      "email": "scmns-deans-office@morgan.edu"
+    },
+    "location": "Dixon Science Research Center, Room 200",
+    "phone": "443-885-4515",
+    "email": "scmns-deans-office@morgan.edu",
+    "departments": [
+      {
+        "name": "Department of Computer Science",
+        "chair": "Dr. Paul Wang",
+        "location": "McMechen Hall",
+        "phone": "443-885-3962",
+        "email": "compsci@morgan.edu"
+      },
+      {
+        "name": "Department of Mathematics",
+        "location": "Spencer Hall"
+      },
+      {
+        "name": "Department of Biology",
+        "location": "Dixon Science Research Center"
+      },
+      {
+        "name": "Department of Chemistry",
+        "location": "Dixon Science Research Center"
+      },
+      {
+        "name": "Department of Physics",
+        "location": "Spencer Hall"
+      }
+    ],
+    "programs_and_services": {
+      "peer_bears": {
+        "name": "Peer B.E.A.R.S. Mentorship Program",
+        "description": "Peer mentorship program connecting new students with experienced upperclassmen in STEM fields"
+      },
+      "research_facilities": {
+        "description": "State-of-the-art research facilities for faculty and student research"
+      },
+      "pre_college_programs": {
+        "description": "STEM outreach programs for K-12 students to explore science and technology careers"
+      }
+    },
+    "student_resources": {
+      "advising": "Each department has dedicated academic advisors",
+      "tutoring": "STEM tutoring available through Academic Success Center",
+      "research_opportunities": "Undergraduate research programs available in all departments"
+    }
+  },
+  "bursar": {
+    "name": "Office of the Bursar",
+    "phone": "443-885-3108",
+    "email": "bursar@morgan.edu",
+    "location": "Tyler Hall",
+    "tuition_info": "https://www.morgan.edu/tuition-fees",
+    "services": [
+      "Tuition and fee payments",
+      "Payment plans",
+      "Billing inquiries",
+      "Refunds"
+    ]
+  }
+}
