@@ -37,45 +37,69 @@ Deployed on Google Cloud Run with multi-instance scaling, Cloud SQL session pers
 
 ## Architecture
 
+The diagram below shows the **full** request topology — not just chat. Every browser-side component (signup, login, profile, admin, chat) talks only to the REST API, which is the sole entry point. Cache and ADK Agent are dependencies of the REST API, not peers — they never talk to the browser directly. Solid arrows are request paths; dashed arrows are the return paths the REST API serves back over the same HTTP/SSE connection.
+
 ```mermaid
 flowchart TB
-    subgraph Client["Frontend (React 19 + Vite)"]
-        UI[Chat Interface]
-        SSE[SSE Streaming]
+    subgraph Client["Frontend (React 19 + Vite) — served by nginx"]
+        Auth[Signup / Login / Verify]
+        Profile[Profile · Admin Dashboard · Tickets]
+        Chat[Chatbox + SSE reader]
     end
 
-    subgraph Backend["Backend (FastAPI)"]
-        API[REST API]
-        Cache[L1 in-memory + L2 Redis + L3 semantic]
+    subgraph Backend["Backend (FastAPI on Cloud Run)"]
+        API[REST API · 60+ endpoints<br/>JWT auth · request orchestration]
+        Cache["Cache<br/>L1 in-memory · L2 Redis · L3 semantic"]
         GG[Grounding Gate]
         FF[Staff-name Faithfulness Check]
     end
 
-    subgraph ADK["ADK Agent (Cloud Run, private)"]
-        PF[KB Prefetch / REG Layer 1]
-        Agent[Gemini 2.5 Flash]
-        VAS[VertexAiSearchTool / REG Layer 2]
-        KB[(Vertex AI Search<br/>382 docs)]
+    subgraph ADK["ADK Agent (Cloud Run · private)"]
+        PF["KB Prefetch · REG Layer 1<br/>TF-IDF over 382 docs"]
+        Gemini[Gemini 2.5 Flash]
+        VAS["VertexAiSearchTool · REG Layer 2<br/>semantic search tool"]
     end
 
-    subgraph Data["Persistent state"]
-        DB[(Cloud SQL MySQL 8.4<br/>users, sessions, tickets)]
-        Secrets[Secret Manager]
-    end
+    KB[("Vertex AI Search<br/>382 docs")]
+    DB[("Cloud SQL MySQL 8.4<br/>users · sessions · chat_history<br/>tickets · feedback")]
+    Secrets[Secret Manager]
 
-    UI --> API
-    API --> Cache
-    Cache --> ADK
-    PF --> Agent
-    Agent --> VAS
+    %% Frontend entry points — all go through REST API only
+    Auth -->|HTTPS JSON| API
+    Profile -->|HTTPS JSON| API
+    Chat -->|HTTPS POST /chat/stream| API
+
+    %% REST API handles state
+    API <-->|"CRUD: users, history, tickets"| DB
+    API -.->|fetch at container boot| Secrets
+
+    %% Chat-only path: cache → ADK fallback
+    API -->|1 . check first| Cache
+    Cache -.->|hit · short-circuit| API
+    API -->|2 . on cache miss| PF
+    PF --> Gemini
+    Gemini --> VAS
     VAS --> KB
-    Agent --> API
+    KB -.->|grounded passages| Gemini
+    Gemini -.->|streamed tokens via SSE| API
+
+    %% Output validation before responding
     API --> GG
     GG --> FF
-    FF --> UI
-    API --> DB
-    Backend --> Secrets
+    FF -.->|validated answer| API
+
+    %% Single return path to all frontend components
+    API -.->|JSON / SSE response| Auth
+    API -.->|JSON response| Profile
+    API -.->|SSE stream| Chat
 ```
+
+**Why the diagram looks this way:**
+
+- The frontend has many components (auth, profile, admin, chat) — **only chat hits the cache + ADK path**. Signup, login, profile updates, ticket CRUD, and admin actions are plain REST → SQL.
+- Every HTTP response physically travels back through the REST API to the browser over the same connection. The Grounding Gate and Faithfulness Check do **not** talk to the browser directly — they hand validated output back to the REST API, which streams it.
+- The cache is checked **before** calling Gemini. On a hit, the request never reaches ADK Agent — saving a full LLM round-trip.
+- "REG Layer 1/2" (retrieval inside ADK) and "L1/L2/L3" (cache layers in the backend) are unrelated concepts that happen to share the word "layer." Cache prevents calling the LLM; REG layers feed the LLM with KB context once it's called.
 
 ### Three services on Cloud Run
 
