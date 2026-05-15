@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_nsf_budget_template",
+  "title": "NSF Budget Template (Protected)",
+  "category": "form",
+  "subcategory": "pre_award_template",
+  "display_label": "NSF Budget Template (Excel)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/budget-development",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Budget/NSF-Budget-Template-protected-v4.xlsx",
+  "content": "Protected Excel workbook used to build the proposal budget in the NSF format expected by MSU's Office of Research Administration. PIs fill in personnel, fringe, equipment, travel, participant support, materials, consultants, subawards, and F&A lines, then submit the workbook to the ORA Budget Specialist alongside the Budget Justification.",
+  "last_scraped": "2026-05-14"
+}

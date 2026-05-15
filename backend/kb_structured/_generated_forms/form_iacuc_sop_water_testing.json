@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_water_testing",
+  "title": "SOP 38.2: Water Testing",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 38.2 \u2014 Water Testing",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_38.2_Water_Testing.pdf",
+  "content": "IACUC SOP describing periodic water-quality testing for animal drinking water and aquatic-species systems at the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

@@ -1,0 +1,26 @@
+{
+  "doc_id": "pre_award_fanda_cost_rates",
+  "title": "Pre-Award — F&A Cost Rates",
+  "category": "pre_award",
+  "subcategory": "rates",
+  "display_label": "F&A (Indirect) Cost Rates (Pre-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/fanda-cost-rates",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/fanda-cost-rates",
+  "content": "Morgan State University's Facilities & Administrative (F&A) — also called Indirect Cost — rates approved by the cognizant federal agency for use on grants, contracts, and other agreements with the Federal Government, subject to conditions in Section III of the negotiated rate agreement. For questions, contact ORA at ask.ora@morgan.edu or 443-885-4044 (fax 443-885-8280).\n\nFiscal Year 2024-2025 (07/01/2024 – 06/30/2025):\n- Organized Research (On-Campus): 53%\n- Instruction (On-Campus): 64%\n- Other Sponsored Activities (On-Campus): 42%\n- All Programs (Off-Campus): 26%\n\nFiscal Year 2025-2026 (07/01/2025 – 06/30/2026):\n- Organized Research (On-Campus): 54%\n- Instruction (On-Campus): 64%\n- Other Sponsored Activity (On-Campus): 42%\n- All Programs (Off-Campus): 26%\n\nThe official F&A rate agreement letter (2024-2026_MorganState_FandA_ltr.pdf) is linked from this page for download by PIs and sponsor reviewers.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "fy_2024_2025": {
+      "organized_research_on_campus": "53%",
+      "instruction_on_campus": "64%",
+      "other_sponsored_activities_on_campus": "42%",
+      "all_programs_off_campus": "26%"
+    },
+    "fy_2025_2026": {
+      "organized_research_on_campus": "54%",
+      "instruction_on_campus": "64%",
+      "other_sponsored_activity_on_campus": "42%",
+      "all_programs_off_campus": "26%"
+    },
+    "rate_agreement_pdf": "2024-2026_MorganState_FandA_ltr.pdf"
+  }
+}

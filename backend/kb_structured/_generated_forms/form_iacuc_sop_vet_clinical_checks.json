@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_vet_clinical_checks",
+  "title": "SOP 36.2: Health Checks and Veterinary Clinical Calls",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 36.2 \u2014 Health Checks and Veterinary Clinical Calls",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_36.2_Health_Checks_and_Veterinary_Clinical_Calls.pdf",
+  "content": "IACUC SOP defining daily animal health checks and the procedure for escalating clinical issues to the Clinical Veterinarian (Dr. Matthew Terzi).",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

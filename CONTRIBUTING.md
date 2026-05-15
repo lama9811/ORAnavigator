@@ -1,11 +1,11 @@
-# Contributing to CS Navigator
+# Contributing to ORA Navigator
 
-CS Navigator is a research project at Morgan State University's Computer Science Department. We welcome contributions from students, faculty, and the open source community.
+ORA Navigator is a research project at Morgan State University's Computer Science Department. We welcome contributions from students, faculty, and the open source community.
 
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/cs-navigator.git`
+2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/ora-navigator.git`
 3. Create a branch: `git checkout -b feature/your-feature`
 4. Make your changes
 5. Push and open a Pull Request against `dev`
@@ -40,7 +40,7 @@ The chatbot's accuracy depends on its knowledge base. If you find wrong or missi
 2. Or edit the JSON files in `backend/kb_structured/` and submit a PR
 
 ### Bug Fixes
-Found a bug? Check the [Issues](https://github.com/theaayushstha1/cs-navigator/issues) tab first. If it's not reported:
+Found a bug? Check the [Issues](https://github.com/theaayushstha1/ora-navigator/issues) tab first. If it's not reported:
 1. Open an issue with the "bug" label
 2. Include steps to reproduce and the bot's response
 

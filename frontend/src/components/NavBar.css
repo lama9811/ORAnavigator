@@ -119,18 +119,21 @@
 }
 
 .brand-main {
-  font-weight: 700;
+  font-family: var(--font-serif, 'DM Serif Display', 'Georgia', serif);
+  font-weight: 400;
   color: var(--text-main);
-  font-size: 1.1rem;
-  letter-spacing: -0.01em;
+  font-size: 1.4rem;
+  letter-spacing: -0.005em;
+  line-height: 1;
 }
 
 .brand-sub {
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
+  margin-top: 4px;
 }
 
 /* ========== Right Side - Navigation Links ========== */

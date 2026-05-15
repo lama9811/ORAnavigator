@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_iacuc_anonymous_welfare_report",
+  "title": "Anonymous Reporting of MSU Animal Welfare Concerns",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "Anonymous Animal Welfare Report",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research",
+  "procedure_url": "https://forms.gle/ivF2WuiqG566uWZGA",
+  "content": "Google Form for the anonymous reporting of animal-welfare concerns at the Morgan State Animal Research Facility. Submissions are routed to the IACUC for review and any necessary follow-up under the federal Animal Welfare Act.",
+  "last_scraped": "2026-05-14"
+}

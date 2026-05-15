@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_docusign_stipend_request",
+  "title": "Stipend Request Memo (DocuSign)",
+  "category": "form",
+  "subcategory": "docusign_post_award",
+  "display_label": "Stipend Request Memo",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=83f3c87d-a6b9-40dc-a7f4-9d7c03723f57&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form for requesting stipend disbursement on sponsored projects at Morgan State University. The requested check issue date must be a minimum of 45 days after the date the request is submitted — submit at least 45 days in advance of the intended payment date. Route to the MSU ORA signing group. Questions to ora-docusign@morgan.edu.",
+  "last_scraped": "2026-05-14"
+}

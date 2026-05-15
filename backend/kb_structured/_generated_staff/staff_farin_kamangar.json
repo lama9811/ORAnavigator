@@ -1,0 +1,156 @@
+{
+  "doc_id": "staff_farin_kamangar",
+  "title": "Staff: Farin Kamangar",
+  "category": "staff",
+  "subcategory": "ora_staff_profile",
+  "display_label": "Farin Kamangar, MD, PhD, CRA — Associate Vice President for Research",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/about/staff-directory",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/about/staff-directory",
+  "staff_name": "Farin Kamangar",
+  "staff_first": "Farin",
+  "staff_last": "Kamangar",
+  "staff_title": "Associate Vice President for Research, University Distinguished Professor",
+  "office": "Tyler Hall, Suite 304",
+  "phone": "443-885-3447",
+  "email": "farin.kamangar@morgan.edu",
+  "service_areas": [
+    "leadership",
+    "ora_executive",
+    "research_strategy"
+  ],
+  "credentials_suffix": "MD, PhD, CRA",
+  "education": [
+    {
+      "degree": "PhD",
+      "field": "Epidemiology",
+      "institution": "Johns Hopkins University"
+    },
+    {
+      "degree": "MHS",
+      "field": "Biostatistics",
+      "institution": "Johns Hopkins University"
+    },
+    {
+      "degree": "MPH",
+      "institution": "Tehran University of Medical Sciences"
+    },
+    {
+      "degree": "MD",
+      "institution": "Tehran University of Medical Sciences"
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Certified Research Administrator (CRA)",
+      "issuer": "Research Administrators Certification Council"
+    },
+    {
+      "name": "Certified Financial Research Administrator (CFRA)",
+      "issuer": "Research Administrators Certification Council"
+    },
+    {
+      "name": "Certified Pre-Award Research Administrator (CPRA)",
+      "issuer": "Research Administrators Certification Council"
+    }
+  ],
+  "certificates": [
+    {
+      "name": "Organizational Leadership",
+      "institution": "Harvard Business School"
+    },
+    {
+      "name": "Financial Accounting",
+      "institution": "Harvard Business School"
+    },
+    {
+      "name": "Economics",
+      "institution": "Harvard Business School"
+    }
+  ],
+  "research_interests": [
+    "Clinical research",
+    "Cancer epidemiology",
+    "Cardiovascular disease epidemiology",
+    "Clinical trials",
+    "Epidemiology of esophageal and gastric cancers",
+    "Carcinogenicity of opium use",
+    "Exposure to polycyclic aromatic hydrocarbons",
+    "Consumption of hot beverages",
+    "Effects of opium use on cardiovascular diseases"
+  ],
+  "h_index": 87,
+  "total_citations": 42000,
+  "publications_count_total": 280,
+  "scholar_url": "https://scholar.google.com/citations?user=kxKoVTMAAAAJ&hl=en",
+  "awards": [
+    "Fellow, American Association for the Advancement of Science (AAAS)",
+    "NIH Merit Award (group award)",
+    "NCI Director's Innovation Award"
+  ],
+  "publications_selected": [
+    {
+      "citation": "Emadi RC, Kamangar F. Coffee's Impact on Health and Well-Being. Nutrients 2025, 17: 2558.",
+      "doi": "10.3390/nu17152558",
+      "pmid": "40806142",
+      "year": 2025
+    },
+    {
+      "citation": "Liu Y, Bollino DR, ..., Kamangar F, Emadi A. A Phase 1 study of pegcrisantaspase and venetoclax for relapsed/refractory AML. Blood 2024, 145: 486-496.",
+      "doi": "10.1182/blood.2024024837",
+      "year": 2024
+    },
+    {
+      "citation": "Kamangar F, et al. Global, regional, and national burden of oesophageal cancer 1990-2017. Lancet Gastroenterology and Hepatology 2020, 5: 582-597.",
+      "doi": "10.1016/S2468-1253(20)30007-8",
+      "pmid": "32246941",
+      "year": 2020
+    },
+    {
+      "citation": "Rahmati A, ..., Kamangar F. Mortality from respiratory diseases associated with opium use. Thorax 2017, 72: 1028-1034.",
+      "doi": "10.1136/thoraxjnl-2015-208251",
+      "pmid": "27885167",
+      "year": 2017
+    },
+    {
+      "citation": "Kamangar F, Shakeri R, Malekzadeh R, Islami F. Opium use: A risk factor for multiple cancers? Lancet Oncology 2014, 15: e69-e77.",
+      "doi": "10.1016/S1470-2045(13)70550-3",
+      "pmid": "24480557",
+      "year": 2014
+    },
+    {
+      "citation": "Karimi P, ..., Kamangar F. Gastric Cancer: Descriptive epidemiology, risk factors, screening, and prevention. Cancer Epidemiology Biomarkers and Prevention 2014, 23: 700-713.",
+      "year": 2014
+    },
+    {
+      "citation": "Khademi H, ..., Kamangar F. Opium use and mortality in the Golestan Cohort Study. BMJ 2012, 344: e2502.",
+      "doi": "10.1136/bmj.e2502",
+      "pmid": "22511302",
+      "year": 2012
+    },
+    {
+      "citation": "Kamangar F, Schantz MM, Abnet CC, Fagundes RB, Dawsey SM. High levels of carcinogenic polycyclic aromatic hydrocarbons in maté drinks. Cancer Epidemiology Biomarkers and Prevention 2008, 17: 1262-1268.",
+      "doi": "10.1158/1055-9965.EPI-08-0025",
+      "pmid": "18483349",
+      "year": 2008
+    },
+    {
+      "citation": "Kamangar F, Dores GM, Anderson WF. Patterns of cancer, incidence, mortality, and prevalence across five continents. Journal of Clinical Oncology 2006, 24: 2137-2150.",
+      "doi": "10.1200/JCO.2005.05.2308",
+      "pmid": "16682732",
+      "year": 2006
+    }
+  ],
+  "major_grants": [
+    "ASCEND Training Model to Enhance the Diversity of the Biomedical Research Workforce (NIH)",
+    "Golestan Cohort Study (>50,000 participants, 20+ years follow-up)"
+  ],
+  "funding_total_career": "$60+ million NIH-funded as PI or co-PI",
+  "collaborations": [
+    "NIH",
+    "Johns Hopkins University",
+    "University of Maryland",
+    "International Agency for Research on Cancer",
+    "Tehran University of Medical Sciences"
+  ],
+  "content": "Farin Kamangar, MD, PhD, CRA is the Associate Vice President for Research, University Distinguished Professor.\n\nOffice: Tyler Hall, Suite 304. Phone: 443-885-3447. Email: farin.kamangar@morgan.edu.\n\nDr. Farin Kamangar is a University Distinguished Professor and Associate Vice President for Research at Morgan State University. He leads the Office of Research Administration and oversees the University's research strategy and externally sponsored research portfolio.\n\nDr. Kamangar is a cancer epidemiologist and has published over 280 peer-reviewed articles, many in top-tier journals such as The Lancet, BMJ, Annals of Internal Medicine, Lancet Oncology, Journal of Clinical Oncology, Journal of the National Cancer Institute, and Gastroenterology.\n\nHe has served as PI or co-PI on over $60 million of NIH-funded projects, including the ASCEND Training Model to Enhance the Diversity of the Biomedical Research Workforce, as well as major epidemiologic studies including the Golestan Cohort Study — a large cohort of over 50,000 individuals with over 20 years of follow-up.\n\nHe is a Fellow of the American Association for the Advancement of Science (AAAS) and has received the NIH Merit Award (group award) and the NCI Director's Innovation Award.\n\nDr. Kamangar has collaborated with researchers at the NIH, Johns Hopkins, the University of Maryland, the International Agency for Research on Cancer, and Tehran University of Medical Sciences.\n\nHe has a passion for teaching and mentoring across all levels — from high school to doctoral — with significant experience mentoring minority students.\n\nEducation: PhD in Epidemiology, Johns Hopkins University; MHS in Biostatistics, Johns Hopkins University; MPH, Tehran University of Medical Sciences; MD, Tehran University of Medical Sciences.\n\nCertifications: Certified Research Administrator (CRA) (Research Administrators Certification Council; Certified Financial Research Administrator (CFRA) (Research Administrators Certification Council; Certified Pre-Award Research Administrator (CPRA) (Research Administrators Certification Council.\n\nCertificates: Organizational Leadership (Harvard Business School); Financial Accounting (Harvard Business School); Economics (Harvard Business School).\n\nResearch interests: Clinical research; Cancer epidemiology; Cardiovascular disease epidemiology; Clinical trials; Epidemiology of esophageal and gastric cancers; Carcinogenicity of opium use; Exposure to polycyclic aromatic hydrocarbons; Consumption of hot beverages; Effects of opium use on cardiovascular diseases.\n\nAwards: Fellow, American Association for the Advancement of Science (AAAS); NIH Merit Award (group award); NCI Director's Innovation Award.\n\nMajor grants: ASCEND Training Model to Enhance the Diversity of the Biomedical Research Workforce (NIH); Golestan Cohort Study (>50,000 participants, 20+ years follow-up).\n\nSelected publications:\n\nEmadi RC, Kamangar F. Coffee's Impact on Health and Well-Being. Nutrients 2025, 17: 2558. doi:10.3390/nu17152558 PMID:40806142\n\nLiu Y, Bollino DR, ..., Kamangar F, Emadi A. A Phase 1 study of pegcrisantaspase and venetoclax for relapsed/refractory AML. Blood 2024, 145: 486-496. doi:10.1182/blood.2024024837\n\nKamangar F, et al. Global, regional, and national burden of oesophageal cancer 1990-2017. Lancet Gastroenterology and Hepatology 2020, 5: 582-597. doi:10.1016/S2468-1253(20)30007-8 PMID:32246941\n\nRahmati A, ..., Kamangar F. Mortality from respiratory diseases associated with opium use. Thorax 2017, 72: 1028-1034. doi:10.1136/thoraxjnl-2015-208251 PMID:27885167\n\nKamangar F, Shakeri R, Malekzadeh R, Islami F. Opium use: A risk factor for multiple cancers? Lancet Oncology 2014, 15: e69-e77. doi:10.1016/S1470-2045(13)70550-3 PMID:24480557\n\nKarimi P, ..., Kamangar F. Gastric Cancer: Descriptive epidemiology, risk factors, screening, and prevention. Cancer Epidemiology Biomarkers and Prevention 2014, 23: 700-713.\n\nKhademi H, ..., Kamangar F. Opium use and mortality in the Golestan Cohort Study. BMJ 2012, 344: e2502. doi:10.1136/bmj.e2502 PMID:22511302\n\nKamangar F, Schantz MM, Abnet CC, Fagundes RB, Dawsey SM. High levels of carcinogenic polycyclic aromatic hydrocarbons in maté drinks. Cancer Epidemiology Biomarkers and Prevention 2008, 17: 1262-1268. doi:10.1158/1055-9965.EPI-08-0025 PMID:18483349\n\nKamangar F, Dores GM, Anderson WF. Patterns of cancer, incidence, mortality, and prevalence across five continents. Journal of Clinical Oncology 2006, 24: 2137-2150. doi:10.1200/JCO.2005.05.2308 PMID:16682732\n\nGoogle Scholar H-index: 87 with 42,000 citations.\n\nGoogle Scholar profile: https://scholar.google.com/citations?user=kxKoVTMAAAAJ&hl=en"
+}

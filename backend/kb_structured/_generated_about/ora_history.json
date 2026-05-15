@@ -1,0 +1,93 @@
+{
+  "doc_id": "ora_history",
+  "title": "History of the Office of Research Administration",
+  "category": "about",
+  "subcategory": "history",
+  "display_label": "ORA History",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/about/history",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/about/history",
+  "former_names": [
+    "Office of Sponsored Programs and Research (OSPR)"
+  ],
+  "founded_year": 1988,
+  "founding_director": "Dr. Edet Isuk",
+  "leadership_history": [
+    {
+      "name": "Dr. Edet Isuk",
+      "role": "Founding Director, OSPR",
+      "tenure": "1988–1997"
+    },
+    {
+      "name": "Dr. Henry Williams",
+      "role": "AVP for Sponsored Programs",
+      "tenure": "1997–2002"
+    },
+    {
+      "name": "Dr. Mildred Ofosu",
+      "role": "AVP for Research",
+      "tenure": "2002–2020"
+    },
+    {
+      "name": "Dr. Victor McCrary",
+      "role": "VP for Research, D-RED (inaugural)",
+      "tenure": "2012–2018"
+    },
+    {
+      "name": "Dr. Willie May",
+      "role": "VP for Research (former NIST Director)",
+      "tenure": "2018–present"
+    },
+    {
+      "name": "Dr. Farin Kamangar",
+      "role": "AVP for Research",
+      "tenure": "2020–present"
+    }
+  ],
+  "funding_trajectory": [
+    {
+      "year": 1988,
+      "annual_extramural": "$7M"
+    },
+    {
+      "year": 2002,
+      "annual_extramural": "$24M"
+    },
+    {
+      "year": 2020,
+      "annual_extramural": "~$30M"
+    },
+    {
+      "year": 2022,
+      "new_commitments": "$72M"
+    }
+  ],
+  "major_recent_grants_2022": [
+    {
+      "name": "GESTAR II",
+      "amount": "$28M"
+    },
+    {
+      "name": "ASCEND expansion",
+      "amount": "$17M"
+    },
+    {
+      "name": "RCMI",
+      "amount": "$15M"
+    },
+    {
+      "name": "ONR AI/ML research",
+      "amount": "$9M"
+    }
+  ],
+  "key_milestones": [
+    {
+      "year": 2012,
+      "event": "President Wilson creates Division of Research and Economic Development (D-RED)"
+    },
+    {
+      "year": 2020,
+      "event": "Office renamed from OSPR to Office of Research Administration (ORA); Dr. Farin Kamangar appointed AVP"
+    }
+  ],
+  "content": "The Office of Sponsored Programs and Research (OSPR) was established in 1988 under Dr. Edet Isuk as Founding Director, with one secretarial assistant. Prior to this, no dedicated office at Morgan State managed research proposals for external funding. Annual extramural funding averaged $7 million at inception.\n\nFrom 1988 to 1997, OSPR reported to the Dean of Graduate Studies and handled proposal development, budget preparation, and post-award management.\n\nIn 1997, Dr. Henry Williams joined as Assistant Vice President for Sponsored Programs, elevating the office's status to report directly to the Vice President for Academic Affairs. Staff expanded to 11 members and annual funding grew to $24 million. Responsibilities broadened to include research compliance, contracts management, and business development.\n\nFrom 2002 to 2020, Dr. Mildred Ofosu served as AVP for Research, maintaining consistent growth and reaching approximately $30 million in annual extramural funding. Title III programs were reassigned to Academic Affairs early in her tenure.\n\nIn 2012, President Wilson created the Division of Research and Economic Development (D-RED), with Dr. Victor McCrary as inaugural Vice President from 2012 to 2018.\n\nIn 2018, Dr. Willie May, former NIST Director, became Vice President for Research. Under his leadership, the office was renamed from OSPR to the Office of Research Administration (ORA) in 2020, with Dr. Farin Kamangar appointed Assistant Vice President.\n\nMajor recent funding acquisitions include GESTAR II ($28M), ASCEND expansion ($17M), RCMI ($15M), and ONR AI/ML research ($9M), reaching $72 million in new commitments by 2022."
+}

@@ -1,0 +1,21 @@
+{
+  "doc_id": "compliance_research_security_technology_control_plan",
+  "title": "Compliance — Research Security: Technology Control Plan (TCP)",
+  "category": "compliance",
+  "subcategory": "research_security_subpage",
+  "display_label": "Technology Control Plan (TCP) — Research Security",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/technology-control-plan-(tcp)",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/technology-control-plan-(tcp)",
+  "content": "Technology Control Plan (TCP) — Research Security.\n\nOverview (verbatim from page): As part of our ongoing commitment to maintaining a secure and reliable digital environment, Morgan State University has implemented a Technology Control Plan (TCP). This will be used to safeguard our IT infrastructure, sensitive data, and academic resources. The TCP serves as a comprehensive framework that outlines essential policies and practices for managing technology across the campus.\n\nFor faculty members, the plan establishes clear guidelines on secure access, data protection, and appropriate use of university-owned technology resources. It ensures that all systems and applications are maintained with robust security protocols to protect both academic and administrative information. The TCP also addresses compliance with legal requirements, ensuring that we meet federal and state standards in handling sensitive data.\n\nSTATUS NOTE — DocuSign template not yet published: As of the last scrape on 2026-05-14, the page states 'Docusign link coming soon!' verbatim. There is no live submission form or template URL exposed yet. Faculty asking how to submit a TCP should contact ORA directly via ask.ora@morgan.edu until the DocuSign workflow is live.\n\nContext: A Technology Control Plan is typically required when a sponsored research project involves export-controlled technologies, data, or information (governed by EAR / ITAR), or when a foreign national will have access to controlled items. The TCP documents physical and electronic safeguards, access lists, training, and termination procedures. Morgan's TCP page is part of the export controls + cybersecurity pillars of the Research Security Program.\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "docusign_status": "coming soon (not yet published as of 2026-05-14)",
+    "template_url": null,
+    "page_completeness": "stub / overview only",
+    "related_pillars": ["export_controls", "cybersecurity"],
+    "parent_program": "Research Security Program",
+    "contact_email": "ask.ora@morgan.edu"
+  }
+}

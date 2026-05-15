@@ -1,0 +1,20 @@
+{
+  "doc_id": "post_award_overview",
+  "title": "Post-Award — Award Management Overview",
+  "category": "post_award",
+  "subcategory": "overview",
+  "display_label": "Award Management (Post-Award Overview)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/post-award",
+  "content": "Award Management is the Morgan State University Office of Research Administration (ORA) hub for post-award processes on sponsored research grants and contracts. The page organizes post-award activity into five main areas:\n\n1. Notification and Setup of Award — Award Notification & Setup, and Post-Award Briefing. After an award is received, ORA notifies the PI/PD, the VP for Finance and Management, and the Office of Restricted Funds Accounting (RFA), and a Post-Award Briefing is scheduled with the PI and supporting units.\n\n2. Deviations from the Original Award (Changes to an Award) — Changes to the original award, including change(s) made to the PI or key personnel, no cost extensions, or transfer of the award from/to MSU.\n\n3. Subawards — A subaward is issued to a subrecipient for assistance in carrying out a specified programmatic effort on a sponsored project. MSU passes through a portion of the sponsored award to the other entity. Subawards may also be called subgrants, subagreements, or subcontracts.\n\n4. Reporting — After an award is issued, funding agencies monitor programmatic and financial aspects of a project. ORA and the Office of Restricted Funds Accounting (RFA) coordinate technical, financial, effort, invention, property, and closeout reports per the Notice of Award (NoA) cadence (monthly, quarterly, annually, or at closeout).\n\n5. Forms — Post-Award DocuSign forms required for MSU processing (Honoraria, Contractual Personnel PF-10, Stipend, Travel Request Non-Title III, Travel Request Title III, Travel Reimbursement GAD Form X-5, Undergraduate Tuition & Fees, Graduate Tuition & Fees).\n\nFor detailed post-award procedures consult PI Handbook 3: Grant-Related Processes (2025-02-24 PDF).\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu. DocuSign submissions: ora-docusign@morgan.edu (Signing group: MSU ORA).",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "phone": "443-885-4044",
+    "fax": "443-885-8280",
+    "general_email": "ask.ora@morgan.edu",
+    "docusign_email": "ora-docusign@morgan.edu",
+    "docusign_signing_group": "MSU ORA",
+    "office_location": "Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251",
+    "reference_handbook": "PI Handbook 3: Grant-Related Processes (2025-02-24)"
+  }
+}

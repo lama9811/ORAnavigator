@@ -1,0 +1,27 @@
+{
+  "doc_id": "pre_award_limited_submission",
+  "title": "Pre-Award — Limited Submission",
+  "category": "pre_award",
+  "subcategory": "limited_submission",
+  "display_label": "Limited Submission (Pre-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/limited-submission",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/limited-submission",
+  "content": "Morgan State University's procedures for managing funding opportunities that restrict how many letters of intent, pre-proposals, proposals, or applications a single university may submit. To prevent disqualification, MSU has established specific guidelines. Contact ORA at ask.ora@morgan.edu or 443-885-4044 (fax 443-885-8280); subaward and limited-submission questions can also be directed to ailing.zhang@morgan.edu or gillian.silver@morgan.edu.\n\nKey procedures:\n- Researchers must notify the Office of Research Administration as early as possible when planning a limited submission proposal.\n- If notification arrives within 6 weeks of the deadline, ORA uses a first-come, first-served approach.\n- If notification occurs more than 6 weeks prior to the deadline, Dr. Farin Kamangar (Assistant Vice President for Research) selects among applications and may convene a review group.\n\nSelected applicants must provide: the solicitation number, project title, principal investigator names and affiliations, and key personnel information. For competitive review situations, a 4-page summary is required, demonstrating project impact, novelty, team strength, facility availability, institutional relevance, and student training opportunities, along with principal investigator biosketches.\n\nChosen applicants must then follow standard ORA submission procedures, including the Internal Routing Form and budget documentation. Unfunded proposals from limited submissions receive no preference in subsequent opportunities. Authorized applicants who fail to submit may, at the Assistant Vice President for Research's discretion, be excluded from future limited-submission considerations.\n\nStaff roles and titles (verified on page): Ms. Ailing Zhang serves as Sr. Grants Manager (ailing.zhang@morgan.edu) and Ms. Gillian Silver serves as Director of the Office of Research Administration (gillian.silver@morgan.edu); both are the named points of contact for limited submission notifications.\n\nSelection rule clarification (verified on page): If the number of applications received is fewer than or equal to the maximum allowed by the sponsor, ALL applications will be submitted — selection (FCFS or AVP review) only applies when the number of internal applications exceeds the sponsor's maximum.\n\nORA office address (verified on page): Office of Research Administration, Morgan State University, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251.\n\nPage section structure (verified on page): The 'Guidelines' heading on the page organizes content into five labeled subsections — (1) Communicating the Information, (2) Selection, (3) Full Proposal Submission, (4) Resubmission, and (5) Failure to Submit Full Proposal(s).",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "fcfs_window": "within 6 weeks of deadline = first-come, first-served",
+    "competitive_review_window": "more than 6 weeks prior = AVP Research selects (may convene review group)",
+    "avp_research": "Dr. Farin Kamangar",
+    "summary_required_pages": 4,
+    "below_cap_rule": "If internal applications <= sponsor maximum, all are submitted (no selection process invoked)",
+    "ailing_zhang_title": "Sr. Grants Manager",
+    "gillian_silver_title": "Director of Office of Research Administration",
+    "ora_office_address": "Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251",
+    "ora_phone": "443-885-4044",
+    "ora_fax": "443-885-8280",
+    "ora_email": "ask.ora@morgan.edu",
+    "page_subsections": ["Communicating the Information", "Selection", "Full Proposal Submission", "Resubmission", "Failure to Submit Full Proposal(s)"]
+  }
+}

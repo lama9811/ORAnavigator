@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_mouse_breeding_colonies",
+  "title": "SOP 24.2: Management of Mouse Breeding Colonies",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 24.2 \u2014 Management of Mouse Breeding Colonies",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_24.2_Management_of_Mouse_Breeding_Colonies.pdf",
+  "content": "IACUC SOP for managing mouse breeding colonies including line maintenance, retirement, and colony-size limits.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # =============================================================================
-# CSNavigator Cloud Run Deployment Script
+# ORANavigator Cloud Run Deployment Script
 # =============================================================================
 # Deploys backend, frontend, and ADK agent to Google Cloud Run
 #
@@ -18,12 +18,12 @@ set -euo pipefail
 # Configuration
 PROJECT_ID="infra-vertex-494621-v1"
 REGION="us-central1"
-REPO_NAME="csnavigator"
+REPO_NAME="oranavigator"
 
 # Service names
-BACKEND_SERVICE="csnavigator-backend"
-FRONTEND_SERVICE="csnavigator-frontend"
-ADK_SERVICE="csnavigator-adk"
+BACKEND_SERVICE="oranavigator-backend"
+FRONTEND_SERVICE="oranavigator-frontend"
+ADK_SERVICE="oranavigator-adk"
 
 # Artifact Registry paths
 AR_HOST="${REGION}-docker.pkg.dev"
@@ -94,7 +94,7 @@ setup_artifact_registry() {
         gcloud artifacts repositories create ${REPO_NAME} \
             --repository-format=docker \
             --location=${REGION} \
-            --description="CSNavigator container images"
+            --description="ORA Navigator container images"
     else
         log "Artifact Registry repository already exists"
     fi
@@ -170,8 +170,8 @@ deploy_adk() {
         --timeout 300 \
         --concurrency 80 \
         --no-allow-unauthenticated \
-        --service-account "csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
-        --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/csnavigator-kb-local,KB_PREFETCH_DATASTORE_ID=csnavigator-kb-local"
+        --service-account "oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
+        --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,ADK_APP_NAME=ora_navigator_unified,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local,KB_PREFETCH_DATASTORE_ID=oranavigator-kb-local"
 
     ADK_URL=$(gcloud run services describe ${ADK_SERVICE} \
         --region=${REGION} \
@@ -219,18 +219,26 @@ deploy_backend() {
         --timeout 300 \
         --concurrency 100 \
         --allow-unauthenticated \
-        --add-cloudsql-instances "${PROJECT_ID}:${REGION}:cs-navigatrodb" \
-        --service-account "csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
-        --set-env-vars "\
-USE_VERTEX_AGENT=true,\
-ADK_BASE_URL=${ADK_URL},\
-ADK_APP_NAME=cs_navigator_unified,\
-GOOGLE_CLOUD_PROJECT=${PROJECT_ID}" \
+        --add-cloudsql-instances "${PROJECT_ID}:${REGION}:oranavigator-db" \
+        --service-account "oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
+        --set-env-vars "^@^\
+USE_VERTEX_AGENT=true@\
+ADK_BASE_URL=${ADK_URL}@\
+ADK_APP_NAME=ora_navigator_unified@\
+GOOGLE_CLOUD_PROJECT=${PROJECT_ID}@\
+GOOGLE_CLOUD_LOCATION=${REGION}@\
+GOOGLE_GENAI_USE_VERTEXAI=TRUE@\
+AGENT_MODEL=gemini-2.5-flash@\
+UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local@\
+VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local@\
+ACCESS_TOKEN_EXPIRE_MINUTES=240@\
+ALGORITHM=HS256@\
+CORS_ORIGINS=https://ora.inavigator.ai,https://oranavigator-frontend-ollhkgeova-uc.a.run.app,http://localhost:3001,http://127.0.0.1:3001" \
         --set-secrets "\
-DATABASE_URL=DATABASE_URL:latest,\
-JWT_SECRET=JWT_SECRET:latest,\
-ADMIN_EMAIL=ADMIN_EMAIL:latest,\
-ADMIN_PASSWORD=ADMIN_PASSWORD:latest"
+DATABASE_URL=ora-database-url:latest,\
+JWT_SECRET=ora-jwt-secret:latest,\
+ADMIN_EMAIL=ora-admin-email:latest,\
+ADMIN_PASSWORD=ora-admin-password:latest"
 
     BACKEND_URL=$(gcloud run services describe ${BACKEND_SERVICE} \
         --region=${REGION} \
@@ -274,31 +282,38 @@ setup_secrets() {
         error ".env file not found"
     fi
 
-    # List of secrets to create (OPENAI_API_KEY is optional — only used for TTS)
-    SECRETS=("DATABASE_URL" "JWT_SECRET" "ADMIN_EMAIL" "ADMIN_PASSWORD")
+    # ORA secrets are pre-created (ora-database-url, ora-jwt-secret, ora-admin-email, ora-admin-password)
+    # ORA Navigator uses generic-named secrets in the same project; do NOT overwrite them here.
+    # Map .env vars → ora-prefixed secrets (idempotent: creates if missing, adds a new version if present)
+    declare -a ENV_TO_SECRET=(
+        "DATABASE_URL:ora-database-url"
+        "JWT_SECRET:ora-jwt-secret"
+        "ADMIN_EMAIL:ora-admin-email"
+        "ADMIN_PASSWORD:ora-admin-password"
+    )
 
-    for SECRET_NAME in "${SECRETS[@]}"; do
-        SECRET_VALUE=$(grep "^${SECRET_NAME}=" "${SCRIPT_DIR}/.env" | cut -d'=' -f2-)
+    for MAPPING in "${ENV_TO_SECRET[@]}"; do
+        ENV_NAME="${MAPPING%%:*}"
+        SECRET_NAME="${MAPPING##*:}"
+        SECRET_VALUE=$(grep "^${ENV_NAME}=" "${SCRIPT_DIR}/.env" | cut -d'=' -f2-)
 
         if [ -z "$SECRET_VALUE" ]; then
-            warn "Secret ${SECRET_NAME} not found in .env, skipping..."
+            warn "Value for ${ENV_NAME} not found in .env, skipping ${SECRET_NAME}..."
             continue
         fi
 
-        # Create or update secret
         if gcloud secrets describe ${SECRET_NAME} >/dev/null 2>&1; then
-            log "Updating secret: ${SECRET_NAME}"
+            log "Adding new version to: ${SECRET_NAME}"
             echo -n "${SECRET_VALUE}" | gcloud secrets versions add ${SECRET_NAME} --data-file=-
         else
             log "Creating secret: ${SECRET_NAME}"
             echo -n "${SECRET_VALUE}" | gcloud secrets create ${SECRET_NAME} --data-file=-
         fi
 
-        # Grant access to backend service account
         gcloud secrets add-iam-policy-binding ${SECRET_NAME} \
-            --member="serviceAccount:csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --member="serviceAccount:oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
             --role="roles/secretmanager.secretAccessor" \
-            --quiet
+            --quiet 2>&1 | tail -1
     done
 
     log "Secrets configured"
@@ -312,13 +327,13 @@ setup_iam() {
 
     # Create service account if not exists
     if ! gcloud iam service-accounts describe \
-        "csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" >/dev/null 2>&1; then
+        "oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" >/dev/null 2>&1; then
         log "Creating service account..."
-        gcloud iam service-accounts create csnavigator-backend \
-            --display-name="CSNavigator Backend"
+        gcloud iam service-accounts create oranavigator-backend \
+            --display-name="ORANavigator Backend"
     fi
 
-    SA_EMAIL="csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com"
+    SA_EMAIL="oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com"
 
     # Grant necessary roles
     ROLES=(

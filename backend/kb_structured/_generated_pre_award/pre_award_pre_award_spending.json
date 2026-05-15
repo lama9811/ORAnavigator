@@ -1,0 +1,20 @@
+{
+  "doc_id": "pre_award_pre_award_spending",
+  "title": "Pre-Award — Pre-Award Spending (Advance Accounts)",
+  "category": "pre_award",
+  "subcategory": "spending",
+  "display_label": "Pre-Award Spending (Advance Accounts)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/pre-award-spending",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=aee73e60-47e3-456b-881d-6957d3650bcf&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "Morgan State University's Pre-Award Spending program allows a Principal Investigator or Project Director to begin spending on a sponsored project before receiving the official award documents. The Office of Research Administration, working with the Division of Finance & Administration, may authorize an Advance Account to support project start-up activities including personnel hiring, procurement, and other essential activities. Contact ORA at ask.ora@morgan.edu or 443-885-4044.\n\nAdvance Account creation is limited to specific circumstances and requires formal review and approval. Requests may be considered when:\n- An award has been granted but the project period has not yet begun;\n- There is a high probability that the University will receive the award; or\n- Continuation funding for a multi-year award is pending.\n\nApproved spending is subject to sponsor and University requirements and is generally limited to 20% of total project costs or $100,000, whichever is less.\n\nFor more complete information, see PI Handbook 3: Grant-Related Processes and PI Handbook 5: Policies & Guidelines, both linked from the Resources / Principal Investigator Handbooks page.\n\nThe Application for Advance Account is submitted via DocuSign: https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=aee73e60-47e3-456b-881d-6957d3650bcf&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "spending_cap": "20% of total project costs OR $100,000, whichever is less",
+    "eligibility": [
+      "award granted but project period has not begun",
+      "high probability the University will receive the award",
+      "continuation funding for multi-year award is pending"
+    ],
+    "form": "Application for Advance Account (DocuSign)"
+  }
+}

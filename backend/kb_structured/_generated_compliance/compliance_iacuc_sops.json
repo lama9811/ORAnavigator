@@ -1,0 +1,23 @@
+{
+  "doc_id": "compliance_iacuc_sops",
+  "title": "IACUC — Standard Operating Procedures (SOPs)",
+  "category": "compliance",
+  "subcategory": "iacuc_sops",
+  "display_label": "IACUC Standard Operating Procedures",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "content": "The Morgan State University IACUC publishes a comprehensive set of 50+ Standard Operating Procedures (SOPs) governing every aspect of animal-care and use at the Animal Research Facility (ARF). Each SOP is a downloadable PDF. The current list (numbering is non-contiguous; SOP 37 is currently not published):\n\nSupporting documents:\n- 2-Factor Authentication (2FA) Self Enrollment - Push Notifications\n- Biological Safety Manual and Exposure Control Plan\n- Emergency Declaration and Point of Contact Call List\n\nIACUC SOPs:\n- SOP 1.2: Training Requirements\n- SOP 2.2: Rodent Import Procedure\n- SOP 3.2: Anesthesia and Analgesia\n- SOP 4.2: Hazards in the Animal Facility\n- SOP 5.2: Animal Purchasing (procurement policy for animal purchasing and purchasing lab supplies)\n- SOP 6.2: Animal Receiving\n- SOP 7.2: Rodent Breeding (Mice)\n- SOP 8.2: Waste Management\n- SOP 9.2: Cage Labeling and Record Keeping\n- SOP 10.2: Cage Washer Procedures\n- SOP 11.2: Chemical Waste\n- SOP 12.2: Access to Controlled Substances\n- SOP 13.2: Dead Animal and Carcass Disposal Procedures\n- SOP 14.2: Cleaning Procedures for Personnel Areas\n- SOP 15.3: Emergency and Disaster Plan\n- SOP 16.2: Environmental Enrichment\n- SOP 17.3: Euthanasia — Use of alternative to CO2 Euthanasia\n- SOP 18.2: Animal Transport Procedures\n- SOP 19.2: General MSU Waste Management Information\n- SOP 20.2: Rodent Husbandry and Training for Animal Facility Personnel\n- SOP 21.1: Identification of Animals\n- SOP 22.2: Rodent Export Procedures\n- SOP 23.2: Non-Pharmaceutical Grade Drugs\n- SOP 24.2: Management of Mouse Breeding Colonies\n- SOP 25.2: Ordering and Receiving Feed and Bedding\n- SOP 26.2: Personal Protective Equipment (PPE)\n- SOP 27.2: Pharmaceutical Drugs\n- SOP 28.2: Animal Facility Access\n- SOP 29.2: Rodent Quarantine\n- SOP 30.2: Occupational Health Program\n- SOP 31.2: General Cleaning Procedures\n- SOP 32.2: Sentinel Procedures (Routine Sentinel Procedures in Microisolator Facilities — Animal Surveillance)\n- SOP 33.2: Separation of Rodents for Overcrowding or Fighting\n- SOP 34.2: Survival Surgery\n- SOP 35.2: Use and Monitoring of Cabinet Cage Washer\n- SOP 36.2: Health Checks and Veterinary Clinical Calls\n- SOP 38.2: Water Testing\n- SOP 39.2: Weekend and Holiday Care\n- SOP 40.2: Working with Microisolator Cages using Aseptic Techniques\n- SOP 41.2: Access to Animal Housing\n- SOP 42.2: Post-Approval Monitoring and Protocol Renewal\n- SOP 43.2: Parasite Treatment\n- SOP 44.2: Rodent Cage Density Policy\n- SOP 45.2: Satellite Areas\n- SOP 46.2: Laboratory Safety\n- SOP 47.2: Vendor Health Report Review\n- SOP 48.1: IACUC Procedures for Protocol Review\n- SOP 49.1: IACUC Procedures for Semiannual Review\n- SOP 50.1: IACUC Appointment of Members\n- SOP 51.1: IACUC Responsibilities\n\nAll SOP PDFs are hosted under /Documents/ADMINISTRATION/OFFICES/ora/Animal Research/SOPs/. Direct PDF URLs are exposed individually on the IACUC SOPs page. Researchers should consult the relevant SOP before initiating procedures and contact the IACUC office (Dr. Ingrid Tulloch, Director, Ingrid.Tulloch@morgan.edu) for clarification.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "sop_count_published": 50,
+    "sop_numbering_skips": "SOP 37 not published; numbering jumps from 36 to 38",
+    "sop_directory_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/",
+    "supporting_documents": [
+      "2-Factor Authentication (2FA) Self Enrollment - Push Notifications",
+      "Biological Safety Manual and Exposure Control Plan",
+      "Emergency Declaration and Point of Contact Call List"
+    ]
+  }
+}

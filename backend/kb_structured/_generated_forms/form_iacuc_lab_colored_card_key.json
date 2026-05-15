@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_lab_colored_card_key",
+  "title": "Lab Colored Card Key",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC \u2014 Lab Colored Card Key",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Lab%20Colored%20card%20%20Key.docx",
+  "content": "Reference key for the colored cage-card system used in the ARF \u2014 each color denotes status (active study, breeding, quarantine, etc.).",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

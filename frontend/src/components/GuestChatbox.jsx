@@ -5,14 +5,14 @@ import { useNavigate } from "react-router-dom";
 import { BsArrowUpCircleFill, BsClock, BsCheckCircle, BsX } from "react-icons/bs";
 import "./GuestChatbox.css";
 
-// Default suggestions for guests
+// Default suggestions — ORA faculty/PI/admin audience
 const GUEST_SUGGESTIONS = [
-  "What degrees does the CS department offer?",
-  "What are the prerequisites for COSC 220 Data Structures?",
-  "Who are the faculty in the CS department?",
-  "How many credits do I need to graduate with a B.S. in CS?",
-  "What's the 4+1 accelerated B.S./M.S. program?",
-  "Where can I find tutoring and academic support?"
+  "What's Morgan's current F&A (indirect cost) rate?",
+  "When is the next IRB meeting and what's the submission deadline?",
+  "Who do I contact about a NIH grant submission?",
+  "What forms do I need for a no-cost extension?",
+  "How do I request a subaward on my sponsored project?",
+  "Where can I find the PI Handbook on budget preparation?"
 ];
 
 import { getApiBase } from "../lib/apiBase";
@@ -233,9 +233,10 @@ export default function GuestChatbox() {
       <div className="guest-chat-messages">
         {messages.length === 0 ? (
           <div className="guest-welcome-container">
-            <img src="/msu_logo.webp" alt="MSU Logo" className="guest-welcome-logo" />
-            <h1 className="guest-welcome-title">Morgan State CS Navigator</h1>
-            <p className="guest-welcome-subtitle">How can I assist with your academic journey today?</p>
+            <div className="ora-eyebrow">Office of Research Administration · Morgan State University</div>
+            <h1 className="guest-welcome-title">ORA Navigator</h1>
+            <p className="guest-welcome-subtitle">A research-administration assistant for faculty, PIs, and department admins — answers grounded in ORA policies, forms, IRB &amp; IACUC procedures, and funding sources.</p>
+            <div className="ora-suggestions-label">Try asking</div>
             <div className="guest-suggestions">
               {GUEST_SUGGESTIONS.map((s, i) => (
                 <button
@@ -329,8 +330,8 @@ export default function GuestChatbox() {
         )}
       </div>
 
-      <div style={{ textAlign: 'center', padding: '6px 0 10px', fontSize: '0.7rem', color: 'var(--text-tertiary, #94a3b8)', letterSpacing: '0.02em' }}>
-        CS Navigator {new Date().getFullYear()} | Morgan State University Department of Computer Science
+      <div style={{ textAlign: 'center', padding: '6px 0 10px', fontSize: '0.7rem', color: 'var(--text-tertiary, #94a3b8)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+        ORA Navigator · {new Date().getFullYear()} · Morgan State University Office of Research Administration
       </div>
 
       {/* Sign-up Modal */}
@@ -347,7 +348,7 @@ export default function GuestChatbox() {
               </div>
               <h2 className="signup-modal-title">Your Free Trial Has Ended</h2>
               <p className="signup-modal-subtitle">
-                Create a free account to continue using CS Navigator
+                Create a free account to continue using ORA Navigator
               </p>
             </div>
 
@@ -356,19 +357,19 @@ export default function GuestChatbox() {
               <ul className="benefits-list">
                 <li>
                   <BsCheckCircle className="benefit-icon" />
-                  <span>Unlimited chat messages</span>
+                  <span>Unlimited research-administration questions</span>
                 </li>
                 <li>
                   <BsCheckCircle className="benefit-icon" />
-                  <span>Personalized course recommendations</span>
+                  <span>Saved chat history across grants and projects</span>
                 </li>
                 <li>
                   <BsCheckCircle className="benefit-icon" />
-                  <span>Save your chat history</span>
+                  <span>Direct links to ORA forms, policies, and PI Handbooks</span>
                 </li>
                 <li>
                   <BsCheckCircle className="benefit-icon" />
-                  <span>Connect your DegreeWorks for tailored advice</span>
+                  <span>Routing to the right ORA staff member for your question</span>
                 </li>
               </ul>
             </div>

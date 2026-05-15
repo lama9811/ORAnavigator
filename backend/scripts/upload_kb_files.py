@@ -147,7 +147,7 @@ def sync_all():
 
 def main():
     print("=" * 60)
-    print("  CS Navigator - Knowledge Base Uploader")
+    print("  ORA Navigator - Knowledge Base Uploader")
     print("=" * 60)
 
     # Parse arguments

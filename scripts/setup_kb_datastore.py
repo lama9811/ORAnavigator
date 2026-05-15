@@ -21,8 +21,8 @@ from google.protobuf.struct_pb2 import Struct
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT", "infra-vertex-494621-v1")
 LOCATION = "us"
 COLLECTION = "default_collection"
-DATASTORE_ID = "csnavigator-kb-local"
-DISPLAY_NAME = "CS Navigator KB (local)"
+DATASTORE_ID = "oranavigator-kb-local"
+DISPLAY_NAME = "ORA Navigator KB (local)"
 
 KB_DIR = Path(__file__).parent.parent / "backend" / "kb_structured"
 API_ENDPOINT = f"{LOCATION}-discoveryengine.googleapis.com"

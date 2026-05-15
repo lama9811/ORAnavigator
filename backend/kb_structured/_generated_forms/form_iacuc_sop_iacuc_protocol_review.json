@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_iacuc_protocol_review",
+  "title": "SOP 48.1: IACUC Procedures for Protocol Review",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 48.1 \u2014 IACUC Procedures for Protocol Review",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_48.1_IACUC_Procedures_for_Protocol_ReviewA.pdf",
+  "content": "IACUC SOP governing the committee's procedure for reviewing newly submitted animal-research protocols, including designated review and full-committee review.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

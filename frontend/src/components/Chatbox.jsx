@@ -1131,7 +1131,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
             transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
           >
             <img src="/msu_logo.webp" alt="MSU Logo" className="welcome-logo" />
-            <h1 className="welcome-title">Morgan State CS Navigator</h1>
+            <h1 className="welcome-title">ORA Navigator</h1>
             <p className="welcome-subtitle">How can I assist with your academic journey today?</p>
             <div className="suggestions">
               {suggestionsLoading ? (

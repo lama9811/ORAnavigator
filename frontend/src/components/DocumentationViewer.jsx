@@ -125,9 +125,9 @@ export default function DocumentationViewer({ isOpen, onClose, darkMode, mode = 
 
   const renderOverview = () => (
     <div className="doc-section">
-      <h2>CS Navigator - Technical Documentation</h2>
+      <h2>ORA Navigator - Technical Documentation</h2>
       <p className="doc-intro">
-        CS Navigator is an AI-powered academic assistant that uses RAG (Retrieval-Augmented Generation)
+        ORA Navigator is an AI-powered academic assistant that uses RAG (Retrieval-Augmented Generation)
         to help Computer Science students at Morgan State University.
       </p>
 
@@ -538,7 +538,7 @@ Content-Type: application/json
     <div className="doc-section agents-section">
       <h2>AI Agents Plan</h2>
       <p className="doc-intro">
-        Transform CS Navigator with autonomous AI agents that can reason, act, and complete complex tasks
+        Transform ORA Navigator with autonomous AI agents that can reason, act, and complete complex tasks
         to better serve students and faculty. Think of agents as smart assistants that work 24/7.
       </p>
 
@@ -1867,7 +1867,7 @@ Content-Type: application/json
       <h2>Future Development & API Requirements</h2>
       <p className="doc-intro">
         This section outlines our current AI infrastructure, potential upgrades, and API requirements
-        to enhance CS Navigator's capabilities. Use this as a reference when discussing budget with your professor.
+        to enhance ORA Navigator's capabilities. Use this as a reference when discussing budget with your professor.
       </p>
 
       {/* Current Stack Summary */}

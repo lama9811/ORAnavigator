@@ -1,0 +1,85 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - navigation [ref=e3]:
+    - generic [ref=e4]:
+      - generic "Return to Home" [ref=e5] [cursor=pointer]:
+        - img "Morgan State University" [ref=e6]
+        - generic [ref=e7]:
+          - generic [ref=e8]: ORA Navigator
+          - generic [ref=e9]: Office of Research Administration · MSU
+      - generic "Primary navigation" [ref=e10]:
+        - link "Try Free" [ref=e11] [cursor=pointer]:
+          - /url: /trychat
+        - link "Login" [ref=e12] [cursor=pointer]:
+          - /url: /login
+        - link "Sign Up" [ref=e13] [cursor=pointer]:
+          - /url: /signup
+  - generic [ref=e14]:
+    - complementary "ORA Navigator" [ref=e15]:
+      - generic [ref=e16]:
+        - img "Morgan State University" [ref=e17]
+        - heading "ORA Navigator" [level=1] [ref=e18]
+        - paragraph [ref=e19]: A research-administration assistant for Morgan State faculty, PIs, and ORA staff. Sign up with your @morgan.edu address to get started.
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - img [ref=e23]
+            - generic [ref=e25]:
+              - strong [ref=e26]: Proposal & Pre-Award
+              - generic [ref=e27]: F&A rates, budget templates, internal routing, NSF/NIH submission checklists — answers in seconds.
+          - generic [ref=e28]:
+            - img [ref=e30]
+            - generic [ref=e32]:
+              - strong [ref=e33]: Compliance Workflows
+              - generic [ref=e34]: IRB meeting dates, IACUC forms, COI disclosure, RCR training — the right doc, the right contact.
+          - generic [ref=e35]:
+            - img [ref=e37]
+            - generic [ref=e39]:
+              - strong [ref=e40]: Post-Award & Reporting
+              - generic [ref=e41]: NCE 60-day rule, effort certification, subawards, financial reporting — grounded in PI Handbook 5.
+          - generic [ref=e42]:
+            - img [ref=e44]
+            - generic [ref=e46]:
+              - strong [ref=e47]: Morgan-only access
+              - generic [ref=e48]: Sign in with your @morgan.edu email. Your questions stay within the Morgan ORA workspace.
+      - generic [ref=e49]:
+        - generic [ref=e50]: Morgan State University
+        - generic [ref=e51]: ·
+        - generic [ref=e52]: Office of Research Administration
+    - main [ref=e53]:
+      - region "Sign Up" [ref=e54]:
+        - generic [ref=e55]:
+          - heading "Sign Up" [level=2] [ref=e56]
+          - paragraph [ref=e57]: Use your @morgan.edu email to create your ORA Navigator account.
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e60]: Morgan State Email (@morgan.edu only)
+            - generic [ref=e61]:
+              - img
+              - textbox "Morgan State Email (@morgan.edu only)" [ref=e62]:
+                - /placeholder: you@morgan.edu
+          - generic [ref=e63]:
+            - generic [ref=e64]: Full Name (optional)
+            - generic [ref=e65]:
+              - img
+              - textbox "Full Name (optional)" [ref=e66]:
+                - /placeholder: e.g. Rohan Saini
+          - generic [ref=e67]:
+            - generic [ref=e68]: Password
+            - generic [ref=e69]:
+              - img
+              - textbox "Password" [ref=e70]:
+                - /placeholder: Create a strong password
+              - button "Show password" [ref=e71] [cursor=pointer]: Show
+          - generic [ref=e72]:
+            - generic [ref=e73]: Confirm Password
+            - generic [ref=e74]:
+              - img
+              - textbox "Confirm Password" [ref=e75]:
+                - /placeholder: Confirm your password
+              - button "Show password" [ref=e76] [cursor=pointer]: Show
+          - button "Create Account" [disabled] [ref=e77]
+          - paragraph [ref=e78]: By creating an account, you agree to the University's terms of service and privacy policy.
+        - generic [ref=e79]:
+          - text: Already have an account?
+          - link "Log in" [ref=e80] [cursor=pointer]:
+            - /url: /login

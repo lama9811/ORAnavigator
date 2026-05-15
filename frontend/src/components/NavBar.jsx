@@ -106,8 +106,8 @@ export default function NavBar({ role, onToggleSidebar }) {
           )}
           
           <div className="nav-title">
-            <span className="brand-main">CS NAVIGATOR</span>
-            <span className="brand-sub">Morgan State University</span>
+            <span className="brand-main">ORA Navigator</span>
+            <span className="brand-sub">Office of Research Administration · MSU</span>
           </div>
         </div>
 

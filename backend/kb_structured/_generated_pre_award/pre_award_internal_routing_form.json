@@ -1,0 +1,23 @@
+{
+  "doc_id": "pre_award_internal_routing_form",
+  "title": "Pre-Award — Internal Routing Form (IRF)",
+  "category": "pre_award",
+  "subcategory": "routing",
+  "display_label": "Internal Routing Form (IRF)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/internal-routing-form",
+  "procedure_url": "https://powerforms.docusign.net/d952f118-fd7b-4b18-b238-57855dc939f7?env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&accountId=91e00bed-fb84-48ab-9c47-f3a2c0621225",
+  "content": "The Internal Routing Form (IRF) is a required document that must be submitted before applying for any external funding, preferably two weeks prior to the sponsor's submission deadline. The IRF gives the Office of Research Administration basic information about the Principal Investigator and the funding opportunity, captures certifications regarding Responsible Conduct of Research standards, and confirms supervisory approval to proceed with the project. The IRF is completed via DocuSign; questions can be directed to Ms. Deshun Li (deshun.li@morgan.edu) or ask.ora@morgan.edu, 443-885-4044 (fax 443-885-8280).\n\nThe IRF includes the following sections:\n- MSU Principal Investigator details: name, school, department, contact information.\n- Funding Opportunity information: FOA URL, program name, CFDA/ALN number, sponsor type, and due date.\n- Application details: project title, MSU role, work location, submission type, activity type, funding amounts, and proposed start date.\n- Partner PI & Institution information: required only for subawards.\n- Restrictions: six surety questions covering federal/state bar status, criminal convictions, indictments, foreign nationals, and conflicts of interest.\n- Requirements: cost share, resource needs, equipment purchases, utilities, personnel, human subjects research, animal research, radioactive materials, and faculty release time.\n- Certification statements: affirm project discussion with department leadership, accuracy of information, and acceptance of scientific responsibility.\n\nAfter the IRF is submitted, the PI must send a Budget (Excel) and Budget Justification (Word) to the ORA Budget Specialist (see the Budget Development page). The IRF must collect signatures from the PI/PD, Department Chair, Dean or Center Director, ORA Research Budget Specialist, Grants Manager, and Director of Research Administration.\n\nDocuSign links:\n- PowerForm: https://powerforms.docusign.net/d952f118-fd7b-4b18-b238-57855dc939f7?env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&accountId=91e00bed-fb84-48ab-9c47-f3a2c0621225\n- Complete new IRF: https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=d952f118-fd7b-4b18-b238-57855dc939f7&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "lead_time": "submit IRF at least 2 weeks before sponsor deadline",
+    "required_signatures": [
+      "PI/PD",
+      "Department Chair",
+      "Dean or Center Director",
+      "ORA Research Budget Specialist",
+      "Grants Manager",
+      "Director of Research Administration"
+    ],
+    "irf_contact": "Ms. Deshun Li (deshun.li@morgan.edu)"
+  }
+}

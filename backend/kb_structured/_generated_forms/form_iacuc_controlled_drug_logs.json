@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_controlled_drug_logs",
+  "title": "Controlled Drug Logs",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC \u2014 Controlled Drug Logs",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/Controlled%20Drug%20Logs%20%281%29.pdf",
+  "content": "DEA-required logs for controlled substances used in animal research \u2014 receipt, dispensing, on-hand inventory, and disposal entries.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

@@ -1,0 +1,17 @@
+{
+  "doc_id": "pre_award_overview",
+  "title": "Pre-Award — Overview",
+  "category": "pre_award",
+  "subcategory": "overview",
+  "display_label": "Pre-Award Overview",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award",
+  "content": "Morgan State University requires all sponsored project proposals to undergo review and approval through the Office of Research Administration (ORA). The Pre-Award section provides information and resources for complete proposal development, including preparation tools, institutional data, sponsor information, and necessary forms. Faculty, PIs, and research staff can reach ORA at ask.ora@morgan.edu or by phone at 443-885-4044.\n\nProposal development process: Resources include PI Handbooks, trainings, and access to the Pivot-RP Funding Opportunities Database (https://pivot.proquest.com/dashboard). Researchers should review proposal components and the submission checklist, then develop budgets according to university guidelines. ORA offers tips for timely proposal submission presented by staff specialists.\n\nIntention to submit: An Internal Routing Form (IRF) initiates the proposal review process and should be submitted at least two weeks before the agency deadline. Concurrent submission of the budget (Excel format) and the budget justification (Word format) to designated ORA staff is required.\n\nApplication information available on this site: University application information (UEI, EIN, NAICS, SAM expiration, etc.), the current fringe benefit rate schedule, and the Facilities & Administrative (F&A) cost rates are all documented resources for proposal budgeting. Ms. Deshun Li and Ailing Zhang, MS are referenced as ORA pre-award contacts. Pre-award spending information and advance account creation are addressed in a dedicated section, and pre-award subaward procedures are covered separately. A Limited Submission policy applies when sponsors cap how many proposals MSU may submit.\n\nSubpages: University Application Information, Role of Principal Investigator, Proposal Components, Proposal Submission Checklist, Internal Routing Form, Budget Development, Fringe Benefit Rate, F&A Cost Rates, Proposal and Budget Examples, Pre-Award Spending, Pre-Award Subawards, and Limited Submission.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "contact_email": "ask.ora@morgan.edu",
+    "contact_phone": "443-885-4044",
+    "irf_lead_time": "submit at least 2 weeks before sponsor deadline",
+    "funding_database": "Pivot-RP (https://pivot.proquest.com/dashboard)"
+  }
+}

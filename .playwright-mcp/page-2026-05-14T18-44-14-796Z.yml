@@ -1,0 +1,217 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "Skip to Content" [ref=e4] [cursor=pointer]:
+      - /url: https://www.morgan.edu/technology-transfer-and-intellectual-property/conflict-of-interest-in-randd#content
+    - generic [ref=e5]:
+      - link "Morgan State Logo" [ref=e7] [cursor=pointer]:
+        - /url: ""
+        - img "Morgan State Logo" [ref=e8]
+      - generic [ref=e9]:
+        - button "Open main menu." [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: 
+          - text: 
+          - generic [ref=e12]: Menu
+        - button "Open the 'info for' menu." [ref=e13] [cursor=pointer]:
+          - generic [ref=e14]: 
+          - text: 
+          - generic [ref=e15]: Info For
+        - button "Open search form." [ref=e16] [cursor=pointer]:
+          - generic [ref=e17]: 
+          - text: 
+          - generic [ref=e18]: Search
+        - link "Open My MSU" [ref=e19] [cursor=pointer]:
+          - /url: https://www.morgan.edu/gateway/
+          - generic [ref=e20]: 
+          - generic [ref=e21]: My MSU
+  - text:                 
+  - main [ref=e22]:
+    - generic [ref=e24]:
+      - link "Home" [ref=e25] [cursor=pointer]:
+        - /url: ""
+      - text: /
+      - link "Technology Transfer and Intellectual Property" [ref=e26] [cursor=pointer]:
+        - /url: /technologytransfer
+      - text: /
+      - link "Conflict of Interest in R&D" [ref=e27] [cursor=pointer]:
+        - /url: /technology-transfer-and-intellectual-property/conflict-of-interest-in-randd
+    - text:   
+    - generic [ref=e30]:
+      - generic [ref=e32]:
+        - paragraph [ref=e33]: Office of Technology Transfer and Intellectual Property
+        - separator [ref=e34]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - heading "Conflict of Interest in R&D" [level=1] [ref=e38]
+          - generic [ref=e40]:
+            - paragraph [ref=e41]: Maryland law encourages public senior higher education institutions to promote economic development in the State and to increase their arrangements with the private sector, including collaborative research and development, commercial application of institution-owned intellectual property, and provisions of technical assistance. To facilitate these purposes, under the Maryland Public Ethics Law, the Public-Private Partnership Act (Institutions of Higher Education) allows for the exemption of university personnel for some of the law's conflict of interest (COI) provisions.
+            - paragraph [ref=e42]: In 2017, to further the economic and social impact of the university, and to bring Morgan in step with other Maryland research universities, the Morgan State University Board of Regents approved a new Conflict of Interest Policy in Research and Development. Concurrently, we established university Conflict of Interest Procedures, and both the Policy and Procedures have been approved by the State Ethics Commission.
+            - paragraph [ref=e43]: A nine-member Morgan Conflict of Interest Committee (COIC) is comprised of six faculty members from across the campus, a representative from the Office of Academic Affairs, a representative from the Office of Technology Transfer, and the Vice President for Research and Economic Development, who serves as chair. The work of the COIC is to review faculty Conflict of Interest exemption requests for research and economic development activities, including those associated with faculty start-up companies, and make recommendations for university exemptions under Morgan's COI Policy and Procedures.
+          - generic [ref=e46]:
+            - link "Conflict of Interest Committee +" [ref=e48] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e49]: Conflict of Interest Committee
+              - generic [ref=e50]:
+                - generic [ref=e52]: +
+                - text: 
+            - link "Policies and Procedures +" [ref=e54] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e55]: Policies and Procedures
+              - generic [ref=e56]:
+                - generic [ref=e58]: +
+                - text: 
+            - link "Guidelines for Faculty and Staff +" [ref=e60] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e61]: Guidelines for Faculty and Staff
+              - generic [ref=e62]:
+                - generic [ref=e64]: +
+                - text: 
+            - link "Education and Training +" [ref=e66] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e67]: Education and Training
+              - generic [ref=e68]:
+                - generic [ref=e70]: +
+                - text: 
+            - link "State Ethics Commission +" [ref=e72] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e73]: State Ethics Commission
+              - generic [ref=e74]:
+                - generic [ref=e76]: +
+                - text: 
+        - generic [ref=e77]:
+          - list [ref=e79]:
+            - listitem [ref=e80]:
+              - link "Technology Transfer and Intellectual Property" [ref=e81] [cursor=pointer]:
+                - /url: /technologytransfer
+              - list [ref=e82]:
+                - listitem [ref=e83]:
+                  - link "About" [ref=e84] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/about
+                - listitem [ref=e85]:
+                  - link "Innovation Works" [ref=e86] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/innovation-works
+                - listitem [ref=e87]:
+                  - link "Carnegie R1 Progress" [ref=e88] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/carnegie-r1-progress
+                - listitem [ref=e89]:
+                  - link "Issued Patents" [ref=e90] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/issued-patents
+                - listitem [ref=e91]:
+                  - link "Pending Utility Patents" [ref=e92] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/pending-utility-patents
+                - listitem [ref=e93]:
+                  - link "Innovation of the Year Awards" [ref=e94] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/innovation-of-the-year-awards
+                - listitem [ref=e95]:
+                  - link "OTT Publications" [ref=e96] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/ott-publications
+                - listitem [ref=e97]:
+                  - link "For Industry" [ref=e98] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/for-industry
+                - listitem [ref=e99]:
+                  - link " Conflict of Interest in R&D" [ref=e100] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/conflict-of-interest-in-randd
+                    - generic [ref=e101]: 
+                    - text: Conflict of Interest in R&D
+                - listitem [ref=e102]:
+                  - link "Resources" [ref=e103] [cursor=pointer]:
+                    - /url: /technology-transfer-and-intellectual-property/resources
+          - generic [ref=e105]:
+            - heading "Contact Information" [level=4] [ref=e106]
+            - separator [ref=e107]
+            - paragraph [ref=e108]:
+              - strong [ref=e109]: Office of Technology Transfer
+              - text: Earl S. Richardson Library, Suite 207
+              - text: 1700 E. Cold Spring Lane
+              - text: Baltimore, MD 21251
+              - text: 443-885-1003
+    - generic [ref=e111]:
+      - generic [ref=e112]: 
+      - text: 
+  - contentinfo [ref=e113]:
+    - generic [ref=e115]:
+      - generic [ref=e117]:
+        - img "Morgan State University logo in white and orange" [ref=e119]
+        - paragraph [ref=e120]:
+          - link "1700 East Cold Spring Lane Baltimore, Maryland 21251" [ref=e121] [cursor=pointer]:
+            - /url: https://www.google.com/maps/place/Morgan+State+University/@39.3438,-76.5869596,17z/data=!3m1!4b1!4m6!3m5!1s0x89c805bb6adeb895:0x3035e29e2ad87f3f!8m2!3d39.3437959!4d-76.5843847!16zL20vMHN4Z2g?entry=ttu&g_ep=EgoyMDI2MDMxMC4wIKXMDSoASAFQAw%3D%3D
+            - text: 1700 East Cold Spring Lane
+            - text: Baltimore, Maryland 21251
+        - paragraph [ref=e122]:
+          - link "Carnegie Classification Seal" [ref=e123] [cursor=pointer]:
+            - /url: https://carnegieclassifications.acenet.edu/institution/morgan-state-university/
+            - img "Carnegie Classification Seal" [ref=e124]
+        - paragraph
+      - generic [ref=e126]:
+        - list [ref=e127]:
+          - listitem [ref=e128]:
+            - link "APPLY" [ref=e129] [cursor=pointer]:
+              - /url: /apply
+          - listitem [ref=e130]:
+            - link "ADMISSIONS & AID" [ref=e131] [cursor=pointer]:
+              - /url: /admissions-aid
+          - listitem [ref=e132]:
+            - link "STUDENT LIFE" [ref=e133] [cursor=pointer]:
+              - /url: /student-life
+          - listitem [ref=e134]:
+            - link "SCHEDULE A VISIT" [ref=e135] [cursor=pointer]:
+              - /url: /campusvisits
+          - listitem [ref=e136]:
+            - link "REQUEST INFORMATION" [ref=e137] [cursor=pointer]:
+              - /url: /request-info
+          - listitem [ref=e138]:
+            - link "GIVE TO MORGAN" [ref=e139] [cursor=pointer]:
+              - /url: http://www.givetomorgan.org/
+        - text:     
+        - generic [ref=e140]:
+          - paragraph [ref=e141]:
+            - link "Privacy" [ref=e142] [cursor=pointer]:
+              - /url: /privacy
+            - text: "|"
+            - link "Contact Us" [ref=e143] [cursor=pointer]:
+              - /url: /contactus
+            - text: "|"
+            - link "Report Waste & Fraud" [ref=e144] [cursor=pointer]:
+              - /url: https://www.ola.state.md.us/fraud/ola-fraud-hotline
+          - paragraph [ref=e145]: ©2026 Morgan State University
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - link "Facebook" [ref=e149] [cursor=pointer]:
+            - /url: https://www.facebook.com/morganstateu
+            - generic [ref=e150]: 
+          - link "X.com" [ref=e151] [cursor=pointer]:
+            - /url: https://www.x.com/morganstateu/
+            - generic [ref=e152]: 
+          - link "Instagram" [ref=e153] [cursor=pointer]:
+            - /url: https://www.instagram.com/morganstateu
+            - generic [ref=e154]: 
+          - link "Youtube" [ref=e155] [cursor=pointer]:
+            - /url: https://www.youtube.com/morganstateu
+            - generic [ref=e156]: 
+          - link "LinkedIn" [ref=e157] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/morgan-state-university
+            - generic [ref=e158]: 
+        - list [ref=e159]:
+          - listitem [ref=e160]:
+            - link "Nondiscrimination Notice" [ref=e161] [cursor=pointer]:
+              - /url: /nondiscrimination
+          - listitem [ref=e162]:
+            - link "Accessibility" [ref=e163] [cursor=pointer]:
+              - /url: /accessibility
+          - listitem [ref=e164]:
+            - link "Careers" [ref=e165] [cursor=pointer]:
+              - /url: /jobs
+          - listitem [ref=e166]:
+            - link "Campus Map" [ref=e167] [cursor=pointer]:
+              - /url: https://map.morgan.edu/
+          - listitem [ref=e168]:
+            - link "Emergency Information" [ref=e169] [cursor=pointer]:
+              - /url: /emergency-information
+          - listitem [ref=e170]:
+            - link "Clery Report" [ref=e171] [cursor=pointer]:
+              - /url: /cleryreport
+          - listitem [ref=e172]:
+            - link "Title IX Information" [ref=e173] [cursor=pointer]:
+              - /url: /titleix
+          - listitem [ref=e174]:
+            - link "Mobile Alerts" [ref=e175] [cursor=pointer]:
+              - /url: /mobilealerts

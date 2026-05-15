@@ -1,30 +1,30 @@
 import React from "react";
-import { FaGraduationCap } from "@react-icons/all-files/fa/FaGraduationCap";
-import { FaBook } from "@react-icons/all-files/fa/FaBook";
-import { FaComments } from "@react-icons/all-files/fa/FaComments";
+import { FaFileInvoiceDollar } from "@react-icons/all-files/fa/FaFileInvoiceDollar";
+import { FaClipboardCheck } from "@react-icons/all-files/fa/FaClipboardCheck";
+import { FaChartLine } from "@react-icons/all-files/fa/FaChartLine";
 import { FaShieldAlt } from "@react-icons/all-files/fa/FaShieldAlt";
 import "./auth.css";
 
 const features = [
   {
-    icon: FaGraduationCap,
-    title: "Academic Guidance",
-    desc: "Get personalized advice on courses, majors, and degree requirements"
+    icon: FaFileInvoiceDollar,
+    title: "Proposal & Pre-Award",
+    desc: "F&A rates, budget templates, internal routing, NSF/NIH submission checklists — answers in seconds."
   },
   {
-    icon: FaBook,
-    title: "Curriculum Explorer",
-    desc: "Browse the full CS curriculum with prerequisites and offerings"
+    icon: FaClipboardCheck,
+    title: "Compliance Workflows",
+    desc: "IRB meeting dates, IACUC forms, COI disclosure, RCR training — the right doc, the right contact."
   },
   {
-    icon: FaComments,
-    title: "AI-Powered Chat",
-    desc: "Ask questions and get instant answers about your academic journey"
+    icon: FaChartLine,
+    title: "Post-Award & Reporting",
+    desc: "NCE 60-day rule, effort certification, subawards, financial reporting — grounded in PI Handbook 5."
   },
   {
     icon: FaShieldAlt,
-    title: "Secure & Private",
-    desc: "Your conversations and data are protected and confidential"
+    title: "Morgan-only access",
+    desc: "Sign in with your @morgan.edu email. Your questions stay within the Morgan ORA workspace."
   }
 ];
 
@@ -32,7 +32,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <div className="auth">
       {/* LEFT: Brand panel with features */}
-      <aside className="auth__brand" aria-label="Morgan State CS Navigator">
+      <aside className="auth__brand" aria-label="ORA Navigator">
         {/* Animated background elements */}
         <div className="auth__bgOrbs">
           <div className="auth__orb auth__orb--1"></div>
@@ -47,7 +47,7 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
             alt="Morgan State University"
           />
 
-          <h1 className="auth__brandTitle">CS Navigator</h1>
+          <h1 className="auth__brandTitle">ORA Navigator</h1>
           <p className="auth__brandSubtitle">{subtitle}</p>
 
           {/* Feature highlights */}
@@ -73,8 +73,8 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
         {/* Footer on left panel */}
         <div className="auth__brandFooter">
           <span>Morgan State University</span>
-          <span className="auth__dot">•</span>
-          <span>Department of Computer Science</span>
+          <span className="auth__dot">·</span>
+          <span>Office of Research Administration</span>
         </div>
       </aside>
 
@@ -90,8 +90,8 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
             <h2 className="auth__title">{title}</h2>
             <p className="auth__titleSub">
               {title === "Log in"
-                ? "Welcome back! Enter your credentials to continue."
-                : "Create your account to get started."}
+                ? "Welcome back. Sign in with your Morgan State email to continue."
+                : "Use your @morgan.edu email to create your ORA Navigator account."}
             </p>
           </header>
 

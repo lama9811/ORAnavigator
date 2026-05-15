@@ -1,0 +1,42 @@
+{
+  "doc_id": "trainings_special_workshops",
+  "title": "Trainings — Special Workshops",
+  "category": "trainings",
+  "subcategory": "workshops",
+  "display_label": "Special Workshops (ORA Trainings)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/special-workshops",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/trainings/special-workshops",
+  "content": "Special Workshops are one-off, deep-dive training events hosted by ORA on specific research administration topics. Unlike the recurring Monthly D-RED Seminars, Special Workshops are scheduled as needed, often combining multiple presenters into a single half-day or full-day session focused on one theme.\n\nDocumented workshop on this page:\n\nCost Allowability Workshop — Held December 9, 2022. This workshop included four sequential presentations:\n1) 'Cost Allowability Principles & Examples' — Presented by Farin Kamangar, MD, PhD\n2) 'Budget Info in the Funding Opportunity Announcement (FOA)' — Presented by Gillian Silver, MPH, CPH\n3) 'Understanding Federal Notices of Award' — Presented by Becca Steiner\n4) 'Cost Allowability, Processes & Support Documents' — Presented by Lucy Manyara, MBA and Shamon Shine-Lee\n\nThe page itself does not enumerate registration procedures, future workshop schedules, or full external PDF/PowerPoint URLs (only relative document paths are referenced for slide decks).\n\nTo inquire about upcoming Special Workshops or request a workshop on a specific topic, contact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.\n\nAdditional details revealed by Playwright: All four Cost Allowability Workshop presentation slide decks have direct PDF URLs on morgan.edu under /Documents/ADMINISTRATION/OFFICES/ora/Workshops/: (1) Cost Allowability Principles & Examples (Kamangar) — 2022-12-09_Cost_Allowability.pdf; (2) Budget Info in the FOA (Silver) — 2022-12-09_Budget_Info_in_the_FOA.pdf; (3) Understanding Federal Notices of Award (Steiner) — 2022-12-09_Understanding_Federal_Notices_of_Award.pdf; (4) Cost Allowability, Processes & Support Documents (Manyara/Shine-Lee) — 2022-12-09_Cost_Allowability_Support_Documents.pdf. The page has no other archived workshops as of 2026-05-14; the Cost Allowability workshop remains the sole documented Special Workshop.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "documented_workshops": [
+      {
+        "title": "Cost Allowability Workshop",
+        "date": "2022-12-09",
+        "presentation_pdf_urls": [
+          "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Cost_Allowability.pdf",
+          "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Budget_Info_in_the_FOA.pdf",
+          "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Understanding_Federal_Notices_of_Award.pdf",
+          "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Cost_Allowability_Support_Documents.pdf"
+        ],
+        "presenters": [
+          "Farin Kamangar, MD, PhD",
+          "Gillian Silver, MPH, CPH",
+          "Becca Steiner",
+          "Lucy Manyara, MBA",
+          "Shamon Shine-Lee"
+        ],
+        "components": [
+          "Cost Allowability Principles & Examples",
+          "Budget Info in the Funding Opportunity Announcement (FOA)",
+          "Understanding Federal Notices of Award",
+          "Cost Allowability, Processes & Support Documents"
+        ]
+      }
+    ],
+    "cadence": "Ad-hoc / one-off",
+    "contact_email": "ask.ora@morgan.edu"
+  }
+}

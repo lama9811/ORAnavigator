@@ -16,7 +16,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'CS Navigator',
+        name: 'ORA Navigator',
         short_name: 'CSNav',
         description: 'AI-powered academic advising for Morgan State CS',
         theme_color: '#4285F4',

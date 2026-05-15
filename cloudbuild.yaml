@@ -1,5 +1,5 @@
 # =============================================================================
-# Cloud Build CI/CD Configuration for CSNavigator
+# Cloud Build CI/CD Configuration for ORANavigator
 # =============================================================================
 # Automatically builds and deploys on push to main branch
 #
@@ -12,10 +12,10 @@
 
 substitutions:
   _REGION: us-central1
-  _REPO_NAME: csnavigator
-  _BACKEND_SERVICE: csnavigator-backend
-  _FRONTEND_SERVICE: csnavigator-frontend
-  _ADK_SERVICE: csnavigator-adk
+  _REPO_NAME: oranavigator
+  _BACKEND_SERVICE: oranavigator-backend
+  _FRONTEND_SERVICE: oranavigator-frontend
+  _ADK_SERVICE: oranavigator-adk
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -104,7 +104,7 @@ steps:
       - '--timeout=300'
       - '--concurrency=80'
       - '--no-allow-unauthenticated'
-      - '--service-account=csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com'
+      - '--service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com'
       - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID}'
     waitFor: ['push-adk']
 
@@ -132,11 +132,11 @@ steps:
           --timeout=300 \
           --concurrency=100 \
           --allow-unauthenticated \
-          --service-account=csnavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
-          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=cs_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://cs.inavigator.ai,API_URL=https://api.inavigator.ai,ALLOW_TEST_EMAILS=false,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false" \
+          --service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
+          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://ora.inavigator.ai,API_URL=https://api-ora.inavigator.ai,ALLOW_TEST_EMAILS=false,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false" \
           --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,ADMIN_EMAIL=ADMIN_EMAIL:latest,ADMIN_PASSWORD=ADMIN_PASSWORD:latest"
         # NOTE: SMTP_USER, SMTP_PASS, and RESEARCH_SECRET must be set manually on the
-        # Cloud Run service via console or: gcloud run services update csnavigator-backend
+        # Cloud Run service via console or: gcloud run services update oranavigator-backend
         #   --set-env-vars="SMTP_USER=noreplyinavigator@gmail.com,SMTP_PASS=<app-password>,RESEARCH_SECRET=<secret>"
         # TODO: Migrate to Secret Manager once API is enabled on the project
     waitFor: ['deploy-adk', 'push-backend']

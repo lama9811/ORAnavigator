@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_emergency_declaration_call_list",
+  "title": "Emergency Declaration and Point of Contact Call List",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC \u2014 Emergency Declaration and Point of Contact Call List",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Emergency%20Declaration%20and%20Point%20of%20Contact_Call%20List.docx",
+  "content": "Emergency declaration template and point-of-contact call list for the Animal Research Facility \u2014 used during after-hours or disaster events.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

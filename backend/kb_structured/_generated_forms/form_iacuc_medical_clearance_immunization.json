@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_medical_clearance_immunization",
+  "title": "Medical Clearance and Proof of Immunization Form",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC \u2014 Medical Clearance and Proof of Immunization Form",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Medical%20Clearance%20and%20Proof%20of%20Immunization%20Form.docx",
+  "content": "Required occupational-health form documenting medical clearance and immunization status for personnel working with laboratory animals.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

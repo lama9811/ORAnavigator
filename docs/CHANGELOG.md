@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to CS Navigator are documented here.
+All notable changes to ORA Navigator are documented here.
 
 ## [5.0] - 2026-04-04
 ### Added

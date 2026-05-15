@@ -1,0 +1,24 @@
+{
+  "doc_id": "announcement_nih_nsf_doe_common_forms_2026_01_21",
+  "title": "Preparing for NIH, NSF, and DOE Common Forms & Research Security Requirements",
+  "category": "announcements",
+  "subcategory": "regulatory_update",
+  "display_label": "NIH/NSF/DOE Common Forms & Research Security (Jan 2026)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/ora-announcements",
+  "content": "Beginning January 2026, NIH and DOE will require investigators to use SciENcv to generate digitally certified Common Forms, including the Biographical Sketch and Current and Pending Support. Faculty should create and maintain an up-to-date SciENcv profile now at https://www.ncbi.nlm.nih.gov/sciencv/.\n\nNSF and DOE also require senior/key personnel to complete and certify research security training prior to proposal submission. This requirement can be met by completing the one-hour CITI Research Security Training (Combined) module available via Morgan's Responsible Conduct of Research page at https://www.morgan.edu/office-of-research-administration/research-compliance/responsible-conduct-of-research.\n\nACTION ITEMS FOR MORGAN INVESTIGATORS:\n1. Create or update a SciENcv profile at https://www.ncbi.nlm.nih.gov/sciencv/ — required for NIH and DOE Common Forms (Biographical Sketch, Current and Pending Support).\n2. Senior/key personnel on NSF or DOE proposals must complete the CITI Research Security Training (Combined) one-hour module prior to proposal submission and certify completion.\n3. Direct questions to ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "announcement_date": "2026-01-21",
+  "key_facts": {
+    "agencies_affected": ["NIH", "NSF", "DOE"],
+    "effective_date": "2026-01",
+    "sciencv_url": "https://www.ncbi.nlm.nih.gov/sciencv/",
+    "citi_training_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/responsible-conduct-of-research",
+    "sciencv_required_for": ["Common Forms", "Biographical Sketch", "Current and Pending Support"],
+    "sciencv_required_by": ["NIH", "DOE"],
+    "research_security_training_required_by": ["NSF", "DOE"],
+    "training_module": "CITI Research Security Training (Combined)",
+    "training_duration": "1 hour"
+  }
+}

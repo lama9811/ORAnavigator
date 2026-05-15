@@ -1,0 +1,27 @@
+{
+  "doc_id": "post_award_notification_and_setup",
+  "title": "Post-Award — Notification and Setup of Award",
+  "category": "post_award",
+  "subcategory": "setup",
+  "display_label": "Notification & Setup of Award (Post-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/notification-and-setup-of-award",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/post-award/notification-and-setup-of-award",
+  "content": "Notification of Award: Award notifications may take the form of an award letter, a purchase order, a detailed contract, or an agreement spelling out the terms and conditions. The notification is directed to the Assistant VP for Research Administration, who distributes copies to the PI/PD and the VP for Finance and Management. The Office of Restricted Funds Accounting (RFA) is also notified.\n\nImportant: Awards for proposals that did not undergo the normal internal processing, review, and approval through the Office of Research Administration (ORA) may be refused by the University.\n\nSet-Up of Award: Once the award is formally accepted, documents are forwarded to RFA, which assigns an Index or Budget code number and establishes the account in Banner (the University's financial system). The Comptroller's Office is notified. Account setup typically takes up to three (3) business days. A Post-Award Briefing meeting is then scheduled with the PI and supporting units.\n\nPost-Award Briefing: The Post-Award Briefing provides a roadmap in administering and managing key grant/contract post-award activities, spanning from account setup through final reporting. Primary offices involved in the briefing are:\n- Office of Research Administration (ORA)\n- Office of Human Resources\n- Office of Procurement\n- Office of the Comptroller\n- Purchasing Card Office\n\nContacts: ORA — Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu. Research Compliance Director: Dr. Edet Isuk — edet.isuk@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "account_setup_turnaround_days": 3,
+    "financial_system": "Banner",
+    "fiscal_office": "Office of Restricted Funds Accounting (RFA)",
+    "research_compliance_director": "Dr. Edet Isuk (edet.isuk@morgan.edu)",
+    "university_acceptance_clause": "The University is not obligated to accept an award; awards are made to the University, not an individual.",
+    "briefing_units": [
+      "Office of Research Administration",
+      "Office of Human Resources",
+      "Office of Procurement",
+      "Office of the Comptroller",
+      "Purchasing Card Office"
+    ]
+  }
+}

@@ -64,14 +64,14 @@ def hr():
 story = []
 
 # ─── TITLE ───
-story.append(Paragraph('CS Navigator: Testing Report Summary and Feedback', styles['DocTitle']))
+story.append(Paragraph('ORA Navigator: Testing Report Summary and Feedback', styles['DocTitle']))
 story.append(Paragraph('April 2, 2026 | Prepared for Dr. Naja Mack and Dr. Shuangbao (Paul) Wang', styles['DocSub']))
 story.append(hr())
 
 # ─── 1. OVERVIEW ───
 story.append(Paragraph('1. Overview', styles['H1']))
 story.append(Paragraph(
-    'On April 2, 2026, students from Dr. Naja Mack\'s lab tested CS Navigator as part of a '
+    'On April 2, 2026, students from Dr. Naja Mack\'s lab tested ORA Navigator as part of a '
     'structured evaluation. Testing coincided with a scheduled deployment of version 5.0, '
     'which introduced Canvas LMS integration and security improvements. During a 45-minute '
     'deployment window (3:00 to 3:45 PM ET), the AI agent was temporarily unreachable due to '
@@ -273,7 +273,7 @@ story.append(PageBreak())
 story.append(Paragraph('5. Out-of-Scope Questions', styles['H1']))
 story.append(Paragraph(
     'Several testers asked questions intentionally outside the system\'s scope. '
-    'CS Navigator is designed specifically for CS academic advising at Morgan State. '
+    'ORA Navigator is designed specifically for CS academic advising at Morgan State. '
     'The system correctly identified these boundaries:',
     styles['Body']))
 
@@ -416,7 +416,7 @@ story.append(Paragraph('Result: 27 of 28 tests passed. Average response time: 2.
 story.append(Spacer(1, 30))
 story.append(hr())
 story.append(Paragraph(
-    'CS Navigator is an open-source project by Aayush Shrestha for the Morgan State CS Department. '
+    'ORA Navigator is an open-source project by Aayush Shrestha for the Morgan State CS Department. '
     'Full 15-page report with detailed issue-by-issue analysis available upon request. '
     'Repository: github.com/theaayushstha1/cs-chatbot-morganstate',
     styles['Footer']))

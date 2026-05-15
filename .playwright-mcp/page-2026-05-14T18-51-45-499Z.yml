@@ -1,0 +1,196 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "Skip to Content" [ref=e4] [cursor=pointer]:
+        - /url: https://www.morgan.edu/office-of-research-administration/trainings#content
+      - generic [ref=e5]:
+        - link "Morgan State Logo" [ref=e7] [cursor=pointer]:
+          - /url: ""
+          - img "Morgan State Logo" [ref=e8]
+        - generic [ref=e9]:
+          - button "Open main menu." [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: 
+            - text: 
+          - button "Open the 'info for' menu." [ref=e12] [cursor=pointer]:
+            - generic [ref=e13]: 
+            - text: 
+          - button "Open search form." [ref=e14] [cursor=pointer]:
+            - generic [ref=e15]: 
+            - text: 
+          - link "Open My MSU" [ref=e16] [cursor=pointer]:
+            - /url: https://www.morgan.edu/gateway/
+            - generic [ref=e17]: 
+    - text:                 
+    - main [ref=e18]:
+      - generic [ref=e20]:
+        - link "Home" [ref=e21] [cursor=pointer]:
+          - /url: ""
+        - text: /
+        - link "Office of Research Administration" [ref=e22] [cursor=pointer]:
+          - /url: /ora
+        - text: /
+        - link "Trainings" [ref=e23] [cursor=pointer]:
+          - /url: /office-of-research-administration/trainings
+      - generic [ref=e26]:
+        - link " SUB MENU" [ref=e27] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e28]: 
+          - text:  SUB MENU
+        - text: 
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Office of Research Administration
+          - separator [ref=e35]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "Trainings" [level=1] [ref=e39]
+            - generic [ref=e41]:
+              - paragraph [ref=e42]:
+                - strong [ref=e43]:
+                  - link "e-Training" [ref=e44] [cursor=pointer]:
+                    - /url: /office-of-research-administration/trainings/e-training
+                - text: Training Modules Touching on All Aspects of Administrative Functions at Morgan State University
+              - paragraph [ref=e45]:
+                - link "Research Compliance and Security Training" [ref=e46] [cursor=pointer]:
+                  - /url: /office-of-research-administration/research-compliance/research-security/research-compliance-and-security-training
+                - text: MSU Researcher Compliance and Training Requirement(s) Information
+              - paragraph [ref=e47]:
+                - strong [ref=e48]:
+                  - link "New Faculty Development Seminars" [ref=e49] [cursor=pointer]:
+                    - /url: /office-of-research-administration/trainings/new-faculty-development-seminars
+                - text: MSU Faculty and Staff Development Videos and Presentations
+              - paragraph [ref=e50]:
+                - strong [ref=e51]:
+                  - link "Monthly D-RED Seminars" [ref=e52] [cursor=pointer]:
+                    - /url: /office-of-research-administration/trainings/monthly-d-red-seminars
+                - text: Training Videos and Presentations
+              - paragraph [ref=e53]:
+                - strong [ref=e54]:
+                  - link "Special Workshops" [ref=e55] [cursor=pointer]:
+                    - /url: /office-of-research-administration/trainings/special-workshops
+                - text: Focused Day-Long Workshop Presentations on Specific Research Administration Subjects
+              - paragraph [ref=e56]:
+                - link "Test Prep" [ref=e57] [cursor=pointer]:
+                  - /url: /office-of-research-administration/trainings/test-prep
+                - text: "Preparatory materials to ace RACC's CRA exam: learn a lot about research administration in easy-to-digest format"
+              - paragraph [ref=e58]:
+                - strong [ref=e59]:
+                  - link "Trainings Outside ORA" [ref=e60] [cursor=pointer]:
+                    - /url: /office-of-research-administration/trainings/msu-trainings-outside-ora
+                - text: Opportunities Outside of ORA for MSU Faculty and Staff to Learn About Research
+            - paragraph [ref=e63]:
+              - text: For questions, please email
+              - link "ask.ora@morgan.edu" [ref=e64] [cursor=pointer]:
+                - /url: mailto:ask.ora@morgan.edu
+              - text: .
+          - generic: 
+      - generic [ref=e68]:
+        - heading "Contact Information" [level=4] [ref=e69]
+        - separator [ref=e70]
+        - paragraph [ref=e71]:
+          - strong [ref=e72]: Office of Research Administration
+          - text: Morgan State University
+          - text: Tyler Hall, Student Service Bldg
+          - text: Suite 304
+          - text: Baltimore, MD 21251
+        - paragraph [ref=e73]:
+          - text: "Questions, contact:"
+          - text: "P: 443-885-4044"
+          - text: "F: 443-885-8280"
+          - text: "E:"
+          - link "ask.ora@morgan.edu" [ref=e74] [cursor=pointer]:
+            - /url: mailto:ask.ora@morgan.edu
+        - paragraph
+        - paragraph
+        - paragraph
+      - generic [ref=e76]:
+        - generic [ref=e77]: 
+        - text: 
+    - contentinfo [ref=e78]:
+      - generic [ref=e80]:
+        - generic [ref=e82]:
+          - img "Morgan State University logo in white and orange" [ref=e84]
+          - paragraph [ref=e85]:
+            - link "1700 East Cold Spring Lane Baltimore, Maryland 21251" [ref=e86] [cursor=pointer]:
+              - /url: https://www.google.com/maps/place/Morgan+State+University/@39.3438,-76.5869596,17z/data=!3m1!4b1!4m6!3m5!1s0x89c805bb6adeb895:0x3035e29e2ad87f3f!8m2!3d39.3437959!4d-76.5843847!16zL20vMHN4Z2g?entry=ttu&g_ep=EgoyMDI2MDMxMC4wIKXMDSoASAFQAw%3D%3D
+              - text: 1700 East Cold Spring Lane
+              - text: Baltimore, Maryland 21251
+          - paragraph [ref=e87]:
+            - link "Carnegie Classification Seal" [ref=e88] [cursor=pointer]:
+              - /url: https://carnegieclassifications.acenet.edu/institution/morgan-state-university/
+              - img "Carnegie Classification Seal" [ref=e89]
+          - paragraph
+        - generic [ref=e91]:
+          - list [ref=e92]:
+            - listitem [ref=e93]:
+              - link "APPLY" [ref=e94] [cursor=pointer]:
+                - /url: /apply
+            - listitem [ref=e95]:
+              - link "ADMISSIONS & AID" [ref=e96] [cursor=pointer]:
+                - /url: /admissions-aid
+            - listitem [ref=e97]:
+              - link "STUDENT LIFE" [ref=e98] [cursor=pointer]:
+                - /url: /student-life
+            - listitem [ref=e99]:
+              - link "SCHEDULE A VISIT" [ref=e100] [cursor=pointer]:
+                - /url: /campusvisits
+            - listitem [ref=e101]:
+              - link "REQUEST INFORMATION" [ref=e102] [cursor=pointer]:
+                - /url: /request-info
+            - listitem [ref=e103]:
+              - link "GIVE TO MORGAN" [ref=e104] [cursor=pointer]:
+                - /url: http://www.givetomorgan.org/
+          - generic [ref=e105]:
+            - link "Facebook" [ref=e106] [cursor=pointer]:
+              - /url: https://www.facebook.com/morganstateu
+              - generic [ref=e107]: 
+            - link "X.com" [ref=e108] [cursor=pointer]:
+              - /url: https://www.x.com/morganstateu/
+              - generic [ref=e109]: 
+            - link "Instagram" [ref=e110] [cursor=pointer]:
+              - /url: https://www.instagram.com/morganstateu
+              - generic [ref=e111]: 
+            - link "Youtube" [ref=e112] [cursor=pointer]:
+              - /url: https://www.youtube.com/morganstateu
+              - generic [ref=e113]: 
+            - link "LinkedIn" [ref=e114] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/morgan-state-university
+              - generic [ref=e115]: 
+          - list [ref=e117]:
+            - listitem [ref=e118]:
+              - link "Nondiscrimination Notice" [ref=e119] [cursor=pointer]:
+                - /url: /nondiscrimination
+            - listitem [ref=e120]:
+              - link "Accessibility" [ref=e121] [cursor=pointer]:
+                - /url: /accessibility
+            - listitem [ref=e122]:
+              - link "Careers" [ref=e123] [cursor=pointer]:
+                - /url: /jobs
+            - listitem [ref=e124]:
+              - link "Campus Map" [ref=e125] [cursor=pointer]:
+                - /url: https://map.morgan.edu/
+            - listitem [ref=e126]:
+              - link "Emergency Information" [ref=e127] [cursor=pointer]:
+                - /url: /emergency-information
+            - listitem [ref=e128]:
+              - link "Clery Report" [ref=e129] [cursor=pointer]:
+                - /url: /cleryreport
+            - listitem [ref=e130]:
+              - link "Title IX Information" [ref=e131] [cursor=pointer]:
+                - /url: /titleix
+            - listitem [ref=e132]:
+              - link "Mobile Alerts" [ref=e133] [cursor=pointer]:
+                - /url: /mobilealerts
+          - generic [ref=e134]:
+            - paragraph [ref=e135]:
+              - link "Privacy" [ref=e136] [cursor=pointer]:
+                - /url: /privacy
+              - text: "|"
+              - link "Contact Us" [ref=e137] [cursor=pointer]:
+                - /url: /contactus
+              - text: "|"
+              - link "Report Waste & Fraud" [ref=e138] [cursor=pointer]:
+                - /url: https://www.ola.state.md.us/fraud/ola-fraud-hotline
+            - paragraph [ref=e139]: ©2026 Morgan State University
+        - text:     
+  - img [ref=e142]

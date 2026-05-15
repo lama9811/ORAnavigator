@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_research_security_data_encryption",
+  "title": "Data Encryption Procedure (PDF)",
+  "category": "form",
+  "subcategory": "research_security_pdf",
+  "display_label": "Data Encryption Procedure",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/information-technology-resources",
+  "procedure_url": "https://drive.google.com/file/d/1D4IXLrV3CnHzMB5TwyvqBfajYODSSWLw/view",
+  "content": "Data Encryption Procedure for Morgan State University. Ensures that sensitive and confidential information is protected through the implementation of strong encryption practices. As a critical security measure, encryption safeguards data from unauthorized access by rendering it unreadable without the appropriate decryption credentials. Part of MSU's Research Security Program (cybersecurity pillar). Hosted on Google Drive. Linked from the Research Security Information Technology Resources page.",
+  "last_scraped": "2026-05-14"
+}

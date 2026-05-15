@@ -1,0 +1,254 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "Skip to Content" [ref=e4] [cursor=pointer]:
+        - /url: https://www.morgan.edu/office-of-research-administration/trainings/special-workshops#content
+      - generic [ref=e5]:
+        - link "Morgan State Logo" [ref=e7] [cursor=pointer]:
+          - /url: ""
+          - img "Morgan State Logo" [ref=e8]
+        - generic [ref=e9]:
+          - button "Open main menu." [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: 
+            - text: 
+            - generic [ref=e12]: Menu
+          - button "Open the 'info for' menu." [ref=e13] [cursor=pointer]:
+            - generic [ref=e14]: 
+            - text: 
+            - generic [ref=e15]: Info For
+          - button "Open search form." [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: 
+            - text: 
+            - generic [ref=e18]: Search
+          - link "Open My MSU" [ref=e19] [cursor=pointer]:
+            - /url: https://www.morgan.edu/gateway/
+            - generic [ref=e20]: 
+            - generic [ref=e21]: My MSU
+    - text:                 
+    - main [ref=e22]:
+      - generic [ref=e24]:
+        - link "Home" [ref=e25] [cursor=pointer]:
+          - /url: ""
+        - text: /
+        - link "Office of Research Administration" [ref=e26] [cursor=pointer]:
+          - /url: /ora
+        - text: /
+        - link "Trainings" [ref=e27] [cursor=pointer]:
+          - /url: /office-of-research-administration/trainings
+        - text: /
+        - link "Special Workshops" [ref=e28] [cursor=pointer]:
+          - /url: /office-of-research-administration/trainings/special-workshops
+      - text:   
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Office of Research Administration
+          - separator [ref=e35]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "Workshops" [level=1] [ref=e39]
+            - generic [ref=e41]:
+              - heading "Cost Allowability" [level=3] [ref=e42]
+              - paragraph [ref=e43]: December 9, 2022
+              - table [ref=e44]:
+                - rowgroup [ref=e45]:
+                  - row "PDF Presentation Presenter" [ref=e46]:
+                    - columnheader "PDF Presentation" [ref=e47]
+                    - columnheader "Presenter" [ref=e48]
+                  - row "Cost Allowability Principles & Examples Farin Kamangar, MD, PhD" [ref=e49]:
+                    - cell "Cost Allowability Principles & Examples" [ref=e50]:
+                      - link "Cost Allowability Principles & Examples" [ref=e51] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Cost_Allowability.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e52]:
+                      - link "Farin Kamangar, MD, PhD" [ref=e53] [cursor=pointer]:
+                        - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                  - row "Budget Info in the Funding Opportunity Announcement (FOA) Gillian Silver, MPH, CPH" [ref=e54]:
+                    - cell "Budget Info in the Funding Opportunity Announcement (FOA)" [ref=e55]:
+                      - link "Budget Info in the Funding Opportunity Announcement (FOA)" [ref=e56] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Budget_Info_in_the_FOA.pdf
+                    - cell "Gillian Silver, MPH, CPH" [ref=e57]:
+                      - link "Gillian Silver, MPH, CPH" [ref=e58] [cursor=pointer]:
+                        - /url: /office-of-research-administration/about/staff-directory/gillian-b-silver
+                  - row "Understanding Federal Notices of Award Becca Steiner" [ref=e59]:
+                    - cell "Understanding Federal Notices of Award" [ref=e60]:
+                      - link "Understanding Federal Notices of Award" [ref=e61] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Understanding_Federal_Notices_of_Award.pdf
+                    - cell "Becca Steiner" [ref=e62]:
+                      - link "Becca Steiner" [ref=e63] [cursor=pointer]:
+                        - /url: /office-of-research-administration/about/staff-directory/rebecca-steiner
+                  - row "Cost Allowability, Processes & Support Documents Lucy Manyara, MBA Shamon Shine-Lee" [ref=e64]:
+                    - cell "Cost Allowability, Processes & Support Documents" [ref=e65]:
+                      - link "Cost Allowability, Processes & Support Documents" [ref=e66] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/Workshops/2022-12-09_Cost_Allowability_Support_Documents.pdf
+                    - cell "Lucy Manyara, MBA Shamon Shine-Lee" [ref=e67]:
+                      - paragraph [ref=e68]:
+                        - link "Lucy Manyara, MBA" [ref=e69] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/lucy-manyara
+                          - text: Lucy Manyara, MBA
+                      - paragraph [ref=e70]:
+                        - link "Shamon Shine-Lee" [ref=e71] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/shamon-shine-lee
+          - generic [ref=e72]:
+            - list [ref=e74]:
+              - listitem [ref=e75]:
+                - link "Office of Research Administration" [ref=e76] [cursor=pointer]:
+                  - /url: /ora
+                - list [ref=e77]:
+                  - listitem [ref=e78]:
+                    - link "About" [ref=e79] [cursor=pointer]:
+                      - /url: /office-of-research-administration/about
+                  - listitem [ref=e80]:
+                    - link "Pre-Award" [ref=e81] [cursor=pointer]:
+                      - /url: /office-of-research-administration/pre-award
+                  - listitem [ref=e82]:
+                    - link "Post-Award" [ref=e83] [cursor=pointer]:
+                      - /url: /office-of-research-administration/post-award
+                  - listitem [ref=e84]:
+                    - link "Policies and Guidelines" [ref=e85] [cursor=pointer]:
+                      - /url: /office-of-research-administration/policies-and-guidelines
+                  - listitem [ref=e86]:
+                    - link "Research Compliance" [ref=e87] [cursor=pointer]:
+                      - /url: /office-of-research-administration/research-compliance
+                  - listitem [ref=e88]:
+                    - link "Trainings" [ref=e89] [cursor=pointer]:
+                      - /url: /office-of-research-administration/trainings
+                  - list [ref=e90]:
+                    - listitem [ref=e91]:
+                      - link "e-Training" [ref=e92] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/e-training
+                    - listitem [ref=e93]:
+                      - link "New Faculty Development Seminars" [ref=e94] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/new-faculty-development-seminars
+                    - listitem [ref=e95]:
+                      - link "Monthly D-RED Seminars" [ref=e96] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/monthly-d-red-seminars
+                    - listitem [ref=e97]:
+                      - link " Special Workshops" [ref=e98] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/special-workshops
+                        - generic [ref=e99]: 
+                        - text: Special Workshops
+                    - listitem [ref=e100]:
+                      - link "Test Prep" [ref=e101] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/test-prep
+                    - listitem [ref=e102]:
+                      - link "MSU Trainings Outside ORA" [ref=e103] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/msu-trainings-outside-ora
+                  - listitem [ref=e104]:
+                    - link "Resources" [ref=e105] [cursor=pointer]:
+                      - /url: /office-of-research-administration/resources
+                  - listitem [ref=e106]:
+                    - link "Funding Sources" [ref=e107] [cursor=pointer]:
+                      - /url: /office-of-research-administration/funding-sources
+                  - listitem [ref=e108]:
+                    - link "ORA Announcements" [ref=e109] [cursor=pointer]:
+                      - /url: /office-of-research-administration/ora-announcements
+            - generic [ref=e111]:
+              - heading "Contact Information" [level=4] [ref=e112]
+              - separator [ref=e113]
+              - paragraph [ref=e114]:
+                - strong [ref=e115]: Office of Research Administration
+                - text: Morgan State University
+                - text: Tyler Hall, Student Service Bldg
+                - text: Suite 304
+                - text: Baltimore, MD 21251
+              - paragraph [ref=e116]:
+                - text: "Questions, contact:"
+                - text: "P: 443-885-4044"
+                - text: "F: 443-885-8280"
+                - text: "E:"
+                - link "ask.ora@morgan.edu" [ref=e117] [cursor=pointer]:
+                  - /url: mailto:ask.ora@morgan.edu
+              - paragraph
+              - paragraph
+              - paragraph
+      - generic [ref=e119]:
+        - generic [ref=e120]: 
+        - text: 
+    - contentinfo [ref=e121]:
+      - generic [ref=e123]:
+        - generic [ref=e125]:
+          - img "Morgan State University logo in white and orange" [ref=e127]
+          - paragraph [ref=e128]:
+            - link "1700 East Cold Spring Lane Baltimore, Maryland 21251" [ref=e129] [cursor=pointer]:
+              - /url: https://www.google.com/maps/place/Morgan+State+University/@39.3438,-76.5869596,17z/data=!3m1!4b1!4m6!3m5!1s0x89c805bb6adeb895:0x3035e29e2ad87f3f!8m2!3d39.3437959!4d-76.5843847!16zL20vMHN4Z2g?entry=ttu&g_ep=EgoyMDI2MDMxMC4wIKXMDSoASAFQAw%3D%3D
+              - text: 1700 East Cold Spring Lane
+              - text: Baltimore, Maryland 21251
+          - paragraph [ref=e130]:
+            - link "Carnegie Classification Seal" [ref=e131] [cursor=pointer]:
+              - /url: https://carnegieclassifications.acenet.edu/institution/morgan-state-university/
+              - img "Carnegie Classification Seal" [ref=e132]
+          - paragraph
+        - generic [ref=e134]:
+          - list [ref=e135]:
+            - listitem [ref=e136]:
+              - link "APPLY" [ref=e137] [cursor=pointer]:
+                - /url: /apply
+            - listitem [ref=e138]:
+              - link "ADMISSIONS & AID" [ref=e139] [cursor=pointer]:
+                - /url: /admissions-aid
+            - listitem [ref=e140]:
+              - link "STUDENT LIFE" [ref=e141] [cursor=pointer]:
+                - /url: /student-life
+            - listitem [ref=e142]:
+              - link "SCHEDULE A VISIT" [ref=e143] [cursor=pointer]:
+                - /url: /campusvisits
+            - listitem [ref=e144]:
+              - link "REQUEST INFORMATION" [ref=e145] [cursor=pointer]:
+                - /url: /request-info
+            - listitem [ref=e146]:
+              - link "GIVE TO MORGAN" [ref=e147] [cursor=pointer]:
+                - /url: http://www.givetomorgan.org/
+          - text:     
+          - generic [ref=e148]:
+            - paragraph [ref=e149]:
+              - link "Privacy" [ref=e150] [cursor=pointer]:
+                - /url: /privacy
+              - text: "|"
+              - link "Contact Us" [ref=e151] [cursor=pointer]:
+                - /url: /contactus
+              - text: "|"
+              - link "Report Waste & Fraud" [ref=e152] [cursor=pointer]:
+                - /url: https://www.ola.state.md.us/fraud/ola-fraud-hotline
+            - paragraph [ref=e153]: ©2026 Morgan State University
+        - generic [ref=e155]:
+          - generic [ref=e156]:
+            - link "Facebook" [ref=e157] [cursor=pointer]:
+              - /url: https://www.facebook.com/morganstateu
+              - generic [ref=e158]: 
+            - link "X.com" [ref=e159] [cursor=pointer]:
+              - /url: https://www.x.com/morganstateu/
+              - generic [ref=e160]: 
+            - link "Instagram" [ref=e161] [cursor=pointer]:
+              - /url: https://www.instagram.com/morganstateu
+              - generic [ref=e162]: 
+            - link "Youtube" [ref=e163] [cursor=pointer]:
+              - /url: https://www.youtube.com/morganstateu
+              - generic [ref=e164]: 
+            - link "LinkedIn" [ref=e165] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/morgan-state-university
+              - generic [ref=e166]: 
+          - list [ref=e167]:
+            - listitem [ref=e168]:
+              - link "Nondiscrimination Notice" [ref=e169] [cursor=pointer]:
+                - /url: /nondiscrimination
+            - listitem [ref=e170]:
+              - link "Accessibility" [ref=e171] [cursor=pointer]:
+                - /url: /accessibility
+            - listitem [ref=e172]:
+              - link "Careers" [ref=e173] [cursor=pointer]:
+                - /url: /jobs
+            - listitem [ref=e174]:
+              - link "Campus Map" [ref=e175] [cursor=pointer]:
+                - /url: https://map.morgan.edu/
+            - listitem [ref=e176]:
+              - link "Emergency Information" [ref=e177] [cursor=pointer]:
+                - /url: /emergency-information
+            - listitem [ref=e178]:
+              - link "Clery Report" [ref=e179] [cursor=pointer]:
+                - /url: /cleryreport
+            - listitem [ref=e180]:
+              - link "Title IX Information" [ref=e181] [cursor=pointer]:
+                - /url: /titleix
+            - listitem [ref=e182]:
+              - link "Mobile Alerts" [ref=e183] [cursor=pointer]:
+                - /url: /mobilealerts
+  - img [ref=e186]

@@ -1,0 +1,38 @@
+{
+  "doc_id": "trainings_e_training",
+  "title": "Trainings — eTraining Modules",
+  "category": "trainings",
+  "subcategory": "etraining",
+  "display_label": "eTraining (ORA Trainings)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+  "content": "The Office of Research Administration (ORA) is pleased to provide a gamut of training modules touching on all aspects of administrative functions here at Morgan State University. The eTraining catalog consists of eight self-paced modules covering the full spectrum of post-award and grant operations work.\n\nAvailable eTraining modules:\n\n1) Post Award Quick Guide — Covers establishing award guidelines, determining allowable costs, setting up awards in Banner, compliance matters, reporting requirements, prior approvals, and resources.\n\n2) Navigating Banner: Essentials for Research Administration — Provides an overview of reviewing grant-funded activity, budget review, encumbrances, budget transfers, and cost transfers in Banner.\n\n3) Building the Project Team: Contractual Hiring and Compensation — Addresses hiring staff, summer research contracts, and honoraria processing.\n\n4) Travel on Sponsored Projects: Approval to Reimbursement — Covers travel authorization requests, reimbursement claims, and compliance rules.\n\n5) Purchasing with Purpose: Procurement on Sponsored Projects / Banner Pool Level 08 — Covers vendor goods/services, requisitions, and subawards.\n\n6) Supporting Participants: Payments, Benefits, and Indirect Costs — Addresses participant stipends, tuition, healthcare, travel, indirect costs, and Modified Total Direct Costs (MTDC).\n\n7) Show Your Work: Understanding Time and Effort Reporting — Explains the time/effort certification process for faculty, staff, and students.\n\n8) It Takes a Village: Understanding Cost Share on Sponsored Projects — Covers cost share types, approval processes, and documentation.\n\nThese modules are intended for faculty, principal investigators, department admins, and research staff who manage or interact with sponsored projects. The page does not specify required vs. encouraged designations, login procedures, or fixed cadence — the modules are evergreen/self-service.\n\nAdditional details revealed by Playwright: Each of the 8 modules has a direct Articulate Rise URL exposed through expandable accordion panels. The interactive Rise modules are hosted at rise.articulate.com or share.articulate.com and open in a new tab. Direct URLs: (1) Post Award Quick Guide — https://rise.articulate.com/share/bLJYTO9HcIsvOpsVS9KKkClk3VoLSs1N (with 9 sub-modules: establishing guidelines from Notice of Award, allowable costs/activities, Banner setup and spending instruments, audit-risk expenses, compliance, reporting, prior approval, ORA resources, MSU responsible officers); (2) Navigating Banner — https://rise.articulate.com/share/JssRlmP10hNJXNgv9sqeHN86eYaosJ7S; (3) Building the Project Team — https://rise.articulate.com/share/SYMnLxQyzAquu3LhTIbEIQ2_VQdKfFWH (Banner pool 02: Contractual Salaries); (4) Travel on Sponsored Projects — https://rise.articulate.com/share/EkNni5Bgg6Epa2bjN00d_owxwj1AFjeC (covers MSU policy + Uniform Guidance rules for travel authorization & reimbursement); (5) Purchasing with Purpose (Banner Pool 08: Grant-Funded Contractual Services) — https://rise.articulate.com/share/5gROiZqb81HR0jfGreHGt00baHxOl2m2 (vendor goods/services, Banner requisitions, subawards); (6) Supporting Participants — https://share.articulate.com/fLyvCDI1vSeMFtSyq2ebF (stipends, tuition, healthcare, travel, indirect costs, MTDC); (7) Show Your Work: Time and Effort — https://share.articulate.com/s01WpXKAGFN1dft3QDlow (note: distinct from the D-RED Time & Effort interactive module at rise.articulate.com/share/YUeYo_t7gEEPZQPjwbuFNy3UD03HIsYQ); (8) It Takes a Village: Cost Share — https://share.articulate.com/jQ-qp8p2axC-3ba_0hXae (types of cost share, approvals, documentation, Banner cost share activity code).\n\nContact for eTraining questions: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "module_count": 8,
+    "module_direct_urls": {
+      "post_award_quick_guide": "https://rise.articulate.com/share/bLJYTO9HcIsvOpsVS9KKkClk3VoLSs1N",
+      "navigating_banner": "https://rise.articulate.com/share/JssRlmP10hNJXNgv9sqeHN86eYaosJ7S",
+      "building_project_team_summer_contracts": "https://rise.articulate.com/share/SYMnLxQyzAquu3LhTIbEIQ2_VQdKfFWH",
+      "travel_on_sponsored_projects": "https://rise.articulate.com/share/EkNni5Bgg6Epa2bjN00d_owxwj1AFjeC",
+      "purchasing_banner_pool_08": "https://rise.articulate.com/share/5gROiZqb81HR0jfGreHGt00baHxOl2m2",
+      "supporting_participants": "https://share.articulate.com/fLyvCDI1vSeMFtSyq2ebF",
+      "show_your_work_time_effort_etraining": "https://share.articulate.com/s01WpXKAGFN1dft3QDlow",
+      "it_takes_a_village_cost_share": "https://share.articulate.com/jQ-qp8p2axC-3ba_0hXae"
+    },
+    "modules": [
+      "Post Award Quick Guide",
+      "Navigating Banner: Essentials for Research Administration",
+      "Building the Project Team: Contractual Hiring and Compensation",
+      "Travel on Sponsored Projects: Approval to Reimbursement",
+      "Purchasing with Purpose: Procurement on Sponsored Projects / Banner Pool Level 08",
+      "Supporting Participants: Payments, Benefits, and Indirect Costs",
+      "Show Your Work: Understanding Time and Effort Reporting",
+      "It Takes a Village: Understanding Cost Share on Sponsored Projects"
+    ],
+    "contact_email": "ask.ora@morgan.edu",
+    "contact_phone": "443-885-4044"
+  }
+}

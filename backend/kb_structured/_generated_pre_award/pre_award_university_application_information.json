@@ -1,0 +1,28 @@
+{
+  "doc_id": "pre_award_university_application_information",
+  "title": "Pre-Award — University Application Information",
+  "category": "pre_award",
+  "subcategory": "overview",
+  "display_label": "University Application Information (Pre-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/university-application-information",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/university-application-information",
+  "content": "Standard institutional identifiers and registrations a Morgan State University principal investigator may need when applying for a grant. For questions, contact ORA at ask.ora@morgan.edu, 443-885-4044, or 443-885-8280.\n\nKey institutional data:\n- Unique Entity ID (UEI): KULSKCCZJT27\n- Entity Identification Number (EIN): 52 6002033 B8 (if the application is character-limited, leave off the B8)\n- North American Industry Classification System (NAICS) Code: 611310\n- Standard Industrial Classification (SIC) Code: 8221\n- Animal Welfare Assurance #: D21-01124 (expires 01/31/27)\n- Contract Regis: suj6sb\n- Human Subjects Assurance: FWA00003318 (IRB Ident: IRB00002142, Name: Morgan State U IRB1, City: Baltimore, State: Maryland)\n- Commercial and Government Entity (CAGE) Code: 8U547\n- Congressional District of Morgan State University: MD 7th (MD-007)\n- Cognizant Federal Agency: DHHS, Ernest Kineer, 214-767-3261\n- System for Award Management (SAM) Expiration Date: November 15, 2025\n- Morgan's official address: 1700 E. Cold Spring Lane, Baltimore, MD 21251-0001\n- Dun & Bradstreet or DUNS #: 879941318 (phased out as a key identifier on 4/4/2022)\n\nThe Office of Research Administration is located at Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251.\n\nThe page also links to MSU's Certification as a Minority-Serving Institution (PDF dated 2024-02-12) and to MSU Single Audits (via the Comptroller's audited financial statements page).",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "uei": "KULSKCCZJT27",
+    "ein": "52 6002033 B8",
+    "naics": "611310",
+    "sic": "8221",
+    "animal_welfare_assurance": "D21-01124 (exp. 01/31/27)",
+    "human_subjects_assurance": "FWA00003318",
+    "irb_identifier": "IRB00002142",
+    "cage_code": "8U547",
+    "congressional_district": "MD-007 (7th)",
+    "cognizant_federal_agency": "DHHS, Ernest Kineer, 214-767-3261",
+    "sam_expiration": "2025-11-15",
+    "address": "1700 E. Cold Spring Lane, Baltimore, MD 21251-0001",
+    "ora_address": "Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251",
+    "duns": "879941318 (phased out 2022-04-04)",
+    "contract_regis": "suj6sb"
+  }
+}

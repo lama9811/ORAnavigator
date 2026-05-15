@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_carcass_disposal",
+  "title": "SOP 13.2: Dead Animal and Carcass Disposal Procedures",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 13.2 \u2014 Dead Animal and Carcass Disposal Procedures",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_13.2_Dead_Animal_and_Carcass_Disposal_Procedures.pdf",
+  "content": "IACUC SOP specifying handling, labeling, freezer storage, and disposal of deceased animals and carcasses from the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

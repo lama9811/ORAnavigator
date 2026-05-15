@@ -1,0 +1,30 @@
+{
+  "doc_id": "compliance_research_security_nspm_33",
+  "title": "Compliance — Research Security: NSPM-33 Overview",
+  "category": "compliance",
+  "subcategory": "research_security_subpage",
+  "display_label": "NSPM-33 Overview (Research Security)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/nspm-33-overview",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/nspm-33-overview",
+  "content": "NSPM-33 (National Security Presidential Memorandum 33) Overview at Morgan State University.\n\nPage content (verbatim, complete): National Security Presidential Memorandum-33 (NSPM-33) requires federal research agencies to ensure that institutions receiving over $50 million annually certify they have a research security program. This includes training relevant personnel on research security threats and insider threats, where applicable. In response, the NSF, NIH, DOE, and DOD have developed online research security training. The training, which is available through CITI Programs, provides guidance on global research risks and protection strategies.\n\nKey facts captured from the page:\n- Trigger threshold: institutions receiving over $50 million annually in federal R&D funding must certify they have a research security program.\n- Required program element called out on the page: training of relevant personnel on research security threats and insider threats.\n- Federal agencies that developed compliant online training in response to NSPM-33: NSF, NIH, DOE, and DOD.\n- Recommended training delivery channel: CITI Programs (https://about.citiprogram.org/ — MSU account required).\n\nBROADER NSPM-33 CONTEXT (not on the Morgan page but useful to PIs): NSPM-33 was issued in January 2021 and its implementation guidance (issued by the White House Office of Science and Technology Policy in 2022 and updated by NSF and other agencies) requires research institutions to address five core program elements: (1) cybersecurity, (2) foreign travel security, (3) insider threat awareness and identification, (4) export control training, and (5) research security training. Morgan's Research Security Program organizes these under four pillars on its parent page: Cybersecurity, Export Controls, Conflict of Interest, and Foreign Travel Security. Disclosure obligations under NSPM-33 also typically extend to: foreign affiliations, foreign appointments, foreign financial support, in-kind contributions from foreign entities, current and pending support across sponsors, and use of SciENcv-generated biosketches and current/pending support documents for federal proposals.\n\nFor Morgan-specific implementation: see related compliance pages — Research Compliance and Security Training (compliance_research_security_training), Information Technology Resources (compliance_research_security_information_technology), Technology Control Plan (compliance_research_security_technology_control_plan), and the Research Security Program Committee (compliance_research_security_program_committee).\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "full_name": "National Security Presidential Memorandum-33",
+    "annual_federal_funding_threshold_usd": 50000000,
+    "required_program_elements_per_page": ["training on research security threats", "training on insider threats"],
+    "agencies_with_compliant_training": ["NSF", "NIH", "DOE", "DOD"],
+    "recommended_training_channel": "CITI Programs",
+    "msu_pillars": ["cybersecurity", "export_controls", "conflict_of_interest", "foreign_travel_security"],
+    "related_msu_doc_ids": [
+      "compliance_research_security_training",
+      "compliance_research_security_information_technology",
+      "compliance_research_security_technology_control_plan",
+      "compliance_research_security_program_committee",
+      "compliance_research_security"
+    ],
+    "page_completeness": "brief overview",
+    "contact_email": "ask.ora@morgan.edu"
+  }
+}

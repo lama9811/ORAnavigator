@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_rodent_husbandry",
+  "title": "SOP 20.2: Rodent Husbandry and Training for Animal Facility Personnel",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 20.2 \u2014 Rodent Husbandry and Training for Animal Facility Personnel",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_20.2_Rodent_Husbandry_and_training_for_Animal_Facility_Personnel.pdf",
+  "content": "IACUC SOP describing daily husbandry tasks (feeding, watering, health checks, cage changes) and the training program for facility staff.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

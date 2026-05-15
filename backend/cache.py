@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Multi-Tier Cache Module for CS Navigator Chatbot
+Multi-Tier Cache Module for ORA Navigator Chatbot
 =================================================
 Provides L1 (in-memory) + L2 (Redis) + Semantic (embedding similarity) caching.
 
@@ -183,7 +183,7 @@ class L2Cache:
             return None
 
         try:
-            value = self._client.get(f"csnavigator:{key}")
+            value = self._client.get(f"oranavigator:{key}")
             if value is not None:
                 self._stats["hits"] += 1
                 return value
@@ -199,7 +199,7 @@ class L2Cache:
             return False
 
         try:
-            self._client.setex(f"csnavigator:{key}", self.ttl, value)
+            self._client.setex(f"oranavigator:{key}", self.ttl, value)
             return True
         except Exception as e:
             self._stats["errors"] += 1
@@ -211,19 +211,19 @@ class L2Cache:
             return False
 
         try:
-            return self._client.delete(f"csnavigator:{key}") > 0
+            return self._client.delete(f"oranavigator:{key}") > 0
         except Exception as e:
             self._stats["errors"] += 1
             logger.warning(f"[REDIS] Delete error: {e}")
             return False
 
     def clear(self) -> int:
-        """Clear all csnavigator keys from Redis."""
+        """Clear all oranavigator keys from Redis."""
         if not self._connected:
             return 0
 
         try:
-            keys = self._client.keys("csnavigator:*")
+            keys = self._client.keys("oranavigator:*")
             if keys:
                 count = self._client.delete(*keys)
                 self._stats = {"hits": 0, "misses": 0, "errors": 0}
@@ -241,7 +241,7 @@ class L2Cache:
         info = {"connected": self._connected}
         if self._connected:
             try:
-                db_size = len(self._client.keys("csnavigator:*"))
+                db_size = len(self._client.keys("oranavigator:*"))
                 info["size"] = db_size
             except:
                 info["size"] = "unknown"
@@ -399,7 +399,7 @@ class SemanticCache:
                 "r": response,
             })
             self._l2._client.setex(
-                f"csnavigator:sem:{key}",
+                f"oranavigator:sem:{key}",
                 L2_CACHE_TTL_SECONDS,
                 data,
             )
@@ -411,7 +411,7 @@ class SemanticCache:
         if not self._l2 or not self._l2.is_connected():
             return
         try:
-            keys = self._l2._client.keys("csnavigator:sem:*")
+            keys = self._l2._client.keys("oranavigator:sem:*")
             loaded = 0
             for key in keys[:SEMANTIC_MAX_ENTRIES]:
                 raw = self._l2._client.get(key)
@@ -432,7 +432,7 @@ class SemanticCache:
             self._entries.clear()
         if self._l2 and self._l2.is_connected():
             try:
-                keys = self._l2._client.keys("csnavigator:sem:*")
+                keys = self._l2._client.keys("oranavigator:sem:*")
                 if keys:
                     self._l2._client.delete(*keys)
             except:
@@ -551,7 +551,7 @@ class MultiTierCache:
             return False
 
         # Don't cache responses with grounding disclaimers (they indicate low confidence)
-        if "I may not have complete information" in response or "Please verify with the CS department" in response:
+        if "I may not have complete information" in response or "Please verify with the Office of Research Administration" in response:
             return False
 
         key = self._generate_key(query, context_hash)

@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_dead_animal_card",
+  "title": "Dead Animal Card (for printing)",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC \u2014 Dead Animal Card (for printing)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/Dead%20Animal%20Card-for%20printing.pdf",
+  "content": "Printable cage card placed on cages housing deceased animals \u2014 provides chain-of-custody information for carcass disposal.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

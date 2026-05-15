@@ -2,7 +2,7 @@
 Vertex AI Agent Engine Client
 ==============================
 
-Communicates with the CS Navigator agent running on Google ADK web server.
+Communicates with the ORA Navigator agent running on Google ADK web server.
 Handles session management and SSE response parsing.
 
 v4.2: Smart session reuse. Sessions are cached per user with a TTL and
@@ -28,7 +28,7 @@ from typing import Optional
 
 # Configuration
 ADK_BASE_URL = os.getenv("ADK_BASE_URL", "http://127.0.0.1:8080")
-ADK_APP_NAME = os.getenv("ADK_APP_NAME", "cs_navigator_unified")
+ADK_APP_NAME = os.getenv("ADK_APP_NAME", "ora_navigator_unified")
 
 # ---------------------------------------------------------------------------
 # Procedure Guide Links: maps keywords to Drive doc links.
@@ -92,20 +92,20 @@ def _inject_procedure_links(response_text: str) -> str:
 _OUTAGE_MSG = (
     "I'm temporarily having trouble connecting to my knowledge base. "
     "This is a system issue, not a gap in my knowledge. "
-    "Please try again in a minute. If the problem persists, contact the CS department at (443) 885-3962."
+    "Please try again in a minute. If the problem persists, contact ORA at 443-885-4044."
 )
 
 # Grounding validation: minimum thresholds before flagging a response
 _GROUNDING_MIN_CHUNKS = 2       # At least 2 KB docs must be cited
 _GROUNDING_DISCLAIMER = (
     "\n\n---\n*I may not have complete information on this topic in my knowledge base. "
-    "Please verify with the CS department at (443) 885-3962 or compsci@morgan.edu.*"
+    "Please verify with ORA at 443-885-4044 or ask.ora@morgan.edu.*"
 )
 
 # Patterns that are inherently non-KB (greetings, security refusals, outages)
 # These responses don't need KB grounding so skip the gate
 _SKIP_GROUNDING_RE = re.compile(
-    r'^(Hey!|Hello!|CS Navigator was developed|I can only help with Morgan State|I\'m temporarily having trouble|You\'re welcome)',
+    r'^(Hey!|Hello!|ORA Navigator was developed|I can only help with Morgan State|I\'m temporarily having trouble|You\'re welcome)',
     re.IGNORECASE,
 )
 
@@ -135,13 +135,13 @@ _PROF_NAME_RE = re.compile(
 
 _FAITHFULNESS_DISCLAIMER = (
     "\n\n---\n*Some names in this response may not match our department records. "
-    "Please verify faculty names at the [CS department page](https://www.morgan.edu/computer-science) "
-    "or contact compsci@morgan.edu.*"
+    "Please verify faculty names at the [Office of Research Administration page](https://www.morgan.edu/office-of-research-administration) "
+    "or contact ask.ora@morgan.edu.*"
 )
 
 
 def _check_faculty_faithfulness(text: str) -> list[str]:
-    """Check if the response mentions professor names not in the CS department.
+    """Check if the response mentions professor names not in the Office of Research Administration.
     Returns list of hallucinated names (empty if all names check out)."""
     if not text:
         return []
@@ -308,7 +308,7 @@ def _cache_session(user_id: str, session_id: str, context: str = "", model: str 
 
 def query_agent(query: str, user_id: str = "default", context: str = "", model: str = "", canvas_context: str = "", memory_context: str = "") -> str:
     """
-    Send a query to the CS Navigator agent and return the final text response.
+    Send a query to the ORA Navigator agent and return the final text response.
 
     Reuses ADK sessions when the user's DegreeWorks context hasn't changed.
     Canvas + memory data sent via state_delta (volatile, changes often).
@@ -386,7 +386,7 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
 
         resp = requests.post(
             f"{ADK_BASE_URL}/run_sse",
-            headers={"Content-Type": "application/json"},
+            headers=_get_auth_headers(),
             json=payload,
             stream=True,
             timeout=120,
@@ -557,7 +557,7 @@ def reset_session(user_id: str) -> None:
 
 def query_agent_stream(query: str, user_id: str = "default", context: str = "", model: str = "", canvas_context: str = "", memory_context: str = ""):
     """
-    Send a query to the CS Navigator agent and stream text chunks as they arrive.
+    Send a query to the ORA Navigator agent and stream text chunks as they arrive.
 
     Session reuse based on DegreeWorks (stable). Canvas + memory sent via state_delta (volatile).
     """
@@ -612,7 +612,7 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
 
         resp = requests.post(
             f"{ADK_BASE_URL}/run_sse",
-            headers={"Content-Type": "application/json"},
+            headers=_get_auth_headers(),
             json=payload,
             stream=True,
             timeout=120,

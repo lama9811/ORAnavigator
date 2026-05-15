@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_cage_labeling",
+  "title": "SOP 9.2: Cage Labeling and Record Keeping",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 9.2 \u2014 Cage Labeling and Record Keeping",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_9.2_Cage_labeling_and_Record_keeping.pdf",
+  "content": "IACUC SOP specifying cage-card requirements, protocol/PI identification, and record-keeping for animal cages at the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

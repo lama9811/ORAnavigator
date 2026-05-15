@@ -1,10 +1,10 @@
-# CS Navigator Deployment Guide
+# ORA Navigator Deployment Guide
 
-> **Complete step-by-step tutorial for deploying CS Navigator on a new AWS account**
+> **Complete step-by-step tutorial for deploying ORA Navigator on a new AWS account**
 >
 > Author: Aayush Shrestha
 > Last Updated: January 2026
-> Project: CS Navigator - AI Chatbot for Morgan State University
+> Project: ORA Navigator - AI Chatbot for Morgan State University
 
 ---
 
@@ -35,7 +35,7 @@
 
 ## Overview
 
-CS Navigator is a full-stack AI chatbot application that helps Morgan State University CS students with academic advising, course information, and DegreeWorks integration.
+ORA Navigator is a full-stack AI chatbot application that helps Morgan State University CS students with academic advising, course information, and DegreeWorks integration.
 
 ### Tech Stack
 
@@ -52,7 +52,7 @@ CS Navigator is a full-stack AI chatbot application that helps Morgan State Univ
 
 ### What This Guide Covers
 
-This guide walks you through deploying CS Navigator on a **new AWS account**, including:
+This guide walks you through deploying ORA Navigator on a **new AWS account**, including:
 - Creating new AWS infrastructure (EC2, RDS)
 - Updating configuration files
 - Setting up the server
@@ -171,7 +171,7 @@ Local Machine                    Docker Hub                     EC2 Instance
 
    | Setting | Value |
    |---------|-------|
-   | Name | `cs-navigator-server` |
+   | Name | `ora-navigator-server` |
    | AMI | Amazon Linux 2023 AMI (Free tier eligible) |
    | Instance type | `t2.micro` (Free tier) or `t2.small` (recommended) |
    | Key pair | Create new → Download `.pem` file |
@@ -199,7 +199,7 @@ Local Machine                    Docker Hub                     EC2 Instance
    | Engine | MySQL |
    | Version | 8.0.x (latest) |
    | Template | Free tier |
-   | DB instance identifier | `cs-navigator-db` |
+   | DB instance identifier | `ora-navigator-db` |
    | Master username | `admin` (or your choice) |
    | Master password | Create a strong password |
    | Instance class | `db.t3.micro` (Free tier) |
@@ -208,7 +208,7 @@ Local Machine                    Docker Hub                     EC2 Instance
    | VPC | Same as EC2 |
 
 3. **After creation, note down:**
-   - Endpoint (e.g., `cs-navigator-db.xxxxx.us-east-1.rds.amazonaws.com`)
+   - Endpoint (e.g., `ora-navigator-db.xxxxx.us-east-1.rds.amazonaws.com`)
    - Port: `3306`
    - Master username
    - Master password
@@ -285,7 +285,7 @@ VITE_API_URL=http://18.214.136.155:5000
 DATABASE_URL=mysql+pymysql://YOUR_DB_USER:YOUR_DB_PASSWORD@YOUR_RDS_ENDPOINT:3306/chatbot
 
 # Example:
-# DATABASE_URL=mysql+pymysql://chatuser:NewPassword123!@cs-navigator-db.abc123.us-east-1.rds.amazonaws.com:3306/chatbot
+# DATABASE_URL=mysql+pymysql://chatuser:NewPassword123!@ora-navigator-db.abc123.us-east-1.rds.amazonaws.com:3306/chatbot
 
 # ============================================
 # API URLs - UPDATE WITH YOUR NEW EC2 IP
@@ -781,8 +781,8 @@ free -m
 
 | Resource | Name | Notes |
 |----------|------|-------|
-| EC2 Instance | cs-navigator-server | Runs Docker containers |
-| RDS Database | cs-navigator-db | MySQL 8.0 |
+| EC2 Instance | ora-navigator-server | Runs Docker containers |
+| RDS Database | ora-navigator-db | MySQL 8.0 |
 | Key Pair | your-key-name | SSH access |
 | Security Group (EC2) | - | Ports 22, 80, 443, 3000, 5000 |
 | Security Group (RDS) | - | Port 3306 |

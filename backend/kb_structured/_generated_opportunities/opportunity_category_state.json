@@ -1,0 +1,12 @@
+{
+  "doc_id": "opportunity_category_state",
+  "title": "State Funding — Maryland Agencies",
+  "category": "opportunities",
+  "subcategory": "state_maryland",
+  "display_label": "Maryland State Funding Sources",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/funding-sources",
+  "content": "Maryland state-level funding sources listed by Morgan State ORA on the Funding Sources page:\n\n- Maryland Innovation Initiative (MII) — https://www.tedcomd.com/funding/maryland-innovation-initiative — Administered by TEDCO (Maryland Technology Development Corporation), MII supports the commercialization of research from Maryland's qualifying universities including Morgan State, advancing technology from lab to market.\n- Maryland E-Nnovation Initiative Fund (MEIF) — https://commerce.maryland.gov/fund/maryland-e-nnovation-initiative-fund-(meif) — Administered by the Maryland Department of Commerce, MEIF provides matching funds to Maryland universities for endowed research chairs in scientific and technical fields of study.\n\nFor questions about applying through Morgan State, contact ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

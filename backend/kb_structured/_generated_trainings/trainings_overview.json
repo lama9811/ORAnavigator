@@ -1,0 +1,36 @@
+{
+  "doc_id": "trainings_overview",
+  "title": "Trainings — Overview (ORA Training Program)",
+  "category": "trainings",
+  "subcategory": "overview",
+  "display_label": "Trainings Overview (ORA Trainings)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/trainings",
+  "content": "The Morgan State University Office of Research Administration (ORA) offers a comprehensive trainings program covering all aspects of administrative functions related to research at the university. The trainings page describes offerings as covering 'All Aspects of Administrative Functions at Morgan State University' and includes faculty/staff development videos, presentations, and workshops on research administration subjects.\n\nThe ORA training catalog is organized into the following seven sections, each with its own subpage:\n\n1) e-Training (https://www.morgan.edu/office-of-research-administration/trainings/e-training) — A gamut of self-paced eTraining modules touching on all aspects of administrative functions: Post Award Quick Guide; Navigating Banner: Essentials for Research Administration; Building the Project Team (contractual hiring, summer contracts, honoraria); Travel on Sponsored Projects; Purchasing with Purpose (procurement, Banner Pool Level 08, subawards); Supporting Participants (stipends, tuition, MTDC); Show Your Work (time and effort reporting); It Takes a Village (cost share).\n\n2) Research Compliance and Security Training (https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-compliance-and-security-training) — REQUIRED for all MSU personnel engaged in federally funded research. Options include CITI Program (https://citiprogram.org/), NSF SECURE Center (https://www.secure-center.org/ctm), and NSF Modules (https://www.nsf.gov/research-security/training). Personnel must complete one approved option and retain the certificate.\n\n3) New Faculty Development Seminars (https://www.morgan.edu/office-of-research-administration/trainings/new-faculty-development-seminars) — Seminar series for new faculty covering the grant lifecycle, funding sources, proposal components, research/fiscal compliance, pedagogy, AI in research, the history of Morgan, and professional societies/fellowships. Presenters include Dr. Farin Kamangar, Gillian Silver, Laura Dorsey-Elson, Dr. Edet Isuk, and Dr. Edwin Johnson.\n\n4) Monthly D-RED Seminars (https://www.morgan.edu/office-of-research-administration/trainings/monthly-d-red-seminars) — Recurring monthly seminars on research administration topics. The pattern is typically the second Wednesday of each month (recent dates include Sep 10, Oct 9, Nov 12, Dec 11). Topics range from NSF funding strategy and CAREER awards, to research security, cost sharing, audits, intellectual property, export controls, conflict of interest, and time and effort reporting. Past PDFs and Zoom recordings are archived going back to 2019.\n\n5) Special Workshops (https://www.morgan.edu/office-of-research-administration/trainings/special-workshops) — One-off topical workshops. An example documented workshop is the Cost Allowability workshop held December 9, 2022, with presentations from Farin Kamangar, Gillian Silver, Becca Steiner, Lucy Manyara, and Shamon Shine-Lee.\n\n6) Test Prep (https://www.morgan.edu/office-of-research-administration/trainings/test-prep) — Study materials to prepare ORA staff for the Research Administrators Certification Council (RACC) credentials: CRA® (Certified Research Administrator), CPRA® (Certified Pre-Award Research Administrator), and CFRA® (Certified Financial Research Administrator). RACC website: https://www.cra-cert.org/. Fifteen chapter-based PDF study guides are provided.\n\n7) Trainings Outside ORA (https://www.morgan.edu/office-of-research-administration/trainings/msu-trainings-outside-ora) — Pointers to research-relevant trainings offered by other MSU units, including the ASCEND and RCMI Fall 2023 Faculty Development Opportunities newsletter.\n\nORA training coordinators and frequent presenters include Dr. Farin Kamangar (MD, PhD, CRA, CPRA, CFRA — Associate Vice President for Research), Gillian Silver (MPH, CPH, CRA, CPRA, CFRA), Ryan Mobley (CRA, CFRA, CPRA), and Rebecca (Becca) Steiner. General contact for trainings: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "subpages": [
+      "e-training",
+      "research-compliance-and-security-training",
+      "new-faculty-development-seminars",
+      "monthly-d-red-seminars",
+      "special-workshops",
+      "test-prep",
+      "msu-trainings-outside-ora"
+    ],
+    "general_contact": {
+      "phone": "443-885-4044",
+      "fax": "443-885-8280",
+      "email": "ask.ora@morgan.edu",
+      "address": "Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251"
+    },
+    "key_coordinators": [
+      "Dr. Farin Kamangar (MD, PhD, CRA, CPRA, CFRA)",
+      "Gillian Silver (MPH, CPH, CRA, CPRA, CFRA)",
+      "Ryan Mobley (CRA, CFRA, CPRA)",
+      "Rebecca (Becca) Steiner"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "doc_id": "post_award_changes_to_an_award",
+  "title": "Post-Award — Changes to an Award",
+  "category": "post_award",
+  "subcategory": "changes",
+  "display_label": "Changes to an Award (Post-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/changes-to-an-award",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/post-award/changes-to-an-award",
+  "content": "Changes to an Award covers procedures for modifying active sponsored research awards at Morgan State University. Prior to planning for any changes in a received award, review the award document and sponsor policies to determine approval requirements.\n\nTypes of changes covered:\n\n1. Change of PI or Key Personnel — Requires approval from the department head, dean, and sponsor. The request package must include the CV of the new PI or Co-PI. Requests are routed through the Associate Vice President for Research, Dr. Farin Kamangar.\n\n2. No Cost Extension (NCE) — The PI must notify ORA in writing at least 60 days before the project's expiration date. ORA will work with the PI to obtain the sponsor's approval.\n\n3. Transfer of Award FROM Another Institution (incoming) — Requires sponsor approval and approval from the previous institution. The PI submits a new or revised proposal package through ORA.\n\n4. Transfer of Award TO Another Institution (outgoing) — If MSU retains the project, a new PI is appointed. If MSU releases the project, the departing PI must request transfer approval from the department head, dean, and sponsor. A final accounting and certification is required before the transfer can be completed.\n\nAdditional details: When MSU elects to retain a project after the PI departs, the departing PI may continue to be retained on the project through either a subaward or a consultant agreement. Outgoing transfers are approved only after final accounting and certification by the responsible grant accountant that all incurred obligations have been settled and that a remaining balance exists for transfer.\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "nce_advance_notice_days": 60,
+    "associate_vp_for_research": "Dr. Farin Kamangar",
+    "change_types": [
+      "PI / Key Personnel change",
+      "No Cost Extension",
+      "Transfer of award from another institution",
+      "Transfer of award to another institution"
+    ],
+    "outgoing_transfer_requirement": "Final accounting and certification before transfer",
+    "departing_pi_retention_mechanisms": ["subaward", "consultant agreement"]
+  }
+}

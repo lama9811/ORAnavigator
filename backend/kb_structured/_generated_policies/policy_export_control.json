@@ -1,0 +1,12 @@
+{
+  "doc_id": "policy_export_control",
+  "title": "Export Control Policy",
+  "category": "policies",
+  "subcategory": "policy",
+  "display_label": "Export Control",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/policies-and-guidelines",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/2024-07-01_PIHandbook5.pdf",
+  "content": "Establishes Morgan State University's framework for complying with U.S. export control laws and regulations (including ITAR, EAR, and OFAC sanctions) that govern the transfer of controlled technology, technical data, software, services, and equipment to foreign nationals, foreign institutions, or destinations outside the United States. Compiled in PI Handbook 5 (effective 2024-07-01). Full policy details in PI Handbook 5.",
+  "last_scraped": "2026-05-14",
+  "pi_handbook_5_section": "3"
+}

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   MODERN AUTH STYLES - CS Navigator
+   MODERN AUTH STYLES - ORA Navigator
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .auth {
@@ -41,7 +41,7 @@
 .auth__orb--1 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, rgba(66, 133, 244, 0.3), rgba(52, 168, 83, 0.2));
+  background: linear-gradient(135deg, rgba(11, 30, 63, 0.3), rgba(201, 162, 76, 0.2));
   top: -100px;
   right: -100px;
   animation-delay: 0s;
@@ -50,7 +50,7 @@
 .auth__orb--2 {
   width: 300px;
   height: 300px;
-  background: linear-gradient(135deg, rgba(52, 168, 83, 0.25), rgba(66, 133, 244, 0.15));
+  background: linear-gradient(135deg, rgba(201, 162, 76, 0.25), rgba(11, 30, 63, 0.15));
   bottom: 100px;
   left: -50px;
   animation-delay: -7s;
@@ -59,7 +59,7 @@
 .auth__orb--3 {
   width: 200px;
   height: 200px;
-  background: rgba(66, 133, 244, 0.15);
+  background: rgba(11, 30, 63, 0.15);
   top: 50%;
   right: 20%;
   animation-delay: -14s;
@@ -87,7 +87,7 @@
   max-width: 100%;
   height: auto;
   margin-bottom: 28px;
-  filter: drop-shadow(0 8px 24px rgba(66, 133, 244, 0.15));
+  filter: drop-shadow(0 8px 24px rgba(11, 30, 63, 0.15));
   transition: transform 0.3s ease;
 }
 
@@ -101,7 +101,7 @@
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  background: linear-gradient(135deg, var(--msu-blue) 0%, #3367D6 100%);
+  background: linear-gradient(135deg, var(--msu-blue) 0%, #15315C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -129,7 +129,7 @@
   padding: 16px 20px;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(66, 133, 244, 0.08);
+  border: 1px solid rgba(11, 30, 63, 0.08);
   border-radius: 16px;
   transition: all 0.3s ease;
   animation: featureSlide 0.5s ease-out backwards;
@@ -149,8 +149,8 @@
 .auth__feature:hover {
   transform: translateX(8px);
   background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(66, 133, 244, 0.15);
-  box-shadow: 0 8px 24px rgba(66, 133, 244, 0.1);
+  border-color: rgba(11, 30, 63, 0.15);
+  box-shadow: 0 8px 24px rgba(11, 30, 63, 0.1);
 }
 
 .auth__featureIcon {
@@ -160,16 +160,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--msu-blue) 0%, #669DF6 100%);
+  background: linear-gradient(135deg, var(--msu-blue) 0%, #1E4480 100%);
   color: white;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.25);
+  box-shadow: 0 4px 12px rgba(11, 30, 63, 0.25);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .auth__feature:hover .auth__featureIcon {
   transform: scale(1.08);
-  box-shadow: 0 6px 16px rgba(66, 133, 244, 0.3);
+  box-shadow: 0 6px 16px rgba(11, 30, 63, 0.3);
 }
 
 .auth__featureText {
@@ -210,8 +210,8 @@
 /* ─── RIGHT PANEL: Form Area ─── */
 .auth__main {
   background:
-    radial-gradient(ellipse 800px 600px at 80% 20%, rgba(66, 133, 244, 0.06), transparent 50%),
-    radial-gradient(ellipse 600px 400px at 20% 80%, rgba(66, 133, 244, 0.08), transparent 50%),
+    radial-gradient(ellipse 800px 600px at 80% 20%, rgba(11, 30, 63, 0.06), transparent 50%),
+    radial-gradient(ellipse 600px 400px at 20% 80%, rgba(11, 30, 63, 0.08), transparent 50%),
     linear-gradient(160deg, #eef1f5 0%, #e8ecf1 50%, #eef1f5 100%);
   display: flex;
   align-items: center;
@@ -227,8 +227,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(66,133,244,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(66,133,244,0.06) 1px, transparent 1px);
+    linear-gradient(rgba(11,30,63,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11,30,63,0.06) 1px, transparent 1px);
   background-size: 50px 50px;
   animation: gridMove 30s linear infinite;
   pointer-events: none; /* CRITICAL: Allow touch/click through to inputs */
@@ -291,7 +291,7 @@
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(66, 133, 244, 0.2);
+  box-shadow: 0 8px 24px rgba(11, 30, 63, 0.2);
 }
 
 /* Header */
@@ -331,7 +331,7 @@
   position: relative;
   z-index: 2;
   pointer-events: auto;
-  -webkit-tap-highlight-color: rgba(66, 133, 244, 0.2);
+  -webkit-tap-highlight-color: rgba(11, 30, 63, 0.2);
   touch-action: manipulation;
   padding: 4px 2px; /* Larger touch target */
 }
@@ -416,7 +416,7 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  -webkit-tap-highlight-color: rgba(66, 133, 244, 0.1);
+  -webkit-tap-highlight-color: rgba(11, 30, 63, 0.1);
   touch-action: manipulation;
   pointer-events: auto;
   /* No position/z-index - let icon overlay naturally */
@@ -431,7 +431,7 @@
   outline: none;
   border-color: var(--msu-blue);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.1);
+  box-shadow: 0 0 0 4px rgba(11, 30, 63, 0.1);
 }
 
 .field input::placeholder {
@@ -454,12 +454,12 @@
   transition: background 0.2s ease, color 0.2s ease;
   z-index: 3;
   pointer-events: auto;
-  -webkit-tap-highlight-color: rgba(66, 133, 244, 0.1);
+  -webkit-tap-highlight-color: rgba(11, 30, 63, 0.1);
   touch-action: manipulation;
 }
 
 .field__action:hover {
-  background: rgba(66, 133, 244, 0.08);
+  background: rgba(11, 30, 63, 0.08);
   color: var(--msu-blue);
 }
 
@@ -471,7 +471,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: white;
-  background: var(--gradient-primary, linear-gradient(135deg, #4285F4 0%, #669DF6 100%));
+  background: var(--gradient-primary, linear-gradient(135deg, #4285F4 0%, #1E4480 100%));
   border: none;
   border-radius: 12px;
   cursor: pointer;
@@ -479,9 +479,9 @@
   position: relative;
   z-index: 2;
   pointer-events: auto;
-  -webkit-tap-highlight-color: rgba(66, 133, 244, 0.3);
+  -webkit-tap-highlight-color: rgba(11, 30, 63, 0.3);
   touch-action: manipulation;
-  box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
+  box-shadow: 0 4px 14px rgba(11, 30, 63, 0.25);
   overflow: hidden;
 }
 
@@ -496,7 +496,7 @@
 
 .auth__submit:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(66, 133, 244, 0.35);
+  box-shadow: 0 6px 20px rgba(11, 30, 63, 0.35);
 }
 
 .auth__submit:hover:not(:disabled)::before {
@@ -1068,7 +1068,7 @@ input:-webkit-autofill:active {
   .field__action,
   .auth__submit,
   .auth__link {
-    -webkit-tap-highlight-color: rgba(66, 133, 244, 0.1);
+    -webkit-tap-highlight-color: rgba(11, 30, 63, 0.1);
     touch-action: manipulation;
     pointer-events: auto !important;
   }

@@ -1,0 +1,240 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "Skip to Content" [ref=e4] [cursor=pointer]:
+        - /url: https://www.morgan.edu/office-of-research-administration/post-award/reporting#content
+      - generic [ref=e5]:
+        - link "Morgan State Logo" [ref=e7] [cursor=pointer]:
+          - /url: ""
+          - img "Morgan State Logo" [ref=e8]
+        - generic [ref=e9]:
+          - button "Open main menu." [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: 
+            - text: 
+            - generic [ref=e12]: Menu
+          - button "Open the 'info for' menu." [ref=e13] [cursor=pointer]:
+            - generic [ref=e14]: 
+            - text: 
+            - generic [ref=e15]: Info For
+          - button "Open search form." [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: 
+            - text: 
+            - generic [ref=e18]: Search
+          - link "Open My MSU" [ref=e19] [cursor=pointer]:
+            - /url: https://www.morgan.edu/gateway/
+            - generic [ref=e20]: 
+            - generic [ref=e21]: My MSU
+    - text:                 
+    - main [ref=e22]:
+      - generic [ref=e24]:
+        - link "Home" [ref=e25] [cursor=pointer]:
+          - /url: ""
+        - text: /
+        - link "Office of Research Administration" [ref=e26] [cursor=pointer]:
+          - /url: /ora
+        - text: /
+        - link "Post-Award" [ref=e27] [cursor=pointer]:
+          - /url: /office-of-research-administration/post-award
+        - text: /
+        - link "Reporting" [ref=e28] [cursor=pointer]:
+          - /url: /office-of-research-administration/post-award/reporting
+      - text:   
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Office of Research Administration
+          - separator [ref=e35]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "Reporting" [level=1] [ref=e39]
+            - generic [ref=e41]:
+              - heading "Reporting Overview" [level=3] [ref=e42]
+              - paragraph [ref=e43]: After an award is issued, funding agencies monitor programmatic and financial aspects of a project. The PI/PD is responsible for preparing the programmatic/technical reports that are submitted to the funding agency at regular intervals. Such reports may be submitted monthly, quarterly, annually, or at the closing of the grant, based on the terms and conditions of the Notice of Award (NoA). These reports are sometimes submitted directly by the PI, but are often required to be submitted via the Office of Research Administration (ORA).
+              - paragraph [ref=e44]: Fiscal reports also need to be submitted at regular intervals, as instructed in the NoA. Fiscal reports are submitted by the Office of Restricted Funds Accounting (RFA). However, the PI needs to communicate with RFA to be sure that the expenses are correct.
+              - paragraph [ref=e45]: All aspects of grant management, programmatic or fiscal, are governed by the Office of Management and Budget (OMB) guidelines, including CFR 200. The NoAs and terms and conditions typically reflect those guidelines, with some further added restrictions specific to that award.
+              - paragraph [ref=e46]: "Common reports include:"
+              - list [ref=e47]:
+                - listitem [ref=e48]: Programmatic (annual progress reports, final technical reports, invention reports)
+                - listitem [ref=e49]: Financial (annual financial reports, final financial reports, and invoicing)
+              - paragraph [ref=e50]: Another important post-award report is Effort Certification Reporting, in which the percentage of effort spent on this award for each individual personnel is recorded.
+              - paragraph [ref=e51]: For more information, see below.
+            - generic [ref=e54]:
+              - link "Programmatic Reporting +" [ref=e56] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e57]: Programmatic Reporting
+                - generic [ref=e58]:
+                  - generic [ref=e60]: +
+                  - text: 
+              - link "Effort Reporting and Certification +" [ref=e62] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e63]: Effort Reporting and Certification
+                - generic [ref=e64]:
+                  - generic [ref=e66]: +
+                  - text: 
+              - link "MSU Policies and Guidelines +" [ref=e68] [cursor=pointer]:
+                - /url: "#"
+                - generic [ref=e69]: MSU Policies and Guidelines
+                - generic [ref=e70]:
+                  - generic [ref=e72]: +
+                  - text: 
+          - generic [ref=e73]:
+            - list [ref=e75]:
+              - listitem [ref=e76]:
+                - link "Office of Research Administration" [ref=e77] [cursor=pointer]:
+                  - /url: /ora
+                - list [ref=e78]:
+                  - listitem [ref=e79]:
+                    - link "About" [ref=e80] [cursor=pointer]:
+                      - /url: /office-of-research-administration/about
+                  - listitem [ref=e81]:
+                    - link "Pre-Award" [ref=e82] [cursor=pointer]:
+                      - /url: /office-of-research-administration/pre-award
+                  - listitem [ref=e83]:
+                    - link "Post-Award" [ref=e84] [cursor=pointer]:
+                      - /url: /office-of-research-administration/post-award
+                  - list [ref=e85]:
+                    - listitem [ref=e86]:
+                      - link "Notification and Setup of Award" [ref=e87] [cursor=pointer]:
+                        - /url: /office-of-research-administration/post-award/notification-and-setup-of-award
+                    - listitem [ref=e88]:
+                      - link "Changes to an Award" [ref=e89] [cursor=pointer]:
+                        - /url: /office-of-research-administration/post-award/changes-to-an-award
+                    - listitem [ref=e90]:
+                      - link "Post-Award Subawards" [ref=e91] [cursor=pointer]:
+                        - /url: /office-of-research-administration/post-award/post-award-subawards
+                    - listitem [ref=e92]:
+                      - link " Reporting" [ref=e93] [cursor=pointer]:
+                        - /url: /office-of-research-administration/post-award/reporting
+                        - generic [ref=e94]: 
+                        - text: Reporting
+                    - listitem [ref=e95]:
+                      - link "Forms" [ref=e96] [cursor=pointer]:
+                        - /url: /office-of-research-administration/post-award/forms
+                  - listitem [ref=e97]:
+                    - link "Policies and Guidelines" [ref=e98] [cursor=pointer]:
+                      - /url: /office-of-research-administration/policies-and-guidelines
+                  - listitem [ref=e99]:
+                    - link "Research Compliance" [ref=e100] [cursor=pointer]:
+                      - /url: /office-of-research-administration/research-compliance
+                  - listitem [ref=e101]:
+                    - link "Trainings" [ref=e102] [cursor=pointer]:
+                      - /url: /office-of-research-administration/trainings
+                  - listitem [ref=e103]:
+                    - link "Resources" [ref=e104] [cursor=pointer]:
+                      - /url: /office-of-research-administration/resources
+                  - listitem [ref=e105]:
+                    - link "Funding Sources" [ref=e106] [cursor=pointer]:
+                      - /url: /office-of-research-administration/funding-sources
+                  - listitem [ref=e107]:
+                    - link "ORA Announcements" [ref=e108] [cursor=pointer]:
+                      - /url: /office-of-research-administration/ora-announcements
+            - generic [ref=e110]:
+              - heading "Contact Information" [level=4] [ref=e111]
+              - separator [ref=e112]
+              - paragraph [ref=e113]:
+                - strong [ref=e114]: Office of Research Administration
+                - text: Morgan State University
+                - text: Tyler Hall, Student Service Bldg
+                - text: Suite 304
+                - text: Baltimore, MD 21251
+              - paragraph [ref=e115]:
+                - text: "Questions, contact:"
+                - text: "P: 443-885-4044"
+                - text: "F: 443-885-8280"
+                - text: "E:"
+                - link "ask.ora@morgan.edu" [ref=e116] [cursor=pointer]:
+                  - /url: mailto:ask.ora@morgan.edu
+              - paragraph
+              - paragraph
+              - paragraph
+      - generic [ref=e118]:
+        - generic [ref=e119]: 
+        - text: 
+    - contentinfo [ref=e120]:
+      - generic [ref=e122]:
+        - generic [ref=e124]:
+          - img "Morgan State University logo in white and orange" [ref=e126]
+          - paragraph [ref=e127]:
+            - link "1700 East Cold Spring Lane Baltimore, Maryland 21251" [ref=e128] [cursor=pointer]:
+              - /url: https://www.google.com/maps/place/Morgan+State+University/@39.3438,-76.5869596,17z/data=!3m1!4b1!4m6!3m5!1s0x89c805bb6adeb895:0x3035e29e2ad87f3f!8m2!3d39.3437959!4d-76.5843847!16zL20vMHN4Z2g?entry=ttu&g_ep=EgoyMDI2MDMxMC4wIKXMDSoASAFQAw%3D%3D
+              - text: 1700 East Cold Spring Lane
+              - text: Baltimore, Maryland 21251
+          - paragraph [ref=e129]:
+            - link "Carnegie Classification Seal" [ref=e130] [cursor=pointer]:
+              - /url: https://carnegieclassifications.acenet.edu/institution/morgan-state-university/
+              - img "Carnegie Classification Seal" [ref=e131]
+          - paragraph
+        - generic [ref=e133]:
+          - list [ref=e134]:
+            - listitem [ref=e135]:
+              - link "APPLY" [ref=e136] [cursor=pointer]:
+                - /url: /apply
+            - listitem [ref=e137]:
+              - link "ADMISSIONS & AID" [ref=e138] [cursor=pointer]:
+                - /url: /admissions-aid
+            - listitem [ref=e139]:
+              - link "STUDENT LIFE" [ref=e140] [cursor=pointer]:
+                - /url: /student-life
+            - listitem [ref=e141]:
+              - link "SCHEDULE A VISIT" [ref=e142] [cursor=pointer]:
+                - /url: /campusvisits
+            - listitem [ref=e143]:
+              - link "REQUEST INFORMATION" [ref=e144] [cursor=pointer]:
+                - /url: /request-info
+            - listitem [ref=e145]:
+              - link "GIVE TO MORGAN" [ref=e146] [cursor=pointer]:
+                - /url: http://www.givetomorgan.org/
+          - text:     
+          - generic [ref=e147]:
+            - paragraph [ref=e148]:
+              - link "Privacy" [ref=e149] [cursor=pointer]:
+                - /url: /privacy
+              - text: "|"
+              - link "Contact Us" [ref=e150] [cursor=pointer]:
+                - /url: /contactus
+              - text: "|"
+              - link "Report Waste & Fraud" [ref=e151] [cursor=pointer]:
+                - /url: https://www.ola.state.md.us/fraud/ola-fraud-hotline
+            - paragraph [ref=e152]: ©2026 Morgan State University
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - link "Facebook" [ref=e156] [cursor=pointer]:
+              - /url: https://www.facebook.com/morganstateu
+              - generic [ref=e157]: 
+            - link "X.com" [ref=e158] [cursor=pointer]:
+              - /url: https://www.x.com/morganstateu/
+              - generic [ref=e159]: 
+            - link "Instagram" [ref=e160] [cursor=pointer]:
+              - /url: https://www.instagram.com/morganstateu
+              - generic [ref=e161]: 
+            - link "Youtube" [ref=e162] [cursor=pointer]:
+              - /url: https://www.youtube.com/morganstateu
+              - generic [ref=e163]: 
+            - link "LinkedIn" [ref=e164] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/morgan-state-university
+              - generic [ref=e165]: 
+          - list [ref=e166]:
+            - listitem [ref=e167]:
+              - link "Nondiscrimination Notice" [ref=e168] [cursor=pointer]:
+                - /url: /nondiscrimination
+            - listitem [ref=e169]:
+              - link "Accessibility" [ref=e170] [cursor=pointer]:
+                - /url: /accessibility
+            - listitem [ref=e171]:
+              - link "Careers" [ref=e172] [cursor=pointer]:
+                - /url: /jobs
+            - listitem [ref=e173]:
+              - link "Campus Map" [ref=e174] [cursor=pointer]:
+                - /url: https://map.morgan.edu/
+            - listitem [ref=e175]:
+              - link "Emergency Information" [ref=e176] [cursor=pointer]:
+                - /url: /emergency-information
+            - listitem [ref=e177]:
+              - link "Clery Report" [ref=e178] [cursor=pointer]:
+                - /url: /cleryreport
+            - listitem [ref=e179]:
+              - link "Title IX Information" [ref=e180] [cursor=pointer]:
+                - /url: /titleix
+            - listitem [ref=e181]:
+              - link "Mobile Alerts" [ref=e182] [cursor=pointer]:
+                - /url: /mobilealerts
+  - img [ref=e185]

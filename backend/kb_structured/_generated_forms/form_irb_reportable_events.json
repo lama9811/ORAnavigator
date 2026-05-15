@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_irb_reportable_events",
+  "title": "Human Subjects Research Reportable Events Form",
+  "category": "form",
+  "subcategory": "irb_form",
+  "display_label": "IRB Reportable Events Form",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/human-subjects-research",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/IRB%20Forms/Reportable%20Events%20Form%203.6.2026%20%28final%29.pdf",
+  "content": "PDF form used to notify the IRB of reportable events such as adverse events, unanticipated problems involving risks to participants or others, protocol deviations, or breaches of confidentiality. Submit promptly per IRB procedures.",
+  "last_scraped": "2026-05-14"
+}

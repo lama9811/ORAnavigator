@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-CS Navigator is a project by and for Morgan State University students. We are committed to providing a welcoming and inclusive environment for everyone.
+ORA Navigator is a project by and for Morgan State University students. We are committed to providing a welcoming and inclusive environment for everyone.
 
 ## Our Standards
 

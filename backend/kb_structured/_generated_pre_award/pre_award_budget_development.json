@@ -1,0 +1,23 @@
+{
+  "doc_id": "pre_award_budget_development",
+  "title": "Pre-Award — Budget Development",
+  "category": "pre_award",
+  "subcategory": "budget",
+  "display_label": "Budget Development (Pre-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/budget-development",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/budget-development",
+  "content": "Comprehensive guidance for preparing the budget (also called the cost proposal) for a Morgan State University sponsored project. ORA emphasizes that the budget is equally as important as the technical proposal. For questions contact ask.ora@morgan.edu or 443-885-4044 (fax 443-885-8280).\n\nBudget overview: Budgets are comprehensive planning documents integrating details for achieving proposal objectives, accounting for both long-range goals and short-term targets. A budget typically includes direct costs, other direct costs, indirect costs, and other budget elements.\n\nExpense categories:\n\nPersonnel salaries and wages: senior personnel, post-doctoral researchers, lab technicians, graduate/undergraduate students, teaching assistants, and clerical staff.\n\nFringe benefits (current rates): Regular full-time/non-contractual employees (year round) = 42% of gross salary; Faculty during academic year = 42%; Faculty during summer = 9%; Contractual employees (year round) = 9%. See the Fringe Benefit Rate page for the official rate letter.\n\nEquipment: defined as property with acquisition cost of $5,000 or more and an expected service life exceeding one year. Brief descriptions and justifications are required.\n\nTravel: includes domestic and international travel for fieldwork and conferences. Current 2025 reimbursable rates under the State of Maryland include personal automobile mileage at $0.70 per mile, and meal per diems of $15 (breakfast), $18 (lunch), and $30 (dinner) for a total of $63 daily. GSA Per Diem Rates and the MSU University Travel page are also referenced.\n\nParticipant support: costs that defray expenses for students in training activities, conferences, or symposiums. Participants must be non-MSU employees receiving services (not providing them). Morgan employees do not qualify as participants, and indirect costs are not allowed on participant support.\n\nMaterials and supplies: supplies, printing, instructional materials, and audiovisual/computer supplies.\n\nConsultant services: require descriptions of proposed services, time estimates, and payment rates. MSU faculty may not be listed as consultants.\n\nSubawards (also called subgrants, subagreements, or subcontracts): require clear budget provisions, separate identification, and a service explanation. See the Pre-Award Subawards page.\n\nFacilities and Administrative (F&A) / Indirect Cost: Morgan State's currently negotiated rate for Organized Research (On-Campus) is 53%-54% of modified total direct cost (see the F&A Cost Rates page for the full rate schedule by fiscal year and activity type).\n\nLinked templates and resources from this page: PI Handbook 2 (Grant Budgets) PDF, NSF Budget Template (protected Excel), Budget Justification Template (Word), and Budget Preparation PowerPoint Slides PDF.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "equipment_threshold": "$5,000 acquisition cost, >1 year service life",
+    "fringe_rates": {
+      "faculty_academic_year": "42%",
+      "faculty_summer": "9%",
+      "regular_fulltime_yearround": "42%",
+      "contractual_yearround": "9%"
+    },
+    "md_mileage_rate_2025": "$0.70/mile",
+    "md_meal_per_diem_2025": {"breakfast": "$15", "lunch": "$18", "dinner": "$30", "total": "$63"},
+    "participant_support": "MSU employees do not qualify; no indirect costs on participant support"
+  }
+}

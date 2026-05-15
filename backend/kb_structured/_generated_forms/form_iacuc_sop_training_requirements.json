@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_training_requirements",
+  "title": "SOP 1.2: Training Requirements",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 1.2 \u2014 Training Requirements",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_1.2_Training_Requirements.pdf",
+  "content": "IACUC SOP defining the required training program for all personnel who work with laboratory animals at the Morgan State Animal Research Facility (ARF). Covers initial training, ongoing competency, and recertification requirements.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

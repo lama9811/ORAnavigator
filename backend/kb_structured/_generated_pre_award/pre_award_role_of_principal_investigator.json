@@ -1,0 +1,17 @@
+{
+  "doc_id": "pre_award_role_of_principal_investigator",
+  "title": "Pre-Award — Role of Principal Investigator",
+  "category": "pre_award",
+  "subcategory": "overview",
+  "display_label": "Role of Principal Investigator (Pre-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/role-of-principal-investigator",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/role-of-principal-investigator",
+  "content": "This page explains who is eligible to serve as Principal Investigator (PI) or Project Director (PD) on a sponsored project at Morgan State University. For questions, contact the Office of Research Administration at ask.ora@morgan.edu or 443-885-4044.\n\nEligibility categories:\n- Full-time tenure track faculty members at any academic rank automatically qualify as PI/PD.\n- Other university appointees (directors, senior administrators, visiting faculty, retired faculty) may serve as PI/PD with dean approval. A formal Memorandum of Designation must be filed with ORA. Adjunct faculty serving as PI/PD may need a full-time co-PI/PD.\n- Full-time regular staff with appropriate qualifications are eligible to serve as PI/PD.\n- Individual fellowship applications: when a sponsor requires the Fellow to be the PI/PD, a Sponsor or Mentor meeting the criteria above will serve as the Project Director on MSU records and handle administrative and scientific oversight of the award.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "default_eligible": "full-time tenure track faculty",
+    "requires_dean_approval": "directors, senior administrators, visiting faculty, retired faculty (Memorandum of Designation required)",
+    "adjuncts": "may require full-time co-PI/PD",
+    "fellowship_exception": "Sponsor/Mentor serves as PD when Fellow is required PI"
+  }
+}

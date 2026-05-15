@@ -43,7 +43,7 @@
 }
 
 .guest-trial-bar.expired {
-  background: linear-gradient(135deg, #4285F4 0%, #669DF6 100%);
+  background: var(--gradient-primary);
   border-bottom: none;
 }
 
@@ -161,7 +161,7 @@
 }
 
 .trial-link:hover {
-  color: #4285F4;
+  color: var(--msu-gold);
   text-decoration: underline;
 }
 
@@ -237,48 +237,76 @@
   }
 }
 
+/* logo replaced by editorial eyebrow + serif title — class kept for back-compat in case other components reference it */
 .guest-welcome-logo {
-  width: 100px;
-  height: 100px;
-  margin-bottom: 32px;
-  border-radius: 24px;
-  box-shadow:
-    0 8px 24px rgba(66, 133, 244, 0.2),
-    0 0 0 4px rgba(66, 133, 244, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.guest-welcome-logo:hover {
-  transform: scale(1.05);
-  box-shadow:
-    0 12px 32px rgba(66, 133, 244, 0.25),
-    0 0 0 6px rgba(66, 133, 244, 0.15);
+  display: none;
 }
 
 .guest-welcome-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  margin-bottom: 12px;
-  letter-spacing: -0.03em;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: var(--font-serif, 'DM Serif Display', 'Georgia', serif);
+  font-size: 4rem;
+  font-weight: 400;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--text-main);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
+.guest-welcome-title::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 2px;
+  margin: 18px auto 0;
+  background: var(--msu-gold);
+}
+
+.ora-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
 }
 
 .guest-welcome-subtitle {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   color: var(--text-secondary);
-  margin-bottom: 40px;
+  margin-bottom: 36px;
   font-weight: 400;
-  max-width: 500px;
-  line-height: 1.6;
+  max-width: 560px;
+  line-height: 1.65;
+}
+
+.ora-suggestions-label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ora-suggestions-label::before,
+.ora-suggestions-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+  max-width: 80px;
+}
+
+@media (max-width: 600px) {
+  .guest-welcome-title { font-size: 2.8rem; }
 }
 
 /* Suggestions grid - matches main chat */
@@ -316,11 +344,9 @@
   line-height: 1.4;
 }
 
-/* Google brand color accents on guest suggestion cards */
-.guest-suggestion-btn:nth-child(4n+1) { border-left-color: #4285F4; }
-.guest-suggestion-btn:nth-child(4n+2) { border-left-color: #EA4335; }
-.guest-suggestion-btn:nth-child(4n+3) { border-left-color: #34A853; }
-.guest-suggestion-btn:nth-child(4n+4) { border-left-color: #FBBC05; }
+/* ORA editorial accents — alternating navy/gold rule on the leading edge */
+.guest-suggestion-btn:nth-child(odd)  { border-left-color: var(--msu-blue); }
+.guest-suggestion-btn:nth-child(even) { border-left-color: var(--msu-gold); }
 
 .guest-suggestion-btn::before {
   content: '';
@@ -329,7 +355,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(66, 133, 244, 0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(201, 162, 76, 0.10), transparent);
   transition: left 0.5s ease;
 }
 

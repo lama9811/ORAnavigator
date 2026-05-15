@@ -1,0 +1,37 @@
+{
+  "doc_id": "post_award_forms_index",
+  "title": "Post-Award — Forms Index",
+  "category": "post_award",
+  "subcategory": "forms_index",
+  "display_label": "Post-Award Forms (Index)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "content": "The Post-Award Forms page lists the eight DocuSign forms required for grant-funded requests processed through the Morgan State University Office of Research Administration (ORA). All submissions route through DocuSign to the MSU ORA signing group; questions and submissions go to ora-docusign@morgan.edu.\n\nForms available (each has its own form card in the KB):\n\n1. Honoraria Request Memo — payment for participation to a person not employed by or a student of Morgan State University. One-time payments with market-rate limitations. International payments require Accounts Payable guidance.\n\n2. PF-10 Contractual Personnel Request Form — exclusively for revisions and continuation requests for existing contractual personnel. New employees must use the EPAF system via WebSIS.\n\n3. Stipend Request Memo — requires the requested check issue date to be a minimum of 45 days after submission of the request.\n\n4. Non-Title III Travel Request Form — for grant travel funded by non-Title III sources. As of 05/30/2024, 'Grant/Award End Date' is a mandatory field. Additional details at the University Travel website.\n\n5. Title III Travel Request Form — for grant travel funded by Title III sources.\n\n6. Travel Reimbursement Form (GAD Form X-5) — uses the State of Maryland Expense Account (GAD Form X-5) format.\n\n7. Grant-Funded Undergraduate Tuition, Fees, and Health Insurance Request Memo — for undergraduate tuition, fees, and health insurance support paid from grant funds.\n\n8. Grant-Funded Graduate Tuition and Fees Request Memo — graduate version; graduate student health insurance must be reimbursed via a separate requisition, not on this memo.\n\nGeneral guidance and references: PI Handbook 3: Grant-Related Processes (2025-02-24 PDF) documents the broader post-award business processes these forms support.\n\nAdditional details (verified via Playwright on 2026-05-14): The live page now lists the primary DocuSign forms contact as Rebecca Steiner (rebecca.steiner@morgan.edu, 443-885-4044) — the older ora-docusign@morgan.edu inbox may still be monitored but is not displayed on the current page. The two travel request forms (Title III and Non-Title III) are grouped on the live page under the heading 'Travel Request Form (COMP 01)', which is the State of Maryland COMP-01 form designation. For PF-10 guidance on first-time and repeat employees (who use EPAF via WebSIS instead), an ORA e-training module on Contractual Salaries is available at https://www.morgan.edu/office-of-research-administration/trainings/e-training. Travel form completion guidance and TL-number processing tips are at https://www.morgan.edu/comptroller/university-travel (questions to the Office of the Comptroller's Travel Division). A completed sample of the Undergraduate Tuition memo is published at https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/ORAForms/Post-Award%20Forms/Samples/Sample_UndergradTuition.pdf (KB doc_id: form_sample_undergrad_tuition_memo).\n\nContacts: ask.ora@morgan.edu, rebecca.steiner@morgan.edu, ora-docusign@morgan.edu. Phone 443-885-4044. Tyler Hall Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "form_count": 8,
+    "docusign_email": "ora-docusign@morgan.edu",
+    "docusign_primary_contact_on_live_page": "Rebecca Steiner (rebecca.steiner@morgan.edu, 443-885-4044)",
+    "docusign_signing_group": "MSU ORA",
+    "stipend_advance_notice_days": 45,
+    "non_title_iii_travel_form_update": "Grant/Award End Date became mandatory on 2024-05-30",
+    "travel_request_form_state_designation": "COMP 01",
+    "travel_help_url": "https://www.morgan.edu/comptroller/university-travel",
+    "pf10_etraining_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+    "sample_undergrad_tuition_pdf": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/ORAForms/Post-Award%20Forms/Samples/Sample_UndergradTuition.pdf",
+    "reference_handbook": "PI Handbook 3: Grant-Related Processes (2025-02-24)",
+    "form_doc_ids": [
+      "form_docusign_honoraria_request",
+      "form_docusign_pf10_contractual_personnel",
+      "form_docusign_stipend_request",
+      "form_docusign_travel_request_non_title_iii",
+      "form_docusign_travel_request_title_iii",
+      "form_docusign_travel_reimbursement_gad_x5",
+      "form_docusign_tuition_fees_undergrad",
+      "form_docusign_tuition_fees_grad",
+      "form_sample_undergrad_tuition_memo"
+    ]
+  }
+}

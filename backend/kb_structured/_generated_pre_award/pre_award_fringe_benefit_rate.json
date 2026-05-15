@@ -1,0 +1,19 @@
+{
+  "doc_id": "pre_award_fringe_benefit_rate",
+  "title": "Pre-Award — Fringe Benefit Rate",
+  "category": "pre_award",
+  "subcategory": "rates",
+  "display_label": "Fringe Benefit Rate (Pre-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/fringe-benefit-rate",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/fringe-benefit-rate",
+  "content": "Morgan State University's fringe benefit rates used when developing sponsored project budgets. Fringe benefits are supplements to salaries and wages covering FICA/Medicare, retirement, healthcare insurance, unemployment insurance, tuition remission, TIAA/CREF, and worker's compensation. For questions, contact ORA at ask.ora@morgan.edu or 443-885-4044 (fax 443-885-8280).\n\nFringe benefit rates by employee category:\n- Faculty (Academic Year): 42%\n- Faculty (Summer): 9%\n- Full-Time / Non-Contractual (Year Round): 42%\n- Contractual (Year Round): 9%\n\nContractual employees at Morgan State University are defined as those who work less than 6 months or less than 30 hours per week.\n\nThe official fringe rate breakdown document (FringeRate-2018.pdf) is available for download from this page.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "faculty_academic_year_rate": "42%",
+    "faculty_summer_rate": "9%",
+    "fulltime_non_contractual_rate": "42%",
+    "contractual_rate": "9%",
+    "contractual_definition": "less than 6 months OR less than 30 hours per week",
+    "rate_letter_pdf": "FringeRate-2018.pdf"
+  }
+}

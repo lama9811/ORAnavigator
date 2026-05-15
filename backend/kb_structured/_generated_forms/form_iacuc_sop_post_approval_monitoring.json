@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_post_approval_monitoring",
+  "title": "SOP 42.2: Post-Approval Monitoring and Protocol Renewal",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 42.2 \u2014 Post-Approval Monitoring and Protocol Renewal",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_42.2_Post-Approval_Monitoring_and_Protocol_Renewal.pdf",
+  "content": "IACUC SOP outlining the post-approval monitoring program and the triennial protocol renewal process at the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

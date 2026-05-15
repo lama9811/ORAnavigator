@@ -119,7 +119,7 @@ export default function Login({ onLoggedIn }) {
   return (
     <AuthLayout
       title="Log in"
-      subtitle="Welcome back, Bear. Ask questions about courses, requirements, and resources."
+      subtitle="Sign in with your @morgan.edu email to continue working on grants, compliance, and post-award questions."
       footer={
         <>
           Don't have an account? <Link className="auth__link" to="/signup">Sign up</Link>

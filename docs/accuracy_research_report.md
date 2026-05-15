@@ -1,4 +1,4 @@
-# CS Navigator Accuracy & Consistency Research Report
+# ORA Navigator Accuracy & Consistency Research Report
 **Date:** April 8, 2026  
 **Sources:** 23 academic papers, full codebase review (16 issues), Obsidian vault (v0-v5 history)
 
@@ -27,7 +27,7 @@ flowchart TD
     J & K & L --> M[Inject into Agent Session State<br/>Context can be 8000+ chars]
     
     M --> N[Gemini Agent<br/>gemini-2.5-flash]
-    N -->|SHOULD search KB| O[Vertex AI Search<br/>csnavigator-kb-v7]
+    N -->|SHOULD search KB| O[Vertex AI Search<br/>oranavigator-kb-v7]
     N -->|CAN SKIP KB!<br/>Uses training data instead| P[Hallucinated Response]
     
     O --> Q[Generate Response<br/>max 2048 tokens - can truncate!]

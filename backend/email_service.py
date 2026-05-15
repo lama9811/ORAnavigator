@@ -1,5 +1,5 @@
 """
-Email Service for CS Navigator
+Email Service for ORA Navigator
 ================================
 Sends verification and password reset emails.
 Uses Gmail SMTP or any SMTP provider.
@@ -38,7 +38,7 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
-        msg["From"] = f"CS Navigator <{FROM_EMAIL}>"
+        msg["From"] = f"ORA Navigator <{FROM_EMAIL}>"
         msg["To"] = to_email
         msg.attach(MIMEText(html_body, "html"))
 
@@ -60,7 +60,7 @@ def send_verification_email(to_email: str, token: str) -> bool:
     html = f"""
     <div style="font-family: 'Google Sans', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #4285F4; font-size: 24px; margin: 0;">CS Navigator</h1>
+            <h1 style="color: #4285F4; font-size: 24px; margin: 0;">ORA Navigator</h1>
             <p style="color: #5f6368; font-size: 14px;">Morgan State University</p>
         </div>
         <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; border: 1px solid #dadce0;">
@@ -82,7 +82,7 @@ def send_verification_email(to_email: str, token: str) -> bool:
         </p>
     </div>
     """
-    return _send_email(to_email, "Verify your CS Navigator account", html)
+    return _send_email(to_email, "Verify your ORA Navigator account", html)
 
 
 def send_password_reset_email(to_email: str, token: str) -> bool:
@@ -91,7 +91,7 @@ def send_password_reset_email(to_email: str, token: str) -> bool:
     html = f"""
     <div style="font-family: 'Google Sans', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
-            <h1 style="color: #4285F4; font-size: 24px; margin: 0;">CS Navigator</h1>
+            <h1 style="color: #4285F4; font-size: 24px; margin: 0;">ORA Navigator</h1>
             <p style="color: #5f6368; font-size: 14px;">Morgan State University</p>
         </div>
         <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; border: 1px solid #dadce0;">
@@ -113,4 +113,4 @@ def send_password_reset_email(to_email: str, token: str) -> bool:
         </p>
     </div>
     """
-    return _send_email(to_email, "Reset your CS Navigator password", html)
+    return _send_email(to_email, "Reset your ORA Navigator password", html)

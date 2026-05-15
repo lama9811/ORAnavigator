@@ -4,7 +4,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir google-adk==1.23.0 aiomysql
 
-COPY cs_navigator_unified/ ./cs_navigator_unified/
+COPY ora_navigator_unified/ ./ora_navigator_unified/
 
 EXPOSE 8080
 

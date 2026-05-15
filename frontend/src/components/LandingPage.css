@@ -1,11 +1,25 @@
-/* Landing Page - Full screen chat experience */
+/* Landing Page — editorial paper backdrop, subtle rule lines */
 
 .landing-page {
   height: calc(100vh - 70px);
   width: 100%;
   background: var(--bg-body);
+  background-image: var(--gradient-mesh);
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Faint horizontal rule under the navbar to anchor the editorial frame */
+.landing-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 5%;
+  right: 5%;
+  height: 1px;
+  background: var(--border-subtle);
+  opacity: 0.7;
 }
 
 .landing-chat-wrapper {

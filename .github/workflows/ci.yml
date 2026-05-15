@@ -58,7 +58,7 @@ jobs:
           python-version: "3.12"
       - run: pip install google-adk==1.23.0
       - name: Verify agent loads
-        run: python -c "from cs_navigator_unified.agent import root_agent; print(root_agent.name)"
+        run: python -c "from ora_navigator_unified.agent import root_agent; print(root_agent.name)"
 
   health-check:
     name: Production Health

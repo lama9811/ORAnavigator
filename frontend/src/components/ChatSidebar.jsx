@@ -3,10 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from 'sonner';
 import { FaPlus } from "@react-icons/all-files/fa/FaPlus";
 import { FaSearch } from "@react-icons/all-files/fa/FaSearch";
-import { FaBook } from "@react-icons/all-files/fa/FaBook";
-import { FaChalkboardTeacher } from "@react-icons/all-files/fa/FaChalkboardTeacher";
-import { FaChartLine } from "@react-icons/all-files/fa/FaChartLine";
-import { FaProjectDiagram } from "@react-icons/all-files/fa/FaProjectDiagram";
 import { FaTrash } from "@react-icons/all-files/fa/FaTrash";
 import { FaUser } from "@react-icons/all-files/fa/FaUser";
 import { FaSignOutAlt } from "@react-icons/all-files/fa/FaSignOutAlt";
@@ -298,20 +294,6 @@ export default function ChatSidebar({
     });
   };
   
-  const handleCurriculumClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    closeContextMenu();
-    navigate("/curriculum");
-  };
-
-  const handleMyClassesClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    closeContextMenu();
-    navigate("/my-classes");
-  };
-
   const handleProfileClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -408,38 +390,6 @@ export default function ChatSidebar({
           />
         </div>
 
-        <button
-          className="sidebar-action-btn curriculum-link"
-          onClick={handleMyClassesClick}
-          title="View your Canvas courses, assignments, and grades"
-        >
-          <FaChalkboardTeacher size={16} />
-          <span>My Classes</span>
-        </button>
-        <button
-          className="sidebar-action-btn curriculum-link"
-          onClick={handleCurriculumClick}
-          title="View Computer Science curriculum"
-        >
-          <FaBook size={16} />
-          <span>Curriculum</span>
-        </button>
-        <button
-          className="sidebar-action-btn curriculum-link"
-          onClick={(e) => { e.preventDefault(); navigate("/grade-analysis"); }}
-          title="Grade analysis and strategy"
-        >
-          <FaChartLine size={16} />
-          <span>Grade Surgeon</span>
-        </button>
-        <button
-          className="sidebar-action-btn curriculum-link"
-          onClick={(e) => { e.preventDefault(); navigate("/ripple-effect"); }}
-          title="Prerequisite dependency map"
-        >
-          <FaProjectDiagram size={16} />
-          <span>Ripple Effect</span>
-        </button>
       </div>
 
       <div className="sidebar-middle">
@@ -581,12 +531,12 @@ export default function ChatSidebar({
               e.stopPropagation();
               onLogout();
             }}
-            title="Sign out of CS Navigator"
+            title="Sign out of ORA Navigator"
           >
             <FaSignOutAlt size={16} />
           </button>
         </div>
-        <a className="sidebar-opensource-badge" href="https://github.com/theaayushstha1/cs-navigator" target="_blank" rel="noopener noreferrer">
+        <a className="sidebar-opensource-badge" href="https://github.com/theaayushstha1/ora-navigator" target="_blank" rel="noopener noreferrer">
           <FaGithub size={10} />
           <span>Open Source</span>
         </a>

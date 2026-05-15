@@ -1,0 +1,28 @@
+{
+  "doc_id": "compliance_coi_sponsored_research",
+  "title": "Compliance — Conflict of Interest for Sponsored Research (FCOI)",
+  "category": "compliance",
+  "subcategory": "coi_subpage",
+  "display_label": "Conflict of Interest for Sponsored Research (FCOI)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/conflict-of-interest/conflict-of-interest-for-sponsored-research",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/COI/MorganStateUniversity_FCOIDisclosureProcessandManagement.pdf",
+  "content": "Financial Conflict of Interest (FCOI) in Sponsored Research at Morgan State University.\n\nDefinition: Financial conflicts of interest in sponsored research occur when the financial interests of Investigators (or those of the Investigator's spouse/domestic partner and/or dependent children) could directly and significantly affect the design, conduct, or reporting of research, or present the appearance of doing so. Many aspects of research — from how a study is designed, how data is collected, analyzed and reported, to what individuals/suppliers are involved in the work — can be potentially influenced inappropriately by conflicts of interest.\n\nRationale: Ideally, financial interests should not, and in most instances do not, compromise intellectual honesty. Nevertheless, they certainly can, especially if the financial interests are significant. Concerns about the actual or potential adverse effect of financial interests on research provided the impetus for the Public Health Service (PHS) and the National Science Foundation (NSF) to adopt conflict of interest policies (e.g., 42 CFR Part 50 Subpart F). These federal regulations and guidance regarding financial conflicts of interest in research are designed to promote objectivity in research. They require that the design, conduct, and reporting of research funded under federal grants, cooperative agreements, or contracts will be free from bias resulting from conflicts.\n\nORC Role: In compliance with these regulations, the Office of Research Compliance (ORC) seeks to promote objectivity in research at MSU by identifying real or potential financial conflicts of interest and advising faculty researchers on how to mitigate, manage, and if necessary eliminate those conflicts. To that end, ORC has established administrative procedures for:\n- disclosing significant conflicts before any research is undertaken;\n- managing, reducing, or eliminating significant financial conflicts of interest; and\n- providing subsequent reports on how the conflicts were handled.\n\nTraining Requirement: All investigators who are responsible for designing, conducting, or reporting on research or research activities must also complete training on financial conflicts of interest. The training is currently available through the CITI Training Program (https://about.citiprogram.org/), and is required every 4 years.\n\n=== ACCORDION: Procedures ===\nFCOI Disclosure Process and Management — PDF at https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/COI/MorganStateUniversity_FCOIDisclosureProcessandManagement.pdf\n\n=== ACCORDION: Policy ===\nMSU Board of Regents Conflict of Interest in Research and Development Policy — PDF at https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/COI/MorganStateUniversity_ConflictOfInterest_Policy.pdf\n\n=== ACCORDION: Disclosure Form ===\nFinancial Conflict of Interest Form (Google Form) — https://docs.google.com/forms/d/e/1FAIpQLSeQQps5_dzvY75zyY88epYD0foyK2Fbt9qXxXnDSrloTt45LA/viewform?usp=sharing&ouid=110641760161967436962\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "regulation": "42 CFR Part 50 Subpart F",
+    "training_provider": "CITI Training Program",
+    "training_cycle_years": 4,
+    "investigators_covered": ["Investigator", "spouse/domestic partner", "dependent children"],
+    "regulators_cited": ["Public Health Service (PHS)", "National Science Foundation (NSF)"],
+    "administering_office": "Office of Research Compliance (ORC)",
+    "accordions_opened": 3,
+    "accordion_titles": ["Procedures", "Policy", "Disclosure Form"],
+    "fcoi_disclosure_pdf_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/COI/MorganStateUniversity_FCOIDisclosureProcessandManagement.pdf",
+    "msu_bor_coi_policy_pdf_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/COI/MorganStateUniversity_ConflictOfInterest_Policy.pdf",
+    "fcoi_disclosure_form_url": "https://docs.google.com/forms/d/e/1FAIpQLSeQQps5_dzvY75zyY88epYD0foyK2Fbt9qXxXnDSrloTt45LA/viewform",
+    "contact_email": "ask.ora@morgan.edu",
+    "contact_phone": "443-885-4044"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "doc_id": "trainings_test_prep",
+  "title": "Trainings — Test Prep (RACC Certification: CRA, CPRA, CFRA)",
+  "category": "trainings",
+  "subcategory": "test_prep",
+  "display_label": "Test Prep — RACC Certifications (ORA Trainings)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/test-prep",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/trainings/test-prep",
+  "content": "At Morgan State University, many faculty and staff play vital roles in coordinating, managing, and administering sponsored awards, including grants, cooperative agreements, and contracts. ORA's Test Prep program supports those staff in pursuing professional certification through the Research Administrators Certification Council (RACC). RACC website: https://www.cra-cert.org/.\n\nRACC offers three credentials, each with its own exam:\n- CRA® — Certified Research Administrator: https://www.cra-cert.org/cra-\n- CPRA® — Certified Pre-Award Research Administrator: https://www.cra-cert.org/cpra-\n- CFRA® — Certified Financial Research Administrator: https://www.cra-cert.org/cfra\n\nORA provides 15 chapter-based PDF study guides covering the topics required across the RACC exam blueprints. Each chapter includes background information, test questions, and answers. The study chapters cover:\n\n1) F&A Costs (Facilities and Administrative costs / indirect costs)\n2) Prior Approval\n3) Cost Share\n4) SBIR/STTR (Small Business Innovation Research / Technology Transfer)\n5) NIH (National Institutes of Health)\n6) NSF (National Science Foundation)\n7) Award Instruments\n8) Cost Allowability\n9) Intellectual Property\n10) Single Audit\n11) Notices of Award\n12) Research Misconduct\n13) Human Research Ethics\n14) Animal Research Ethics\n15) Export Controls\n16) Contracting\n\nPDFs are hosted on morgan.edu at /Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/[filename].pdf.\n\nORA staff who have earned RACC credentials include Farin Kamangar (CRA, CPRA, CFRA), Gillian Silver (CRA, CPRA, CFRA), and Ryan Mobley (CRA, CFRA, CPRA). They serve as informal mentors for staff preparing for these exams.\n\nThe page does not specify scheduled study sessions, cadence, or registration procedures — materials are self-service.\n\nFor questions or to access study sessions, contact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Email ask.ora@morgan.edu.\n\nAdditional details revealed by Playwright: All 16 chapter PDFs have direct URLs on morgan.edu under /Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/. The page intro now reads more explicitly: 'Each button below brings you to a unique chapter full of information, test questions, and answers: a complete test prep package in PDF form.' Verified count is 16 chapters (matching the existing key_facts count, despite the body text in the existing JSON saying 'fifteen chapter-based PDF study guides' — the correct count is 16). Direct chapter URLs: F&A Costs FA_Costs.pdf; Prior Approval PriorApproval.pdf; Cost Share CostShare.pdf; SBIR/STTR SBIR_STTR.pdf; NIH NIH.pdf; NSF NSF.pdf; Award Instruments FederalAwardInstruments.pdf; Cost Allowability Cost-Allowability.pdf; Intellectual Property IntellectualProperty.pdf; Single Audit SingleAudit.pdf; Notices of Award FederalNoticesofAward.pdf; Research Misconduct ResearchMisconduct.pdf; Human Research Ethics EthicsInHumanResearch.pdf; Animal Research Ethics AnimalResearchEthics.pdf; Export Controls ExportControls.pdf; Contracting Contracting.pdf.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "certifying_body": "Research Administrators Certification Council (RACC)",
+    "racc_url": "https://www.cra-cert.org/",
+    "certifications": [
+      {
+        "name": "CRA",
+        "full_name": "Certified Research Administrator",
+        "url": "https://www.cra-cert.org/cra-"
+      },
+      {
+        "name": "CPRA",
+        "full_name": "Certified Pre-Award Research Administrator",
+        "url": "https://www.cra-cert.org/cpra-"
+      },
+      {
+        "name": "CFRA",
+        "full_name": "Certified Financial Research Administrator",
+        "url": "https://www.cra-cert.org/cfra"
+      }
+    ],
+    "study_chapters_count": 16,
+    "study_topics": [
+      "F&A Costs",
+      "Prior Approval",
+      "Cost Share",
+      "SBIR/STTR",
+      "NIH",
+      "NSF",
+      "Award Instruments",
+      "Cost Allowability",
+      "Intellectual Property",
+      "Single Audit",
+      "Notices of Award",
+      "Research Misconduct",
+      "Human Research Ethics",
+      "Animal Research Ethics",
+      "Export Controls",
+      "Contracting"
+    ],
+    "msu_certified_mentors": [
+      "Farin Kamangar (CRA, CPRA, CFRA)",
+      "Gillian Silver (CRA, CPRA, CFRA)",
+      "Ryan Mobley (CRA, CFRA, CPRA)"
+    ],
+    "chapter_pdf_direct_urls": {
+      "fa_costs": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/FA_Costs.pdf",
+      "prior_approval": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/PriorApproval.pdf",
+      "cost_share": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/CostShare.pdf",
+      "sbir_sttr": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/SBIR_STTR.pdf",
+      "nih": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/NIH.pdf",
+      "nsf": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/NSF.pdf",
+      "award_instruments": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/FederalAwardInstruments.pdf",
+      "cost_allowability": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/Cost-Allowability.pdf",
+      "intellectual_property": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/IntellectualProperty.pdf",
+      "single_audit": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/SingleAudit.pdf",
+      "notices_of_award": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/FederalNoticesofAward.pdf",
+      "research_misconduct": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/ResearchMisconduct.pdf",
+      "human_research_ethics": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/EthicsInHumanResearch.pdf",
+      "animal_research_ethics": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/AnimalResearchEthics.pdf",
+      "export_controls": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/ExportControls.pdf",
+      "contracting": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Test%20Prep/Contracting.pdf"
+    },
+    "contact_email": "ask.ora@morgan.edu"
+  }
+}

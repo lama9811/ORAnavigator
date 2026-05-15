@@ -3,7 +3,6 @@ import { FaPlus } from "@react-icons/all-files/fa/FaPlus";
 import { FaMoon } from "@react-icons/all-files/fa/FaMoon";
 import { FaSun } from "@react-icons/all-files/fa/FaSun";
 import { FaUser } from "@react-icons/all-files/fa/FaUser";
-import { FaBook } from "@react-icons/all-files/fa/FaBook";
 import { FaCog } from "@react-icons/all-files/fa/FaCog";
 import './CommandPalette.css';
 
@@ -45,11 +44,6 @@ export default function CommandPalette({
               <Command.Item onSelect={() => runAction(() => onNavigate('/profile'))}>
                 <FaUser size={14} />
                 <span>Open Profile</span>
-              </Command.Item>
-
-              <Command.Item onSelect={() => runAction(() => onNavigate('/curriculum'))}>
-                <FaBook size={14} />
-                <span>Open Curriculum</span>
               </Command.Item>
 
               {role === 'admin' && (

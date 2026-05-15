@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_rodent_breeding_log",
+  "title": "Rodent Breeding Log",
+  "category": "form",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC \u2014 Rodent Breeding Log",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Rodent%20Breeding%20log%201-15-20.xlsx",
+  "content": "Excel template log tracking rodent breeding outcomes \u2014 litters, pups born, weanlings, mortality.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

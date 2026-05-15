@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_overcrowding_separation",
+  "title": "SOP 33.2: Separation of Rodents for Overcrowding or Fighting",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 33.2 \u2014 Separation of Rodents for Overcrowding or Fighting",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_33.2_Separation_of_Rodents_for_Overcrowding_or_Fighting.pdf",
+  "content": "IACUC SOP describing when and how to separate rodents experiencing overcrowding or fighting, with cage-density limits.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

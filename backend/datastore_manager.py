@@ -18,10 +18,10 @@ from google.protobuf.struct_pb2 import Struct
 log = logging.getLogger(__name__)
 
 # Configuration
-GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "csnavigator-vertex-ai")
+GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "oranavigator-vertex-ai")
 DATASTORE_ID = os.getenv(
     "VERTEX_AI_DATASTORE_ID",
-    "projects/csnavigator-vertex-ai/locations/us/collections/default_collection/dataStores/csnavigator-kb-v7"
+    "projects/oranavigator-vertex-ai/locations/us/collections/default_collection/dataStores/oranavigator-kb-v7"
 )
 
 _ds_parts = DATASTORE_ID.split("/")

@@ -1,4 +1,4 @@
-<h1 align="center">CS Navigator</h1>
+<h1 align="center">ORA Navigator</h1>
 <p align="center"><strong>AI-Powered Academic Advising for Morgan State University</strong></p>
 <p align="center">
   <a href="https://cs.inavigator.ai">Live App</a> |
@@ -7,18 +7,18 @@
   <a href="#version-history">Version History</a>
 </p>
 <p align="center">
-  <a href="https://github.com/theaayushstha1/cs-navigator/actions"><img src="https://github.com/theaayushstha1/cs-navigator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/theaayushstha1/cs-navigator/releases/tag/v5.1"><img src="https://img.shields.io/badge/version-5.1-blue" alt="Version"></a>
+  <a href="https://github.com/theaayushstha1/ora-navigator/actions"><img src="https://github.com/theaayushstha1/ora-navigator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/theaayushstha1/ora-navigator/releases/tag/v5.1"><img src="https://img.shields.io/badge/version-5.1-blue" alt="Version"></a>
   <img src="https://img.shields.io/badge/accuracy-100%25%20(50Q)-brightgreen" alt="Accuracy">
   <img src="https://img.shields.io/badge/response-3.9s%20avg-brightgreen" alt="Response Time">
   <img src="https://img.shields.io/badge/deploy-Google%20Cloud%20Run-4285F4" alt="Deploy">
   <img src="https://img.shields.io/badge/AI-Google%20ADK%20%2B%20Gemini-orange" alt="AI">
-  <a href="https://github.com/theaayushstha1/cs-navigator/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+  <a href="https://github.com/theaayushstha1/ora-navigator/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
 </p>
 
 ---
 
-CS Navigator is a production AI chatbot serving 800+ CS students at Morgan State University. Students ask questions in plain English and get personalized answers grounded in the department's knowledge base, their DegreeWorks academic record, and Canvas LMS grades.
+ORA Navigator is a production AI chatbot serving 800+ CS students at Morgan State University. Students ask questions in plain English and get personalized answers grounded in the department's knowledge base, their DegreeWorks academic record, and Canvas LMS grades.
 
 Built with Google ADK (Agent Development Kit), Gemini 2.0 Flash, and Vertex AI Search. Uses a novel **Retrieval-Enforced Generation (REG)** pipeline that guarantees KB grounding at three layers: pre-generation context injection, tool-based retrieval, and post-generation verification. Zero hallucinations across 200+ tested queries with 3.9s average response time.
 
@@ -29,7 +29,7 @@ Deployed on Google Cloud Run with multi-instance scaling, database-backed sessio
 ## Demo
 
 <p align="center">
-  <img src="docs/screenshots/demo.gif" width="80%" alt="CS Navigator Demo">
+  <img src="docs/screenshots/demo.gif" width="80%" alt="ORA Navigator Demo">
   <br><em>Ask questions, get personalized answers grounded in university data</em>
 </p>
 
@@ -322,15 +322,15 @@ Three services on Google Cloud Run:
 
 ```bash
 # 1. ADK Agent
-gcloud run deploy csnavigator-adk --source=./adk_agent \
+gcloud run deploy oranavigator-adk --source=./adk_agent \
   --region=us-central1 --memory=2Gi --cpu=2 --min-instances=2
 
 # 2. Backend API
-gcloud run deploy csnavigator-backend --source=./backend \
+gcloud run deploy oranavigator-backend --source=./backend \
   --region=us-central1 --memory=1Gi --cpu=1 --min-instances=2
 
 # 3. Frontend
-gcloud run deploy csnavigator-frontend --source=./frontend \
+gcloud run deploy oranavigator-frontend --source=./frontend \
   --region=us-central1 --memory=512Mi --cpu=1 --min-instances=1
 ```
 
@@ -365,7 +365,7 @@ cs-chatbot-morganstate/
     Dockerfile                  Cloud Run container
 
   adk_agent/                    Google ADK Agent
-    cs_navigator_unified/
+    ora_navigator_unified/
       agent.py                  Agent definition, REG Layer 1 callback
       kb_prefetch.py            In-memory TF-IDF KB prefetch (<5ms)
       promptfooconfig.yaml      52 regression tests

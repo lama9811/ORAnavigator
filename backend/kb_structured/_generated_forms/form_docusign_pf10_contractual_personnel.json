@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_docusign_pf10_contractual_personnel",
+  "title": "PF-10 Contractual Personnel Request Form (DocuSign)",
+  "category": "form",
+  "subcategory": "docusign_post_award",
+  "display_label": "PF-10 Contractual Personnel Request",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=7bf272d8-3c06-4071-bf77-4f7eaa26943b&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form used exclusively for revisions and continuation requests for existing grant-funded contractual personnel at Morgan State University. New employees must NOT be onboarded via PF-10; instead, use the EPAF system via WebSIS. Submitted to the MSU ORA signing group through DocuSign. Questions to ora-docusign@morgan.edu.",
+  "last_scraped": "2026-05-14"
+}

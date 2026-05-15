@@ -189,11 +189,11 @@ Safe to re-run (idempotent via stable vector IDs).
 The legacy index uses 1536 dims (OpenAI text-embedding-3-small). We need 256 dims (Google text-embedding-004). Two options:
 
 **Option A (Recommended): New index**
-- Create a new Pinecone index: `csnavigator-hybrid-v1`
+- Create a new Pinecone index: `oranavigator-hybrid-v1`
 - Dimension: 256
 - Metric: cosine
 - Namespace: `docs`
-- Set `PINECONE_INDEX_NAME=csnavigator-hybrid-v1` in env
+- Set `PINECONE_INDEX_NAME=oranavigator-hybrid-v1` in env
 
 **Option B: Reuse existing index**
 - Delete all vectors in the existing index
@@ -273,9 +273,9 @@ if isinstance(pinecone_results, Exception):
 
 ### Phase 1: Infrastructure (no production changes)
 
-1. **Create new Pinecone index** (`csnavigator-hybrid-v1`, 256 dims, cosine, AWS us-east-1)
+1. **Create new Pinecone index** (`oranavigator-hybrid-v1`, 256 dims, cosine, AWS us-east-1)
 2. **Add env vars** to `.env` and Cloud Run:
-   - `PINECONE_INDEX_NAME=csnavigator-hybrid-v1`
+   - `PINECONE_INDEX_NAME=oranavigator-hybrid-v1`
    - Verify `PINECONE_API_KEY` and `PINECONE_ENV` are set
 3. **Write `backend/scripts/reingest_to_pinecone.py`**
 4. **Run reingest locally** against the new Pinecone index

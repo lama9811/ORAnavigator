@@ -1,0 +1,35 @@
+{
+  "doc_id": "ora_office_contact",
+  "title": "Office of Research Administration — Main Contact",
+  "category": "about",
+  "subcategory": "office_contact",
+  "display_label": "ORA Main Office",
+  "procedure_url": "https://www.morgan.edu/ora",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/about/staff-directory",
+  "office_name": "Office of Research Administration",
+  "institution": "Morgan State University",
+  "address": {
+    "building": "Tyler Hall, Student Service Bldg",
+    "suite": "Suite 304",
+    "city": "Baltimore",
+    "state": "MD",
+    "zip": "21251"
+  },
+  "main_phone": "443-885-4044",
+  "fax": "443-885-8280",
+  "main_email": "ask.ora@morgan.edu",
+  "website": "https://www.morgan.edu/ora",
+  "sections": [
+    "About",
+    "Pre-Award",
+    "Post-Award",
+    "Policies and Guidelines",
+    "Research Compliance",
+    "Trainings",
+    "Resources",
+    "Funding Sources",
+    "ORA Announcements",
+    "Contact Information"
+  ],
+  "content": "The Office of Research Administration (ORA) at Morgan State University is located at Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251. Main phone: 443-885-4044. Fax: 443-885-8280. Email: ask.ora@morgan.edu. Website: https://www.morgan.edu/ora. ORA is organized around the following sections: About, Pre-Award, Post-Award, Policies and Guidelines, Research Compliance, Trainings, Resources, Funding Sources, ORA Announcements, and Contact Information. For questions, contact ask.ora@morgan.edu or call 443-885-4044."
+}

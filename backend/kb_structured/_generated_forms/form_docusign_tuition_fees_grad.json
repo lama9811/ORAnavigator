@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_docusign_tuition_fees_grad",
+  "title": "Grant-Funded Graduate Tuition and Fees Request Memo (DocuSign)",
+  "category": "form",
+  "subcategory": "docusign_post_award",
+  "display_label": "Tuition & Fees Request — Graduate",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=351bf2cc-0948-4040-9810-a3a09d802fcf&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form to request payment of graduate tuition and fees from grant funds at Morgan State University. Note: graduate student health insurance is NOT covered by this memo — it must be reimbursed via a separate requisition. Submit via DocuSign to the MSU ORA signing group. Questions to ora-docusign@morgan.edu.",
+  "last_scraped": "2026-05-14"
+}

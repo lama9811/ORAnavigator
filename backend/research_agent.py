@@ -1,5 +1,5 @@
 """
-Auto-Research Agent for CS Navigator
+Auto-Research Agent for ORA Navigator
 ======================================
 Tracks failed queries, clusters similar ones, researches answers
 using Gemini + Google Search grounding, and creates KB suggestions
@@ -50,7 +50,7 @@ def detect_and_log_failed_query(user_query: str, bot_response: str, user_id: int
     PRIMARY SIGNAL: The ADK agent's groundingMetadata tells us exactly how many
     KB documents were retrieved and what fraction of the response is grounded.
     If zero KB chunks were returned, the agent had nothing to work with = KB miss.
-    EXCEPTION: If has_student_data is True, the answer came from DW/Canvas, not KB.
+    EXCEPTION: If has_student_data is True, the answer came from profile data, not KB.
 
     FALLBACK: If grounding metadata is unavailable (legacy path, error), use a
     narrow regex that only matches responses that START with failure language.
@@ -220,7 +220,7 @@ def cluster_failed_queries() -> int:
 
 def research_topic(representative_query: str, all_queries: list[str]) -> dict:
     """Use Gemini with Google Search to research a failed query topic.
-    Focuses on Morgan State CS department official pages."""
+    Focuses on Morgan State Office of Research Administration official pages."""
     from google import genai
     from google.genai import types
 
@@ -235,7 +235,7 @@ The core question is: {representative_query}
 
 RESEARCH TASK:
 1. Search for the answer on Morgan State University's official website (morgan.edu), especially the Computer Science department pages.
-2. Focus on: morgan.edu/computer-science, morgan.edu/scmns, and related university pages.
+2. Focus on: morgan.edu/office-of-research-administration, morgan.edu/office-of-research-administration, and related university pages.
 3. Find specific, factual information: names, dates, locations, phone numbers, URLs, policies, hours.
 4. Cross-reference multiple pages if possible to ensure accuracy.
 5. If you find conflicting information, note it.
@@ -251,7 +251,7 @@ OUTPUT FORMAT (return ONLY valid JSON, no markdown fences):
 }}"""
 
     try:
-        client = genai.Client(vertexai=True, project="csnavigator-vertex-ai", location="us-central1")
+        client = genai.Client(vertexai=True, project="oranavigator-vertex-ai", location="us-central1")
 
         response = client.models.generate_content(
             model="gemini-2.0-flash",

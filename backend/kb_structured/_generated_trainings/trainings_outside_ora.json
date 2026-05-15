@@ -1,0 +1,24 @@
+{
+  "doc_id": "trainings_outside_ora",
+  "title": "Trainings — MSU Trainings Outside ORA",
+  "category": "trainings",
+  "subcategory": "external",
+  "display_label": "Trainings Outside ORA (ORA Trainings)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/msu-trainings-outside-ora",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/trainings/msu-trainings-outside-ora",
+  "content": "This page is a directory of research-relevant trainings offered by Morgan State University units other than ORA. The page contains minimal substantive content; most details about specific trainings, instructors, and registration procedures are not included on the page itself and must be sought from the offering unit.\n\nDocumented external training resource on this page:\n\nASCEND & RCMI Faculty Development Opportunities — Fall 2023 newsletter document available at: /Documents/ADMINISTRATION/OFFICES/ora/ASCENDRCMI%20Trainings/ASCEND%20RCMI%20Fall2023-upcoming-NewsLetter%20%28002%29.pdf. ASCEND (A Student-Centered, Entrepreneurship Development training model) and RCMI (Research Centers in Minority Institutions) are MSU-hosted programs offering faculty development opportunities outside ORA's direct catalog.\n\nFor additional information about trainings offered by other MSU units (HR, IT, Procurement, Travel, etc.) that touch on research administration, faculty should contact those units directly or reach out to ORA at ask.ora@morgan.edu for a referral.\n\nGeneral ORA contact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.\n\nAdditional details revealed by Playwright (2026-05-14): The page remains sparse — confirmed as the smallest of the seven trainings pages. The full body content is only 'ASCEND & RCMI Programs / Fall 2023 Faculty Development Opportunities' as a single linked heading pointing to the Fall 2023 newsletter PDF. No new external trainings, no accordions, no tables, no additional units listed. Page still serves as a stub/pointer for trainings offered outside ORA — faculty should reach out to ORA at ask.ora@morgan.edu for referrals to HR, IT, Procurement, Travel, or other unit-specific trainings.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "documented_external_resources": [
+      {
+        "program": "ASCEND & RCMI",
+        "document": "ASCEND RCMI Fall 2023 upcoming Newsletter (002).pdf",
+        "path": "/Documents/ADMINISTRATION/OFFICES/ora/ASCENDRCMI%20Trainings/ASCEND%20RCMI%20Fall2023-upcoming-NewsLetter%20%28002%29.pdf"
+      }
+    ],
+    "contact_email": "ask.ora@morgan.edu",
+    "page_completeness_note": "Page contains minimal substantive content; serves as a directory pointer rather than full catalog."
+  }
+}

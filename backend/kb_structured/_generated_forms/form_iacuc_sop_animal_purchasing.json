@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_animal_purchasing",
+  "title": "SOP 5.2: Animal Purchasing",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 5.2 \u2014 Animal Purchasing",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_5.2_Animal_Purchasing_Procurement_Policy_for_Animal_Purchasing_and_Purchasing_Lab_supplies.pdf",
+  "content": "IACUC SOP detailing the procurement policy for purchasing animals and laboratory supplies for use in the Animal Research Facility, including approved vendor lists and ordering procedures.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

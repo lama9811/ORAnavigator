@@ -1,0 +1,24 @@
+{
+  "doc_id": "post_award_subawards",
+  "title": "Post-Award — Subawards",
+  "category": "post_award",
+  "subcategory": "subaward",
+  "display_label": "Subawards (Post-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/post-award-subawards",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/post-award/post-award-subawards",
+  "content": "Subawards. A subaward is issued to a subrecipient for assistance in carrying out a specified programmatic effort on a sponsored project. Morgan State University passes through a portion of the sponsored award to the other entity. Subawards may also be called subgrants, subagreements, or subcontracts.\n\nDefinition (Subrecipient): A subrecipient is a legal entity to which a subaward is made and which is accountable for the use of the funds provided.\n\nKey rules:\n- The prime award terms and conditions apply to all subrecipient entity types.\n- Subrecipients bear responsibility for programmatic and administrative decisions and for compliance with the prime award terms.\n- Subaward monitoring is coordinated by ORA Post-Award staff in collaboration with the PI.\n\nResources: A training video, 'Subawards: What You Need to Know,' is available, along with associated forms and policies accessible via the ORA website. Detailed subaward procedures are documented in PI Handbook 3: Grant-Related Processes.\n\nAdditional details: The 'Subawards: What You Need to Know' training video is embedded on the page as a YouTube video (https://www.youtube.com/embed/zoDvRuwD0l4) titled 'Zoom video about how subawards are process at Morgan State University.' The page also clarifies that the term 'subaward' includes awards made by a subrecipient to a lower-tier subrecipient when prior approval is obtained.\n\nContacts:\n- Pre-Award subaward questions: Ailing Zhang, MS — ailing.zhang@morgan.edu\n- Post-Award subaward questions: Matthew Lee, MBA, PMP — matthew.lee@morgan.edu; Poline Mirithu — poline.mirithu@morgan.edu\n- General ORA: 443-885-4044 (phone), 443-885-8280 (fax), ask.ora@morgan.edu, Tyler Hall Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "pre_award_contact": "Ailing Zhang (ailing.zhang@morgan.edu)",
+    "post_award_contacts": [
+      "Matthew Lee (matthew.lee@morgan.edu)",
+      "Poline Mirithu (poline.mirithu@morgan.edu)"
+    ],
+    "synonyms": ["subgrant", "subagreement", "subcontract"],
+    "training_resource": "Subawards: What You Need to Know (video)",
+    "training_video_url": "https://www.youtube.com/embed/zoDvRuwD0l4",
+    "includes_lower_tier_subrecipients_with_prior_approval": true
+  }
+}

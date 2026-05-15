@@ -1,0 +1,1083 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "Skip to Content" [ref=e4] [cursor=pointer]:
+        - /url: https://www.morgan.edu/office-of-research-administration/trainings/monthly-d-red-seminars#content
+      - generic [ref=e5]:
+        - link "Morgan State Logo" [ref=e7] [cursor=pointer]:
+          - /url: ""
+          - img "Morgan State Logo" [ref=e8]
+        - generic [ref=e9]:
+          - button "Open main menu." [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: 
+            - text: 
+            - generic [ref=e12]: Menu
+          - button "Open the 'info for' menu." [ref=e13] [cursor=pointer]:
+            - generic [ref=e14]: 
+            - text: 
+            - generic [ref=e15]: Info For
+          - button "Open search form." [ref=e16] [cursor=pointer]:
+            - generic [ref=e17]: 
+            - text: 
+            - generic [ref=e18]: Search
+          - link "Open My MSU" [ref=e19] [cursor=pointer]:
+            - /url: https://www.morgan.edu/gateway/
+            - generic [ref=e20]: 
+            - generic [ref=e21]: My MSU
+    - text:                 
+    - main [ref=e22]:
+      - generic [ref=e24]:
+        - link "Home" [ref=e25] [cursor=pointer]:
+          - /url: ""
+        - text: /
+        - link "Office of Research Administration" [ref=e26] [cursor=pointer]:
+          - /url: /ora
+        - text: /
+        - link "Trainings" [ref=e27] [cursor=pointer]:
+          - /url: /office-of-research-administration/trainings
+        - text: /
+        - link "Monthly D-RED Seminars" [ref=e28] [cursor=pointer]:
+          - /url: /office-of-research-administration/trainings/monthly-d-red-seminars
+      - text:   
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Office of Research Administration
+          - separator [ref=e35]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "Trainings" [level=1] [ref=e39]
+            - generic [ref=e41]:
+              - table [ref=e42]:
+                - rowgroup [ref=e43]:
+                  - row "PDF Presentation Presenter Date Video" [ref=e44]:
+                    - columnheader "PDF Presentation" [ref=e45]:
+                      - heading "PDF Presentation" [level=4] [ref=e46]
+                    - columnheader "Presenter" [ref=e47]:
+                      - heading "Presenter" [level=4] [ref=e48]
+                    - columnheader "Date" [ref=e49]:
+                      - heading "Date" [level=4] [ref=e50]
+                    - columnheader "Video" [ref=e51]:
+                      - heading "Video" [level=4] [ref=e52]
+                  - row "Navigating the Restructured National Science Foundation and Exploring Funding Opportunities (pdf coming soon) Tori Smith, PhD Claudia Rankins, PhD PRISSEM Academic Services, LLC Apr 22, 2026 Recording" [ref=e53]:
+                    - cell "Navigating the Restructured National Science Foundation and Exploring Funding Opportunities (pdf coming soon)" [ref=e54]:
+                      - paragraph [ref=e55]:
+                        - emphasis [ref=e56]: Navigating the Restructured National Science Foundation and Exploring Funding Opportunities (pdf coming soon)
+                    - cell "Tori Smith, PhD Claudia Rankins, PhD PRISSEM Academic Services, LLC" [ref=e57]:
+                      - paragraph [ref=e58]:
+                        - generic [ref=e59]:
+                          - text: Tori Smith, PhD
+                          - link "Claudia Rankins, PhD" [ref=e60] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                          - link "PRISSEM Academic Services, LLC" [ref=e61] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                    - cell "Apr 22, 2026" [ref=e62]:
+                      - paragraph [ref=e63]: Apr 22, 2026
+                    - cell "Recording" [ref=e64]:
+                      - link "Recording" [ref=e65] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/PflkxZp0HNTxN_ozz9a1iSzvavSh7LvSQw54LUATuVXi7v8MKRqoDklpY8iv1xOZ.6E4DLO-0jQDRXhcU
+                  - row "The NSF CAREER Program and Other Funding Opportunities for Early Career Faculty (pdf coming soon) Claudia Rankins, PhD Falcon Rankins, PhD PRISSEM Academic Services, LLC Mar 25, 2026 Recording" [ref=e66]:
+                    - cell "The NSF CAREER Program and Other Funding Opportunities for Early Career Faculty (pdf coming soon)" [ref=e67]:
+                      - emphasis [ref=e68]: The NSF CAREER Program and Other Funding Opportunities for Early Career Faculty (pdf coming soon)
+                    - cell "Claudia Rankins, PhD Falcon Rankins, PhD PRISSEM Academic Services, LLC" [ref=e69]:
+                      - paragraph [ref=e70]:
+                        - generic [ref=e71]:
+                          - link "Claudia Rankins, PhD" [ref=e72] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                          - link "Falcon Rankins, PhD" [ref=e73] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                          - link "PRISSEM Academic Services, LLC" [ref=e74] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                    - cell "Mar 25, 2026" [ref=e75]:
+                      - paragraph [ref=e76]: Mar 25, 2026
+                    - cell "Recording" [ref=e77]:
+                      - link "Recording" [ref=e78] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_pdKmPsT2lGmuLozQQEASCKYjPfqdVu8jdCVj6sXLCaRcWa5Ix93bOWpT2P-2DSUhh9.nCCeaZTC1KPI9NGZ&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=x2BywU61yFzK174GZ7me6gYIoLgFU917MdjtJDtGp1FrHKYAKBsjS67ohRzkd4nS&s=fY4f6PexT_TQSWjs8v68W9-7Fchl71JmeOnKm1flJ_s&e=
+                  - 'row "The Hunter Becomes the Hunted: Protecting High Value Research from Nation-State Espionage Erdal Ozkaya, PhD Mar 11, 2026 Recording" [ref=e79]':
+                    - 'cell "The Hunter Becomes the Hunted: Protecting High Value Research from Nation-State Espionage" [ref=e80]':
+                      - paragraph [ref=e81]:
+                        - 'link "The Hunter Becomes the Hunted: Protecting High Value Research from Nation-State Espionage" [ref=e82] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2025-2026%20Monthly%20D-RED%20Seminars/2026-03_Ozkaya.pdf
+                    - cell "Erdal Ozkaya, PhD" [ref=e83]:
+                      - paragraph [ref=e84]:
+                        - link "Erdal Ozkaya, PhD" [ref=e85] [cursor=pointer]:
+                          - /url: https://erdalozkaya.com/tag/morgan-state/
+                    - cell "Mar 11, 2026" [ref=e86]:
+                      - paragraph [ref=e87]: Mar 11, 2026
+                    - cell "Recording" [ref=e88]:
+                      - link "Recording" [ref=e89] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/hHg8NH2wqOJ1RAjYPjdStN0oQYuTkILCsFH7v1YTVlSI9sK3UOwlj7LG14NHDI4r.IPDhRsTS-Gcjc8tE
+                  - 'row "The National Transportation Center & the SMARTER Center Transportation Research at Morgan: From Research to Advocacy Mansoureh Jeihani, PhD Di Yang, PhD Celeste Chavis, PhD Nov 12, 2025 Recording" [ref=e90]':
+                    - 'cell "The National Transportation Center & the SMARTER Center Transportation Research at Morgan: From Research to Advocacy" [ref=e91]':
+                      - paragraph [ref=e92]:
+                        - link "The National Transportation Center & the SMARTER Center" [ref=e93] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2025-2026%20Monthly%20D-RED%20Seminars/2025-11_Jeihani_Transportation.pdf
+                      - paragraph [ref=e94]:
+                        - 'link "Transportation Research at Morgan: From Research to Advocacy" [ref=e95] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2025-2026%20Monthly%20D-RED%20Seminars/2025-11_Chavis_Transportation.pdf
+                    - cell "Mansoureh Jeihani, PhD Di Yang, PhD Celeste Chavis, PhD" [ref=e96]:
+                      - paragraph [ref=e97]:
+                        - link "Mansoureh Jeihani, PhD" [ref=e98] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/transportation-and-urban-infrastructure-studies/faculty-and-staff/dr-mansoureh-jeihani
+                        - link "Di Yang, PhD" [ref=e99] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/transportation-and-urban-infrastructure-studies/faculty-and-staff/dr-di-yang
+                        - link "Celeste Chavis, PhD" [ref=e100] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/transportation-and-urban-infrastructure-studies/faculty-and-staff/dr-celeste-chavis
+                    - cell "Nov 12, 2025" [ref=e101]:
+                      - paragraph [ref=e102]: Nov 12, 2025
+                    - cell "Recording" [ref=e103]:
+                      - link "Recording" [ref=e104] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_lHD7pI6-2DoA1TsLffEL21ihkcR18VDmd3th8Wtg-2Dlo8YPIbqAamjIg72WFFbDewk.f9KHpALh3lj90D5b&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=dQneFRAdLqXy74u1eXdw8IWITl1rRQ7eKwGz8_-hRNkpoi7gvaaRJ_jhSAEhmlX8&s=jALgUAWoQFwb7o5a83NMSSeVrqKRoGHjiX-zR3Yczb4&e=
+                  - 'row "Morgan''s Research Impact: Enhancing Community Health Through Community-Based Participatory Research (CBPR) Payam Sheikhattari, PhD Kimberly Warren, PhD Valerie Odero-Marah, PhD Adriana Foster Oct 8, 2025 Recording" [ref=e105]':
+                    - 'cell "Morgan''s Research Impact: Enhancing Community Health Through Community-Based Participatory Research (CBPR)" [ref=e106]':
+                      - 'link "Morgan''s Research Impact: Enhancing Community Health Through Community-Based Participatory Research (CBPR)" [ref=e107] [cursor=pointer]':
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/2025-2026%20Monthly%20D-RED%20Seminars/2025-10-08_CBPR.pdf
+                    - cell "Payam Sheikhattari, PhD Kimberly Warren, PhD Valerie Odero-Marah, PhD Adriana Foster" [ref=e108]:
+                      - paragraph [ref=e109]:
+                        - link "Payam Sheikhattari, PhD" [ref=e111] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/school-of-community-health-and-policy/about/payam-sheikhatari
+                        - generic [ref=e112]:
+                          - link "Kimberly Warren, PhD" [ref=e113] [cursor=pointer]:
+                            - /url: https://www.morgan.edu/psychology/faculty-and-staff/kimberly-warren
+                          - link "Valerie Odero-Marah, PhD" [ref=e114] [cursor=pointer]:
+                            - /url: https://www.morgan.edu/biology/faculty-and-staff/valerie-odero-marah
+                          - link "Adriana Foster" [ref=e115] [cursor=pointer]:
+                            - /url: https://www.morgan.edu/morgancares
+                    - cell "Oct 8, 2025" [ref=e116]:
+                      - paragraph [ref=e117]: Oct 8, 2025
+                    - cell "Recording" [ref=e118]:
+                      - link "Recording" [ref=e119] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/y_nbyiI2v_TQ-HCKv7fZOTWJIabu9GIUWezN0sNli7KkVEaYoNscfHbrHVvAZSTP.fbGTe-zZ_Y2_38MQ
+                  - 'row "SBIR and STTR Program: Overview & Status Report (slides not available, see recording) Rich Giersch Life Science Works Sep 10, 2025 Recording" [ref=e120]':
+                    - 'cell "SBIR and STTR Program: Overview & Status Report (slides not available, see recording)" [ref=e121]':
+                      - text: "SBIR and STTR Program: Overview & Status Report"
+                      - text: (
+                      - emphasis [ref=e122]: slides not available, see recording)
+                    - cell "Rich Giersch Life Science Works" [ref=e123]:
+                      - paragraph [ref=e124]:
+                        - link "Rich Giersch Life Science Works" [ref=e125] [cursor=pointer]:
+                          - /url: https://lifesciencewa.org/speakers/richard-giersch/
+                          - generic [ref=e126]:
+                            - text: Rich Giersch
+                            - text: Life Science Works
+                    - cell "Sep 10, 2025" [ref=e127]:
+                      - paragraph [ref=e128]: Sep 10, 2025
+                    - cell "Recording" [ref=e129]:
+                      - link "Recording" [ref=e130] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_lyzF7i1bA5HaeDiORCnPf4Kl9OJz1gjsMDwsPt8lwh2n7gg38-5F6J5-2DMKoin33-5FAf.evZC3eCnNocxQ3sq&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=pmJysMQfs-TzWohY2-UfXc0f1pCmCtTX_R_fgrEeB6QmJVneKaevc5TTl6cbZ9PY&s=dhH_9JfbZUbvAkrQctOtM2DncSCFUrtONaFP3xnjgmA&e=
+                  - row "Thriving Through Uncertainty - Navigating the Process to Submit Proposals to the National Science Foundation Claudia Rankins, PhD PRISSEM Academic Services, LLC May 14, 2025 Recording" [ref=e131]:
+                    - cell "Thriving Through Uncertainty - Navigating the Process to Submit Proposals to the National Science Foundation" [ref=e132]:
+                      - link "Thriving Through Uncertainty - Navigating the Process to Submit Proposals to the National Science Foundation" [ref=e133] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/2024-25%20Monthly%20D-RED%20Seminars/2025-05_PRISSEM_Uncertainty.pdf
+                    - cell "Claudia Rankins, PhD PRISSEM Academic Services, LLC" [ref=e134]:
+                      - paragraph [ref=e135]:
+                        - generic [ref=e136]:
+                          - link "Claudia Rankins, PhD" [ref=e137] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                          - link "PRISSEM Academic Services, LLC" [ref=e138] [cursor=pointer]:
+                            - /url: https://prissem.com/about/
+                    - cell "May 14, 2025" [ref=e139]:
+                      - paragraph [ref=e140]: May 14, 2025
+                    - cell "Recording" [ref=e141]:
+                      - link "Recording" [ref=e142] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/3uaLosywvtozyWFSHLghrLzdlmvoXmkEmHPcLMKfFAn5PWu3G7v9iUz3BQ7rK1hs.nR1nERYNYS_psJvZ
+                  - row "Common Pitfalls in Individual Compensation Using Grants Farin Kamangar, MD, PhD, CRA, CPRA, CFRA, Ryan Mobley, CRA, CFRA, CPRA May 7, 2025 Recording" [ref=e143]:
+                    - cell "Common Pitfalls in Individual Compensation Using Grants" [ref=e144]:
+                      - link "Common Pitfalls in Individual Compensation Using Grants" [ref=e145] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/2024-25%20Monthly%20D-RED%20Seminars/2025-05_Kamangar-Mobley_Compensation.pdf
+                    - cell "Farin Kamangar, MD, PhD, CRA, CPRA, CFRA, Ryan Mobley, CRA, CFRA, CPRA" [ref=e146]:
+                      - paragraph [ref=e147]:
+                        - generic [ref=e148]:
+                          - link "Farin Kamangar, MD, PhD, CRA, CPRA, CFRA" [ref=e149] [cursor=pointer]:
+                            - /url: https://www.morgan.edu/office-of-research-administration/about/staff-directory/farin-kamangar
+                          - text: ","
+                          - link "Ryan Mobley, CRA, CFRA, CPRA" [ref=e150] [cursor=pointer]:
+                            - /url: /office-of-research-administration/about/staff-directory/ryan-mobley
+                    - cell "May 7, 2025" [ref=e151]:
+                      - paragraph [ref=e152]: May 7, 2025
+                    - cell "Recording" [ref=e153]:
+                      - link "Recording" [ref=e154] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/8AGKiNatq0t6v7zOrReSrReFUbdiBHBIr4Xx5eQmJHy1zwx2SFnmElOxqDI2bV5P.kdNcJ51sZmIkx36N
+                  - 'row "The Modern R1 University: Unpacking the Carnegie Classifications and Pathways to Research Growth in 2025 Jon Barnhart Director, Research Advisory Services EAB Apr 2, 2025 Recording" [ref=e155]':
+                    - 'cell "The Modern R1 University: Unpacking the Carnegie Classifications and Pathways to Research Growth in 2025" [ref=e156]':
+                      - paragraph [ref=e157]:
+                        - 'link "The Modern R1 University: Unpacking the Carnegie Classifications and Pathways to Research Growth in 2025" [ref=e158] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2024-25%20Monthly%20D-RED%20Seminars/2025-04_EAB_ResearchGrowthStrategy.pdf
+                    - cell "Jon Barnhart Director, Research Advisory Services EAB" [ref=e159]:
+                      - paragraph [ref=e160]:
+                        - link "Jon Barnhart" [ref=e161] [cursor=pointer]:
+                          - /url: https://eab.com/about/experts/jon-barnhart/
+                        - link "Director, Research Advisory Services EAB" [ref=e162] [cursor=pointer]:
+                          - /url: https://eab.com/about/experts/jon-barnhart/
+                          - generic [ref=e163]:
+                            - text: Director, Research Advisory Services
+                            - text: EAB
+                    - cell "Apr 2, 2025" [ref=e164]:
+                      - paragraph [ref=e165]: Apr 2, 2025
+                    - cell "Recording" [ref=e166]:
+                      - link "Recording" [ref=e167] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/ww24S4Wkwm6-lpU1Ikof-NE-L5CAiAenSGlWP3LpYZBWlKiNGAnV-J7asUQU7hJf.rIB4Q72FrKNgy68S
+                  - 'row "An Improbable Journey: From the Projects in Birmingham, Alabama to Leading the U.S. National Institute of Standards and Technology and Beyond Willie E. May, PhD Feb 5, 2025 Recording" [ref=e168]':
+                    - 'cell "An Improbable Journey: From the Projects in Birmingham, Alabama to Leading the U.S. National Institute of Standards and Technology and Beyond" [ref=e169]':
+                      - paragraph [ref=e170]:
+                        - 'link "An Improbable Journey: From the Projects in Birmingham, Alabama to Leading the U.S. National Institute of Standards and Technology and Beyond" [ref=e171] [cursor=pointer]':
+                          - /url: https://drive.google.com/file/d/1cVNt_fHxNngINw9DEwonh87hSdxWO3Sj/view?usp=drive_link
+                    - cell "Willie E. May, PhD" [ref=e172]:
+                      - paragraph [ref=e173]:
+                        - link "Willie E. May, PhD" [ref=e174] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/research-and-economic-development/about-us/staff-directory/willie-may
+                    - cell "Feb 5, 2025" [ref=e175]:
+                      - paragraph [ref=e176]: Feb 5, 2025
+                    - cell "Recording" [ref=e177]:
+                      - link "Recording" [ref=e178] [cursor=pointer]:
+                        - /url: "https://morganstate.zoom.us/rec/share/_vHrxG5xgUdbjQhhBpxPQ-EimGt-DE64ubuTrXydfeHkBDG1nMesj_T01I9_GavL.Q7NoVybLwYTwfjju "
+                  - row "Principles and Practive of Cost Sharing Farin Kamangar, MD, PhD, CRA, Ryan Mobley, CRA, CFRA & Lena Fernandez Dec 11, 2024 Recording" [ref=e179]:
+                    - cell "Principles and Practive of Cost Sharing" [ref=e180]:
+                      - paragraph [ref=e181]:
+                        - link "Principles and Practive of Cost Sharing" [ref=e182] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2024-25%20Monthly%20D-RED%20Seminars/2024-12-11_Kamangar_CostShare.pdf
+                    - cell "Farin Kamangar, MD, PhD, CRA, Ryan Mobley, CRA, CFRA & Lena Fernandez" [ref=e183]:
+                      - paragraph [ref=e184]:
+                        - generic [ref=e185]:
+                          - link "Farin Kamangar, MD, PhD, CRA" [ref=e186] [cursor=pointer]:
+                            - /url: https://www.morgan.edu/office-of-research-administration/about/staff-directory/farin-kamangar
+                          - text: ","
+                          - link "Ryan Mobley, CRA, CFRA" [ref=e187] [cursor=pointer]:
+                            - /url: /office-of-research-administration/about/staff-directory/ryan-mobley
+                          - text: "&"
+                          - text: Lena Fernandez
+                    - cell "Dec 11, 2024" [ref=e188]:
+                      - paragraph [ref=e189]: Dec 11, 2024
+                    - cell "Recording" [ref=e190]:
+                      - link "Recording" [ref=e191] [cursor=pointer]:
+                        - /url: "https://morganstate.zoom.us/rec/share/fsV_sc8d2SZYRcnHCIAdYTrrX4izi3Vvi3tpBuAUVf-ICqQqkRAjrsO6oo7qedVQ.nRf47KmB0eRO_yZX "
+                  - row "Planning for Effective NSF Award Management Claudia Rankins, PhD PRISSEM Academic Services, LLC Oct 9, 2024 Recording" [ref=e192]:
+                    - cell "Planning for Effective NSF Award Management" [ref=e193]:
+                      - paragraph [ref=e194]:
+                        - link "Planning for Effective NSF Award Management" [ref=e195] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2024-25%20Monthly%20D-RED%20Seminars/2024-10_Rankins_NSFAwardManagement.pdf
+                    - cell "Claudia Rankins, PhD PRISSEM Academic Services, LLC" [ref=e196]:
+                      - paragraph [ref=e197]:
+                        - link "Claudia Rankins, PhD" [ref=e198] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                        - link "PRISSEM Academic Services, LLC" [ref=e199] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                    - cell "Oct 9, 2024" [ref=e200]:
+                      - paragraph [ref=e201]: Oct 9, 2024
+                    - cell "Recording" [ref=e202]:
+                      - link "Recording" [ref=e203] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/RKFIza2pRntY0tJv32xp7aMuQfl3RG_GcqONx5OKWnr_r8cT19ct1eD2ZDpPmvds.dEuVO2_A-X2sSg0n
+                  - row "MSU's Grant Metrics Farin Kamangar, MD, PhD, CRA Sep 11, 2024 Recording" [ref=e204]:
+                    - cell "MSU's Grant Metrics" [ref=e205]:
+                      - paragraph [ref=e206]:
+                        - link "MSU's Grant Metrics" [ref=e207] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2024-25%20Monthly%20D-RED%20Seminars/2024-09-11_Kamangar_MSUMetrics.pdf
+                    - cell "Farin Kamangar, MD, PhD, CRA" [ref=e208]:
+                      - paragraph [ref=e209]:
+                        - link "Farin Kamangar, MD, PhD, CRA" [ref=e210] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Sep 11, 2024" [ref=e211]:
+                      - paragraph [ref=e212]: Sep 11, 2024
+                    - cell "Recording" [ref=e213]:
+                      - link "Recording" [ref=e214] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/JyO4gZiWpj-MGVw0JJGjDLFJj6DbqnLKvGGAsLGuNKOteANprBDzTPU9kAqroK8.4zRyGbj2-ufvWM5I%20
+                  - row "Research Administration as Customer Service Matthew Lee, MBA, PMP & Becca Steiner May 8, 2024 Recording" [ref=e215]:
+                    - cell "Research Administration as Customer Service" [ref=e216]:
+                      - paragraph [ref=e217]:
+                        - link "Research Administration as Customer Service" [ref=e218] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2024-05_LEE-STEINER_CustomerServicePresentation.pdf
+                    - cell "Matthew Lee, MBA, PMP & Becca Steiner" [ref=e219]:
+                      - paragraph [ref=e220]:
+                        - generic [ref=e221]:
+                          - link "Matthew Lee, MBA, PMP" [ref=e222] [cursor=pointer]:
+                            - /url: /office-of-research-administration/about/staff-directory/matthew-lee
+                          - text: "&"
+                          - link "Becca Steiner" [ref=e223] [cursor=pointer]:
+                            - /url: /office-of-research-administration/about/staff-directory/rebecca-steiner
+                    - cell "May 8, 2024" [ref=e224]:
+                      - paragraph [ref=e225]: May 8, 2024
+                    - cell "Recording" [ref=e226]:
+                      - link "Recording" [ref=e227] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_r8DrEg8IWxa4JP-5FfWAv-5F2je4qv3Gi0V-5FaOqBV3HolcIuVwoO4XH5VrMDV9Pt-5FtOi.X3icZWGXdXAsl9Cj&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=NOkCGqJHJxcHSTIpWCNVRAQralE36Bzgnq11XjR0mQyfc6J71tQPNh3-MpmSjRfP&s=jdUv9fOzs1EX6OaXtdwnwzYNzyoVJFLyI6N47U2farU&e=.xml
+                  - row "Summer Contracts for Grant-Supported Faculty & Staff Ryan Mobley, CRA Apr 10, 2024 Recording" [ref=e228]:
+                    - cell "Summer Contracts for Grant-Supported Faculty & Staff" [ref=e229]:
+                      - paragraph [ref=e230]:
+                        - link "Summer Contracts for Grant-Supported Faculty & Staff" [ref=e231] [cursor=pointer]:
+                          - /url: https://rise.articulate.com/share/SYMnLxQyzAquu3LhTIbEIQ2_VQdKfFWH
+                    - cell "Ryan Mobley, CRA" [ref=e232]:
+                      - paragraph [ref=e233]:
+                        - link "Ryan Mobley, CRA" [ref=e234] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/ryan-mobley
+                    - cell "Apr 10, 2024" [ref=e235]:
+                      - paragraph [ref=e236]: Apr 10, 2024
+                    - cell "Recording" [ref=e237]:
+                      - link "Recording" [ref=e238] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/lI4o9UmvRA3QjzFXUJuWFNU5Pd8GdYj6G7jsFj2Z97Wv2s7Pc51vqFarGU6atSu1.5Q2_odFD6aCH-kbt%20
+                  - row "The NSF Merit Review Process and Criteria Claudia Rankins, PhD PRISSEM Academic Services, LLC Mar 27, 2024 Recording" [ref=e239]:
+                    - cell "The NSF Merit Review Process and Criteria" [ref=e240]:
+                      - paragraph [ref=e241]:
+                        - link "The NSF Merit Review Process and Criteria" [ref=e242] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2024-03_Rankins_NSFMeritReviewCriteria.pdf
+                    - cell "Claudia Rankins, PhD PRISSEM Academic Services, LLC" [ref=e243]:
+                      - paragraph [ref=e244]:
+                        - link "Claudia Rankins, PhD" [ref=e245] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                        - link "PRISSEM Academic Services, LLC" [ref=e246] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                    - cell "Mar 27, 2024" [ref=e247]:
+                      - paragraph [ref=e248]: Mar 27, 2024
+                    - cell "Recording" [ref=e249]:
+                      - link "Recording" [ref=e250] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/RLrxYT9GpQ1V-8JmGWWg2Axh32vfHi-u3Jg2MWW8pUIwnV-G3Rq9xsNGFevaKNpq._4oyptcY6az6C_J7
+                  - row "Using Storytelling to Decode Grant Solicitations (not available) Tracy Rone, PhD Feb. 14, 2024 Recording" [ref=e251]:
+                    - cell "Using Storytelling to Decode Grant Solicitations (not available)" [ref=e252]:
+                      - paragraph [ref=e253]:
+                        - text: Using Storytelling to Decode Grant Solicitations
+                        - emphasis [ref=e254]: (not available)
+                    - cell "Tracy Rone, PhD" [ref=e255]:
+                      - paragraph [ref=e256]:
+                        - link "Tracy Rone, PhD" [ref=e257] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/school-of-education-and-urban-studies/about/office-staff/tracy-rone
+                    - cell "Feb. 14, 2024" [ref=e258]:
+                      - paragraph [ref=e259]: Feb. 14, 2024
+                    - cell "Recording" [ref=e260]:
+                      - link "Recording" [ref=e261] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/3qn1Z9UlT4wV7URYOzuS7heME5x0PUogrLCIieSiNCE27N2NPohEg39bg4SmlXva.cP-wuiY-V4lF-zVN%20
+                  - row "ForagerOne, A Platform for Building MSU’s Research Infrastructure Lisa Brown, PhD Dec. 5, 2023 Recording" [ref=e262]:
+                    - cell "ForagerOne, A Platform for Building MSU’s Research Infrastructure" [ref=e263]:
+                      - paragraph [ref=e264]:
+                        - link "ForagerOne, A Platform for Building MSU’s Research Infrastructure" [ref=e265] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2023-12_BROWN_ForagerOne.pdf
+                    - cell "Lisa Brown, PhD" [ref=e266]:
+                      - paragraph [ref=e267]:
+                        - link "Lisa Brown, PhD" [ref=e268] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/biology/faculty-and-staff/lisa-brown
+                    - cell "Dec. 5, 2023" [ref=e269]:
+                      - paragraph [ref=e270]: Dec. 5, 2023
+                    - cell "Recording" [ref=e271]:
+                      - link "Recording" [ref=e272] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/NBp4nN1ppqLgUjz5pH8AgsoVThKCL7u-e40nLDFYEF-93ghAiHpSm9SrDNHXCyOE.r3vNyhesn-6sZRuq%20
+                  - 'row "Fulbright U.S. Scholar Program: Opportunities for Faculty, Artists, Researchers and Professionals Julie E. Taylor, PhD Director of Academic Relations, Fulbright Nov. 15, 2023 Recording" [ref=e273]':
+                    - 'cell "Fulbright U.S. Scholar Program: Opportunities for Faculty, Artists, Researchers and Professionals" [ref=e274]':
+                      - paragraph [ref=e275]:
+                        - 'link "Fulbright U.S. Scholar Program: Opportunities for Faculty, Artists, Researchers and Professionals" [ref=e276] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2023-11-16_Taylor_Fulbright_USScholarpresentation2025-26.pdf
+                    - cell "Julie E. Taylor, PhD Director of Academic Relations, Fulbright" [ref=e277]:
+                      - paragraph [ref=e278]:
+                        - text: Julie E. Taylor, PhD
+                        - text: Director of Academic Relations, Fulbright
+                    - cell "Nov. 15, 2023" [ref=e279]:
+                      - paragraph [ref=e280]: Nov. 15, 2023
+                    - cell "Recording" [ref=e281]:
+                      - link "Recording" [ref=e282] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/C92-mFjM68yPysj14Q6NEq-vRbCYi77G-dNGIW9Kbot-hUb-Xru6UiLHQIu448Ap.vgwOUgD4zkuIT2CU
+                  - row "Resources at Morgan State to Help You Do Translational and Community-Engaged Research Gillian Silver, MPH, CPH, CRA and Payam Sheikhattari, MD, MPH Oct. 11, 2023 Recording" [ref=e283]:
+                    - cell "Resources at Morgan State to Help You Do Translational and Community-Engaged Research" [ref=e284]:
+                      - paragraph [ref=e285]:
+                        - link "Resources at Morgan State to Help You Do Translational and Community-Engaged Research" [ref=e286] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2023-10_CBPR.pdf
+                    - cell "Gillian Silver, MPH, CPH, CRA and Payam Sheikhattari, MD, MPH" [ref=e287]:
+                      - paragraph [ref=e288]:
+                        - generic [ref=e289]:
+                          - link "Gillian Silver, MPH, CPH, CRA" [ref=e290] [cursor=pointer]:
+                            - /url: /office-of-research-administration/about/staff-directory/gillian-b-silver
+                          - text: and
+                          - link "Payam Sheikhattari, MD, MPH" [ref=e291] [cursor=pointer]:
+                            - /url: https://www.morgan.edu/school-of-community-health-and-policy/about/payam-sheikhatari.xml
+                    - cell "Oct. 11, 2023" [ref=e292]:
+                      - paragraph [ref=e293]: Oct. 11, 2023
+                    - cell "Recording" [ref=e294]:
+                      - link "Recording" [ref=e295] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/L_a9KiLFYl3xZFd2GkfkEtbJTCV-rIbnV3bOmxnBO2Ckg4wqopNuk6gFubhtiCej.a7z3Ugr1GSfQ-oYL
+                  - row "Philanthropic Funds for Research and Other Sponsored Programs Farin Kamangar, MD, PhD Sept 13, 2023 Recording" [ref=e296]:
+                    - cell "Philanthropic Funds for Research and Other Sponsored Programs" [ref=e297]:
+                      - paragraph [ref=e298]:
+                        - link "Philanthropic Funds for Research and Other Sponsored Programs" [ref=e299] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2023-09_KAMANGAR_Philanthropic1.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e300]:
+                      - paragraph [ref=e301]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e303] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/office-of-research-administration/about/staff-directory/farin-kamangar-md-phd
+                    - cell "Sept 13, 2023" [ref=e304]:
+                      - paragraph [ref=e305]: Sept 13, 2023
+                    - cell "Recording" [ref=e306]:
+                      - link "Recording" [ref=e307] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/-qsgDKhsW5_QSI9hGZlHr-VGlF-vxGLpywaJKVkb35EWeOEY_IK1ftGIsLj2ciCy._pWdQDnkSWgqMwSe
+                  - row "The Importance of Understanding Internal Controls for a Successful Research Enterprise Alan Small and Abe Mauer July 13, 2023 Recording" [ref=e308]:
+                    - cell "The Importance of Understanding Internal Controls for a Successful Research Enterprise" [ref=e309]:
+                      - paragraph [ref=e310]:
+                        - link "The Importance of Understanding Internal Controls for a Successful Research Enterprise" [ref=e311] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2023-07_MAUER_HigherEducationInternalControls.pdf
+                    - cell "Alan Small and Abe Mauer" [ref=e312]:
+                      - paragraph [ref=e313]:
+                        - link "Alan Small" [ref=e314] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/internal-audit-and-management-review/our-staff
+                        - text: and
+                        - link "Abe Mauer" [ref=e315] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/internal-audit-and-management-review/our-staff
+                    - cell "July 13, 2023" [ref=e316]:
+                      - paragraph [ref=e317]: July 13, 2023
+                    - cell "Recording" [ref=e318]:
+                      - link "Recording" [ref=e319] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/ircm-ok5JaFpEfFPTe5ZFu5-luCyZL1OhG95oC3Zj591jU2jrzVqrLhYFzZXbWo.U7lRy0s7VyHfkhax
+                  - row "Grant-Funded Property Standards The Basics of Intellectual Property Farin Kamangar, MD, PhD June 14, 2023 Recording" [ref=e320]:
+                    - cell "Grant-Funded Property Standards The Basics of Intellectual Property" [ref=e321]:
+                      - paragraph [ref=e322]:
+                        - link "Grant-Funded Property Standards" [ref=e323] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2023-06_KAMANGAR_PropertyStandards.pdf
+                      - paragraph [ref=e324]:
+                        - link "The Basics of Intellectual Property" [ref=e325] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2023-06%20KAMANGAR_IntellectualProperty.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e326]:
+                      - paragraph [ref=e327]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e329] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/office-of-research-administration/about/staff-directory/farin-kamangar-md-phd
+                    - cell "June 14, 2023" [ref=e330]:
+                      - paragraph [ref=e331]: June 14, 2023
+                    - cell "Recording" [ref=e332]:
+                      - link "Recording" [ref=e333] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/nf_NVECROjFJoPJWufnVpaJbuqz7gW947ko3tiDwOcllVRZcxkGs7v0nB0U7mjhE._ZcfpwtWM-JTWAet
+                  - 'row "Morgan: Leading the Future, The Role the National Science Foundation Can Play Claudia Rankins, PhD PRISSEM Academic Services, LLC May 10, 2023 Recording" [ref=e334]':
+                    - 'cell "Morgan: Leading the Future, The Role the National Science Foundation Can Play" [ref=e335]':
+                      - paragraph [ref=e336]:
+                        - 'link "Morgan: Leading the Future, The Role the National Science Foundation Can Play" [ref=e337] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/2023-24%20Monthly%20D-RED%20Seminars/2023-05-10_PRISSEM_MSU_LeadingTheFuture.pdf
+                    - cell "Claudia Rankins, PhD PRISSEM Academic Services, LLC" [ref=e338]:
+                      - paragraph [ref=e339]:
+                        - link "Claudia Rankins, PhD" [ref=e340] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                        - link "PRISSEM Academic Services, LLC" [ref=e341] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                    - cell "May 10, 2023" [ref=e342]:
+                      - paragraph [ref=e343]: May 10, 2023
+                    - cell "Recording" [ref=e344]:
+                      - link "Recording" [ref=e345] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/Z3J6geEqk4tFH_VHff3ppVSDzI33rMiRshcNm0dXL1tunOArTfBks_VA_HECn8d7.XVq8azxsA5JjKC7j%20
+                  - 'row "Export Controls Overview & Conflicts of Interest: Recognition and Management Edet Isuk, PhD Apr. 12, 2023 Recording" [ref=e346]':
+                    - 'cell "Export Controls Overview & Conflicts of Interest: Recognition and Management" [ref=e347]':
+                      - paragraph [ref=e348]:
+                        - 'link "Export Controls Overview & Conflicts of Interest: Recognition and Management" [ref=e349] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2023-04-12_ISUK_ExportControls%20-%20COI_PPt%20%20eei_2023F-1.pptx
+                    - cell "Edet Isuk, PhD" [ref=e350]:
+                      - paragraph [ref=e351]:
+                        - link "Edet Isuk, PhD" [ref=e352] [cursor=pointer]:
+                          - /url: /x8256.xml
+                    - cell "Apr. 12, 2023" [ref=e353]:
+                      - paragraph [ref=e354]: Apr. 12, 2023
+                    - cell "Recording" [ref=e355]:
+                      - link "Recording" [ref=e356] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/Nalj0YxkqxV4Fz9sNKLAakK2Gy9YMeAnMxKee_N3DI4_-swGGIKptljp77EF_dK5.-a43y717O-jY_wtR%20
+                  - row "Time and Effort Reporting Ryan Mobley Mar. 29, 2023 Recording" [ref=e357]:
+                    - cell "Time and Effort Reporting" [ref=e358]:
+                      - paragraph [ref=e359]:
+                        - link "Time and Effort Reporting" [ref=e360] [cursor=pointer]:
+                          - /url: https://rise.articulate.com/share/YUeYo_t7gEEPZQPjwbuFNy3UD03HIsYQ
+                    - cell "Ryan Mobley" [ref=e361]:
+                      - paragraph [ref=e362]:
+                        - link "Ryan Mobley" [ref=e363] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/ascend/about/faculty-and-staff/ryan-mobley
+                    - cell "Mar. 29, 2023" [ref=e364]:
+                      - paragraph [ref=e365]: Mar. 29, 2023
+                    - cell "Recording" [ref=e366]:
+                      - link "Recording" [ref=e367] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/8il98s808gOhENp3hZuKGU16Wp96Rmc17-0wErnGLzobkGDV-2fVp0h5XV5bHaVc.uxOBdfs3BfngPxm6%20
+                  - row "Understanding Federal Grant Audits Farin Kamangar, MD, PhD and Deb Flavin, Associate Vice President, Accounting Operations & Compliance Feb. 1, 2023 Recording" [ref=e368]:
+                    - cell "Understanding Federal Grant Audits" [ref=e369]:
+                      - paragraph [ref=e370]:
+                        - link "Understanding Federal Grant Audits" [ref=e371] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2023-02_FederalAuditofGrants.pdf
+                    - cell "Farin Kamangar, MD, PhD and Deb Flavin, Associate Vice President, Accounting Operations & Compliance" [ref=e372]:
+                      - paragraph [ref=e373]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e374] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/office-of-research-administration/about/staff-directory/farin-kamangar-md-phd
+                          - text: Farin Kamangar, MD, PhD
+                        - text: and Deb Flavin,
+                        - emphasis [ref=e375]: Associate Vice President, Accounting Operations & Compliance
+                    - cell "Feb. 1, 2023" [ref=e376]:
+                      - paragraph [ref=e377]: Feb. 1, 2023
+                    - cell "Recording" [ref=e378]:
+                      - link "Recording" [ref=e379] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/wgCdoA3jkrQbORC3KKkmCPjVkReLfm_2RQVdSfVYqH0Kj-r5wEvzlF1dDYiduPaT.hDDCYZQR-EyNN4Hg%20
+                  - row "Understanding Federal Notices of Award Understanding DoD Award Numbers Understanding DoED Award Numbers Understanding NASA Award Numbers Becca Steiner Nov. 30, 2022 Recording" [ref=e380]:
+                    - cell "Understanding Federal Notices of Award Understanding DoD Award Numbers Understanding DoED Award Numbers Understanding NASA Award Numbers" [ref=e381]:
+                      - paragraph [ref=e382]:
+                        - link "Understanding Federal Notices of Award" [ref=e383] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022.11.30_Understanding%20Federal%20Notices%20of%20Award.pdf
+                      - paragraph [ref=e384]:
+                        - link "Understanding DoD Award Numbers" [ref=e385] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022.11.30_Understanding%20DoD%20Award%20Numbers.pdf
+                      - paragraph [ref=e386]:
+                        - link "Understanding DoED Award Numbers" [ref=e387] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022.11.30_Understanding%20DoED%20Award%20Numbers.pdf
+                      - paragraph [ref=e388]:
+                        - link "Understanding NASA Award Numbers" [ref=e389] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022.11.30_Understanding%20NASA%20Award%20Numbers.pdf
+                    - cell "Becca Steiner" [ref=e390]:
+                      - paragraph [ref=e391]:
+                        - link "Becca Steiner" [ref=e392] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/rebecca-steiner
+                    - cell "Nov. 30, 2022" [ref=e393]:
+                      - paragraph [ref=e394]: Nov. 30, 2022
+                    - cell "Recording" [ref=e395]:
+                      - link "Recording" [ref=e396] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/iGtBuSCPsAp0r0LAAFQClE9yt5t6laBclLTLV92ECu1M7gjSbHlZ0jdlKlBLFTDl.1W-uyjuuozkjBN3x%20
+                  - row "Responsible Conduct of Research (RCR) Edet Isuk, PhD Nov. 9, 2022 Recording" [ref=e397]:
+                    - cell "Responsible Conduct of Research (RCR)" [ref=e398]:
+                      - paragraph [ref=e399]:
+                        - link "Responsible Conduct of Research (RCR)" [ref=e400] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022.11.09_Isuk_RCR_Presentation.pdf
+                    - cell "Edet Isuk, PhD" [ref=e401]:
+                      - paragraph [ref=e402]:
+                        - link "Edet Isuk, PhD" [ref=e403] [cursor=pointer]:
+                          - /url: /x8256.xml
+                    - cell "Nov. 9, 2022" [ref=e404]:
+                      - paragraph [ref=e405]: Nov. 9, 2022
+                    - cell "Recording" [ref=e406]:
+                      - link "Recording" [ref=e407] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_eQZmEAX0TlETKwBP4na3v6CpOMVeaGJUCR-2DyAHz1aCojiOndVj86M8Htc6EcYX3O.-5FXQq0tum2DGAuLR0&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=HCYJwKWlPRpUFyF0WfmayazRwlWWIXf59tWJWrjhjDv9BnfNZ88Lc552jkmckbXe&s=KPxaWh3VRbc1GkYbr5PlC9OeePMotfhMQFYp4I_7oQM&e=
+                  - row "Transferring Grants and Contracts Ailing Zhang, MS Oct. 12, 2022 Recording (begin at 36:00)" [ref=e408]:
+                    - cell "Transferring Grants and Contracts" [ref=e409]:
+                      - paragraph [ref=e410]:
+                        - link "Transferring Grants and Contracts" [ref=e411] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022_10_Transferring_Grants_and_Contracts.pdf
+                    - cell "Ailing Zhang, MS" [ref=e412]:
+                      - paragraph [ref=e413]:
+                        - link "Ailing Zhang, MS" [ref=e414] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/ailing-zhang
+                    - cell "Oct. 12, 2022" [ref=e415]:
+                      - paragraph [ref=e416]: Oct. 12, 2022
+                    - cell "Recording (begin at 36:00)" [ref=e417]:
+                      - link "Recording (begin at 36:00)" [ref=e418] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_MOWMZBzStZGwWFCDyMZBv9duZQkHuerHsqul7Oji6qv3n8nqsMagUNOQzpR1ezjV.lcC1-5FjGW3sPr0tza&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=8178TbEOPwB3BBFyHnFFqe1Y3bOAln-ndb8oatq2OGMeKk8VLqtej6RbHyfehksU&s=RdHbPqV0tgBCOOZr9ijg21Roq5jLVXya2vethM0jVDU&e=
+                  - row "Subawards at Morgan State University Matthew Lee, MBA Oct. 12, 2022 Recording" [ref=e419]:
+                    - cell "Subawards at Morgan State University" [ref=e420]:
+                      - paragraph [ref=e421]:
+                        - link "Subawards at Morgan State University" [ref=e422] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/2022_10_Subawards_at_MSU.pdf
+                    - cell "Matthew Lee, MBA" [ref=e423]:
+                      - paragraph [ref=e424]:
+                        - link "Matthew Lee, MBA" [ref=e425] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/matthew-lee
+                    - cell "Oct. 12, 2022" [ref=e426]:
+                      - paragraph [ref=e427]: Oct. 12, 2022
+                    - cell "Recording" [ref=e428]:
+                      - link "Recording" [ref=e429] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_MOWMZBzStZGwWFCDyMZBv9duZQkHuerHsqul7Oji6qv3n8nqsMagUNOQzpR1ezjV.lcC1-5FjGW3sPr0tza&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=8178TbEOPwB3BBFyHnFFqe1Y3bOAln-ndb8oatq2OGMeKk8VLqtej6RbHyfehksU&s=RdHbPqV0tgBCOOZr9ijg21Roq5jLVXya2vethM0jVDU&e=
+                  - row "Office of Research Administration's (ORA) New Resources and Services Farin Kamangar, MD, PhD Sep. 14, 2022 Recording" [ref=e430]:
+                    - cell "Office of Research Administration's (ORA) New Resources and Services" [ref=e431]:
+                      - paragraph [ref=e432]:
+                        - link "Office of Research Administration's (ORA) New Resources and Services" [ref=e433] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/New%20ORA%20Website%20Presentation%202022-09-15.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e434]:
+                      - paragraph [ref=e435]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e436] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Sep. 14, 2022" [ref=e437]:
+                      - paragraph [ref=e438]: Sep. 14, 2022
+                    - cell "Recording" [ref=e439]:
+                      - link "Recording" [ref=e440] [cursor=pointer]:
+                        - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_i5CBLYkDURnGE-5F8LCePbqzuKVfhQtPVAeBUMFJEaPukt8Ekgxd-5FxJzwxq2DZX84.U-2D1tcf1OIHfAAhz7&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=-DJHJDEuCFo2xhQCA4-48nRrWlI8KJ4z5X5Kj1NlMdVsmRi5ZpJjlP9-bax_vKFF&s=At7gp-9cdZ3cbL7CTj2oTAab5PXTo3rClF89I2mZGn4&e=
+                  - row "Key Considerations for Conducting Research at MSU Gillian Silver, MPH, CPH, CRA Aug. 11, 2022" [ref=e441]:
+                    - cell "Key Considerations for Conducting Research at MSU" [ref=e442]:
+                      - paragraph [ref=e443]:
+                        - link "Key Considerations for Conducting Research at MSU" [ref=e444] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/Key%20Considerations%20for%20Conducting%20Research%20at%20MSU%208-11-22.pdf
+                    - cell "Gillian Silver, MPH, CPH, CRA" [ref=e445]:
+                      - paragraph [ref=e446]:
+                        - link "Gillian Silver, MPH, CPH, CRA" [ref=e447] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/gillian-b-silver
+                    - cell "Aug. 11, 2022" [ref=e448]:
+                      - paragraph [ref=e449]: Aug. 11, 2022
+                    - cell [ref=e450]:
+                      - paragraph
+                  - row "The Economic and Social Values of the University Research Enterprise Part 1 Farin Kamangar, MD, PhD Jul. 13, 2022 Recording" [ref=e451]:
+                    - cell "The Economic and Social Values of the University Research Enterprise Part 1" [ref=e452]:
+                      - link "The Economic and Social Values of the University Research Enterprise Part 1" [ref=e453] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA15A%20Value%20of%20Research%20Part%201%20and%20Conclusions%20Farin%20Kamangar.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e454]:
+                      - paragraph [ref=e455]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e456] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Jul. 13, 2022" [ref=e457]
+                    - cell "Recording" [ref=e458]:
+                      - link "Recording" [ref=e459] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/-dltoEfWlHkmwEPTdQdyiPHqky_IuU3bk_3n-cTe_FggqJfjgEU1F8U-NqMY0AZL.95c1ANlUKSJ-GeaU%20
+                  - row "The Economic and Social Values of the University Research Enterprise Part 2 Scott Knoche, PhD Jul. 13, 2022 Recording" [ref=e460]:
+                    - cell "The Economic and Social Values of the University Research Enterprise Part 2" [ref=e461]:
+                      - link "The Economic and Social Values of the University Research Enterprise Part 2" [ref=e462] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA15B%20Value%20of%20Research%20Part%202%20Scott%20Knoche.pdf
+                    - cell "Scott Knoche, PhD" [ref=e463]:
+                      - link "Scott Knoche, PhD" [ref=e464] [cursor=pointer]:
+                        - /url: https://www.morgan.edu/pearl/directory/scott-knoche
+                    - cell "Jul. 13, 2022" [ref=e465]
+                    - cell "Recording" [ref=e466]:
+                      - link "Recording" [ref=e467] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/-dltoEfWlHkmwEPTdQdyiPHqky_IuU3bk_3n-cTe_FggqJfjgEU1F8U-NqMY0AZL.95c1ANlUKSJ-GeaU%20
+                  - row "The Economic and Social Values of the University Research Enterprise Part 3 Wayne Swann Jul. 13, 2022 Recording" [ref=e468]:
+                    - cell "The Economic and Social Values of the University Research Enterprise Part 3" [ref=e469]:
+                      - link "The Economic and Social Values of the University Research Enterprise Part 3" [ref=e470] [cursor=pointer]:
+                        - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA15C%20Value%20of%20Research%20Part%203%20Wayne%20Swann.pdf
+                    - cell "Wayne Swann" [ref=e471]:
+                      - link "Wayne Swann" [ref=e472] [cursor=pointer]:
+                        - /url: https://www.morgan.edu/technology-transfer-and-intellectual-property/about/staff/wayne-swann
+                    - cell "Jul. 13, 2022" [ref=e473]
+                    - cell "Recording" [ref=e474]:
+                      - link "Recording" [ref=e475] [cursor=pointer]:
+                        - /url: https://morganstate.zoom.us/rec/share/-dltoEfWlHkmwEPTdQdyiPHqky_IuU3bk_3n-cTe_FggqJfjgEU1F8U-NqMY0AZL.95c1ANlUKSJ-GeaU%20
+                  - row "Paying Students and Other Trainees Using Grants Farin Kamangar, MD, PhD Jun. 8, 2022 Recording" [ref=e476]:
+                    - cell "Paying Students and Other Trainees Using Grants" [ref=e477]:
+                      - paragraph [ref=e478]:
+                        - link "Paying Students and Other Trainees Using Grants" [ref=e479] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA14%20Student%20Payments.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e480]:
+                      - paragraph [ref=e481]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e482] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Jun. 8, 2022" [ref=e483]:
+                      - paragraph [ref=e484]: Jun. 8, 2022
+                    - cell "Recording" [ref=e485]:
+                      - paragraph [ref=e486]:
+                        - link "Recording" [ref=e487] [cursor=pointer]:
+                          - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_A6sq4OAgGgWA8yKSxCN6QLEK0RtBwSO3uUY7twySc4x6HIZl-2D2qj0E-2D0y52faW2S.fnWFCrgeNem0i1zD&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=7pUfPDL96TSlrDNBs2stw18wozUUgmBEOsRRZmQn1N4YasnN5yiHWlpD3wb6sh5W&s=YVLS34Prceek_jtG8UkP7EuUC9_ovBqpayyb91OabmU&e=
+                  - row "New Release Time Procedures Farin Kamangar, MD, PhDSharon Oliver-Whitehurst May 11, 2022 Recording" [ref=e488]:
+                    - cell "New Release Time Procedures" [ref=e489]:
+                      - paragraph [ref=e490]:
+                        - link "New Release Time Procedures" [ref=e491] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA13%20Release%20Time%20by%20Sharon%20Whitehurst.pdf
+                    - cell "Farin Kamangar, MD, PhDSharon Oliver-Whitehurst" [ref=e492]:
+                      - paragraph [ref=e493]:
+                        - link "Farin Kamangar, MD, PhD":
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                        - link "Sharon Oliver-Whitehurst" [ref=e494] [cursor=pointer]:
+                          - /url: https://www.morgan.edu/academic-affairs/staff/sharon-whitehurst
+                    - cell "May 11, 2022" [ref=e495]:
+                      - paragraph [ref=e496]: May 11, 2022
+                    - cell "Recording" [ref=e497]:
+                      - paragraph [ref=e498]:
+                        - link "Recording" [ref=e499] [cursor=pointer]:
+                          - /url: https://urldefense.proofpoint.com/v2/url?u=https-3A__morganstate.zoom.us_rec_share_FOb6AaEIgNtRwkKxxu0fGvlLgUwzH2z8lDmtvhhYhNwI6AwnPS-2DaER10gqYuA2NF.CTeufi8VvzfmUQuw&d=DwMFAw&c=0CCt47_3RbNABITTvFzZbA&r=X7VKNBeJhVj6foz89cEgQXclL6LaliHeFKBITlTe6To&m=zcp1UKGonG-YYLB6Lg4Z-SOrUPzNTZbCLf1qhkNTlP5cFGNnrMmgU2PNuZ_NJakq&s=2FiA8dnqAZTlUh0fp5ll7en0ph-KhOtNeFx6PlyrVDw&e=
+                  - 'row "Pivot-RP: A Software to Find Grant OpportunitiesEdet Isuk, PhD Edet Isuk, PhD Apr. 6, 2022 Recording" [ref=e500]':
+                    - 'cell "Pivot-RP: A Software to Find Grant OpportunitiesEdet Isuk, PhD" [ref=e501]':
+                      - paragraph [ref=e502]:
+                        - 'link "Pivot-RP: A Software to Find Grant Opportunities" [ref=e503] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA12%20Pivot-RA.pdf
+                        - link "Edet Isuk, PhD":
+                          - /url: /x8256.xml
+                    - cell "Edet Isuk, PhD" [ref=e504]:
+                      - link "Edet Isuk, PhD" [ref=e505] [cursor=pointer]:
+                        - /url: /x8256.xml
+                    - cell "Apr. 6, 2022" [ref=e506]
+                    - cell "Recording" [ref=e507]:
+                      - paragraph [ref=e508]:
+                        - link "Recording" [ref=e509] [cursor=pointer]:
+                          - /url: https://morganstate.zoom.us/rec/share/y6hA8Hv7GG0bSN4C0nF-_LV1PAUgRRw245GeXPHgNhSKKCbuSMWEedfZyiWGGFd6.5ehTAD9cahXWvbUf%20
+                  - 'row "Restricted Funds Accounting: Structure and Services Jeffrey Copeland Mar. 9, 2022" [ref=e510]':
+                    - 'cell "Restricted Funds Accounting: Structure and Services" [ref=e511]':
+                      - paragraph [ref=e512]:
+                        - 'link "Restricted Funds Accounting: Structure and Services" [ref=e513] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA11%20Grants%20Management%20RFA.pdf
+                    - cell "Jeffrey Copeland" [ref=e514]:
+                      - link "Jeffrey Copeland" [ref=e515] [cursor=pointer]:
+                        - /url: https://www.morgan.edu/finance-and-administration/staff-directory
+                    - cell "Mar. 9, 2022" [ref=e516]
+                    - cell [ref=e517]:
+                      - paragraph [ref=e518]
+                  - row "Getting Started on the Path to National Science Foundation Funding Claudia Rankins, PhD & Falcon Rankins, PhD PRISSEM Academic Services, LLC Feb. 16, 2022 Recording" [ref=e519]:
+                    - cell "Getting Started on the Path to National Science Foundation Funding" [ref=e520]:
+                      - paragraph [ref=e521]:
+                        - link "Getting Started on the Path to National" [ref=e522] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/RankinsWebinar-MSU-D-REDSeminar_%202022-02-16.pdf
+                        - link "Science Foundation Funding" [ref=e523] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/RankinsWebinar-MSU-D-REDSeminar_%202022-02-16.pdf
+                    - cell "Claudia Rankins, PhD & Falcon Rankins, PhD PRISSEM Academic Services, LLC" [ref=e524]:
+                      - paragraph [ref=e525]:
+                        - link "Claudia Rankins, PhD &" [ref=e526] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                        - link "Falcon Rankins, PhD" [ref=e527] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                        - link "PRISSEM Academic Services, LLC" [ref=e528] [cursor=pointer]:
+                          - /url: https://prissem.com/about/
+                    - cell "Feb. 16, 2022" [ref=e529]:
+                      - paragraph [ref=e530]: Feb. 16, 2022
+                    - cell "Recording" [ref=e531]:
+                      - paragraph [ref=e532]:
+                        - link "Recording" [ref=e533] [cursor=pointer]:
+                          - /url: https://morganstate.zoom.us/rec/play/aEhwsn3Kogr2GztmgA_1F5X81LwqDobgXOfo9utB_f33E7XZyqmi5HI0liGRE-vL6DYjvLFUcK0wEr8q.GhG8Jq7nverEO7Rv?continueMode=true
+                  - row "Cost Sharing (Matching) at MSU Farin Kamangar, MD, PhD Dec. 8, 2021 Recording" [ref=e534]:
+                    - cell "Cost Sharing (Matching) at MSU" [ref=e535]:
+                      - paragraph [ref=e536]:
+                        - link "Cost Sharing (Matching) at MSU" [ref=e537] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA9%20Cost%20Sharing.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e538]:
+                      - paragraph [ref=e539]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e540] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Dec. 8, 2021" [ref=e541]:
+                      - paragraph [ref=e542]: Dec. 8, 2021
+                    - cell "Recording" [ref=e543]:
+                      - paragraph [ref=e544]:
+                        - link "Recording" [ref=e545] [cursor=pointer]:
+                          - /url: https://morganstate.zoom.us/rec/share/l0ZvCtTyh1jrY5l6urO6g_jMEe8uk-BhH0Z26905SI42jDkGV-fq2HQLRL2AIy7m.N8AWbLy1NUcn-7UY
+                  - row "Research Compliance and Ethics Edet Isuk, PhD Nov. 11, 2021" [ref=e546]:
+                    - cell "Research Compliance and Ethics" [ref=e547]:
+                      - paragraph [ref=e548]:
+                        - link "Research Compliance and Ethics" [ref=e549] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA8%20Research%20Compliance%20%20and%20Ethics.pdf
+                    - cell "Edet Isuk, PhD" [ref=e550]:
+                      - link "Edet Isuk, PhD" [ref=e551] [cursor=pointer]:
+                        - /url: /x8256.xml
+                    - cell "Nov. 11, 2021" [ref=e552]
+                    - cell [ref=e553]:
+                      - paragraph [ref=e554]
+                  - row "Tips for Timely SubmissionAiling Zhang Ailing Zhang, MS Oct. 13, 2021 Recording" [ref=e555]:
+                    - cell "Tips for Timely SubmissionAiling Zhang" [ref=e556]:
+                      - paragraph [ref=e557]:
+                        - link "Tips for Timely Submission" [ref=e558] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA7%20Tips%20for%20Timely%20Submission.pdf
+                        - link "Ailing Zhang":
+                          - /url: /office-of-research-administration/about/staff-directory/ailing-zhang
+                    - cell "Ailing Zhang, MS" [ref=e559]:
+                      - link "Ailing Zhang, MS" [ref=e560] [cursor=pointer]:
+                        - /url: /office-of-research-administration/about/staff-directory/ailing-zhang
+                    - cell "Oct. 13, 2021" [ref=e561]
+                    - cell "Recording" [ref=e562]:
+                      - paragraph [ref=e563]:
+                        - link "Recording" [ref=e564] [cursor=pointer]:
+                          - /url: https://youtu.be/IkPgQxKvI0c
+                  - row "Sub-Award ProcessMatthew LeeMatthew Lee Matthew Lee, MBA Sep. 8, 2021 Recording" [ref=e565]:
+                    - cell "Sub-Award ProcessMatthew LeeMatthew Lee" [ref=e566]:
+                      - paragraph [ref=e567]:
+                        - link "Sub-Award Process" [ref=e568] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA6%20Subaward%20Process%202.pdf
+                        - link "Matthew Lee":
+                          - /url: /office-of-research-administration/about/staff-directory/matthew-lee
+                        - link "Matthew Lee":
+                          - /url: /office-of-research-administration/about/staff-directory/matthew-lee
+                    - cell "Matthew Lee, MBA" [ref=e569]:
+                      - paragraph [ref=e570]:
+                        - link "Matthew Lee, MBA" [ref=e571] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/matthew-lee
+                    - cell "Sep. 8, 2021" [ref=e572]:
+                      - paragraph [ref=e573]: Sep. 8, 2021
+                    - cell "Recording" [ref=e574]:
+                      - paragraph [ref=e575]:
+                        - link "Recording" [ref=e576] [cursor=pointer]:
+                          - /url: https://youtu.be/qD6Efajaq5M
+                  - row "The ABC Steps of Proposal Development (MSU login necessary) Mildred Huff Ofosu, PhD Aug. 11, 2021" [ref=e577]:
+                    - cell "The ABC Steps of Proposal Development (MSU login necessary)" [ref=e578]:
+                      - paragraph [ref=e579]:
+                        - generic [ref=e580]:
+                          - link "The ABC Steps of Proposal Development" [ref=e581] [cursor=pointer]:
+                            - /url: https://morgan.hosted.panopto.com/Panopto/Pages/Viewer.aspx?tid=dbe1bb76-d05c-4a45-8629-ad9600e2e579
+                          - text: (MSU login necessary)
+                    - cell "Mildred Huff Ofosu, PhD" [ref=e582]:
+                      - paragraph [ref=e583]: Mildred Huff Ofosu, PhD
+                    - cell "Aug. 11, 2021" [ref=e584]:
+                      - paragraph [ref=e585]: Aug. 11, 2021
+                    - cell [ref=e586]:
+                      - paragraph
+                  - row "Grant Writing Professional Development (MSU login necessary) Mildred Huff Ofosu, PhD Aug. 11, 2021" [ref=e587]:
+                    - cell "Grant Writing Professional Development (MSU login necessary)" [ref=e588]:
+                      - paragraph [ref=e589]:
+                        - generic [ref=e590]:
+                          - link "Grant Writing Professional Development" [ref=e591] [cursor=pointer]:
+                            - /url: https://morgan.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=8f7e70b9-0617-472d-96ed-ad9201655b5a
+                          - text: (MSU login necessary)
+                    - cell "Mildred Huff Ofosu, PhD" [ref=e592]:
+                      - paragraph [ref=e593]: Mildred Huff Ofosu, PhD
+                    - cell "Aug. 11, 2021" [ref=e594]
+                    - cell [ref=e595]
+                  - row "2021-2022 Faculty Development Opportunity with ASCEND and RCMI (Video only) Christine Hohmann, PhD Aug. 1, 2021 Recording" [ref=e596]:
+                    - cell "2021-2022 Faculty Development Opportunity with ASCEND and RCMI (Video only)" [ref=e597]:
+                      - paragraph [ref=e598]: 2021-2022 Faculty Development Opportunity with ASCEND and RCMI (Video only)
+                    - cell "Christine Hohmann, PhD" [ref=e599]:
+                      - link "Christine Hohmann, PhD" [ref=e600] [cursor=pointer]:
+                        - /url: /ascend/about/faculty-and-staff/christine-hohmann
+                    - cell "Aug. 1, 2021" [ref=e601]
+                    - cell "Recording" [ref=e602]:
+                      - link "Recording" [ref=e603] [cursor=pointer]:
+                        - /url: https://youtu.be/YcXR5Ndf2ig
+                  - row "Useful Resources for Researchers Shiva Mehravaran, MD, MSc Jul. 14, 2021 Recording" [ref=e604]:
+                    - cell "Useful Resources for Researchers" [ref=e605]:
+                      - paragraph [ref=e606]:
+                        - link "Useful Resources for Researchers" [ref=e607] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA5%20Useful%20Resources.pdf
+                    - cell "Shiva Mehravaran, MD, MSc" [ref=e608]:
+                      - link "Shiva Mehravaran, MD, MSc" [ref=e609] [cursor=pointer]:
+                        - /url: /ascend/about/faculty-and-staff/shiva-mehravaran
+                    - cell "Jul. 14, 2021" [ref=e610]
+                    - cell "Recording" [ref=e611]:
+                      - link "Recording" [ref=e612] [cursor=pointer]:
+                        - /url: https://youtu.be/iGsw3SK-J6k
+                  - row "Choosing the Right Funding Opportunity Edet Isuk, PhD Jun. 9, 2021 Recording" [ref=e613]:
+                    - cell "Choosing the Right Funding Opportunity" [ref=e614]:
+                      - paragraph [ref=e615]:
+                        - link "Choosing the Right Funding Opportunity" [ref=e616] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA4%20Choosing%20the%20right%20funding%20opportunity.pdf
+                    - cell "Edet Isuk, PhD" [ref=e617]:
+                      - paragraph [ref=e618]:
+                        - link "Edet Isuk, PhD" [ref=e619] [cursor=pointer]:
+                          - /url: /x8256.xml
+                    - cell "Jun. 9, 2021" [ref=e620]
+                    - cell "Recording" [ref=e621]:
+                      - link "Recording" [ref=e622] [cursor=pointer]:
+                        - /url: https://youtu.be/P2ncgx_Qm-o
+                  - row "Case Discussions in Allowability Farin Kamangar, MD, PhD May 12, 2021" [ref=e623]:
+                    - cell "Case Discussions in Allowability" [ref=e624]:
+                      - paragraph [ref=e625]:
+                        - link "Case Discussions in Allowability" [ref=e626] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA3%20Case%20Discussions%20in%20Allowability.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e627]:
+                      - paragraph [ref=e628]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e629] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "May 12, 2021" [ref=e630]
+                    - cell [ref=e631]
+                  - row "Postaward Management Farin Kamangar, MD, PhD Apr. 14, 2021" [ref=e632]:
+                    - cell "Postaward Management" [ref=e633]:
+                      - paragraph [ref=e634]:
+                        - link "Postaward Management" [ref=e635] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA2%20Postaward%20Management%20Slides.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e636]:
+                      - paragraph [ref=e637]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e638] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Apr. 14, 2021" [ref=e639]
+                    - cell [ref=e640]
+                  - row "Grant Budget Preparation Farin Kamangar, MD, PhD Mar. 10, 2021" [ref=e641]:
+                    - cell "Grant Budget Preparation" [ref=e642]:
+                      - paragraph [ref=e643]:
+                        - link "Grant Budget Preparation" [ref=e645] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ORA1%20MSU%20Grant%20Budget%20Prep%20Slides.pdf
+                    - cell "Farin Kamangar, MD, PhD" [ref=e646]:
+                      - paragraph [ref=e647]:
+                        - link "Farin Kamangar, MD, PhD" [ref=e648] [cursor=pointer]:
+                          - /url: /office-of-research-administration/about/staff-directory/farin-kamangar
+                    - cell "Mar. 10, 2021" [ref=e649]
+                    - cell [ref=e650]
+                  - row "Responsible Conduct of Research (RCR) Edet Isuk, PhD Feb. 1, 2021" [ref=e651]:
+                    - cell "Responsible Conduct of Research (RCR)" [ref=e652]:
+                      - paragraph [ref=e653]:
+                        - link "Responsible Conduct of Research (RCR)" [ref=e654] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/RCR-Presentation-2020a-gen.pdf
+                          - generic [ref=e655]:
+                            - text: Responsible Conduct of
+                            - text: Research (RCR)
+                    - cell "Edet Isuk, PhD" [ref=e656]:
+                      - paragraph [ref=e657]:
+                        - link "Edet Isuk, PhD" [ref=e658] [cursor=pointer]:
+                          - /url: /x8256.xml
+                    - cell "Feb. 1, 2021" [ref=e659]
+                    - cell [ref=e660]
+                  - row "Research Misconduct Policy Synopsis Edet Isuk, PhD Oct. 1, 2020" [ref=e661]:
+                    - cell "Research Misconduct Policy Synopsis" [ref=e662]:
+                      - paragraph [ref=e663]:
+                        - link "Research Misconduct Policy Synopsis" [ref=e664] [cursor=pointer]:
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/ResearchMisconductPresentation.pdf
+                    - cell "Edet Isuk, PhD" [ref=e665]:
+                      - paragraph [ref=e666]:
+                        - link "Edet Isuk, PhD" [ref=e667] [cursor=pointer]:
+                          - /url: /x8256.xml
+                    - cell "Oct. 1, 2020" [ref=e668]
+                    - cell [ref=e669]
+                  - 'row "Conflict of Interest in Research & Development: Educational Slide Deck Conflict of Interest Committee Oct. 2, 2019" [ref=e670]':
+                    - 'cell "Conflict of Interest in Research & Development: Educational Slide Deck" [ref=e671]':
+                      - paragraph [ref=e672]:
+                        - 'link "Conflict of Interest in Research & Development: Educational Slide Deck" [ref=e673] [cursor=pointer]':
+                          - /url: Documents/ADMINISTRATION/OFFICES/ora/TrainingPresentations/COI-EduSlideDeck.pdf
+                    - cell "Conflict of Interest Committee" [ref=e674]:
+                      - paragraph [ref=e675]: Conflict of Interest Committee
+                    - cell "Oct. 2, 2019" [ref=e676]
+                    - cell [ref=e677]
+              - paragraph [ref=e678]:
+                - emphasis [ref=e679]: Virtual LIVE Trainings (sponsored by Office of Research Administration)
+            - generic [ref=e681]:
+              - heading "External Trainings" [level=3] [ref=e682]
+              - paragraph [ref=e683]:
+                - generic [ref=e684]:
+                  - link:
+                    - /url: https://grants.maryland.gov/pages/training.aspx
+                  - link "NIH virtual conference and sessions 2022-2023" [ref=e685] [cursor=pointer]:
+                    - /url: https://nexus.od.nih.gov/all/2022/08/08/2022-2023-virtual-nih-grants-conference-and-precon-events-new-name-new-approach-deeper-dive/
+              - paragraph [ref=e686]:
+                - link "Virginia Tech CRA Study Team info" [ref=e688] [cursor=pointer]:
+                  - /url: https://www.research.vt.edu/research-development/professional-development/cra-study-team.html
+              - paragraph [ref=e689]:
+                - link "How to make an NIH biosketch using My Bibliography and SciENcv" [ref=e691] [cursor=pointer]:
+                  - /url: https://www.youtube.com/watch?v=RaYDhqlpkAo
+              - paragraph [ref=e692]:
+                - link "My Bibliography" [ref=e694] [cursor=pointer]:
+                  - /url: https://www.youtube.com/watch?v=SpFcC0eRk8Q
+              - paragraph [ref=e695]:
+                - link "Add Preprint Citations in My Bibliography" [ref=e697] [cursor=pointer]:
+                  - /url: https://www.youtube.com/watch?v=VGTRQNNDbmM
+              - paragraph [ref=e698]:
+                - link "NCBI and the NIH Public Access Policy" [ref=e700] [cursor=pointer]:
+                  - /url: https://www.youtube.com/watch?v=2ze2PNHvLYk
+              - paragraph [ref=e701]:
+                - link "MD Governor's Grants Office - Training" [ref=e703] [cursor=pointer]:
+                  - /url: https://grants.maryland.gov/pages/training.aspx
+          - generic [ref=e704]:
+            - list [ref=e706]:
+              - listitem [ref=e707]:
+                - link "Office of Research Administration" [ref=e708] [cursor=pointer]:
+                  - /url: /ora
+                - list [ref=e709]:
+                  - listitem [ref=e710]:
+                    - link "About" [ref=e711] [cursor=pointer]:
+                      - /url: /office-of-research-administration/about
+                  - listitem [ref=e712]:
+                    - link "Pre-Award" [ref=e713] [cursor=pointer]:
+                      - /url: /office-of-research-administration/pre-award
+                  - listitem [ref=e714]:
+                    - link "Post-Award" [ref=e715] [cursor=pointer]:
+                      - /url: /office-of-research-administration/post-award
+                  - listitem [ref=e716]:
+                    - link "Policies and Guidelines" [ref=e717] [cursor=pointer]:
+                      - /url: /office-of-research-administration/policies-and-guidelines
+                  - listitem [ref=e718]:
+                    - link "Research Compliance" [ref=e719] [cursor=pointer]:
+                      - /url: /office-of-research-administration/research-compliance
+                  - listitem [ref=e720]:
+                    - link "Trainings" [ref=e721] [cursor=pointer]:
+                      - /url: /office-of-research-administration/trainings
+                  - list [ref=e722]:
+                    - listitem [ref=e723]:
+                      - link "e-Training" [ref=e724] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/e-training
+                    - listitem [ref=e725]:
+                      - link "New Faculty Development Seminars" [ref=e726] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/new-faculty-development-seminars
+                    - listitem [ref=e727]:
+                      - link " Monthly D-RED Seminars" [ref=e728] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/monthly-d-red-seminars
+                        - generic [ref=e729]: 
+                        - text: Monthly D-RED Seminars
+                    - listitem [ref=e730]:
+                      - link "Special Workshops" [ref=e731] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/special-workshops
+                    - listitem [ref=e732]:
+                      - link "Test Prep" [ref=e733] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/test-prep
+                    - listitem [ref=e734]:
+                      - link "MSU Trainings Outside ORA" [ref=e735] [cursor=pointer]:
+                        - /url: /office-of-research-administration/trainings/msu-trainings-outside-ora
+                  - listitem [ref=e736]:
+                    - link "Resources" [ref=e737] [cursor=pointer]:
+                      - /url: /office-of-research-administration/resources
+                  - listitem [ref=e738]:
+                    - link "Funding Sources" [ref=e739] [cursor=pointer]:
+                      - /url: /office-of-research-administration/funding-sources
+                  - listitem [ref=e740]:
+                    - link "ORA Announcements" [ref=e741] [cursor=pointer]:
+                      - /url: /office-of-research-administration/ora-announcements
+            - generic [ref=e743]:
+              - heading "Contact Information" [level=4] [ref=e744]
+              - separator [ref=e745]
+              - paragraph [ref=e746]:
+                - strong [ref=e747]: Office of Research Administration
+                - text: Morgan State University
+                - text: Tyler Hall, Student Service Bldg
+                - text: Suite 304
+                - text: Baltimore, MD 21251
+              - paragraph [ref=e748]:
+                - text: "Questions, contact:"
+                - text: "P: 443-885-4044"
+                - text: "F: 443-885-8280"
+                - text: "E:"
+                - link "ask.ora@morgan.edu" [ref=e749] [cursor=pointer]:
+                  - /url: mailto:ask.ora@morgan.edu
+              - paragraph
+              - paragraph
+              - paragraph
+      - generic [ref=e751]:
+        - generic [ref=e752]: 
+        - text: 
+    - contentinfo [ref=e753]:
+      - generic [ref=e755]:
+        - generic [ref=e757]:
+          - img "Morgan State University logo in white and orange" [ref=e759]
+          - paragraph [ref=e760]:
+            - link "1700 East Cold Spring Lane Baltimore, Maryland 21251" [ref=e761] [cursor=pointer]:
+              - /url: https://www.google.com/maps/place/Morgan+State+University/@39.3438,-76.5869596,17z/data=!3m1!4b1!4m6!3m5!1s0x89c805bb6adeb895:0x3035e29e2ad87f3f!8m2!3d39.3437959!4d-76.5843847!16zL20vMHN4Z2g?entry=ttu&g_ep=EgoyMDI2MDMxMC4wIKXMDSoASAFQAw%3D%3D
+              - text: 1700 East Cold Spring Lane
+              - text: Baltimore, Maryland 21251
+          - paragraph [ref=e762]:
+            - link "Carnegie Classification Seal" [ref=e763] [cursor=pointer]:
+              - /url: https://carnegieclassifications.acenet.edu/institution/morgan-state-university/
+              - img "Carnegie Classification Seal" [ref=e764]
+          - paragraph
+        - generic [ref=e766]:
+          - list [ref=e767]:
+            - listitem [ref=e768]:
+              - link "APPLY" [ref=e769] [cursor=pointer]:
+                - /url: /apply
+            - listitem [ref=e770]:
+              - link "ADMISSIONS & AID" [ref=e771] [cursor=pointer]:
+                - /url: /admissions-aid
+            - listitem [ref=e772]:
+              - link "STUDENT LIFE" [ref=e773] [cursor=pointer]:
+                - /url: /student-life
+            - listitem [ref=e774]:
+              - link "SCHEDULE A VISIT" [ref=e775] [cursor=pointer]:
+                - /url: /campusvisits
+            - listitem [ref=e776]:
+              - link "REQUEST INFORMATION" [ref=e777] [cursor=pointer]:
+                - /url: /request-info
+            - listitem [ref=e778]:
+              - link "GIVE TO MORGAN" [ref=e779] [cursor=pointer]:
+                - /url: http://www.givetomorgan.org/
+          - text:     
+          - generic [ref=e780]:
+            - paragraph [ref=e781]:
+              - link "Privacy" [ref=e782] [cursor=pointer]:
+                - /url: /privacy
+              - text: "|"
+              - link "Contact Us" [ref=e783] [cursor=pointer]:
+                - /url: /contactus
+              - text: "|"
+              - link "Report Waste & Fraud" [ref=e784] [cursor=pointer]:
+                - /url: https://www.ola.state.md.us/fraud/ola-fraud-hotline
+            - paragraph [ref=e785]: ©2026 Morgan State University
+        - generic [ref=e787]:
+          - generic [ref=e788]:
+            - link "Facebook" [ref=e789] [cursor=pointer]:
+              - /url: https://www.facebook.com/morganstateu
+              - generic [ref=e790]: 
+            - link "X.com" [ref=e791] [cursor=pointer]:
+              - /url: https://www.x.com/morganstateu/
+              - generic [ref=e792]: 
+            - link "Instagram" [ref=e793] [cursor=pointer]:
+              - /url: https://www.instagram.com/morganstateu
+              - generic [ref=e794]: 
+            - link "Youtube" [ref=e795] [cursor=pointer]:
+              - /url: https://www.youtube.com/morganstateu
+              - generic [ref=e796]: 
+            - link "LinkedIn" [ref=e797] [cursor=pointer]:
+              - /url: https://www.linkedin.com/company/morgan-state-university
+              - generic [ref=e798]: 
+          - list [ref=e799]:
+            - listitem [ref=e800]:
+              - link "Nondiscrimination Notice" [ref=e801] [cursor=pointer]:
+                - /url: /nondiscrimination
+            - listitem [ref=e802]:
+              - link "Accessibility" [ref=e803] [cursor=pointer]:
+                - /url: /accessibility
+            - listitem [ref=e804]:
+              - link "Careers" [ref=e805] [cursor=pointer]:
+                - /url: /jobs
+            - listitem [ref=e806]:
+              - link "Campus Map" [ref=e807] [cursor=pointer]:
+                - /url: https://map.morgan.edu/
+            - listitem [ref=e808]:
+              - link "Emergency Information" [ref=e809] [cursor=pointer]:
+                - /url: /emergency-information
+            - listitem [ref=e810]:
+              - link "Clery Report" [ref=e811] [cursor=pointer]:
+                - /url: /cleryreport
+            - listitem [ref=e812]:
+              - link "Title IX Information" [ref=e813] [cursor=pointer]:
+                - /url: /titleix
+            - listitem [ref=e814]:
+              - link "Mobile Alerts" [ref=e815] [cursor=pointer]:
+                - /url: /mobilealerts
+  - img [ref=e818]

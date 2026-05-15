@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_docusign_tuition_fees_undergrad",
+  "title": "Grant-Funded Undergraduate Tuition, Fees, and Health Insurance Request Memo (DocuSign)",
+  "category": "form",
+  "subcategory": "docusign_post_award",
+  "display_label": "Tuition & Fees Request — Undergraduate",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=6ed32147-6b47-4944-b24d-b9003ab95638&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form to request payment of undergraduate tuition, fees, and health insurance from grant funds at Morgan State University. The undergraduate version covers health insurance directly on this memo (unlike the graduate version, which requires a separate requisition for health insurance). Submit via DocuSign to the MSU ORA signing group. Questions to ora-docusign@morgan.edu.",
+  "last_scraped": "2026-05-14"
+}

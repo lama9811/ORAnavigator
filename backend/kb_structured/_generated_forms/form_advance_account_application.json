@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_advance_account_application",
+  "title": "Application for Advance Account (Pre-Award Spending) — DocuSign",
+  "category": "form",
+  "subcategory": "pre_award_template",
+  "display_label": "Application for Advance Account (DocuSign)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/pre-award-spending",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=aee73e60-47e3-456b-881d-6957d3650bcf&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form a PI submits to request an Advance Account so they can begin spending on a sponsored project before the official award arrives. Approved pre-award spending is generally capped at 20% of total project costs or $100,000, whichever is less, and requires review by ORA and the Division of Finance & Administration.",
+  "last_scraped": "2026-05-14"
+}

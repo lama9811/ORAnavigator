@@ -1,0 +1,15 @@
+{
+  "doc_id": "pre_award_pre_award_subawards",
+  "title": "Pre-Award — Pre-Award Subawards",
+  "category": "pre_award",
+  "subcategory": "subaward",
+  "display_label": "Pre-Award Subawards",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/pre-award-subawards",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/pre-award/pre-award-subawards",
+  "content": "Guidance on initiating a subaward (also called a subgrant, subagreement, or subcontract) at the pre-award stage at Morgan State University. The first step for any subaward is to contact Ms. Ailing Zhang, Senior Grants Administration, at ailing.zhang@morgan.edu (or ask.ora@morgan.edu, 443-885-4044, fax 443-885-8280) with the following information:\n- Full contact name and information for the Morgan State University faculty researcher and/or contact\n- Morgan State University's role:\n  - Subawardee — Morgan State University will be receiving the subaward\n  - Subawarder — Morgan State University will be issuing the subaward\n- The name of the funding agency\n- The deadline (if Morgan is the subawardee, this is the pass-through institution's internal deadline; if Morgan is issuing the subaward, this is the proposal deadline per the funding agency)\n- If available, the title of the proposal\n- The project start and end dates\n- The amount of the subaward\n- If Morgan State University is the subawardee, include contact information for the pass-through entity's office of research administration\n\nDefinition — Subaward: A subaward is issued to a subrecipient for assistance in carrying out a specified programmatic effort on a sponsored project. Morgan State passes through a portion of the sponsored award to another entity. Subawards may also be called subgrants, subagreements, or subcontracts. All terms and conditions from the prime award apply to the subrecipient entity, and they must be included in the subaward document. The term also covers awards made by a subrecipient to a lower-tier subrecipient with prior approval.\n\nDefinition — Subrecipient: A subrecipient is a legal entity to which a subaward is made and which is accountable for the use of the funds provided in carrying out a portion of the University's programmatic effort under a sponsored project. A subrecipient has responsibility for programmatic and/or administrative decision-making and for adherence to applicable sponsored program compliance requirements.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "first_contact": "Ms. Ailing Zhang, Senior Grants Administration (ailing.zhang@morgan.edu)",
+    "two_roles": ["subawardee (MSU receives)", "subawarder (MSU issues)"]
+  }
+}

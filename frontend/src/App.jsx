@@ -5,10 +5,6 @@ import { Toaster } from "sonner";
 import NavBar         from "./components/NavBar";
 import ChatSidebar    from "./components/ChatSidebar";
 import Chatbox        from "./components/Chatbox";
-import CurriculumPage from "./components/CurriculumPage";
-import MyClassesPage from "./components/MyClassesPage";
-import GradeSurgeon from "./components/GradeSurgeon";
-import RippleEffect from "./components/RippleEffect";
 import ProfilePage    from "./components/ProfilePage";
 import AdminDashboard from "./components/AdminDashboard";
 import Forbidden      from "./components/Forbidden";
@@ -461,110 +457,7 @@ export default function App() {
         />
 
         {/* protected: my classes with sidebar */}
-        <Route
-          path="/my-classes"
-          element={
-            <RequireAuth>
-              <SidebarLayout
-                sessions={sessions}
-                activeId={activeId}
-                onNew={handleNew}
-                onSelect={handleSelect}
-                onDelete={handleDelete}
-                onLogout={handleLogout}
-                userEmail={userEmail}
-                onPin={handlePin}
-                onArchive={handleArchive}
-                onRename={handleRename}
-                darkMode={darkMode}
-                onToggleTheme={toggleTheme}
-                onCollapse={toggleSidebar}
-              >
-                <MyClassesPage />
-              </SidebarLayout>
-            </RequireAuth>
-          }
-        />
-
-        {/* protected: grade surgeon with sidebar */}
-        <Route
-          path="/grade-analysis"
-          element={
-            <RequireAuth>
-              <SidebarLayout
-                sessions={sessions}
-                activeId={activeId}
-                onNew={handleNew}
-                onSelect={handleSelect}
-                onDelete={handleDelete}
-                onLogout={handleLogout}
-                userEmail={userEmail}
-                onPin={handlePin}
-                onArchive={handleArchive}
-                onRename={handleRename}
-                darkMode={darkMode}
-                onToggleTheme={toggleTheme}
-                onCollapse={toggleSidebar}
-              >
-                <GradeSurgeon />
-              </SidebarLayout>
-            </RequireAuth>
-          }
-        />
-
-        {/* protected: ripple effect with sidebar */}
-        <Route
-          path="/ripple-effect"
-          element={
-            <RequireAuth>
-              <SidebarLayout
-                sessions={sessions}
-                activeId={activeId}
-                onNew={handleNew}
-                onSelect={handleSelect}
-                onDelete={handleDelete}
-                onLogout={handleLogout}
-                userEmail={userEmail}
-                onPin={handlePin}
-                onArchive={handleArchive}
-                onRename={handleRename}
-                darkMode={darkMode}
-                onToggleTheme={toggleTheme}
-                onCollapse={toggleSidebar}
-              >
-                <RippleEffect />
-              </SidebarLayout>
-            </RequireAuth>
-          }
-        />
-
-        {/* protected: curriculum with sidebar */}
-        <Route
-          path="/curriculum"
-          element={
-            <RequireAuth>
-              <SidebarLayout
-                sessions={sessions}
-                activeId={activeId}
-                onNew={handleNew}
-                onSelect={handleSelect}
-                onDelete={handleDelete}
-                onLogout={handleLogout}
-                userEmail={userEmail}
-                onPin={handlePin}
-                onArchive={handleArchive}
-                onRename={handleRename}
-                darkMode={darkMode}
-                onToggleTheme={toggleTheme}
-                onCollapse={toggleSidebar}
-              >
-                <CurriculumPage />
-              </SidebarLayout>
-            </RequireAuth>
-          }
-        />
-
-        {/* 🔥 NEW: protected profile page with sidebar */}
+        {/* protected: profile page with sidebar */}
         <Route
           path="/profile"
           element={

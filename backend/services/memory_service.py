@@ -163,7 +163,7 @@ def _extract_memories(transcript: str, existing_memories: str) -> list[dict]:
     try:
         from google import genai
 
-        project = os.getenv("GOOGLE_CLOUD_PROJECT", "csnavigator-vertex-ai")
+        project = os.getenv("GOOGLE_CLOUD_PROJECT", "oranavigator-vertex-ai")
         try:
             client = genai.Client(vertexai=True, project=project, location="us-central1")
         except Exception:
@@ -173,7 +173,7 @@ def _extract_memories(transcript: str, existing_memories: str) -> list[dict]:
                 return []
             client = genai.Client(api_key=api_key)
 
-        prompt = f"""Analyze this student's conversation with CS Navigator and extract key facts worth remembering for future sessions.
+        prompt = f"""Analyze this student's conversation with ORA Navigator and extract key facts worth remembering for future sessions.
 
 RULES:
 - Extract ONLY non-obvious facts about the student's interests, goals, preferences, or situation

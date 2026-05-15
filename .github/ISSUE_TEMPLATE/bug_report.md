@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Report a bug or incorrect answer from CS Navigator
+about: Report a bug or incorrect answer from ORA Navigator
 title: "[BUG] "
 labels: bug
 assignees: theaayushstha1

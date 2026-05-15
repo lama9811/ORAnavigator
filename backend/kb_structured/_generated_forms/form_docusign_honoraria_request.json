@@ -1,0 +1,11 @@
+{
+  "doc_id": "form_docusign_honoraria_request",
+  "title": "Honoraria Request Memo (DocuSign)",
+  "category": "form",
+  "subcategory": "docusign_post_award",
+  "display_label": "Honoraria Request Memo",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=a00d4afc-7e64-47b2-8612-f2434ba3fc2e&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form for requesting an honorarium — a one-time payment for participation to a person who is not an employee of, and not a student of, Morgan State University. Payments must reflect market-rate limitations. International honoraria payments require guidance from MSU Accounts Payable before submission. Route the completed form via DocuSign to the MSU ORA signing group; questions to ora-docusign@morgan.edu.",
+  "last_scraped": "2026-05-14"
+}

@@ -1,74 +1,79 @@
 /* ============================================================
-   CS NAVIGATOR - Design System v6.0
-   Google AI-Inspired Theme
+   ORA NAVIGATOR - Design System v7.0
+   Editorial Research-Administration Theme
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Google Brand Colors */
-  --msu-blue: #4285F4;
-  --msu-blue-hover: #3367D6;
-  --msu-blue-light: #669DF6;
-  --msu-blue-50: rgba(66, 133, 244, 0.06);
-  --msu-blue-100: rgba(66, 133, 244, 0.12);
-  --msu-gold: #FBBC05;
-  --msu-gold-hover: #F9AB00;
-  --msu-gold-50: rgba(251, 188, 5, 0.08);
+  /* ORA Primary Palette — institutional navy + editorial gold */
+  --msu-blue: #0B1E3F;
+  --msu-blue-hover: #15315C;
+  --msu-blue-light: #1E4480;
+  --msu-blue-50: rgba(11, 30, 63, 0.05);
+  --msu-blue-100: rgba(11, 30, 63, 0.12);
+  --msu-gold: #C9A24C;
+  --msu-gold-hover: #B08C36;
+  --msu-gold-50: rgba(201, 162, 76, 0.10);
 
-  /* Google Extended Palette */
-  --google-red: #EA4335;
-  --google-yellow: #FBBC05;
-  --google-green: #34A853;
-  --google-blue: #4285F4;
-  --accent-teal: #00BCD4;
-  --accent-emerald: #34A853;
-  --accent-violet: #A142F4;
-  --accent-rose: #EA4335;
-  --accent-amber: #FBBC05;
+  /* ORA Extended Palette — muted, editorial */
+  --google-red: #B23A48;
+  --google-yellow: #C9A24C;
+  --google-green: #5F7A4A;
+  --google-blue: #0B1E3F;
+  --accent-teal: #406B72;
+  --accent-emerald: #5F7A4A;
+  --accent-violet: #5B4A7C;
+  --accent-rose: #B23A48;
+  --accent-amber: #C9A24C;
+  --ora-ink: #0B1E3F;
+  --ora-parchment: #F4EFE7;
+  --ora-rule: #3A3A3A;
 
-  /* Modern Gradients */
-  --gradient-primary: linear-gradient(135deg, #4285F4 0%, #669DF6 100%);
-  --gradient-gold: linear-gradient(135deg, #FBBC05 0%, #F9AB00 100%);
-  --gradient-subtle: linear-gradient(180deg, #f8f9fa 0%, #f1f3f4 100%);
-  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.75) 100%);
-  --gradient-mesh: radial-gradient(at 40% 20%, rgba(66, 133, 244, 0.04) 0px, transparent 50%),
-                   radial-gradient(at 80% 0%, rgba(52, 168, 83, 0.03) 0px, transparent 50%),
-                   radial-gradient(at 0% 50%, rgba(234, 67, 53, 0.02) 0px, transparent 50%);
-  --gradient-google: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335);
+  /* Editorial gradients (subtler, more paper-like) */
+  --gradient-primary: linear-gradient(135deg, #0B1E3F 0%, #1E4480 100%);
+  --gradient-gold: linear-gradient(135deg, #C9A24C 0%, #B08C36 100%);
+  --gradient-subtle: linear-gradient(180deg, #F4EFE7 0%, #ECE5D7 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255,253,247,0.94) 0%, rgba(244,239,231,0.80) 100%);
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(11, 30, 63, 0.04) 0px, transparent 50%),
+                   radial-gradient(at 80% 0%, rgba(201, 162, 76, 0.05) 0px, transparent 50%),
+                   radial-gradient(at 0% 80%, rgba(11, 30, 63, 0.025) 0px, transparent 50%);
+  --gradient-google: linear-gradient(135deg, #0B1E3F, #1E4480, #C9A24C, #B23A48);
 
-  /* Light Mode Colors */
-  --bg-body: #f8f9fa;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f1f3f4;
-  --bg-elevated: #ffffff;
-  --bg-input: #f1f3f4;
-  --text-main: #202124;
-  --text-secondary: #5f6368;
-  --text-tertiary: #9aa0a6;
-  --border-color: #dadce0;
-  --border-subtle: #e8eaed;
-  --border-focus: #4285F4;
+  /* Light Mode — editorial cream paper */
+  --bg-body: #F4EFE7;
+  --bg-card: #FFFDF7;
+  --bg-card-hover: #ECE5D7;
+  --bg-elevated: #FFFDF7;
+  --bg-input: #FFFDF7;
+  --text-main: #0B1E3F;
+  --text-secondary: #5A5043;
+  --text-tertiary: #8A7E6D;
+  --border-color: #D9CFBC;
+  --border-subtle: #E8DFCB;
+  --border-focus: #0B1E3F;
 
-  /* Refined Shadows (Google Material) */
-  --shadow-xs: 0 1px 2px rgba(60, 64, 67, 0.1);
-  --shadow-sm: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.1);
-  --shadow-md: 0 4px 8px rgba(60, 64, 67, 0.15), 0 1px 3px rgba(60, 64, 67, 0.1);
-  --shadow-lg: 0 8px 20px rgba(60, 64, 67, 0.12), 0 2px 6px rgba(60, 64, 67, 0.08);
-  --shadow-xl: 0 16px 32px rgba(60, 64, 67, 0.14), 0 4px 8px rgba(60, 64, 67, 0.08);
-  --shadow-2xl: 0 24px 48px rgba(60, 64, 67, 0.18);
-  --shadow-glow: 0 0 16px rgba(66, 133, 244, 0.15);
-  --shadow-gold-glow: 0 0 16px rgba(251, 188, 5, 0.15);
-  --shadow-inner: inset 0 1px 3px rgba(60, 64, 67, 0.08);
+  /* Editorial shadows — softer, more print-feel */
+  --shadow-xs: 0 1px 2px rgba(11, 30, 63, 0.06);
+  --shadow-sm: 0 1px 3px rgba(11, 30, 63, 0.08), 0 1px 2px rgba(11, 30, 63, 0.05);
+  --shadow-md: 0 4px 10px rgba(11, 30, 63, 0.08), 0 1px 3px rgba(11, 30, 63, 0.05);
+  --shadow-lg: 0 8px 24px rgba(11, 30, 63, 0.10), 0 2px 6px rgba(11, 30, 63, 0.06);
+  --shadow-xl: 0 18px 40px rgba(11, 30, 63, 0.12), 0 4px 10px rgba(11, 30, 63, 0.06);
+  --shadow-2xl: 0 28px 56px rgba(11, 30, 63, 0.14);
+  --shadow-glow: 0 0 18px rgba(201, 162, 76, 0.20);
+  --shadow-gold-glow: 0 0 18px rgba(201, 162, 76, 0.22);
+  --shadow-inner: inset 0 1px 3px rgba(11, 30, 63, 0.06);
 
-  /* Animation Timing (Material Motion) */
-  --transition-fast: 0.1s ease;
-  --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Animation Timing — slightly slower, more deliberate */
+  --transition-fast: 0.12s ease;
+  --transition-normal: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.36s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Typography */
-  --font-sans: 'Google Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  /* Typography — editorial serif headlines + clean sans body */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-serif: 'DM Serif Display', 'Times New Roman', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
 
   /* Spacing Scale */
   --space-1: 4px;
@@ -81,42 +86,43 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Border Radius (Material You - rounder) */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-2xl: 28px;
+  /* Border Radius — sharper, editorial */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
   --radius-full: 9999px;
 }
 
-/* Dark Mode - Google Dark Theme */
+/* Dark Mode — Midnight library theme */
 body.dark {
-  --bg-body: #1f1f1f;
-  --bg-card: #2d2d2d;
-  --bg-card-hover: #3c3c3c;
-  --bg-elevated: #333333;
-  --bg-input: #3c3c3c;
-  --text-main: #e8eaed;
-  --text-secondary: #9aa0a6;
-  --text-tertiary: #5f6368;
-  --border-color: #3c4043;
-  --border-subtle: #2d2d2d;
-  --border-focus: #8ab4f8;
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.45);
-  --shadow-2xl: 0 24px 48px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 16px rgba(138, 180, 248, 0.12);
-  --shadow-gold-glow: 0 0 16px rgba(253, 214, 99, 0.12);
-  --shadow-inner: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-  --gradient-subtle: linear-gradient(180deg, #2d2d2d 0%, #1f1f1f 100%);
-  --gradient-glass: linear-gradient(135deg, rgba(45, 45, 45, 0.95) 0%, rgba(31, 31, 31, 0.9) 100%);
-  --gradient-mesh: radial-gradient(at 40% 20%, rgba(138, 180, 248, 0.05) 0px, transparent 50%),
-                   radial-gradient(at 80% 0%, rgba(129, 201, 149, 0.04) 0px, transparent 50%),
-                   radial-gradient(at 0% 50%, rgba(242, 139, 130, 0.03) 0px, transparent 50%);
+  --bg-body: #0E1626;
+  --bg-card: #15203A;
+  --bg-card-hover: #1C2A48;
+  --bg-elevated: #1A2640;
+  --bg-input: #1C2A48;
+  --text-main: #ECE5D7;
+  --text-secondary: #B3A989;
+  --text-tertiary: #7A7363;
+  --border-color: #2B3858;
+  --border-subtle: #1F2A45;
+  --border-focus: #C9A24C;
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.50);
+  --shadow-xl: 0 18px 40px rgba(0, 0, 0, 0.55);
+  --shadow-2xl: 0 28px 56px rgba(0, 0, 0, 0.60);
+  --shadow-glow: 0 0 18px rgba(201, 162, 76, 0.22);
+  --shadow-gold-glow: 0 0 18px rgba(201, 162, 76, 0.25);
+  --shadow-inner: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  --gradient-subtle: linear-gradient(180deg, #15203A 0%, #0E1626 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(21, 32, 58, 0.96) 0%, rgba(14, 22, 38, 0.90) 100%);
+  --gradient-mesh: radial-gradient(at 40% 20%, rgba(201, 162, 76, 0.06) 0px, transparent 50%),
+                   radial-gradient(at 80% 0%, rgba(30, 68, 128, 0.08) 0px, transparent 50%),
+                   radial-gradient(at 0% 80%, rgba(201, 162, 76, 0.04) 0px, transparent 50%);
+  --gradient-primary: linear-gradient(135deg, #1E4480 0%, #2F5DA8 100%);
 }
 
 /* ============================================================

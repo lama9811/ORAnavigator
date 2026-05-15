@@ -29,8 +29,8 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 # Configuration
-GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "csnavigator-vertex-ai")
-DATASTORE_ID = "csnavigator-kb-v7"
+GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "oranavigator-vertex-ai")
+DATASTORE_ID = "oranavigator-kb-v7"
 LOCATION = "us"
 API_ENDPOINT = f"{LOCATION}-discoveryengine.googleapis.com"
 
@@ -51,7 +51,7 @@ _BYPASS_RE = re.compile(
 
 _REFUSAL_MSG = (
     "I don't have information about that in my knowledge base. "
-    "For more details, contact the CS department at (443) 885-3962 or compsci@morgan.edu."
+    "For more details, contact ORA at 443-885-4044 or ask.ora@morgan.edu."
 )
 
 

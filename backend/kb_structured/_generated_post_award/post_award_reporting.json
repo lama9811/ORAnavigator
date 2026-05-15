@@ -1,0 +1,34 @@
+{
+  "doc_id": "post_award_reporting",
+  "title": "Post-Award — Reporting",
+  "category": "post_award",
+  "subcategory": "reporting",
+  "display_label": "Reporting (Post-Award)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/reporting",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/post-award/reporting",
+  "content": "Reporting Overview. After an award is issued, funding agencies monitor both programmatic and financial aspects of a project. PIs/PDs prepare technical (programmatic) reports submitted to funding agencies at intervals specified in the Notice of Award (NoA) — monthly, quarterly, annually, or at grant closeout. The Office of Restricted Funds Accounting (RFA) handles fiscal reports; PIs are responsible for verifying the accuracy of expenses.\n\nCommon report types:\n- Programmatic: annual progress reports, final technical reports, invention reports, property/equipment reports.\n- Financial: annual financial reports, final financial reports, invoicing.\n\nProgrammatic Reporting Requirements: Final reports are normally due within 90 days after the end of the project period, and usually include the technical, property (major equipment), and invention reports. Report categories include Interim/Progress reports, Final Technical Reporting, Invention Reporting, and Final Reports / Closeout.\n\nEffort Reporting and Certification:\n- Schedule: Effort certifications are generated three times per year — February (Fall semester), July (Spring semester), and October (Summer effort).\n- Deadline: Once released to campus, certifications must be completed within 14 calendar days.\n- Platform: Searchlight.\n- Who must certify: All PIs/PDs, faculty, professional staff, and students paid directly from federal grants and contracts.\n- Definition: Effort is the amount of time spent on a particular activity. It includes time working on a sponsored project where salary is directly charged or cost-shared effort (also known as match).\n\nCost Sharing: Cost sharing represents that portion of the total project costs of a sponsored agreement that are not charged to the sponsor. These costs are absorbed by the University rather than by the sponsor.\n\nCompliance framework: All reporting is governed by the Office of Management and Budget (OMB) guidelines, including 2 CFR 200 (Uniform Guidance).\n\nReferences: PI Handbook 5: Policies & Guidelines (PDF) — Effort Reporting on page 96, Cost Sharing on page 36. URL: https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/2024-07-01_PIHandbook5.pdf. PI Handbook 3: Grant-Related Processes (2025-02-24) covers post-award report mechanics.\n\nAdditional details (Programmatic Reporting accordion): Property and Invention reports must be completed even when the project acquired no equipment and produced no invention. PIs should treat the requirement seriously — failure to submit reports on time may adversely affect future prospects for funding from the agency. The schedule for required technical reports is typically incorporated in the award document from the sponsor.\n\nAdditional details (Effort Reporting accordion): Effort certifications cover employees paid from federal AND state contracts or grants, including any mandatory cost sharing accounts. PIs/PDs (or their approved designee, called an 'alternate certifier') must verify and certify the reports, attesting that employees actually performed the work on the indicated accounts in the same percentage of time. Any corrections to effort should be reported immediately to the ORA Director (Gillian.Silver@morgan.edu) and to the Grant Accountant assigned to the grant in Restricted Funds Accounting (RFA). PIs/PDs and alternate certifiers are notified via email from the Searchlight platform when reports are available. The electronic effort report may be certified by the employee, supervisor, or PI/PD who has personal familiarity with the employee's compensated effort. The report is after-the-fact and is generated from historical payroll data.\n\nAdditional details (Cost Sharing): Cost sharing can be required by the sponsor or volunteered by a PI/PD; regardless, any commitment of effort referenced in the project proposal or award document must be honored, reported, and captured in the effort reporting system. Because faculty, administrative, and clerical salaries at MSU are paid by the employee's department, cost-shared effort represents a redirection of departmental resources from teaching or other departmental activities to support sponsored agreements.\n\nKey contacts:\n- Ms. Gillian Silver, Director — Gillian.Silver@morgan.edu\n- Mr. Ryan Mobley, Training Coordinator — Ryan.Mobley@morgan.edu\n- General: 443-885-4044, ask.ora@morgan.edu, Tyler Hall Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "final_report_due_days_after_project_end": 90,
+    "effort_certification_window_days": 14,
+    "effort_cycles": {
+      "February": "Fall semester effort",
+      "July": "Spring semester effort",
+      "October": "Summer effort"
+    },
+    "effort_platform": "Searchlight",
+    "effort_covers_state_grants_too": true,
+    "alternate_certifier_allowed": true,
+    "effort_correction_route": "Director ORA (Gillian.Silver@morgan.edu) + RFA Grant Accountant",
+    "property_and_invention_reports_required_even_if_zero": true,
+    "cost_sharing_can_be_required_or_volunteered": true,
+    "regulatory_framework": "2 CFR 200 (OMB Uniform Guidance)",
+    "key_handbooks": [
+      "PI Handbook 3: Grant-Related Processes (2025-02-24)",
+      "PI Handbook 5: Policies & Guidelines (2024-07-01)"
+    ],
+    "pi_handbook_5_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/2024-07-01_PIHandbook5.pdf"
+  }
+}

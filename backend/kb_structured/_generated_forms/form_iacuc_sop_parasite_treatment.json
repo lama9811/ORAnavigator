@@ -1,0 +1,13 @@
+{
+  "doc_id": "form_iacuc_sop_parasite_treatment",
+  "title": "SOP 43.2: Parasite Treatment",
+  "category": "form",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 43.2 \u2014 Parasite Treatment",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_43.2_Parasite_Treatment.pdf",
+  "content": "IACUC SOP for diagnosing and treating ecto- and endo-parasites in laboratory rodent colonies at the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14"
+}

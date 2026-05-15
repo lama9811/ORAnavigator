@@ -2,11 +2,11 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in CS Navigator, please report it responsibly.
+If you discover a security vulnerability in ORA Navigator, please report it responsibly.
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, email: **compsci@morgan.edu** with the subject line "CS Navigator Security Report"
+Instead, email: **compsci@morgan.edu** with the subject line "ORA Navigator Security Report"
 
 Include:
 - Description of the vulnerability
@@ -18,7 +18,7 @@ We will respond within 48 hours and work to patch the issue promptly.
 
 ## Security Measures
 
-CS Navigator implements the following security measures:
+ORA Navigator implements the following security measures:
 
 ### Authentication & Authorization
 - JWT tokens with bcrypt password hashing
