@@ -536,10 +536,6 @@ export default function ChatSidebar({
             <FaSignOutAlt size={16} />
           </button>
         </div>
-        <a className="sidebar-opensource-badge" href="https://github.com/theaayushstha1/ora-navigator" target="_blank" rel="noopener noreferrer">
-          <FaGithub size={10} />
-          <span>Open Source</span>
-        </a>
       </div>
 
       {/* 🎫 Support Ticket Modal */}

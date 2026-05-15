@@ -1123,9 +1123,6 @@ export default function AdminDashboard() {
           <FaSearch size={14} /><span>Research</span>
           {researchStats.pending_suggestions > 0 && <span className="ticket-badge">{researchStats.pending_suggestions}</span>}
         </button>
-        <button className={`admin-tab ${activeTab === "courses" ? "active" : ""}`} onClick={() => setActiveTab("courses")}>
-          <FaCog size={14} /><span>Courses</span>
-        </button>
         <button className={`admin-tab ${activeTab === "system" ? "active" : ""}`} onClick={() => setActiveTab("system")}>
           <FaServer size={14} /><span>System</span>
         </button>
@@ -1503,58 +1500,6 @@ export default function AdminDashboard() {
               ))
             )}
           </div>
-        </div>
-      )}
-
-      {/* =================== COURSES TAB =================== */}
-      {activeTab === "courses" && (
-        <div className="tab-content">
-          <section>
-            <h2>Add New Course</h2>
-            <form onSubmit={handleAddCourse} className="admin-form">
-              <input name="course_code" placeholder="Course Code (e.g. COSC 101)" value={course.course_code} onChange={(e) => setCourse({...course, course_code: e.target.value})} required />
-              <input name="course_name" placeholder="Course Name" value={course.course_name} onChange={(e) => setCourse({...course, course_name: e.target.value})} required />
-              <input name="credits" type="number" placeholder="Credits" value={course.credits} onChange={(e) => setCourse({...course, credits: e.target.value})} required />
-              <input name="prerequisites" placeholder="Prerequisites (comma-separated)" value={course.prerequisites} onChange={(e) => setCourse({...course, prerequisites: e.target.value})} />
-              <input name="offered" placeholder="Offered Semesters (comma-separated)" value={course.offered} onChange={(e) => setCourse({...course, offered: e.target.value})} />
-              <button type="submit" className="action-btn">Add Course</button>
-            </form>
-          </section>
-
-          <section style={{ marginTop: 32 }}>
-            <h2>Existing Courses ({courses.length})</h2>
-            <table className="admin-table">
-              <thead>
-                <tr><th>Code</th><th>Name</th><th>Credits</th><th>Offered</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                {courses.map((c) => (
-                  <tr key={c.course_code}>
-                    <td>{c.course_code}</td>
-                    <td>{c.course_name}</td>
-                    <td>{c.credits}</td>
-                    <td>{Array.isArray(c.offered) ? c.offered.join(", ") : c.offered}</td>
-                    <td className="action-cell">
-                      <button className="edit-btn-labeled" onClick={() => setEditingCourse({
-                        ...c,
-                        prerequisites: Array.isArray(c.prerequisites) ? c.prerequisites.join(", ") : c.prerequisites || "",
-                        offered: Array.isArray(c.offered) ? c.offered.join(", ") : c.offered || ""
-                      })}>
-                        <FaEdit size={16} />
-                        <span>Edit</span>
-                      </button>
-                      <button className="delete-btn-labeled" onClick={() => handleDeleteCourse(c.course_code)}>
-                        <FaTrash size={16} />
-                        <span>Delete</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          {message && <p className="message">{message}</p>}
         </div>
       )}
 

@@ -8,6 +8,9 @@ frontend/.env
 .backend-url
 .frontend-url
 
+# Generated frontend Cloud Build manifest (written by deploy-cloudrun.sh)
+frontend/cloudbuild.yaml
+
 # Virtual environments
 .venv/
 venv/
