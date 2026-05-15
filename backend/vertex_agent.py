@@ -113,20 +113,31 @@ _SKIP_GROUNDING_RE = re.compile(
 _KB_FAIL_RE = re.compile(r"having trouble (accessing|connecting to) my knowledge base", re.IGNORECASE)
 
 # =============================================================================
-# FAITHFULNESS GATE: Entity Whitelist
+# FAITHFULNESS GATE: ORA Staff Entity Whitelist
 # =============================================================================
-# Catches hallucinated professor names that Gemini 2.0 Flash sometimes generates.
-# When a "Dr./Professor X" is found in the response but X isn't in the CS dept,
-# the response is flagged and re-generated with the more faithful 2.5 Flash model.
+# Catches hallucinated staff names. When a "Dr./Professor X" appears in the
+# response and X isn't in the ORA staff roster, append a faithfulness
+# disclaimer pointing to the staff directory.
 #
-# Source of truth: backend/kb_structured/academic_faculty.json
-# Last synced: 2026-04-05
+# Source of truth: backend/kb_structured/_generated_staff/staff_*.json
+# (14 ORA staff as of 2026-05-15). Refresh via:
+#   ls backend/kb_structured/_generated_staff/staff_*.json | xargs -n1 jq -r .staff_last | tr A-Z a-z
 
 _FACULTY_LAST_NAMES = {
-    "ali", "chouchane", "shushane", "dabaghchian", "dacon", "guo",
-    "heydari", "mack", "mao", "ojeme", "paudel", "sakk", "stojkovic",
-    "oladunni", "xu", "steele", "tannouri", "smith", "wang", "tchounwou",
-    "rahman", "shrestha",
+    "aladesote",   # Olatunde Aladesote — Assistant, Research Compliance
+    "boone",       # Taylor Boone — Grant Administrator
+    "kamangar",    # Farin Kamangar — Associate Vice President for Research
+    "lee",         # Matthew Lee — Senior Grants and Contract Manager
+    "li",          # Deshun Li — Research Budget Development Specialist
+    "manyara",     # Lucy Manyara — Budget Officer
+    "mirithu",     # Poline Mirithu — Grants and Contracts Manager
+    "mobley",      # Ryan Mobley — Training and Communications Coordinator
+    "moncrieffe",  # Keyshawn Moncrieffe — Acting Director for Research Compliance
+    "shine-lee",   # Shamon Shine-Lee — Budget Officer
+    "silver",      # Gillian Silver — Director
+    "steiner",     # Rebecca Steiner — Grant Administrator
+    "talton",      # Katherine Talton — Grant Administrator
+    "zhang",       # Ailing Zhang — Senior Grants Manager
 }
 
 _PROF_NAME_RE = re.compile(
@@ -134,8 +145,8 @@ _PROF_NAME_RE = re.compile(
 )
 
 _FAITHFULNESS_DISCLAIMER = (
-    "\n\n---\n*Some names in this response may not match our department records. "
-    "Please verify faculty names at the [Office of Research Administration page](https://www.morgan.edu/office-of-research-administration) "
+    "\n\n---\n*Some names in this response may not match the ORA staff directory. "
+    "Please verify at the [ORA Staff Directory](https://www.morgan.edu/office-of-research-administration/about/staff-directory) "
     "or contact ask.ora@morgan.edu.*"
 )
 
@@ -491,6 +502,13 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
             # Grounding validation gate: flag low-grounded responses
             has_data = bool(context or canvas_context)
             final_text = _apply_grounding_gate(final_text, grounding_chunks, coverage=grounding_coverage, has_student_data=has_data)
+
+            # Faithfulness gate: flag responses naming non-ORA-staff "Dr./Prof. X"
+            hallucinated = _check_faculty_faithfulness(final_text)
+            if hallucinated:
+                print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
+                if _FAITHFULNESS_DISCLAIMER not in final_text:
+                    final_text = final_text + _FAITHFULNESS_DISCLAIMER
 
             # Inject procedure guide Drive links if the agent omitted them
             final_text = _inject_procedure_links(final_text)

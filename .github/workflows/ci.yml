@@ -68,11 +68,11 @@ jobs:
     steps:
       - name: Check backend
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.inavigator.ai/health)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://oranavigator-backend-ollhkgeova-uc.a.run.app/health)
           echo "Backend: $STATUS"
           test "$STATUS" = "200"
       - name: Check frontend
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://cs.inavigator.ai)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://ora.inavigator.ai)
           echo "Frontend: $STATUS"
           test "$STATUS" = "200"

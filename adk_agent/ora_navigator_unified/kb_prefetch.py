@@ -1,11 +1,16 @@
 """
 KB Prefetch - Belt-and-Suspenders Grounding
 ============================================
-Pre-fetches KB docs and searches them with TF-IDF scoring so we can
+Pre-fetches KB docs and searches them with TF-IDF-ish scoring so we can
 inject relevant context into the system instruction via before_model_callback.
 
 Even if Gemini skips the VertexAiSearchTool, the KB docs are already
-in the prompt. Typical latency: <5ms for 71 docs.
+in the prompt. Typical latency: <30ms for 382 docs (ORA corpus).
+
+ORA tuning:
+- Entity boost recognizes ORA acronyms (IRB, IACUC, COI, NCE, F&A, FWA, ...)
+  and SOP numbers (e.g. "SOP 12") instead of CS course codes.
+- Doc-count health warning emitted on cache load (see MIN_DOC_THRESHOLD).
 """
 
 import os
@@ -21,9 +26,12 @@ from google.api_core.client_options import ClientOptions
 log = logging.getLogger(__name__)
 
 # Config
-GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "oranavigator-vertex-ai")
+GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "infra-vertex-494621-v1")
 DATASTORE_ID = os.getenv("KB_PREFETCH_DATASTORE_ID", "oranavigator-kb-local")
 LOCATION = "us"
+# Recall degrades sharply below ~20 docs (TF-IDF vocabulary distribution shift).
+# Current ORA corpus is 382 — well above. Warning fires on shrinkage.
+MIN_DOC_THRESHOLD = 20
 API_ENDPOINT = f"{LOCATION}-discoveryengine.googleapis.com"
 BRANCH = (
     f"projects/{GCP_PROJECT}/locations/{LOCATION}/collections/default_collection"
@@ -81,7 +89,15 @@ def _load_cache_sync():
         _cache.update(new_cache)
         _cache_ts = time.time()
     _bg_loading = False
-    log.info(f"[KB_PREFETCH] Cached {len(new_cache)} docs")
+    n = len(new_cache)
+    if n < MIN_DOC_THRESHOLD:
+        log.warning(
+            f"[KB_PREFETCH] Only {n} docs cached (threshold {MIN_DOC_THRESHOLD}). "
+            "TF-IDF recall may degrade. Verify datastore "
+            f"{DATASTORE_ID!r} in project {GCP_PROJECT!r} is fully indexed."
+        )
+    else:
+        log.info(f"[KB_PREFETCH] Cached {n} docs (datastore {DATASTORE_ID!r})")
 
 
 def _load_cache() -> dict[str, dict]:
@@ -105,6 +121,26 @@ def _load_cache() -> dict[str, dict]:
         return dict(_cache)
 
 
+_ORA_ACRONYM_RE = re.compile(
+    r"\b(IRB|IACUC|IBC|COI|RCR|D[- ]?RED|NCE|F&A|FWA\d{0,12}|UEI|EIN|"
+    r"RACC|PCard|IDC|HHS|NIH|NSF|USDA|OLAW|OHRP|TCP|OVPRED)\b",
+    re.IGNORECASE,
+)
+_ORA_SOP_RE = re.compile(r"\bSOP\s*0*(\d{1,3})\b", re.IGNORECASE)
+
+
+def _extract_entities(query: str) -> list[str]:
+    """Pull ORA-relevant tokens that survive case/spacing and signal a topic strongly.
+    Tokens are returned lowercased; matching is done lowercased against doc text."""
+    out: list[str] = []
+    for m in _ORA_ACRONYM_RE.findall(query):
+        out.append(m.lower().replace(" ", "-"))
+    for n in _ORA_SOP_RE.findall(query):
+        out.append(f"sop {int(n)}")
+        out.append(f"sop{int(n)}")
+    return out
+
+
 def prefetch_kb_context(query: str, top_k: int = 3) -> str:
     """Search cached KB docs with TF-IDF scoring, return formatted context."""
     docs = _load_cache()
@@ -112,8 +148,7 @@ def prefetch_kb_context(query: str, top_k: int = 3) -> str:
         return ""
 
     query_tokens = _tokenize(query)
-    # Entity extraction: course codes like COSC 470
-    entities = [c.replace(" ", " ") for c in re.findall(r"[A-Z]{2,4}\s*\d{3}", query.upper())]
+    entities = _extract_entities(query)
 
     if not query_tokens and not entities:
         return ""
