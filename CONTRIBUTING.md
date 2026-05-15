@@ -1,6 +1,6 @@
 # Contributing to ORA Navigator
 
-ORA Navigator is a research project at Morgan State University's Computer Science Department. We welcome contributions from students, faculty, and the open source community.
+ORA Navigator is an AI assistant for Morgan State University's Office of Research Administration. We welcome contributions from faculty, staff, and the open source community.
 
 ## Getting Started
 
@@ -18,13 +18,13 @@ cp .env.example .env
 # Fill in your API keys and database URL
 
 # Start ADK Agent (Terminal 1)
-cd adk_agent && pip install google-adk && adk web . --port 8080
+cd adk_agent && pip install google-adk && adk web . --port 8081
 
 # Start Backend (Terminal 2)
-cd backend && pip install -r requirements.txt && uvicorn main:app --host 127.0.0.1 --port 5001
+cd backend && pip install -r requirements.txt && uvicorn main:app --host 127.0.0.1 --port 5002
 
 # Start Frontend (Terminal 3)
-cd frontend && npm install && npm run dev -- --port 3000
+cd frontend && npm install && npm run dev -- --port 3001
 ```
 
 ## Branch Strategy
@@ -67,4 +67,4 @@ The backend is FastAPI (Python 3.11). Main entry point is `backend/main.py`.
 ## Questions?
 
 - Open an issue
-- Contact the CS department at compsci@morgan.edu or (443) 885-3962
+- Contact ORA at ask.ora@morgan.edu or (443) 885-4044

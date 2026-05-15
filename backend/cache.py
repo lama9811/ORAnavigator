@@ -51,14 +51,16 @@ MIN_QUERY_LENGTH = 15
 
 # Queries containing these words should NOT be cached (personalized responses)
 NO_CACHE_KEYWORDS = [
-    "my advisor",
-    "my gpa",
-    "my credits",
-    "my courses",
-    "my schedule",
-    "my degree",
+    "my grant",
+    "my proposal",
+    "my protocol",
+    "my irb",
+    "my pi",
+    "my project",
+    "my award",
+    "my budget",
+    "my effort",
     "my name",
-    "my student",
     "i have",
     "i need",
     "i am",

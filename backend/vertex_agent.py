@@ -31,37 +31,12 @@ ADK_BASE_URL = os.getenv("ADK_BASE_URL", "http://127.0.0.1:8080")
 ADK_APP_NAME = os.getenv("ADK_APP_NAME", "ora_navigator_unified")
 
 # ---------------------------------------------------------------------------
-# Procedure Guide Links: maps keywords to Drive doc links.
-# If the agent's response mentions a procedure but omits the Drive link,
-# the post-processor appends it so students always get the source doc.
+# Procedure Guide Links: maps keywords to ORA Drive/SharePoint doc links.
+# If the agent's response mentions a procedure but omits the source link,
+# the post-processor appends it so users always get the official guide.
+# Populate when ORA publishes its procedure-guide URLs (NCE, IRB, COI, etc.).
 # ---------------------------------------------------------------------------
-_PROCEDURE_LINKS = {
-    "academic appeal": ("Academic Appeal Guide", "https://drive.google.com/file/d/13VaJNv3-9nF41y-eVZtvaDXi-mtmkVBE/view"),
-    "change of catalog": ("Change of Catalog Guide", "https://drive.google.com/file/d/1ok9YDZMmll8TLVvB24CRGENDrud3-H7s/view"),
-    "change of major": ("Change of Major Guide", "https://drive.google.com/file/d/1z7vIvSsI3BPIQcOk_enNVymjR94Zq6Hq/view"),
-    "change your major": ("Change of Major Guide", "https://drive.google.com/file/d/1z7vIvSsI3BPIQcOk_enNVymjR94Zq6Hq/view"),
-    "enrollment verification": ("Enrollment Verification Guide", "https://drive.google.com/file/d/17Zqw8TcJSDo-4ImteZGLGbxlGNfGdItR/view"),
-    "degree verification": ("Enrollment/Degree Verification Guide", "https://drive.google.com/file/d/17Zqw8TcJSDo-4ImteZGLGbxlGNfGdItR/view"),
-    "excess credit": ("Excess Credits Guide", "https://drive.google.com/file/d/1oDsY_32JM-xAJFClpCnnvHGILVBSMoHm/view"),
-    "ferpa": ("FERPA Guide", "https://drive.google.com/file/d/1IGdgVnKAh-CudkTQRNgSm6UgXGSTWOV0/view"),
-    "off campus": ("Permission to Take Course Off-Campus Guide", "https://drive.google.com/file/d/1vl5hq6xJT_X4w_xYOyzCMiZKtOJ7A_5K/view"),
-    "off-campus": ("Permission to Take Course Off-Campus Guide", "https://drive.google.com/file/d/1vl5hq6xJT_X4w_xYOyzCMiZKtOJ7A_5K/view"),
-    "personal information update": ("Personal Information Update Guide", "https://drive.google.com/file/d/1KKDuj6XyGxyTtPosl4fcloZIS-0wsdmT/view"),
-    "update your personal": ("Personal Information Update Guide", "https://drive.google.com/file/d/1KKDuj6XyGxyTtPosl4fcloZIS-0wsdmT/view"),
-    "senior citizen tuition": ("Senior Citizen Tuition Waiver Guide", "https://drive.google.com/file/d/1ahCzHUAWESnIHeATKa_eBOvNNhG5aIBb/view"),
-    "time conflict": ("Time Conflict Guide", "https://drive.google.com/file/d/1ka3UrzhH_tmvKbsl2KRwAJO58oEdhInw/view"),
-    "withdrawal": ("Cancellation/Withdrawal Guide", "https://drive.google.com/file/d/1ghXcLsWhYQu2bSdXYi5UWtuv7dt7wuBy/view"),
-    "cancellation": ("Cancellation/Withdrawal Guide", "https://drive.google.com/file/d/1ghXcLsWhYQu2bSdXYi5UWtuv7dt7wuBy/view"),
-    "grade change": ("Grade Changes & Incompletes Guide", "https://drive.google.com/file/d/174ixCMl1kZ1Q7U2RKNknUz-XGd_tMlIn/view"),
-    "incomplete grade": ("Grade Changes & Incompletes Guide", "https://drive.google.com/file/d/174ixCMl1kZ1Q7U2RKNknUz-XGd_tMlIn/view"),
-    "degreeworks substitution": ("Degreeworks Substitution Guide", "https://drive.google.com/file/d/11kWv3UIqp7rpGSWrcYxz6533cq4SE1Xl/view"),
-    "course substitution": ("Degreeworks Substitution Guide", "https://drive.google.com/file/d/11kWv3UIqp7rpGSWrcYxz6533cq4SE1Xl/view"),
-    "proficiency exam": ("Proficiency Exam Guide", "https://drive.google.com/file/d/1r8JXU9w4-Rp1jZr-byJXoJLXPfEwpxTO/view"),
-    "correct a submitted": ("Student Correction Guide", "https://drive.google.com/file/d/1gjyk5iVkQ5qkjY1RkPPrTvgll3mh8U6T/view"),
-    "make a correction": ("Student Correction Guide", "https://drive.google.com/file/d/1gjyk5iVkQ5qkjY1RkPPrTvgll3mh8U6T/view"),
-    "correct a form": ("Student Correction Guide", "https://drive.google.com/file/d/1gjyk5iVkQ5qkjY1RkPPrTvgll3mh8U6T/view"),
-    "corrections to": ("Student Correction Guide", "https://drive.google.com/file/d/1gjyk5iVkQ5qkjY1RkPPrTvgll3mh8U6T/view"),
-}
+_PROCEDURE_LINKS: dict[str, tuple[str, str]] = {}
 
 
 def _inject_procedure_links(response_text: str) -> str:

@@ -27,14 +27,14 @@ import "./Chatbox.css";
 
 // Featured questions that showcase chatbot capabilities
 const FEATURED_QUESTIONS = [
-  "What's the difference between the B.S. in CS and Cloud Computing?",
-  "What are the prerequisites for COSC 220 Data Structures?",
-  "Who is the chair of the CS department and how do I contact them?",
-  "How do I request a course override or substitute a requirement?",
-  "What Group A and Group B electives should I take as a junior?",
-  "Tell me about the 4+1 accelerated B.S./M.S. program",
-  "Where can I get tutoring for intro CS courses like COSC 111?",
-  "What scholarships are available for CS majors at Morgan State?",
+  "What is Morgan State's federal F&A (indirect cost) rate?",
+  "How long does IRB approval typically take and when does the IRB meet?",
+  "What is a No-Cost Extension (NCE) and what's the 60-day deadline?",
+  "What's Morgan State's UEI, EIN, and FWA number?",
+  "Who handles post-award setup and effort reporting?",
+  "How do I disclose a conflict of interest for sponsored research?",
+  "Where do I find IACUC SOPs and animal-use protocols?",
+  "What forms do I need to submit a new grant proposal?",
 ];
 
 import { getApiBase } from "../lib/apiBase";

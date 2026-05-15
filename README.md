@@ -1,58 +1,37 @@
 <h1 align="center">ORA Navigator</h1>
-<p align="center"><strong>AI-Powered Academic Advising for Morgan State University</strong></p>
+<p align="center"><strong>AI Assistant for Morgan State University's Office of Research Administration</strong></p>
 <p align="center">
-  <a href="https://cs.inavigator.ai">Live App</a> |
-  <a href="https://api.inavigator.ai/docs">API Docs</a> |
+  <a href="https://ora.inavigator.ai">Live App</a> |
   <a href="#architecture">Architecture</a> |
-  <a href="#version-history">Version History</a>
+  <a href="#local-development">Local Development</a> |
+  <a href="#deployment">Deployment</a>
 </p>
 <p align="center">
-  <a href="https://github.com/theaayushstha1/ora-navigator/actions"><img src="https://github.com/theaayushstha1/ora-navigator/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/theaayushstha1/ora-navigator/releases/tag/v5.1"><img src="https://img.shields.io/badge/version-5.1-blue" alt="Version"></a>
-  <img src="https://img.shields.io/badge/accuracy-100%25%20(50Q)-brightgreen" alt="Accuracy">
-  <img src="https://img.shields.io/badge/response-3.9s%20avg-brightgreen" alt="Response Time">
   <img src="https://img.shields.io/badge/deploy-Google%20Cloud%20Run-4285F4" alt="Deploy">
   <img src="https://img.shields.io/badge/AI-Google%20ADK%20%2B%20Gemini-orange" alt="AI">
-  <a href="https://github.com/theaayushstha1/ora-navigator/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
+  <img src="https://img.shields.io/badge/KB-Vertex%20AI%20Search-blueviolet" alt="KB">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
 </p>
 
 ---
 
-ORA Navigator is a production AI chatbot serving 800+ CS students at Morgan State University. Students ask questions in plain English and get personalized answers grounded in the department's knowledge base, their DegreeWorks academic record, and Canvas LMS grades.
+ORA Navigator is an AI assistant for Morgan State University's Office of Research Administration (ORA). It serves **faculty, principal investigators, research staff, and department administrators** — not students. Users ask questions about grants, compliance, pre-award, post-award, forms, and ORA staff contacts in plain English and get answers grounded in 382 official documents scraped from `morgan.edu/office-of-research-administration` and its subpages.
 
-Built with Google ADK (Agent Development Kit), Gemini 2.0 Flash, and Vertex AI Search. Uses a novel **Retrieval-Enforced Generation (REG)** pipeline that guarantees KB grounding at three layers: pre-generation context injection, tool-based retrieval, and post-generation verification. Zero hallucinations across 200+ tested queries with 3.9s average response time.
+Built with Google ADK (Agent Development Kit), Gemini 2.5 Flash, and Vertex AI Search. A **Retrieval-Enforced Generation (REG)** pipeline grounds answers at three layers: KB prefetch (TF-IDF), tool-based retrieval (VertexAiSearchTool), and a post-generation grounding gate + staff-name faithfulness check.
 
-Deployed on Google Cloud Run with multi-instance scaling, database-backed session persistence, and a 2-tier caching system.
+Deployed on Google Cloud Run with multi-instance scaling, Cloud SQL session persistence, and a layered cache (L1 in-memory + L2 Redis + L3 semantic).
 
 ---
 
-## Demo
+## What ORA Navigator answers
 
-<p align="center">
-  <img src="docs/screenshots/demo.gif" width="80%" alt="ORA Navigator Demo">
-  <br><em>Ask questions, get personalized answers grounded in university data</em>
-</p>
-
-### Features: Curriculum, My Classes, Grade Surgeon, Ripple Effect
-
-<p align="center">
-  <img src="docs/screenshots/demo-features.gif" width="80%" alt="Features Tour">
-  <br><em>Track degree progress, view grades, analyze course impact</em>
-</p>
-
-### Personalized Advising with DegreeWorks
-
-<p align="center">
-  <img src="docs/screenshots/demo-personal.gif" width="80%" alt="Personalized Chat">
-  <br><em>Agent reads your academic record and gives tailored answers</em>
-</p>
-
-### Admin Dashboard
-
-<p align="center">
-  <img src="docs/screenshots/demo-admin.gif" width="80%" alt="Admin Dashboard">
-  <br><em>Manage knowledge base, users, tickets, research pipeline, system health</em>
-</p>
+| Area | Examples |
+|---|---|
+| **Pre-Award** | F&A and fringe rates · institutional IDs (UEI, EIN, FWA, IRB number) · proposal submission steps · sponsor opportunity databases |
+| **Compliance** | IRB approval timeline + meeting schedule · IACUC SOPs (50 documents) · COI disclosure flow · RCR training · Research Security |
+| **Post-Award** | NCE (No-Cost Extension) 60-day rule · subaward setup · effort reporting (14-day Searchlight) · final reports (90-day) |
+| **Forms & Policies** | PI Handbook policies · 271 forms (PDFs, DocuSign, IACUC SOPs, RACC, D-RED slides) · request templates |
+| **Staff routing** | Function-to-staff lookup · ORA staff directory (14 people) · ask.ora@morgan.edu mailing list |
 
 ---
 
@@ -66,348 +45,155 @@ flowchart TB
     end
 
     subgraph Backend["Backend (FastAPI)"]
-        API[REST API / 86 endpoints]
-        Cache[L1 Memory + L2 Redis]
-        GG[Grounding Gate\nchunks>=2 OR coverage>=30%]
-        FF[Faculty Faithfulness Check]
-        PL[Procedure Link Injection]
+        API[REST API]
+        Cache[L1 in-memory + L2 Redis + L3 semantic]
+        GG[Grounding Gate]
+        FF[Staff-name Faithfulness Check]
     end
 
-    subgraph ADK["ADK Agent (Cloud Run)"]
-        PF[KB Prefetch\nREG Layer 1]
-        Agent[Gemini 2.0 Flash]
-        VAS[VertexAiSearchTool\nREG Layer 2]
-        KB[(Knowledge Base\n71 JSON docs)]
-        SDB[(Session DB\nRDS MySQL)]
+    subgraph ADK["ADK Agent (Cloud Run, private)"]
+        PF[KB Prefetch / REG Layer 1]
+        Agent[Gemini 2.5 Flash]
+        VAS[VertexAiSearchTool / REG Layer 2]
+        KB[(Vertex AI Search<br/>382 docs)]
     end
 
-    subgraph Data["Data Layer"]
-        RDS[(AWS RDS MySQL)]
-        Redis[(Redis Cloud)]
-        Canvas[Canvas LMS]
-        DW[DegreeWorks]
+    subgraph Data["Persistent state"]
+        DB[(Cloud SQL MySQL 8.4<br/>users, sessions, tickets)]
+        Secrets[Secret Manager]
     end
 
-    UI -->|HTTPS| API
-    API -->|Check| Cache
-    Cache -->|Miss| PF
-    PF -->|Inject top 3 docs| Agent
-    Agent -->|Search| VAS
+    UI --> API
+    API --> Cache
+    Cache --> ADK
+    PF --> Agent
+    Agent --> VAS
     VAS --> KB
-    Agent -->|Response| GG
+    Agent --> API
+    API --> GG
     GG --> FF
-    FF --> PL
-    PL -->|Answer| UI
-    Agent -->|Sessions| SDB
-    API -->|Fetch| RDS
-    API -->|Lazy| Canvas
-    API -->|Sync| DW
-
-    style Client fill:#e3f2fd,stroke:#1565c0
-    style Backend fill:#e8f5e9,stroke:#2e7d32
-    style ADK fill:#fff3e0,stroke:#e65100
-    style Data fill:#fce4ec,stroke:#c62828
+    FF --> UI
+    API --> DB
+    Backend --> Secrets
 ```
 
-### Retrieval-Enforced Generation (REG) Pipeline
+### Three services on Cloud Run
 
-Unlike standard RAG where the LLM optionally calls a retrieval tool, REG enforces KB grounding at every stage:
+| Service | URL | Auth | Purpose |
+|---|---|---|---|
+| Frontend | `oranavigator-frontend` | public | React UI behind nginx, served at https://ora.inavigator.ai |
+| Backend | `oranavigator-backend` | public | FastAPI: auth, sessions, chat orchestration, admin |
+| ADK Agent | `oranavigator-adk` | private (backend → ADK only) | Google ADK + Gemini + KB tool |
 
-```mermaid
-flowchart LR
-    Q[Student Question] --> L1[REG Layer 1\nKB Prefetch]
-    L1 -->|Inject top 3 docs\ninto system instruction| L2[REG Layer 2\nVertexAiSearchTool]
-    L2 -->|Agent searches KB\nduring generation| L3[REG Layer 3\nGrounding Gate]
-    L3 -->|Verify chunks>=2\nOR coverage>=30%| R[Grounded Answer]
+### GCP resources (project `infra-vertex-494621-v1`)
 
-    style L1 fill:#e3f2fd,stroke:#1565c0
-    style L2 fill:#fff3e0,stroke:#e65100
-    style L3 fill:#e8f5e9,stroke:#2e7d32
-```
-
-**Layer 1 (Pre-Generation):** `kb_prefetch.py` searches 71 cached KB docs with TF-IDF scoring in <5ms and injects the top 3 matches into the system instruction via ADK's `before_model_callback`. Even if Gemini skips the search tool, the relevant docs are already in the prompt.
-
-**Layer 2 (During Generation):** The agent has `VertexAiSearchTool` to search the KB. This is standard RAG.
-
-**Layer 3 (Post-Generation):** Grounding gate checks if the response is backed by KB evidence (requires 2+ source chunks or 30% coverage). Faculty faithfulness check catches hallucinated professor names. Procedure link injection appends Google Drive guide URLs.
-
-### Caching Flow
-
-```mermaid
-flowchart LR
-    Q[Student Query] --> L1{L1: In-Memory}
-    L1 -->|HIT ~0.001ms| R[Response]
-    L1 -->|MISS| L2{L2: Redis Cloud}
-    L2 -->|HIT ~2ms| R
-    L2 -->|MISS| Agent[ADK Agent\n~3-5s]
-    Agent --> R
-    Agent -.->|Store| L1
-    Agent -.->|Store 8hr| L2
-
-    style L1 fill:#e8f5e9,stroke:#2e7d32
-    style L2 fill:#e3f2fd,stroke:#1565c0
-    style Agent fill:#fce4ec,stroke:#c62828
-```
-
-L3 semantic cache uses Google text-embedding-004 with 0.95 cosine threshold. Catches rephrased versions of the same question (e.g., "where is the CS dept" matches "CS department location") and saves a full 4-second Gemini call.
-
-### Self-Healing Research Pipeline
-
-```mermaid
-flowchart LR
-    Chat[Student Chat] --> Detect{Failed Query\nDetector}
-    Detect -->|0 KB Chunks| Log[Log to DB]
-    Log --> Cluster[Cluster Similar\nFailures]
-    Cluster --> Research[Gemini + Google\nSearch Overnight]
-    Research --> Suggest[KB Addition\nSuggestion]
-    Suggest --> Admin[Admin Reviews\nin Dashboard]
-    Admin -->|Approve| KB[Knowledge Base\nUpdated]
-
-    style Detect fill:#ffebee,stroke:#c62828
-    style Research fill:#e3f2fd,stroke:#1565c0
-    style KB fill:#e8f5e9,stroke:#2e7d32
-```
-
-### Follow-Up Resolution
-
-```mermaid
-flowchart TD
-    FQ[Follow-up Question] --> L0{Layer 0: Regex Override}
-    L0 -->|go back to X, switch to X| Resolved[Rewritten Query]
-    L0 -->|No Match| Check{Has Own Entities?}
-    Check -->|calc, COSC 320| Skip[Skip to Agent]
-    Check -->|No Clear Entity| L1{Layer 1: Entity Focus}
-    L1 -->|Pronoun Replaced| Resolved
-    L1 -->|Cannot Resolve| L2{Layer 2: Gemini LLM}
-    L2 -->|Confident Rewrite| Resolved
-    L2 -->|Unsure| Pass[Pass Original to Agent]
-    Resolved --> Agent[ADK Agent]
-    Skip --> Agent
-    Pass --> Agent
-
-    style L0 fill:#e8f5e9,stroke:#2e7d32
-    style L1 fill:#e3f2fd,stroke:#1565c0
-    style L2 fill:#fff3e0,stroke:#e65100
-```
+- **Cloud SQL**: `oranavigator-db` (db-g1-small, us-central1, public IP `34.173.108.181`)
+- **Vertex AI Search datastore**: `oranavigator-kb-local` (location `us`, 382 docs)
+- **Service account**: `oranavigator-backend@infra-vertex-494621-v1.iam.gserviceaccount.com`
+- **Artifact Registry**: `oranavigator` Docker repo in us-central1
+- **Secret Manager**: `ora-database-url`, `ora-jwt-secret`, `ora-admin-email`, `ora-admin-password`
+- **Domain**: `ora.inavigator.ai` → `oranavigator-frontend` (managed cert)
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Frontend** | React 19, Vite, TailwindCSS | PWA support, SSE streaming, fast builds |
-| **Backend** | FastAPI (Python 3.12) | Async, 86 endpoints, modular routers |
-| **AI Agent** | Google ADK + Gemini 2.0 Flash | Fastest model, highest rate limits, 100% accuracy |
-| **REG Layer 1** | KB Prefetch (TF-IDF, <5ms) | Pre-injects top 3 KB docs into prompt via `before_model_callback` |
-| **REG Layer 2** | Vertex AI Search (71 docs) | Agent's built-in VertexAiSearchTool with grounding metadata |
-| **REG Layer 3** | Grounding Gate + Faithfulness | Post-generation: coverage check, faculty name validation, link injection |
-| **Database** | AWS RDS MySQL | Users, chat history, DegreeWorks, Canvas, ADK sessions |
-| **Cache** | L1 In-Memory + L2 Redis + L3 Semantic | 3-tier: exact match (L1+L2) + embedding similarity at 0.95 (L3) |
-| **Testing** | Promptfoo (52 tests) | Backend pipeline tests + CI gate at 90% threshold |
-| **Deployment** | Google Cloud Run (3 services) | Auto-scaling, min-instances=2, DatabaseSessionService |
-
----
-
-## Key Features
-
-| Feature | How It Works |
-|---------|-------------|
-| **REG Pipeline** | Retrieval-Enforced Generation: 3-layer grounding (prefetch + tool search + verification). Unlike RAG where retrieval is optional, REG guarantees KB context at every stage. Addresses the parametric memory dominance problem (ReDeEP, 2025). |
-| **Grounding Gate** | Coverage-based quality check: requires chunks>=2 OR coverage>=30%. Faculty faithfulness check catches hallucinated professor names. Procedure link injection appends Google Drive guide URLs. |
-| **3-Layer Follow-Up Resolver** | Layer 0: regex override detection ("go back to X"). Layer 1: deterministic entity focus from last Q&A. Layer 2: Gemini LLM fallback. Prevents context bleed between topics. |
-| **Course Context Engine** | Pre-computes prereqs, schedules, faculty cards on the backend and injects into agent session state. Workaround for Gemini API limitation that blocks mixing search + function tools. |
-| **Self-Healing Research Pipeline** | Detects failed queries, clusters them with embeddings, researches corrections using Gemini + Google Search, suggests KB additions. Runs overnight via cron. |
-| **DatabaseSessionService** | ADK sessions stored in shared RDS instead of in-memory per instance. Eliminates 404 errors during scaling and deploys. 24-hour session TTL for all-day conversation continuity. |
-| **Canvas LMS Integration** | Pulls grades, assignments, deadlines via Canvas REST API. Lazy-loads only when query mentions grades/assignments. |
-| **DegreeWorks Integration** | Parses academic records via PDF upload or Banner auto-sync. Injects GPA, completed courses, remaining requirements into agent context. |
-| **Red Team Hardened** | 43-category Promptfoo security audit. 9 agent-level security rules blocking jailbreaks, role-play, calibration framing, and self-disclosure attacks. |
-| **Guest Mode** | 15-minute free trial. Personal queries (GPA, grades) intercepted and redirected to signup. No fabricated data. |
-| **3-Tier Caching** | L1 in-memory (instant) + L2 Redis (8hr TTL) + L3 semantic embedding (0.95 cosine, catches rephrased questions). Greeting and meta fast-paths skip the agent entirely. |
-| **Model Selection** | ChatGPT-style dropdown: iNav (fast, Gemini 2.0 Flash) and iNav Pro (deeper thinking, Gemini 2.5 Flash). Benchmarked 7 models across accuracy and latency. |
-
----
-
-## Design Decisions
-
-| Decision | Alternatives Considered | Why This Approach |
-|----------|------------------------|-------------------|
-| **Single unified agent** (v4+) | 8-specialist multi-agent (v3) | 3x faster response time. Multi-agent had routing overhead and inconsistent handoffs. |
-| **Backend pre-computation** over agent tools | FunctionTool in ADK | Gemini API blocks mixing VertexAiSearchTool with FunctionTool. Pre-compute on backend, inject via session state. |
-| **DatabaseSessionService** over in-memory | Session affinity cookies | Affinity is best-effort only. Breaks on deploys, scale-in, instance recycling. DB sessions survive everything. |
-| **Grounding gate** over coverage metric | Vertex AI Search coverage score | Coverage always returns 100% (useless). Chunk count is the reliable signal. |
-| **24-hour session TTL** | 30 minutes | Students leave for class and come back hours later. DW data changes weekly at most. Context hash forces refresh on data changes anyway. |
-| **Query rewriter skips clear entities** | Always apply previous turn's focus | Prevented context bleed (Dean's List answer bleeding into calc grade question). |
-
----
-
-## Performance
-
-Results from production benchmark (50 authenticated queries, April 9 2026):
-
-| Metric | Value |
-|--------|-------|
-| **Pass Rate** | 100% (50/50) |
-| **Hallucinations** | 0 |
-| **Avg Response Time** | 3.9s |
-| **Median Response** | 4.0s |
-| **Min Response** | 2.4s |
-| **Max Response** | 6.4s |
-| **Drive Links** | 7/50 (all procedure questions) |
-
-| Category | Pass | Total | Avg Time |
-|----------|------|-------|----------|
-| Courses & Prerequisites | 10 | 10 | 3.8s |
-| Schedules | 5 | 5 | 4.3s |
-| Faculty & Department | 8 | 8 | 4.2s |
-| Degree Requirements | 5 | 5 | 3.6s |
-| Programs & Tracks | 4 | 4 | 4.7s |
-| Financial Aid | 6 | 6 | 2.9s |
-| Procedures (with Drive links) | 7 | 7 | 3.5s |
-| Campus Resources | 3 | 3 | 4.2s |
-| Career | 2 | 2 | 2.9s |
-
-### Accuracy Evolution
-
-| Version | Pass Rate | Avg Response | Hallucinations | Instruction Size |
-|---------|-----------|-------------|----------------|-----------------|
-| v4.0 | 39% | 12s | Frequent | 8,000 chars |
-| v5.0 | 95.4% | 6.1s | Rare | 14,090 chars |
-| **v5.1 (REG)** | **100%** | **3.9s** | **Zero** | **3,903 chars** |
-
----
-
-## Version History
-
-| Version | Branch Tag | Key Changes |
-|---------|-----------|-------------|
-| **v5.1** | `dev` | REG pipeline (kb_prefetch + grounding gate + faithfulness check), instruction compression (14K to 3.9K chars), 16 accuracy fixes, model benchmarking (7 models), DB sessions via aiomysql, promptfoo CI gate, router pattern, model selector UI |
-| **v5.0** | `main` | DatabaseSessionService, grounding gate, 3-layer resolver, course context engine, Canvas integration, 43-category red team audit, guest fake data removal |
-| **v4.3** | `v4.3-research` | Auth system (email verification, password reset), auto-research pipeline, structured KB v7 |
-| **v4.0** | `v4.0-accuracy` | Agent accuracy fix (39% to 100%), semantic caching, fresh session strategy |
-| **v3.0** | `v3.0-multi-agent` | 8-specialist multi-agent architecture, Promptfoo security tests |
-| **v2.2** | `v2.2-caching` | Multi-tier Redis caching, SSE streaming |
-| **v2.0** | `v2.0-adk` | Google ADK migration, replaced RAG pipeline |
-| **v1.0** | `v1.0-rag` | Original RAG with Pinecone + OpenAI GPT-3.5 |
-
-All previous versions are accessible via git tags: `git checkout v3.0-multi-agent`
+- **Frontend**: React 19, Vite, react-router, react-icons, PWA (Vite-PWA)
+- **Backend**: FastAPI, SQLAlchemy, bcrypt, JWT auth, cachetools (L1), redis-py (L2), text-embedding-004 cosine (L3)
+- **AI Agent**: Google ADK, Gemini 2.5 Flash, Vertex AI Search
+- **Database**: Cloud SQL MySQL 8.4 (TCP+SSL locally, unix socket via Cloud SQL Auth Proxy in Cloud Run)
+- **Deployment**: Cloud Run, Cloud Build, Artifact Registry, Secret Manager
+- **CI/CD**: GitHub Actions (lint, test, health-check; deploys via `deploy-cloudrun.sh`)
 
 ---
 
 ## Local Development
 
 ```bash
-# Clone
-git clone https://github.com/theaayushstha1/cs-chatbot-morganstate.git
-cd cs-chatbot-morganstate
+# 0. Install Python deps in venv, npm deps in frontend
+python -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+(cd frontend && npm install)
 
-# Copy and fill environment variables
-cp .env.example .env
+# 1. ADK Agent on port 8081
+cd adk_agent && adk web . --port 8081
 
-# Start ADK Agent (port 8080)
-cd adk_agent && pip install google-adk && adk web . --port 8080
+# 2. Backend on port 5002
+cd backend && uvicorn main:app --host 127.0.0.1 --port 5002
 
-# Start Backend (port 5001)
-cd backend && pip install -r requirements.txt && uvicorn main:app --host 127.0.0.1 --port 5001
-
-# Start Frontend (port 3000)
-cd frontend && npm install && npm run dev -- --port 3000
+# 3. Frontend on port 3001
+cd frontend && npm run dev -- --port 3001
 ```
+
+Copy `.env.example` to `.env` and fill in `DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLOUD_PROJECT`. See `STARTUP.md` for short version.
+
+Cloud SQL local connection requires your laptop's public IP in the authorized networks list:
+
+```bash
+gcloud sql instances patch oranavigator-db \
+  --authorized-networks=<your-ip>/32 \
+  --project=infra-vertex-494621-v1
+```
+
+---
+
+## Knowledge Base
+
+The KB lives at `backend/kb_structured/` as 382 JSON files plus a master `_all_documents.jsonl` index. Files are organized by ORA function:
+
+| Folder | Docs | Purpose |
+|---|---:|---|
+| `_generated_forms/` | 271 | PDFs, DocuSign, IACUC SOPs, RACC, D-RED, faculty seminars, templates |
+| `_generated_compliance/` | 23 | IRB (incl. meeting schedule + voting roster), IACUC, COI, RCR, Research Security |
+| `_generated_policies/` | 21 | PI Handbook Section 5 (overview + 20 numbered policies) |
+| `_generated_opportunities/` | 15 | Funding databases + sponsor categories |
+| `_generated_staff/` | 14 | Staff directory + roles |
+| `_generated_pre_award/` | 13 | F&A rates, fringe rates, UEI/EIN/IRB/FWA, proposal steps |
+| `_generated_trainings/` | 8 | eTraining, faculty seminars, monthly D-RED, workshops, RACC |
+| `_generated_post_award/` | 6 | Setup, NCE, subawards, reporting, forms index |
+| `_generated_about/` | 4 | Office overview |
+| `_generated_announcements/` | 3 | Compliance leadership transition, Common Forms |
+| `_generated_resources/` | 3 | PI handbooks, templates |
+| `_generated_service_areas/` | 1 | Function-to-staff routing |
+| **Total** | **382** | of which 249 are Playwright-verified |
+
+The 382 JSON files are uploaded to a Vertex AI Search datastore (`oranavigator-kb-local`). The ADK agent queries the datastore at runtime via `VertexAiSearchTool` — it does not read the local files.
 
 ---
 
 ## Deployment
 
-Three services on Google Cloud Run:
+Cloud Run deploy is handled by `deploy-cloudrun.sh`:
 
 ```bash
-# 1. ADK Agent
-gcloud run deploy oranavigator-adk --source=./adk_agent \
-  --region=us-central1 --memory=2Gi --cpu=2 --min-instances=2
+# Full setup (first time): IAM, secrets, Artifact Registry
+./deploy-cloudrun.sh setup
 
-# 2. Backend API
-gcloud run deploy oranavigator-backend --source=./backend \
-  --region=us-central1 --memory=1Gi --cpu=1 --min-instances=2
-
-# 3. Frontend
-gcloud run deploy oranavigator-frontend --source=./frontend \
-  --region=us-central1 --memory=512Mi --cpu=1 --min-instances=1
+# Deploy all 3 services
+./deploy-cloudrun.sh
 ```
+
+Domain `ora.inavigator.ai` is mapped to `oranavigator-frontend` via Cloud Run domain mapping with a managed TLS cert.
+
+CI (`.github/workflows/ci.yml`) runs on every push: lint, tests, health-check against the live backend and frontend. CI does not auto-deploy.
 
 ---
 
-## Project Structure
+## Security
 
-```
-cs-chatbot-morganstate/
-  frontend/                     React 19 + Vite SPA
-    src/components/             Chat, Sidebar, Profile, Admin, Curriculum
-    public/                     Static assets (WebP optimized)
-    Dockerfile                  Cloud Run container
+See `SECURITY.md`. Highlights:
 
-  backend/                      FastAPI (Python 3.12)
-    main.py                     API server (86 endpoints)
-    vertex_agent.py             ADK client, grounding gate, faithfulness check
-    cache.py                    L1 + L2 caching (semantic L3 available)
-    deps.py                     Shared dependencies (auth, models)
-    routers/auth.py             Auth endpoints (router pattern)
-    research_agent.py           Self-healing failed query pipeline
-    services/
-      course_context.py         Prereq, schedule, faculty pre-computation
-      query_rewriter.py         Follow-up resolver (regex + gated LLM)
-      context_builders.py       DW + Canvas context injection
-      retrieval_gate.py         Pre-agent KB search (admin utility)
-      verification_gate.py      Post-agent claim verification (admin utility)
-      fast_retrieval.py         In-memory TF-IDF search (admin utility)
-      hybrid_retrieval.py       Pinecone + Vertex AI RRF (admin utility)
-    kb_structured/              71 JSON knowledge base documents
-    legacy_rag/                 Archived Pinecone-era scripts (v1.0-v2.0)
-    Dockerfile                  Cloud Run container
-
-  adk_agent/                    Google ADK Agent
-    ora_navigator_unified/
-      agent.py                  Agent definition, REG Layer 1 callback
-      kb_prefetch.py            In-memory TF-IDF KB prefetch (<5ms)
-      promptfooconfig.yaml      52 regression tests
-      backend_provider.py       Promptfoo provider for full pipeline
-      run_tests.sh              CI gate script (90% threshold)
-    Dockerfile                  Cloud Run + DatabaseSessionService
-
-  docs/                         Documentation and evidence
-  deploy-cloudrun.sh            Deployment script
-```
-
----
-
-## Team
-
-Built under the guidance of **Dr. Shuangbao "Paul" Wang**, Professor and Chair of Computer Science at Morgan State University.
-
-| Name | Role |
-|------|------|
-| **Aayush Shrestha** | Lead Developer. ADK agent architecture, backend systems, Canvas/DegreeWorks integration, caching, security hardening, Cloud Run deployment. |
-| **Sakina Shrestha** | Developer. RAG pipeline (v1.0), agent contributions, frontend development. |
-| **Dr. Shuangbao "Paul" Wang** | Faculty Advisor. Research direction, department coordination, testing oversight. |
-
-## Contributing
-
-To contribute:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
+- JWT tokens with bcrypt password hashing
+- `.morgan.edu` email domain restriction at signup (auth router enforces)
+- Email verification flow
+- Grounding gate prevents hallucinated KB facts
+- Staff-name faithfulness check appends a disclaimer if the model invents an ORA staff name not on the authoritative list
+- CORS restricted to known origins, file upload validation, rate limiting on guest chat and registration
 
 ---
 
 ## License
 
-MIT License. See [LICENSE](./LICENSE) for details.
+MIT — see `LICENSE`.
 
----
-
-<p align="center">
-  Built at Morgan State University | Department of Computer Science
-  <br>
-  <a href="https://cs.inavigator.ai">cs.inavigator.ai</a>
-</p>
+ORA Navigator was forked from [CS Navigator](https://github.com/lama9811/cs-navigator) on 2026-05-12. The CS Navigator codebase (academic advising for Computer Science students) is maintained independently.

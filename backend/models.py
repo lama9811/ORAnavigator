@@ -40,7 +40,7 @@ class User(Base):
     #  Profile fields
     name = Column(String(255), nullable=True)
     student_id = Column(String(50), nullable=True)
-    major = Column(String(100), nullable=True, default="Computer Science")
+    major = Column(String(100), nullable=True)
     profile_picture = Column(String(500), nullable=True, default="/user_icon.jpg")
     profile_picture_data = Column(Text, nullable=True)  # Store base64 image data
     morgan_connected = Column(Boolean, nullable=False, default=False)

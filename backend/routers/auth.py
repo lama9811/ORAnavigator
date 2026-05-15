@@ -87,7 +87,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     user.verification_token = None
     db.commit()
     # Redirect to login with success flag
-    app_url = os.getenv("APP_URL", "https://cs.inavigator.ai")
+    app_url = os.getenv("APP_URL", "https://ora.inavigator.ai")
     return RedirectResponse(url=f"{app_url}/login?verified=true")
 
 

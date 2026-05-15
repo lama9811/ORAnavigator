@@ -129,18 +129,17 @@ _THANKS_RE = re.compile(
 )
 
 _GREETING_RESPONSE = (
-    "Hey! I'm ORA Navigator, a chatbot for Computer Science students "
-    "at Morgan State University. I can help answer questions about:\n\n"
-    "- **Courses, prerequisites & schedules**\n"
-    "- **Degree requirements & registration**\n"
-    "- **Faculty & department info**\n"
-    "- **Financial aid & campus resources**\n\n"
+    "Hey! I'm ORA Navigator, the assistant for Morgan State University's "
+    "Office of Research Administration. I can help answer questions about:\n\n"
+    "- **Pre-award**: proposal submission, F&A rates, fringe rates, institutional IDs\n"
+    "- **Compliance**: IRB, IACUC, COI, RCR, Research Security\n"
+    "- **Post-award**: setup, NCEs, subawards, effort reporting, closeout\n"
+    "- **Forms, policies & ORA staff contacts**\n\n"
     "What can I help you with?"
 )
 
 _THANKS_RESPONSE = (
-    "You're welcome! Feel free to ask if you need anything else. Good luck! "
-    "Go Bears!"
+    "You're welcome! Feel free to ask if you need anything else. Go Bears!"
 )
 
 # Meta questions about the app itself - handled deterministically to avoid
@@ -151,9 +150,9 @@ _META_RE = re.compile(
     re.IGNORECASE,
 )
 _META_RESPONSE = (
-    "ORA Navigator was developed by Morgan State University students for students "
-    "in the Computer Science Department. You can access it at "
-    "[cs.inavigator.ai](https://cs.inavigator.ai/)."
+    "ORA Navigator was developed for Morgan State University's Office of "
+    "Research Administration. You can access it at "
+    "[ora.inavigator.ai](https://ora.inavigator.ai/)."
 )
 
 
@@ -268,17 +267,13 @@ def _sanitize_student_data(raw: str, max_length: int = 8000) -> str:
 _UI_FEATURES = """
 YOUR UI FEATURES:
 - **Chat** (main page): AI chat with file upload and voice input
-- **My Classes**: Current Canvas LMS courses and grades (requires Canvas sync)
-- **Curriculum**: Interactive degree progress tracker (completed, in-progress, remaining)
-- **Grade Surgeon**: Calculates grades needed on remaining assignments to hit a target
-- **Ripple Effect**: Shows how a grade change in one course affects overall GPA
-- **Profile**: Account management, DegreeWorks sync, password change
+- **Profile**: Account management (full name, email), password change
 - **Contact Support**: Bug reports and feature requests
-- **Dark Mode / Install App**: Toggle dark theme. Install App is for a future mobile app in progress. ORA Navigator is currently a web app at cs.inavigator.ai.
+- **Dark Mode**: Toggle dark theme. ORA Navigator is a web app at ora.inavigator.ai.
 """
 
 _UI_KEYWORDS_RE = re.compile(
-    r'button|navigation|feature|menu|dark\s*mode|install|profile|grade\s*surgeon|ripple|curriculum|sidebar|ui|interface|app.*look|how.*use|where.*find',
+    r'button|navigation|feature|menu|dark\s*mode|profile|sidebar|ui|interface|app.*look|how.*use|where.*find',
     re.IGNORECASE,
 )
 
@@ -347,15 +342,15 @@ def _build_instruction(ctx):
 # =============================================================================
 # UNIFIED INSTRUCTION
 # =============================================================================
-BASE_INSTRUCTION = """You are ORA Navigator, a chatbot for Computer Science students at Morgan State University. You answer questions about courses, registration, faculty, financial aid, and campus resources using a knowledge base. You are NOT an academic advisor. When students need personalized advising, direct them to their advisor.
+BASE_INSTRUCTION = """You are ORA Navigator, the assistant for Morgan State University's Office of Research Administration (ORA). Your audience is faculty, principal investigators (PIs), research staff, and department administrators — NOT students. You answer questions about pre-award, post-award, compliance (IRB / IACUC / COI / RCR / Research Security), forms, policies, and ORA staff contacts using a knowledge base. When the user needs specific case guidance, direct them to the relevant ORA staff member.
 
-When students ask "who made this app" or similar, say: developed by Morgan State University students for the CS Department. Link: [cs.inavigator.ai](https://cs.inavigator.ai/). You ARE a web application; never say "I don't have an app."
+When users ask "who made this app" or similar, say: developed for Morgan State University's Office of Research Administration. Link: [ora.inavigator.ai](https://ora.inavigator.ai/). You ARE a web application; never say "I don't have an app."
 
 ## GROUNDING RULES
 1. Search the knowledge base on EVERY question. No exceptions.
 2. NEVER use training data for Morgan State facts. Your training data is outdated. Trust ONLY the KB.
 3. NEVER fabricate names, emails, phones, course codes, rooms, or any specifics. If not in KB results, it does not exist as far as you know.
-4. When KB returns no or incomplete results: "Based on the information I have access to, [what you found]. For more details, contact the CS department at (443) 885-3962 or compsci@morgan.edu."
+4. When KB returns no or incomplete results: "Based on the information I have access to, [what you found]. For more details, contact ORA at (443) 885-4044 or ask.ora@morgan.edu."
 
 ## RESPONSE FORMAT
 - Concise, direct. Bullets and headers for readability. **Bold** key info.
@@ -454,7 +449,7 @@ ALWAYS search KB first for any topic below.
 
 ## PRECISION
 - Only list items returned by KB search. Never add from training data.
-- Never speculate. If not in KB: say so + provide (443) 885-3962 / compsci@morgan.edu.
+- Never speculate. If not in KB: say so + provide (443) 885-4044 / ask.ora@morgan.edu.
 - Use full conversation history for follow-ups. Clarify only when truly ambiguous."""
 
 
@@ -462,11 +457,11 @@ ALWAYS search KB first for any topic below.
 # THE SINGLE UNIFIED AGENT
 # =============================================================================
 root_agent = LlmAgent(
-    name='CS_Navigator',
+    name='ORA_Navigator',
     model=AGENT_MODEL,
     description=(
-        'AI assistant for Morgan State University CS students. Handles academic advising, '
-        'course recommendations, career guidance, financial aid, and general department questions.'
+        'AI assistant for Morgan State University Office of Research Administration. Handles '
+        'pre-award, post-award, compliance (IRB/IACUC/COI), forms, policies, and staff lookup.'
     ),
     instruction=_build_instruction,
     tools=[] if os.getenv('DISABLE_KB_TOOL') else [unified_kb],

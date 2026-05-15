@@ -17,8 +17,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       manifest: {
         name: 'ORA Navigator',
-        short_name: 'CSNav',
-        description: 'AI-powered academic advising for Morgan State CS',
+        short_name: 'ORA',
+        description: 'AI assistant for Morgan State Office of Research Administration',
         theme_color: '#4285F4',
         background_color: '#ffffff',
         display: 'standalone',

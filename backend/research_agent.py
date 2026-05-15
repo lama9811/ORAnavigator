@@ -226,23 +226,23 @@ def research_topic(representative_query: str, all_queries: list[str]) -> dict:
 
     queries_text = "\n".join(f"- {q}" for q in all_queries[:5])
 
-    prompt = f"""You are a research assistant for Morgan State University's Computer Science department.
+    prompt = f"""You are a research assistant for Morgan State University's Office of Research Administration (ORA).
 
-Students asked these questions that our chatbot couldn't answer:
+Users asked these questions that our chatbot couldn't answer:
 {queries_text}
 
 The core question is: {representative_query}
 
 RESEARCH TASK:
-1. Search for the answer on Morgan State University's official website (morgan.edu), especially the Computer Science department pages.
-2. Focus on: morgan.edu/office-of-research-administration, morgan.edu/office-of-research-administration, and related university pages.
-3. Find specific, factual information: names, dates, locations, phone numbers, URLs, policies, hours.
+1. Search for the answer on Morgan State University's official website (morgan.edu), especially the Office of Research Administration pages.
+2. Focus on: morgan.edu/office-of-research-administration and its subpages (pre-award, post-award, research-compliance, irb, iacuc, conflict-of-interest, research-security, forms, trainings).
+3. Find specific, factual information: names, dates, locations, phone numbers, URLs, policies, deadlines, SOP numbers, form IDs.
 4. Cross-reference multiple pages if possible to ensure accuracy.
 5. If you find conflicting information, note it.
 
 OUTPUT FORMAT (return ONLY valid JSON, no markdown fences):
 {{
-  "topic": "short topic label (e.g., CS Tutoring Lab Hours)",
+  "topic": "short topic label (e.g., IRB Meeting Schedule, F&A Rate, NCE Deadline)",
   "answer": "the factual answer you found (2-4 paragraphs with specific details)",
   "sources": ["url1", "url2"],
   "confidence": "high or medium or low",

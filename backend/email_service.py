@@ -19,7 +19,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER or "noreply@inavigator.ai")
-APP_URL = os.getenv("APP_URL", "https://cs.inavigator.ai")
+APP_URL = os.getenv("APP_URL", "https://ora.inavigator.ai")
 API_URL = os.getenv("API_URL", "https://api.inavigator.ai")
 
 

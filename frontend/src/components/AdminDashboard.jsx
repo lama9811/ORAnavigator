@@ -31,8 +31,6 @@ import { FaCalendarPlus } from "@react-icons/all-files/fa/FaCalendarPlus";
 import { FaLink } from "@react-icons/all-files/fa/FaLink";
 import { FaMicrophone } from "@react-icons/all-files/fa/FaMicrophone";
 import { FaStop } from "@react-icons/all-files/fa/FaStop";
-import { FaFileAlt } from "@react-icons/all-files/fa/FaFileAlt";
-import { FaRoad } from "@react-icons/all-files/fa/FaRoad";
 import { FaRobot } from "@react-icons/all-files/fa/FaRobot";
 import { FaThumbsUp } from "@react-icons/all-files/fa/FaThumbsUp";
 import { FaThumbsDown } from "@react-icons/all-files/fa/FaThumbsDown";
@@ -40,7 +38,6 @@ import { FaFlag } from "@react-icons/all-files/fa/FaFlag";
 import { FaSmile } from "@react-icons/all-files/fa/FaSmile";
 import { FaCloudUploadAlt } from "@react-icons/all-files/fa/FaCloudUploadAlt";
 import { FaTachometerAlt } from "@react-icons/all-files/fa/FaTachometerAlt";
-import DocumentationViewer from "./DocumentationViewer";
 import "./AdminDashboard.css";
 
 import { getApiBase } from "../lib/apiBase";
@@ -165,8 +162,6 @@ export default function AdminDashboard() {
   const [cacheClearing, setCacheClearing] = useState(false);
 
   // Documentation Viewer State
-  const [showDocViewer, setShowDocViewer] = useState(false);
-  const [docViewerMode, setDocViewerMode] = useState("docs"); // "docs" or "roadmap"
 
   // Feedback State
   const [feedbackData, setFeedbackData] = useState([]);
@@ -2167,41 +2162,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Admin Footer with Documentation Icons */}
-      <div className="admin-footer">
-        <button
-          className="footer-icon-btn"
-          onClick={() => { setDocViewerMode("technical"); setShowDocViewer(true); }}
-          title="View Technical Documentation"
-        >
-          <FaFileAlt size={20} />
-          <span>Docs</span>
-        </button>
-        <button
-          className="footer-icon-btn"
-          onClick={() => { setDocViewerMode("roadmap"); setShowDocViewer(true); }}
-          title="View Development Roadmap"
-        >
-          <FaRoad size={20} />
-          <span>Roadmap</span>
-        </button>
-        <button
-          className="footer-icon-btn agents"
-          onClick={() => { setDocViewerMode("agents"); setShowDocViewer(true); }}
-          title="View AI Agents Plan"
-        >
-          <FaRobot size={20} />
-          <span>AI Agents</span>
-        </button>
-      </div>
-
-      {/* Documentation Viewer Modal */}
-      <DocumentationViewer
-        isOpen={showDocViewer}
-        onClose={() => setShowDocViewer(false)}
-        darkMode={true}
-        mode={docViewerMode}
-      />
     </div>
   );
 }

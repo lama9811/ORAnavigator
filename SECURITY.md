@@ -6,7 +6,7 @@ If you discover a security vulnerability in ORA Navigator, please report it resp
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, email: **compsci@morgan.edu** with the subject line "ORA Navigator Security Report"
+Instead, email: **ask.ora@morgan.edu** with the subject line "ORA Navigator Security Report"
 
 Include:
 - Description of the vulnerability
@@ -37,9 +37,7 @@ ORA Navigator implements the following security measures:
 - Grounding gate catches hallucinations via KB chunk validation
 
 ### Data Protection
-- No student credentials stored (FERPA compliant)
-- DegreeWorks and Canvas data synced transiently, never cached with passwords
-- Self-reported vs verified data clearly labeled
+- Passwords stored only as bcrypt hashes; no third-party institutional credentials stored
 - Guest personal queries intercepted and redirected to signup
 - Session isolation (UUID per guest request)
 
@@ -53,7 +51,4 @@ ORA Navigator implements the following security measures:
 
 ## Supported Versions
 
-| Version | Supported |
-|---------|-----------|
-| v5.0    | Yes       |
-| < v5.0  | No        |
+Only the current deployed version at https://ora.inavigator.ai is supported.

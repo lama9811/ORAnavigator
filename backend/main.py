@@ -492,17 +492,6 @@ class TTSRequest(BaseModel):
 # ==============================================================================
 # 7. STATIC DATA & RESOURCES
 # ==============================================================================
-DATA_DIR       = os.path.join(BACKEND_DIR, "data_sources")
-RESOURCES_FILE = os.path.join(DATA_DIR, "academic_resources.json")
-
-helpful_links = {}
-if os.path.exists(RESOURCES_FILE):
-    try:
-        with open(RESOURCES_FILE, "r", encoding="utf-8") as f:
-            res_data = json.load(f)
-        helpful_links = res_data.get("academic_and_student_support", {}).get("helpful_links", {})
-    except:
-        pass
 
 def load_json_documents(paths: List[str]) -> List[Dict[str,Any]]:
     docs: List[Dict[str,Any]] = []
@@ -796,7 +785,7 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
         "email": db_user.email,
         "name": getattr(db_user, 'name', None),
         "studentId": getattr(db_user, 'student_id', None),
-        "major": getattr(db_user, 'major', "Computer Science"),
+        "major": getattr(db_user, 'major', None),
         "profilePicture": profile_pic,
         "morganConnected": getattr(db_user, 'morgan_connected', False),
         "role": getattr(db_user, 'role', "student")

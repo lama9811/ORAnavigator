@@ -29,7 +29,7 @@ def migrate():
                 print("⏭️  Column 'student_id' already exists")
 
             if not column_exists('users', 'major'):
-                conn.execute(text("ALTER TABLE users ADD COLUMN major VARCHAR(100) DEFAULT 'Computer Science'"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN major VARCHAR(100) DEFAULT NULL"))
                 conn.commit()
                 print("✅ Added column: major")
             else:
