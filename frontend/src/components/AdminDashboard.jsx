@@ -2067,12 +2067,6 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              <div className="system-actions">
-                <h3>Quick Actions</h3>
-                <div className="action-buttons">
-                  <button className="action-btn" onClick={handleReingest}><FaSync size={14} /> Re-ingest KB Docs</button>
-                </div>
-              </div>
             </>
           ) : (
             <div className="empty-state">Unable to load health status</div>
