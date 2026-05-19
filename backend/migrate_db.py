@@ -56,6 +56,88 @@ def migrate():
             else:
                 print("⏭️  Column 'created_at' already exists")
 
+            # =================================================================
+            # Persistent Memory — Phase 1 (within-session rolling summary)
+            # =================================================================
+            if not column_exists('chat_history', 'session_summary'):
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN session_summary MEDIUMTEXT NULL"))
+                conn.commit()
+                print("✅ Added column: chat_history.session_summary")
+            else:
+                print("⏭️  Column 'chat_history.session_summary' already exists")
+
+            if not column_exists('chat_history', 'summary_through_id'):
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN summary_through_id INT NULL"))
+                conn.commit()
+                print("✅ Added column: chat_history.summary_through_id")
+            else:
+                print("⏭️  Column 'chat_history.summary_through_id' already exists")
+
+            # =================================================================
+            # Persistent Memory — Phase 2 (distilled-fact embeddings)
+            # =================================================================
+            if not column_exists('user_memories', 'embedding'):
+                conn.execute(text("ALTER TABLE user_memories ADD COLUMN embedding MEDIUMTEXT NULL"))
+                conn.commit()
+                print("✅ Added column: user_memories.embedding")
+            else:
+                print("⏭️  Column 'user_memories.embedding' already exists")
+
+            if not column_exists('user_memories', 'embedding_model'):
+                conn.execute(text("ALTER TABLE user_memories ADD COLUMN embedding_model VARCHAR(64) NULL"))
+                conn.commit()
+                print("✅ Added column: user_memories.embedding_model")
+            else:
+                print("⏭️  Column 'user_memories.embedding_model' already exists")
+
+            if not column_exists('user_memories', 'paused'):
+                conn.execute(text("ALTER TABLE user_memories ADD COLUMN paused BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
+                print("✅ Added column: user_memories.paused")
+            else:
+                print("⏭️  Column 'user_memories.paused' already exists")
+
+            # =================================================================
+            # Persistent Memory — Phase 4 (verbatim turn-level recall)
+            # =================================================================
+            if not column_exists('chat_history', 'embedding'):
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN embedding MEDIUMTEXT NULL"))
+                conn.commit()
+                print("✅ Added column: chat_history.embedding")
+            else:
+                print("⏭️  Column 'chat_history.embedding' already exists")
+
+            if not column_exists('chat_history', 'embedding_model'):
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN embedding_model VARCHAR(64) NULL"))
+                conn.commit()
+                print("✅ Added column: chat_history.embedding_model")
+            else:
+                print("⏭️  Column 'chat_history.embedding_model' already exists")
+
+            if not column_exists('chat_history', 'topic_label'):
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN topic_label VARCHAR(128) NULL"))
+                conn.commit()
+                print("✅ Added column: chat_history.topic_label")
+            else:
+                print("⏭️  Column 'chat_history.topic_label' already exists")
+
+            # =================================================================
+            # Persistent Memory — Phase 3 (idle sweep) + Phase 5 (pause toggle)
+            # =================================================================
+            if not column_exists('users', 'last_chat_at'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN last_chat_at DATETIME NULL"))
+                conn.commit()
+                print("✅ Added column: users.last_chat_at")
+            else:
+                print("⏭️  Column 'users.last_chat_at' already exists")
+
+            if not column_exists('users', 'memory_paused'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN memory_paused BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
+                print("✅ Added column: users.memory_paused")
+            else:
+                print("⏭️  Column 'users.memory_paused' already exists")
+
             print("\n✅ Database migration completed successfully!")
             
         except Exception as e:

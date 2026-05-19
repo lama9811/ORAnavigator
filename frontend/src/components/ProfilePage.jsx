@@ -8,6 +8,12 @@ import { FaLock } from "@react-icons/all-files/fa/FaLock";
 import { FaCamera } from "@react-icons/all-files/fa/FaCamera";
 import { FaCog } from "@react-icons/all-files/fa/FaCog";
 import { FaShieldAlt } from "@react-icons/all-files/fa/FaShieldAlt";
+import { FaBrain } from "@react-icons/all-files/fa/FaBrain";
+import { FaTrash } from "@react-icons/all-files/fa/FaTrash";
+import { FaPause } from "@react-icons/all-files/fa/FaPause";
+import { FaPlay } from "@react-icons/all-files/fa/FaPlay";
+import { FaHistory } from "@react-icons/all-files/fa/FaHistory";
+import { FaEdit } from "@react-icons/all-files/fa/FaEdit";
 import "./ProfilePage.css";
 
 import { getApiBase } from "../lib/apiBase";
@@ -39,9 +45,201 @@ export default function ProfilePage({ userEmail, onLogout }) {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showPwFields, setShowPwFields] = useState({ current: false, new: false, confirm: false });
 
+  // Phase 5: Memory tab state
+  const memoryUiEnabled = import.meta.env.VITE_ENABLE_MEMORY_UI !== "false";
+  const [memorySection, setMemorySection] = useState({
+    loaded: false,
+    facts: [],
+    conversations: [],
+    paused: false,
+    stats: { fact_count: 0, embedded_turns: 0 },
+  });
+  const [editingMemoryId, setEditingMemoryId] = useState(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [showAllConversations, setShowAllConversations] = useState(false);
+
+  const fetchMemoryData = async () => {
+    if (!memoryUiEnabled) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/me/memories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMemorySection({
+          loaded: true,
+          facts: data.facts || [],
+          conversations: data.recent_conversations || [],
+          paused: !!data.paused_global,
+          stats: data.stats || { fact_count: 0, embedded_turns: 0 },
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch memory data:", err);
+    }
+  };
+
+  const handleToggleMemoryPause = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const next = !memorySection.paused;
+      const response = await fetch(`${API_BASE}/api/me/memories/pause`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ paused: next }),
+      });
+      if (response.ok) {
+        setMemorySection((s) => ({ ...s, paused: next }));
+        setMessage({
+          type: "success",
+          text: next ? "Memory paused. The bot won't store or recall." : "Memory resumed.",
+        });
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Couldn't toggle memory pause." });
+    }
+  };
+
+  const handleEditMemoryStart = (memory) => {
+    setEditingMemoryId(memory.id);
+    setEditingContent(memory.content);
+  };
+
+  const handleEditMemorySave = async (memoryId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/me/memories/${memoryId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: editingContent }),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setMemorySection((s) => ({
+          ...s,
+          facts: s.facts.map((f) => (f.id === memoryId ? updated : f)),
+        }));
+        setEditingMemoryId(null);
+        setEditingContent("");
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Couldn't update memory." });
+    }
+  };
+
+  const handleToggleMemoryPaused = async (memoryId, currentlyPaused) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/me/memories/${memoryId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ paused: !currentlyPaused }),
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        setMemorySection((s) => ({
+          ...s,
+          facts: s.facts.map((f) => (f.id === memoryId ? updated : f)),
+        }));
+      }
+    } catch (err) {
+      // best-effort, don't disrupt UI
+    }
+  };
+
+  const handleDeleteMemory = async (memoryId) => {
+    if (!window.confirm("Permanently delete this memory? This cannot be undone.")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/me/memories/${memoryId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok || response.status === 204) {
+        setMemorySection((s) => ({
+          ...s,
+          facts: s.facts.filter((f) => f.id !== memoryId),
+          stats: { ...s.stats, fact_count: Math.max(0, s.stats.fact_count - 1) },
+        }));
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Couldn't delete memory." });
+    }
+  };
+
+  const handleDeleteConversation = async (chatId) => {
+    if (!window.confirm(
+      "Remove this conversation from memory? The bot won't be able to recall it anymore."
+    )) return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/me/conversations/${chatId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setMemorySection((s) => ({
+          ...s,
+          conversations: s.conversations.map((c) =>
+            c.id === chatId ? { ...c, has_embedding: false } : c
+          ),
+          stats: {
+            ...s.stats,
+            embedded_turns: Math.max(0, s.stats.embedded_turns - 1),
+          },
+        }));
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Couldn't remove conversation from memory." });
+    }
+  };
+
+  const handleForgetEverything = async () => {
+    const typed = window.prompt(
+      "This will PERMANENTLY delete everything I remember about you " +
+        "(all facts + all conversation embeddings). Your chat history text is " +
+        'kept so you can still see what you asked, but the bot won\'t be able to recall.\n\n' +
+        'Type "forget" (without quotes) to confirm.'
+    );
+    if (typed !== "forget") return;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE}/api/me/memories`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMemorySection((s) => ({
+          ...s,
+          facts: [],
+          conversations: s.conversations.map((c) => ({ ...c, has_embedding: false })),
+          stats: { fact_count: 0, embedded_turns: 0 },
+        }));
+        setMessage({
+          type: "success",
+          text: `Forgotten: ${data.deleted_facts} facts, ${data.cleared_embeddings} conversations.`,
+        });
+      }
+    } catch (err) {
+      setMessage({ type: "error", text: "Couldn't erase memory." });
+    }
+  };
+
   // Fetch profile data on mount
   useEffect(() => {
     fetchProfile();
+    fetchMemoryData();
     const token = localStorage.getItem("token");
     // Fetch pending research suggestions count for admin badge
     if (token) {
@@ -387,6 +585,190 @@ export default function ProfilePage({ userEmail, onLogout }) {
             </form>
           )}
         </div>
+
+        {/* Phase 5: Memory Section — see / edit / pause / forget what the bot remembers */}
+        {memoryUiEnabled && (
+        <div className="profile-section memory-section">
+          <div className="section-header">
+            <h3><FaBrain /> Memory</h3>
+            <button
+              className={memorySection.paused ? "edit-btn memory-resume-btn" : "edit-btn memory-pause-btn"}
+              onClick={handleToggleMemoryPause}
+              title={memorySection.paused
+                ? "Resume memory — bot will start remembering again"
+                : "Pause memory — bot will stop storing or recalling"}
+            >
+              {memorySection.paused ? (<><FaPlay /> Resume Memory</>) : (<><FaPause /> Pause Memory</>)}
+            </button>
+          </div>
+
+          <div className="memory-explainer">
+            {memorySection.paused ? (
+              <p className="memory-paused-banner">
+                ⏸ Memory is paused. The bot won't remember new things from this conversation
+                or recall anything from past ones. Earlier-in-this-session context still works.
+              </p>
+            ) : (
+              <p className="memory-explainer-text">
+                The bot remembers facts about you (your role, grants, IRB/IACUC protocols)
+                AND past conversations so it can connect dots over time. Edit anything below,
+                pause memory whenever, or wipe everything with the danger button.
+              </p>
+            )}
+            <div className="memory-stats">
+              <span><strong>{memorySection.stats.fact_count}</strong> facts stored</span>
+              <span>•</span>
+              <span><strong>{memorySection.stats.embedded_turns}</strong> conversations indexed</span>
+            </div>
+          </div>
+
+          {/* Facts about you, grouped by type */}
+          <div className="memory-subsection">
+            <h4>Facts about you</h4>
+            {memorySection.facts.length === 0 ? (
+              <p className="memory-empty">
+                Nothing remembered yet. As you chat, facts about your role,
+                grants, and protocols get stored here.
+              </p>
+            ) : (
+              <ul className="memory-list">
+                {memorySection.facts.map((m) => (
+                  <li
+                    key={m.id}
+                    className={m.paused ? "memory-row memory-row-paused" : "memory-row"}
+                  >
+                    <div className="memory-row-meta">
+                      <span className="memory-type-badge">{m.type}</span>
+                    </div>
+                    {editingMemoryId === m.id ? (
+                      <div className="memory-edit-row">
+                        <input
+                          type="text"
+                          value={editingContent}
+                          onChange={(e) => setEditingContent(e.target.value)}
+                          className="memory-edit-input"
+                          autoFocus
+                        />
+                        <button
+                          className="memory-action-btn"
+                          onClick={() => handleEditMemorySave(m.id)}
+                          title="Save"
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="memory-action-btn"
+                          onClick={() => { setEditingMemoryId(null); setEditingContent(""); }}
+                          title="Cancel"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="memory-row-content">{m.content}</span>
+                        <div className="memory-row-actions">
+                          <button
+                            className="memory-icon-btn"
+                            onClick={() => handleEditMemoryStart(m)}
+                            title="Edit"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="memory-icon-btn"
+                            onClick={() => handleToggleMemoryPaused(m.id, m.paused)}
+                            title={m.paused ? "Resume this fact" : "Pause this fact"}
+                          >
+                            {m.paused ? <FaPlay /> : <FaPause />}
+                          </button>
+                          <button
+                            className="memory-icon-btn memory-delete-btn"
+                            onClick={() => handleDeleteMemory(m.id)}
+                            title="Delete this fact"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Past conversations (recent embedded turns) */}
+          <div className="memory-subsection">
+            <h4><FaHistory /> Past conversations the bot can recall</h4>
+            {memorySection.conversations.length === 0 ? (
+              <p className="memory-empty">
+                No conversations yet. As you chat, exchanges get indexed here
+                so the bot can reference them in future sessions.
+              </p>
+            ) : (
+              <>
+                <ul className="memory-conversation-list">
+                  {memorySection.conversations
+                    .slice(0, showAllConversations ? undefined : 10)
+                    .map((c) => (
+                      <li
+                        key={c.id}
+                        className={c.has_embedding ? "memory-convo" : "memory-convo memory-convo-disabled"}
+                      >
+                        <div className="memory-convo-header">
+                          <span className="memory-convo-date">
+                            {c.timestamp ? new Date(c.timestamp).toLocaleString() : ""}
+                          </span>
+                          {!c.has_embedding && (
+                            <span className="memory-convo-removed">removed from memory</span>
+                          )}
+                          {c.has_embedding && (
+                            <button
+                              className="memory-icon-btn memory-delete-btn"
+                              onClick={() => handleDeleteConversation(c.id)}
+                              title="Remove from memory (keeps the text in your chat history)"
+                            >
+                              <FaTrash />
+                            </button>
+                          )}
+                        </div>
+                        <div className="memory-convo-q">You: {c.user_query}</div>
+                        <div className="memory-convo-a">Bot: {c.bot_response}</div>
+                      </li>
+                    ))}
+                </ul>
+                {memorySection.conversations.length > 10 && (
+                  <button
+                    className="memory-show-more-btn"
+                    onClick={() => setShowAllConversations((s) => !s)}
+                  >
+                    {showAllConversations
+                      ? "Show fewer"
+                      : `Show all ${memorySection.conversations.length}`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Danger zone */}
+          <div className="memory-danger-zone">
+            <h4>Danger zone</h4>
+            <p>
+              Permanently delete every fact and erase every conversation embedding.
+              Your chat-history text stays so you can still see what you asked, but
+              the bot loses the ability to recall any of it.
+            </p>
+            <button
+              className="memory-forget-btn"
+              onClick={handleForgetEverything}
+            >
+              <FaTrash /> Forget everything about me
+            </button>
+          </div>
+        </div>
+        )}
 
         {/* Admin Access - Only show for admins */}
         {profile.role === "admin" && (

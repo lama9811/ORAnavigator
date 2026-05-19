@@ -299,33 +299,35 @@ class SemanticCache:
         self._load_from_redis()
 
     def _embed(self, text: str) -> Optional[np.ndarray]:
-        """Embed text into a 256-dim vector via Google's embedding API."""
+        """Embed text into a 256-dim vector via Google's embedding API.
+
+        Delegates to services.embedding_util.embed_text for shared lazy-init,
+        retry, and rate-limit handling. Wraps the result in np.array so the
+        in-memory entry list stays ndarray-typed for fast cosine math.
+        """
         if not self._available:
             return None
-        try:
-            from google import genai
-            start = time.time()
-            result = self._genai_client.models.embed_content(
-                model=SEMANTIC_EMBEDDING_MODEL,
-                contents=text,
-                config=genai.types.EmbedContentConfig(
-                    output_dimensionality=SEMANTIC_EMBEDDING_DIMS,
-                ),
-            )
-            elapsed = (time.time() - start) * 1000
-            self._stats["embed_time_ms"] += elapsed
-            return np.array(result.embeddings[0].values, dtype=np.float32)
-        except Exception as e:
+
+        from services.embedding_util import embed_text as _shared_embed
+
+        start = time.time()
+        values = _shared_embed(
+            text,
+            model=SEMANTIC_EMBEDDING_MODEL,
+            dims=SEMANTIC_EMBEDDING_DIMS,
+        )
+        self._stats["embed_time_ms"] += (time.time() - start) * 1000
+
+        if values is None:
             self._stats["errors"] += 1
-            logger.warning(f"[SEMANTIC] Embedding error: {e}")
             return None
+        return np.array(values, dtype=np.float32)
 
     @staticmethod
     def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
-        """Fast cosine similarity between two vectors."""
-        dot = np.dot(a, b)
-        norm = np.linalg.norm(a) * np.linalg.norm(b)
-        return float(dot / norm) if norm > 0 else 0.0
+        """Fast cosine similarity between two vectors. Delegates to embedding_util."""
+        from services.embedding_util import cosine_sim
+        return cosine_sim(a, b)
 
     def get(self, query: str) -> Optional[str]:
         """Find a semantically similar cached response."""

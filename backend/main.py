@@ -61,6 +61,7 @@ from vertex_agent import query_agent, query_agent_stream, check_agent_health, re
 
 # Query caching for faster responses
 from cache import query_cache, get_context_hash, log_cache_stats
+from kb_browser import try_browse
 
 
 # Legacy imports kept for /ingest endpoint and file analysis fallback
@@ -385,6 +386,7 @@ def get_current_user(
             "role": user.role,
             "name": user.name,
             "student_id": user.student_id,
+            "memory_paused": bool(getattr(user, "memory_paused", False)),
         }
     except JWTError as e:
         print(f"JWT decode error: {e}")
@@ -931,12 +933,28 @@ def extract_file_content(filepath: str) -> str:
 # Tier 1: Query rewriting for follow-up resolution
 from services.query_rewriter import rewrite_query, is_likely_followup
 
-# Tier 2: Long-term user memory
-from services.memory_service import fetch_user_memories_sync, build_memory_context
+# Tier 2: Long-term user memory + Phase 1/2/3/4 helpers
+from services.memory_service import (
+    fetch_user_memories_sync,
+    build_memory_context,
+    fetch_latest_session_summary_sync,
+    run_session_summary,
+    retrieve_relevant_memories,
+    retrieve_relevant_turns,
+    embed_and_store_turn,
+    consolidate_user_memories_single,
+    consolidate_idle_users,
+    touch_user_last_chat_at,
+)
 
 
-def _fetch_history_sync(user_id: int, session_id: str, limit: int = 10) -> list:
-    """Fetch chat history in a separate DB session for parallel execution."""
+def _fetch_history_sync(user_id: int, session_id: str, limit: int = 10) -> tuple:
+    """Fetch chat history + latest rolling summary in one DB session.
+
+    Returns (turns_list, session_summary). turns_list keeps the previous
+    [{user_query, bot_response}] shape so query_rewriter / is_likely_followup
+    callers stay unchanged. session_summary is None until Phase 1 fires.
+    """
     db = SessionLocal()
     try:
         history = db.query(ChatHistory)\
@@ -944,24 +962,172 @@ def _fetch_history_sync(user_id: int, session_id: str, limit: int = 10) -> list:
             .order_by(ChatHistory.timestamp.desc())\
             .limit(limit)\
             .all()
-        return [{"user_query": h.user_query, "bot_response": h.bot_response} for h in reversed(history)]
+        turns = [
+            {"user_query": h.user_query, "bot_response": h.bot_response}
+            for h in reversed(history)
+        ]
+        summary_row = (
+            db.query(ChatHistory.session_summary)
+            .filter(
+                ChatHistory.user_id == user_id,
+                ChatHistory.session_id == session_id,
+                ChatHistory.session_summary.isnot(None),
+            )
+            .order_by(ChatHistory.id.desc())
+            .first()
+        )
+        summary = summary_row[0] if summary_row else None
+        return turns, summary
     finally:
         db.close()
 
 
-def _build_conversation_context(history_dicts: list) -> str:
-    """Format prior turns as plain text for the agent's context window."""
-    if not history_dicts:
-        return ""
-    lines = ["PRIOR CONVERSATION:"]
-    for h in history_dicts[-5:]:
-        u = (h.get("user_query") or "").strip()
-        b = (h.get("bot_response") or "").strip()
-        if u:
-            lines.append(f"User: {u}")
-        if b:
-            lines.append(f"Assistant: {b[:500]}")
-    return "\n".join(lines) + "\n"
+def _build_conversation_context(history_dicts: list, session_summary: Optional[str] = None) -> str:
+    """Format prior turns + optional rolling summary for the agent's context.
+
+    Phase 1: when session_summary is present (set after ~8+ turns), inject it
+    BEFORE the raw last-5-turn window so older context is preserved.
+    """
+    parts: list = []
+    if session_summary:
+        parts.append(f"EARLIER IN THIS SESSION:\n{session_summary.strip()}\n")
+    if history_dicts:
+        lines = ["PRIOR CONVERSATION:"]
+        for h in history_dicts[-5:]:
+            u = (h.get("user_query") or "").strip()
+            b = (h.get("bot_response") or "").strip()
+            if u:
+                lines.append(f"User: {u}")
+            if b:
+                lines.append(f"Assistant: {b[:500]}")
+        parts.append("\n".join(lines))
+    return ("\n".join(parts) + "\n") if parts else ""
+
+
+def _schedule_session_summary(user_id: int, session_id: str) -> None:
+    """Fire-and-forget background summarization after a chat commit.
+
+    Gated by ENABLE_SESSION_SUMMARY (default true). The task self-gates on
+    turn count, so calling this on every commit is safe.
+    """
+    if os.getenv("ENABLE_SESSION_SUMMARY", "true").lower() not in ("1", "true", "yes"):
+        return
+    try:
+        asyncio.create_task(asyncio.to_thread(run_session_summary, user_id, session_id))
+    except RuntimeError:
+        # No running event loop (sync test context). Silently skip.
+        pass
+
+
+def _schedule_embed_turn(chat_history_id: int) -> None:
+    """Fire-and-forget Phase 4 embedding for a freshly-committed turn.
+
+    Embeds the Q+A so future cross-session semantic recall can find it. Runs
+    after the response is already sent → zero added latency.
+    """
+    if os.getenv("ENABLE_VERBATIM_RECALL", "true").lower() not in ("1", "true", "yes"):
+        return
+    try:
+        asyncio.create_task(asyncio.to_thread(embed_and_store_turn, chat_history_id))
+    except RuntimeError:
+        pass
+
+
+# ----------------------------------------------------------------------------
+# Phase 3 — Real-time memory extraction (kill the 24h lag)
+# ----------------------------------------------------------------------------
+# Trigger extraction every 6 turns post-commit, gated by a per-user
+# asyncio.Lock so a flurry of rapid turns doesn't fire concurrent extractions
+# for the same user. Cross-replica safety is already handled by
+# _merge_memories' substring dedup, so we don't need a distributed lock.
+
+_realtime_extraction_locks: dict[int, asyncio.Lock] = {}
+
+
+def _get_user_realtime_lock(user_id: int) -> asyncio.Lock:
+    lock = _realtime_extraction_locks.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _realtime_extraction_locks[user_id] = lock
+    return lock
+
+
+async def _run_extraction_locked(user_id: int) -> None:
+    """Acquire the per-user lock then run extraction in a thread."""
+    lock = _get_user_realtime_lock(user_id)
+    if lock.locked():
+        # Another coroutine is already extracting for this user — skip; their
+        # run will pick up our new turn too (its hours_back=2 window covers it).
+        return
+    async with lock:
+        await asyncio.to_thread(consolidate_user_memories_single, user_id, 2)
+
+
+def _schedule_realtime_extraction(user_id: int, session_id: str) -> None:
+    """Fire extraction every 6 turns for this user+session.
+
+    Counts session turns post-commit with one cheap aggregate query. Skips
+    if the per-user lock is held or the flag is off.
+    """
+    if os.getenv("ENABLE_REALTIME_MEMORY", "true").lower() not in ("1", "true", "yes"):
+        return
+
+    try:
+        with SessionLocal() as _db:
+            turn_count = (
+                _db.query(ChatHistory)
+                .filter(
+                    ChatHistory.user_id == user_id,
+                    ChatHistory.session_id == session_id,
+                )
+                .count()
+            )
+    except Exception as e:
+        print(f"[MEMORY] turn-count query failed user={user_id}: {e}")
+        return
+
+    if turn_count <= 0 or turn_count % 6 != 0:
+        return
+
+    try:
+        asyncio.create_task(_run_extraction_locked(user_id))
+    except RuntimeError:
+        pass
+
+
+def _schedule_touch_last_chat(user_id: int) -> None:
+    """Update users.last_chat_at = now() in the background.
+
+    Powers the idle-sweep cron — fully best-effort, swallowed if migrate
+    hasn't added the column yet.
+    """
+    try:
+        asyncio.create_task(asyncio.to_thread(touch_user_last_chat_at, user_id))
+    except RuntimeError:
+        pass
+
+
+def _schedule_post_commit_memory_tasks(
+    user_id: int,
+    session_id: str,
+    chat_id: int,
+    memory_paused: bool = False,
+) -> None:
+    """Fire all Phase 1+3+4 background tasks after a chat turn commits.
+
+    Runs *after* the response has been sent → zero added latency. Each
+    sub-task is independently feature-flagged and self-gates on triggers.
+
+    Phase 5: when memory_paused is True, skip embed + realtime extraction
+    (don't record anything for future retrieval). Session summary still
+    runs — it's session-local, not 'memory about the user'. last_chat_at
+    also still touches so admin/UX can see when they were last active.
+    """
+    _schedule_session_summary(user_id, session_id)
+    _schedule_touch_last_chat(user_id)
+    if not memory_paused:
+        _schedule_embed_turn(chat_id)
+        _schedule_realtime_extraction(user_id, session_id)
 
 
 # --- CHAT ROUTES (KB-only, with conversation memory) ---
@@ -978,20 +1144,53 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     file_match = re.search(r'uploads/chat_files/([^\)]+)', user_q)
 
     # Parallel fetch: history (for rewriting) + long-term memory
+    #   + Phase 2 semantic-fact recall + Phase 4 verbatim-turn recall.
+    # All 4 run concurrently to keep added latency near zero (~50-80ms total
+    # for the slowest = single Vertex embed call shared across both retrievals
+    # via lazy client memoization).
+    # Phase 5: when user has paused memory globally, skip the retrieve tasks
+    # entirely (session summary still works — that's session-local, not memory).
+    memory_paused = bool(user.get("memory_paused"))
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user["user_id"], session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user["user_id"], 10),
     ]
+    if not memory_paused:
+        fetch_tasks.append(
+            asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55)
+        )
+        fetch_tasks.append(
+            asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id)
+        )
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
-    history_dicts = results[0] if not isinstance(results[0], Exception) else []
+    if isinstance(results[0], Exception):
+        history_dicts, session_summary = [], None
+    else:
+        history_dicts, session_summary = results[0]
     memory_dicts = results[1] if not isinstance(results[1], Exception) else []
+    relevant_memories = (
+        results[2] if len(results) > 2 and not isinstance(results[2], Exception) else []
+    )
+    relevant_turns = (
+        results[3] if len(results) > 3 and not isinstance(results[3], Exception) else []
+    )
 
     # Tier 1: Rewrite follow-up queries to be self-contained
     if USE_VERTEX_AGENT and history_dicts and is_likely_followup(user_q):
         user_q = await asyncio.to_thread(rewrite_query, user_q, history_dicts)
 
-    memory_context = build_memory_context(memory_dicts)
-    conversation_context = _build_conversation_context(history_dicts)
+    memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
+    conversation_context = _build_conversation_context(history_dicts, session_summary)
+    # Phase 1: session summary + recent-turn context rides on memory_context so
+    # the ADK agent receives it via state_delta["memory"]. Falls back to no-op
+    # when both are empty.
+    if conversation_context:
+        memory_context = conversation_context + (memory_context or "")
+    print(
+        f"[MEMORY] user={user['user_id']} session={session_id} "
+        f"facts={len(memory_dicts)} relevant_facts={len(relevant_memories)} "
+        f"relevant_turns={len(relevant_turns)} summary={'Y' if session_summary else 'N'}"
+    )
 
     # Inject basic profile info so agent knows who they're talking to
     profile_parts = []
@@ -1042,7 +1241,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     else:
         answer = "AI system is initializing. Please try again in a moment."
 
-    # SAVE to RDS (User-Specific)
+    # Persist user-specific chat record
     try:
         new_chat = ChatHistory(
             user_id=user["user_id"],
@@ -1052,6 +1251,11 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
         )
         db.add(new_chat)
         db.commit()
+        # Phases 1/3/4: schedule all background memory tasks (summary, embed,
+        # realtime extraction, last_chat_at touch).
+        _schedule_post_commit_memory_tasks(
+            user["user_id"], session_id, new_chat.id, memory_paused=memory_paused,
+        )
     except Exception as e:
         print(f"[ERROR] Failed to save chat history: {e}")
 
@@ -1080,20 +1284,47 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     session_id = req.session_id or "default"
     user_id = user["user_id"]
 
-    # Parallel fetch: history (for rewriting) + memory
+    # Parallel fetch: history + memory + (if not paused) Phase 2 semantic facts + Phase 4 verbatim turns
+    memory_paused = bool(user.get("memory_paused"))
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user_id, session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user_id, 10),
     ]
+    if not memory_paused:
+        fetch_tasks.append(
+            asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55)
+        )
+        fetch_tasks.append(
+            asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id)
+        )
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
-    history_dicts = results[0] if not isinstance(results[0], Exception) else []
+    if isinstance(results[0], Exception):
+        history_dicts, session_summary = [], None
+    else:
+        history_dicts, session_summary = results[0]
     memory_dicts = results[1] if not isinstance(results[1], Exception) else []
+    relevant_memories = (
+        results[2] if len(results) > 2 and not isinstance(results[2], Exception) else []
+    )
+    relevant_turns = (
+        results[3] if len(results) > 3 and not isinstance(results[3], Exception) else []
+    )
 
     # Tier 1: Rewrite follow-up queries
     if history_dicts and is_likely_followup(user_q):
         user_q = await asyncio.to_thread(rewrite_query, user_q, history_dicts)
 
-    memory_context = build_memory_context(memory_dicts)
+    memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
+    # Phase 1: prepend session summary + recent turns onto memory_context so the
+    # ADK agent receives it via state_delta["memory"].
+    _session_context_prefix = _build_conversation_context(history_dicts, session_summary)
+    if _session_context_prefix:
+        memory_context = _session_context_prefix + (memory_context or "")
+    print(
+        f"[MEMORY] (stream) user={user_id} session={session_id} "
+        f"facts={len(memory_dicts)} relevant_facts={len(relevant_memories)} "
+        f"relevant_turns={len(relevant_turns)} summary={'Y' if session_summary else 'N'}"
+    )
 
     profile_parts = []
     if user.get("name"): profile_parts.append(f"Name: {user['name']}")
@@ -1101,6 +1332,33 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     agent_context = ""
     if profile_parts:
         agent_context = "USER PROFILE (from account):\n" + "\n".join(profile_parts) + "\n"
+
+    # =========================================================================
+    # KB BROWSER - Enumeration queries answered deterministically (no LLM call)
+    # =========================================================================
+    browse_response = try_browse(user_q)
+    if browse_response and not req.skip_cache:
+        print(f"[KB_BROWSE] for query: {user_q[:50]}...")
+
+        async def generate_browse_sse():
+            yield f"data: {json.dumps({'type': 'status', 'content': 'Browsing knowledge base...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'content': browse_response})}\n\n"
+            try:
+                with SessionLocal() as save_db:
+                    new_chat = ChatHistory(
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_query=original_q,
+                        bot_response=browse_response,
+                    )
+                    save_db.add(new_chat)
+                    save_db.commit()
+                    new_chat_id = new_chat.id
+                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id, memory_paused=memory_paused)
+            except Exception as e:
+                print(f"   Chat-history save error (browse): {e}")
+
+        return StreamingResponse(generate_browse_sse(), media_type="text/event-stream")
 
     # =========================================================================
     # CACHE CHECK
@@ -1133,6 +1391,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     )
                     save_db.add(new_chat)
                     save_db.commit()
+                    new_chat_id = new_chat.id
+                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id, memory_paused=memory_paused)
             except Exception as e:
                 print(f"[ERROR] Failed to save cached chat history: {e}")
 
@@ -1204,6 +1464,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                 )
                 save_db.add(new_chat)
                 save_db.commit()
+                new_chat_id = new_chat.id
+            _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id, memory_paused=memory_paused)
         except Exception as e:
             print(f"[ERROR] Failed to save streamed chat history: {e}")
 
@@ -1276,6 +1538,15 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
         return {"response": "I'm here to help with research administration questions at Morgan State. Ask me about grants, compliance, pre/post-award, forms, or staff contacts."}
 
     # =========================================================================
+    # KB BROWSER - Enumeration queries answered deterministically from manifest
+    # Bypasses Gemini entirely (~5ms). Falls through to agent if not a list query.
+    # =========================================================================
+    browse_response = try_browse(user_q)
+    if browse_response:
+        print(f"[KB_BROWSE] (guest) for: {user_q[:50]}...")
+        return {"response": browse_response, "source": "kb_browser"}
+
+    # =========================================================================
     # CACHE CHECK - Return cached response instantly for guest queries
     # =========================================================================
     cached_response = query_cache.get(user_q, context_hash="")
@@ -1317,7 +1588,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
 
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Fetch chat history for the logged-in user from RDS"""
+    """Fetch chat history for the logged-in user."""
     chats = db.query(ChatHistory)\
               .filter(ChatHistory.user_id == user["user_id"])\
               .order_by(ChatHistory.timestamp.asc())\
@@ -2360,6 +2631,286 @@ async def internal_memory_consolidate(request: Request):
     from services.memory_service import consolidate_user_memories
     result = await asyncio.to_thread(consolidate_user_memories, 24)
     return result
+
+
+@app.post("/api/internal/memory/idle-sweep")
+async def internal_memory_idle_sweep(request: Request):
+    """Phase 3 idle-sweep cron — runs every 5 min.
+
+    Picks up users who've been idle 5-10 minutes and runs realtime memory
+    extraction. Complements the per-turn trigger (every 6 turns) so users
+    who stop chatting mid-session still get their facts captured before the
+    3am cron. Auth via X-Research-Secret (same as consolidate endpoint).
+    """
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+    result = await asyncio.to_thread(consolidate_idle_users, 5, 10)
+    return result
+
+
+# ==============================================================================
+# Phase 5 — Per-User Memory Management API (Memory tab in ProfilePage)
+# ==============================================================================
+# Endpoints let a user see + edit + delete + pause what the bot remembers
+# about them. All authenticated via get_current_user. Path params are
+# validated against current_user.id (defense in depth — don't trust path).
+
+
+def _user_memory_to_dict(m) -> dict:
+    """Serialize a UserMemory row for the API (no embedding payload)."""
+    return {
+        "id": m.id,
+        "type": m.memory_type,
+        "content": m.content,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+        "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+        "paused": bool(m.paused),
+    }
+
+
+def _chat_row_to_dict(c) -> dict:
+    """Serialize a ChatHistory row for the Memory tab's 'Past conversations'."""
+    return {
+        "id": c.id,
+        "session_id": c.session_id,
+        "timestamp": c.timestamp.isoformat() if c.timestamp else None,
+        "user_query": (c.user_query or "")[:500],
+        "bot_response": (c.bot_response or "")[:1000],
+        "topic_label": c.topic_label,
+        "has_embedding": c.embedding is not None,
+    }
+
+
+@app.get("/api/me/memories")
+async def me_get_memories(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return everything the bot remembers about the current user.
+
+    Returns: facts (UserMemory rows), recent_conversations (last 50 embedded
+    turns), and the global memory_paused flag.
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    uid = user["user_id"]
+    facts = db.query(UserMemory).filter(UserMemory.user_id == uid)\
+        .order_by(UserMemory.updated_at.desc()).all()
+    convos = db.query(ChatHistory).filter(ChatHistory.user_id == uid)\
+        .order_by(ChatHistory.timestamp.desc()).limit(50).all()
+    u_row = db.query(User).filter(User.id == uid).first()
+    paused_global = bool(getattr(u_row, "memory_paused", False)) if u_row else False
+    embedded_turn_count = db.query(ChatHistory).filter(
+        ChatHistory.user_id == uid, ChatHistory.embedding.isnot(None),
+    ).count()
+
+    return {
+        "facts": [_user_memory_to_dict(m) for m in facts],
+        "recent_conversations": [_chat_row_to_dict(c) for c in convos],
+        "paused_global": paused_global,
+        "stats": {
+            "fact_count": len(facts),
+            "embedded_turns": embedded_turn_count,
+        },
+    }
+
+
+@app.delete("/api/me/memories/{memory_id}", status_code=204)
+async def me_delete_memory(
+    memory_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a single UserMemory row owned by the current user."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    row = db.query(UserMemory).filter(
+        UserMemory.id == memory_id,
+        UserMemory.user_id == user["user_id"],  # defense in depth
+    ).first()
+    if not row:
+        raise HTTPException(404, "Memory not found")
+    db.delete(row)
+    db.commit()
+    return
+
+
+@app.patch("/api/me/memories/{memory_id}")
+async def me_patch_memory(
+    memory_id: int,
+    body: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Edit a memory's content or pause flag. If content changes, the
+    embedding is recomputed so semantic recall stays accurate."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    row = db.query(UserMemory).filter(
+        UserMemory.id == memory_id,
+        UserMemory.user_id == user["user_id"],
+    ).first()
+    if not row:
+        raise HTTPException(404, "Memory not found")
+
+    content_changed = False
+    if "content" in body and isinstance(body["content"], str):
+        new_content = body["content"].strip()
+        if new_content and new_content != row.content:
+            row.content = new_content
+            content_changed = True
+    if "paused" in body:
+        row.paused = bool(body["paused"])
+
+    if content_changed:
+        # Recompute embedding so semantic recall reflects the new text.
+        from services.embedding_util import embed_text
+        from services.memory_service import _serialize_embedding, EMBEDDING_MODEL_VERSION
+        vec = embed_text(row.content)
+        if vec:
+            row.embedding = _serialize_embedding(vec)
+            row.embedding_model = EMBEDDING_MODEL_VERSION
+        else:
+            # Couldn't embed — null the column so retrieval skips this row
+            # rather than using stale embedding for new content.
+            row.embedding = None
+            row.embedding_model = None
+
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return _user_memory_to_dict(row)
+
+
+@app.delete("/api/me/conversations/{chat_id}")
+async def me_delete_conversation(
+    chat_id: int,
+    hard: bool = False,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove a past turn from semantic-recall results.
+
+    Default: soft-zero (clears the embedding so retrieve_relevant_turns
+    can't surface it; text remains for audit).
+    ?hard=true: full row delete.
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    row = db.query(ChatHistory).filter(
+        ChatHistory.id == chat_id,
+        ChatHistory.user_id == user["user_id"],
+    ).first()
+    if not row:
+        raise HTTPException(404, "Conversation not found")
+    if hard:
+        db.delete(row)
+    else:
+        row.embedding = None
+        row.embedding_model = None
+    db.commit()
+    return {"deleted": True, "hard": hard}
+
+
+@app.delete("/api/me/memories")
+async def me_delete_all_memories(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Right-to-erasure: hard-delete all UserMemory rows AND zero out every
+    chat_history.embedding for the current user. Text rows in chat_history
+    are kept so the user's own chat-history page still shows what they
+    asked — only the semantic index is wiped.
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    uid = user["user_id"]
+    fact_count = db.query(UserMemory).filter(UserMemory.user_id == uid).delete()
+    turn_count = (
+        db.query(ChatHistory)
+        .filter(ChatHistory.user_id == uid, ChatHistory.embedding.isnot(None))
+        .update({
+            ChatHistory.embedding: None,
+            ChatHistory.embedding_model: None,
+        }, synchronize_session=False)
+    )
+    db.commit()
+    return {
+        "deleted_facts": fact_count,
+        "cleared_embeddings": turn_count,
+    }
+
+
+@app.post("/api/me/memories/pause")
+async def me_toggle_memory_pause(
+    body: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle global memory pause. When True: chat skips both retrieval
+    paths (Phase 2 + Phase 4) and per-turn extraction (Phase 3).
+    The Phase 1 session summary keeps working — it's session-local, not
+    'memory about the user'.
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    paused = bool(body.get("paused", False))
+    row = db.query(User).filter(User.id == user["user_id"]).first()
+    if not row:
+        raise HTTPException(404, "User not found")
+    row.memory_paused = paused
+    db.commit()
+    return {"paused": paused}
+
+
+# ----------------------------------------------------------------------------
+# Phase 6 — Admin debug view (read-only)
+# ----------------------------------------------------------------------------
+# Admins can see (but NOT edit) any user's memory state. Per GDPR, only the
+# user themselves can modify or delete their memories. This endpoint exists
+# for support and debugging.
+
+@app.get("/api/admin/memories/{target_user_id}")
+async def admin_get_user_memories(
+    target_user_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Admin read-only view of a user's memory state."""
+    if not user or user.get("role") != "admin":
+        raise HTTPException(403, "Admin access required")
+
+    target = db.query(User).filter(User.id == target_user_id).first()
+    if not target:
+        raise HTTPException(404, "User not found")
+
+    facts = db.query(UserMemory).filter(UserMemory.user_id == target_user_id)\
+        .order_by(UserMemory.updated_at.desc()).all()
+    embedded_turn_count = db.query(ChatHistory).filter(
+        ChatHistory.user_id == target_user_id, ChatHistory.embedding.isnot(None),
+    ).count()
+    total_turn_count = db.query(ChatHistory).filter(
+        ChatHistory.user_id == target_user_id,
+    ).count()
+
+    return {
+        "user": {
+            "id": target.id,
+            "email": target.email,
+            "name": target.name,
+            "memory_paused": bool(getattr(target, "memory_paused", False)),
+            "last_chat_at": target.last_chat_at.isoformat() if getattr(target, "last_chat_at", None) else None,
+        },
+        "facts": [_user_memory_to_dict(m) for m in facts],
+        "stats": {
+            "fact_count": len(facts),
+            "embedded_turns": embedded_turn_count,
+            "total_turns": total_turn_count,
+            "coverage_pct": round(100 * embedded_turn_count / total_turn_count, 1) if total_turn_count else 0,
+        },
+    }
 
 
 # ==============================================================================

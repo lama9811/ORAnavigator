@@ -6,7 +6,7 @@ from db import Base
 
 
 class ChatHistory(Base):
-    """Stores chat history in AWS RDS (or local DB).
+    """Stores chat history in Cloud SQL.
     Linked to the User table via user_id."""
     __tablename__ = "chat_history"
     id = Column(Integer, primary_key=True, index=True)
@@ -15,6 +15,15 @@ class ChatHistory(Base):
     user_query = Column(Text)
     bot_response = Column(Text)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # Phase 1: rolling session summary. Populated on the row whose post-commit
+    # task fired the summarization. On read, latest non-null wins.
+    session_summary = Column(Text, nullable=True)
+    summary_through_id = Column(Integer, nullable=True)
+    # Phase 4: verbatim turn embedding for cross-session semantic recall.
+    # Embedded as f"User: {q}\nAssistant: {a[:1500]}" on post-commit hook.
+    embedding = Column(Text, nullable=True)
+    embedding_model = Column(String(64), nullable=True)
+    topic_label = Column(String(128), nullable=True)
 
 
 class Feedback(Base):
@@ -50,6 +59,13 @@ class User(Base):
     reset_token = Column(String(255), nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Phase 3: idle-sweep needs to know when the user last chatted so the cron
+    # can run extraction 5-10 min after they go quiet.
+    last_chat_at = Column(DateTime, nullable=True)
+    # Phase 5: global memory pause. When True, the chat path skips both
+    # semantic recall and per-turn extraction; per-row pause on UserMemory
+    # still works independently.
+    memory_paused = Column(Boolean, nullable=False, default=False)
 
     # Relationship to DegreeWorks data
     degreeworks = relationship("DegreeWorksData", back_populates="user", uselist=False)
@@ -199,17 +215,27 @@ class SupportTicket(Base):
 
 
 class UserMemory(Base):
-    """Long-term user memory for chatbot personalization.
-    Consolidated from daily conversations via cron job.
-    Stored on our RDS (FERPA-safe), not Vertex AI."""
+    """Long-term user memory for ORA Navigator personalization.
+    Consolidated from daily conversations via Cloud Scheduler cron job.
+    Stored on the project's Cloud SQL instance, not Vertex AI.
+
+    Memory types: role, department, active_grant, irb_protocol, iacuc_protocol,
+    sponsor, interest, preference, goal, context."""
     __tablename__ = "user_memories"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    memory_type = Column(String(50), nullable=False)  # interest, preference, goal, context
+    memory_type = Column(String(50), nullable=False)  # role, department, active_grant, irb_protocol, iacuc_protocol, sponsor, interest, preference, goal, context
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Phase 2: JSON-encoded 256-float embedding for semantic recall. Stored as
+    # TEXT (codebase convention is TEXT + json.dumps/loads, not native JSON).
+    embedding = Column(Text, nullable=True)
+    embedding_model = Column(String(64), nullable=True)
+    # Per-row pause: when True, this row is skipped during semantic retrieval.
+    # Cooperates with Phase 5's global users.memory_paused.
+    paused = Column(Boolean, nullable=False, default=False)
 
     user = relationship("User", backref="memories")
 

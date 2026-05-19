@@ -1339,3 +1339,298 @@
   color: var(--text-primary, #333);
   margin: 0;
 }
+
+/* ========================================================================== */
+/* Phase 5 — Memory Section                                                   */
+/* ========================================================================== */
+
+.memory-section {
+  border-left: 4px solid var(--msu-blue);
+}
+
+.memory-pause-btn,
+.memory-resume-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.memory-resume-btn {
+  background: var(--msu-blue) !important;
+  color: white !important;
+}
+
+.memory-explainer {
+  margin-bottom: 16px;
+}
+
+.memory-explainer-text {
+  color: var(--text-secondary, #666);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.memory-paused-banner {
+  background: var(--msu-blue-50, rgba(66, 133, 244, 0.08));
+  border-left: 3px solid var(--msu-blue);
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-main);
+  font-size: 0.92rem;
+  margin: 0 0 8px 0;
+}
+
+.memory-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #666);
+  margin-top: 6px;
+}
+
+.memory-subsection {
+  margin: 18px 0;
+}
+
+.memory-subsection h4 {
+  font-size: 0.95rem;
+  color: var(--text-main);
+  margin: 0 0 10px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.memory-empty {
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+  font-style: italic;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-md, 8px);
+  margin: 0;
+}
+
+.memory-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  transition: border-color 0.15s ease;
+}
+
+.memory-row:hover {
+  border-color: var(--msu-blue);
+}
+
+.memory-row-paused {
+  opacity: 0.5;
+}
+
+.memory-row-meta {
+  flex-shrink: 0;
+}
+
+.memory-type-badge {
+  display: inline-block;
+  background: var(--msu-blue-50, rgba(66, 133, 244, 0.1));
+  color: var(--msu-blue);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.memory-row-content {
+  flex: 1;
+  color: var(--text-main);
+  font-size: 0.93rem;
+  line-height: 1.4;
+}
+
+.memory-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.memory-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.memory-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--msu-blue);
+}
+
+.memory-delete-btn:hover {
+  color: #d93025;
+}
+
+.memory-edit-row {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.memory-edit-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--msu-blue);
+  border-radius: var(--radius-md, 6px);
+  font-size: 0.93rem;
+  font-family: inherit;
+}
+
+.memory-action-btn {
+  background: var(--msu-blue);
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-md, 6px);
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.memory-action-btn:hover {
+  background: var(--msu-blue-hover, #2870c0);
+}
+
+.memory-action-btn:last-child {
+  background: transparent;
+  color: var(--text-secondary, #666);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.memory-conversation-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.memory-convo {
+  background: var(--bg-card, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+}
+
+.memory-convo-disabled {
+  opacity: 0.45;
+}
+
+.memory-convo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.memory-convo-date {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #888);
+}
+
+.memory-convo-removed {
+  font-size: 0.78rem;
+  color: #d93025;
+  font-style: italic;
+}
+
+.memory-convo-q,
+.memory-convo-a {
+  font-size: 0.88rem;
+  color: var(--text-main);
+  line-height: 1.45;
+  margin: 2px 0;
+}
+
+.memory-convo-a {
+  color: var(--text-secondary, #555);
+  padding-left: 10px;
+}
+
+.memory-show-more-btn {
+  background: none;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--msu-blue);
+  padding: 8px 16px;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  margin-top: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.memory-show-more-btn:hover {
+  background: var(--msu-blue-50, rgba(66, 133, 244, 0.06));
+}
+
+.memory-danger-zone {
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid rgba(217, 48, 37, 0.25);
+  border-radius: var(--radius-md, 8px);
+  background: rgba(217, 48, 37, 0.03);
+}
+
+.memory-danger-zone h4 {
+  color: #d93025;
+  margin: 0 0 6px 0;
+}
+
+.memory-danger-zone p {
+  font-size: 0.88rem;
+  color: var(--text-secondary, #666);
+  line-height: 1.5;
+  margin: 0 0 12px 0;
+}
+
+.memory-forget-btn {
+  background: #d93025;
+  color: white;
+  border: none;
+  padding: 9px 16px;
+  border-radius: var(--radius-md, 6px);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.memory-forget-btn:hover {
+  background: #b3261c;
+}
