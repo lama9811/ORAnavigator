@@ -386,7 +386,6 @@ def get_current_user(
             "role": user.role,
             "name": user.name,
             "student_id": user.student_id,
-            "memory_paused": bool(getattr(user, "memory_paused", False)),
         }
     except JWTError as e:
         print(f"JWT decode error: {e}")
@@ -1107,27 +1106,31 @@ def _schedule_touch_last_chat(user_id: int) -> None:
         pass
 
 
+def _schedule_regenerate_suggestions(user_id: int) -> None:
+    """Refresh the user's home-screen suggestions in the background.
+    Internally throttled by source_signature + 10-min window."""
+    try:
+        from services.suggestion_generator import regenerate_for_user
+        asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
+    except RuntimeError:
+        pass  # No event loop — caller is outside an async context.
+
+
 def _schedule_post_commit_memory_tasks(
     user_id: int,
     session_id: str,
     chat_id: int,
-    memory_paused: bool = False,
 ) -> None:
     """Fire all Phase 1+3+4 background tasks after a chat turn commits.
 
     Runs *after* the response has been sent → zero added latency. Each
     sub-task is independently feature-flagged and self-gates on triggers.
-
-    Phase 5: when memory_paused is True, skip embed + realtime extraction
-    (don't record anything for future retrieval). Session summary still
-    runs — it's session-local, not 'memory about the user'. last_chat_at
-    also still touches so admin/UX can see when they were last active.
     """
     _schedule_session_summary(user_id, session_id)
     _schedule_touch_last_chat(user_id)
-    if not memory_paused:
-        _schedule_embed_turn(chat_id)
-        _schedule_realtime_extraction(user_id, session_id)
+    _schedule_embed_turn(chat_id)
+    _schedule_realtime_extraction(user_id, session_id)
+    _schedule_regenerate_suggestions(user_id)
 
 
 # --- CHAT ROUTES (KB-only, with conversation memory) ---
@@ -1148,20 +1151,12 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # All 4 run concurrently to keep added latency near zero (~50-80ms total
     # for the slowest = single Vertex embed call shared across both retrievals
     # via lazy client memoization).
-    # Phase 5: when user has paused memory globally, skip the retrieve tasks
-    # entirely (session summary still works — that's session-local, not memory).
-    memory_paused = bool(user.get("memory_paused"))
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user["user_id"], session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user["user_id"], 10),
+        asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55),
+        asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id),
     ]
-    if not memory_paused:
-        fetch_tasks.append(
-            asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55)
-        )
-        fetch_tasks.append(
-            asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id)
-        )
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
     if isinstance(results[0], Exception):
         history_dicts, session_summary = [], None
@@ -1253,9 +1248,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
         db.commit()
         # Phases 1/3/4: schedule all background memory tasks (summary, embed,
         # realtime extraction, last_chat_at touch).
-        _schedule_post_commit_memory_tasks(
-            user["user_id"], session_id, new_chat.id, memory_paused=memory_paused,
-        )
+        _schedule_post_commit_memory_tasks(user["user_id"], session_id, new_chat.id)
     except Exception as e:
         print(f"[ERROR] Failed to save chat history: {e}")
 
@@ -1284,19 +1277,13 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     session_id = req.session_id or "default"
     user_id = user["user_id"]
 
-    # Parallel fetch: history + memory + (if not paused) Phase 2 semantic facts + Phase 4 verbatim turns
-    memory_paused = bool(user.get("memory_paused"))
+    # Parallel fetch: history + memory + Phase 2 semantic facts + Phase 4 verbatim turns
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user_id, session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user_id, 10),
+        asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55),
+        asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id),
     ]
-    if not memory_paused:
-        fetch_tasks.append(
-            asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55)
-        )
-        fetch_tasks.append(
-            asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id)
-        )
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
     if isinstance(results[0], Exception):
         history_dicts, session_summary = [], None
@@ -1354,7 +1341,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     save_db.add(new_chat)
                     save_db.commit()
                     new_chat_id = new_chat.id
-                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id, memory_paused=memory_paused)
+                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id)
             except Exception as e:
                 print(f"   Chat-history save error (browse): {e}")
 
@@ -1392,7 +1379,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     save_db.add(new_chat)
                     save_db.commit()
                     new_chat_id = new_chat.id
-                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id, memory_paused=memory_paused)
+                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id)
             except Exception as e:
                 print(f"[ERROR] Failed to save cached chat history: {e}")
 
@@ -1465,7 +1452,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                 save_db.add(new_chat)
                 save_db.commit()
                 new_chat_id = new_chat.id
-            _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id, memory_paused=memory_paused)
+            _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id)
         except Exception as e:
             print(f"[ERROR] Failed to save streamed chat history: {e}")
 
@@ -1655,43 +1642,67 @@ async def text_to_speech(req: TTSRequest, _user=Depends(get_current_user)):
         print(f"TTS Error: {e}")
         raise HTTPException(500, f"TTS generation failed: {str(e)}")
 
+# ==============================================================================
+# HOME-SCREEN SUGGESTION POOL (shared by guest endpoint + cold-start path)
+# ==============================================================================
+# Single source of truth for the default ORA-themed question set. Sampled by:
+#   - GET /api/popular-questions             (guests / unauthenticated)
+#   - GET /api/me/suggested-questions        (cold-start: <3 turns / <2 facts)
+#   - services/suggestion_generator.py       (filler when LLM output fails validation)
+DEFAULT_QUESTION_POOL = [
+    # Pre-award
+    "How do I find funding opportunities for my research?",
+    "What is the process for submitting a grant proposal?",
+    "Who reviews and approves proposals before submission?",
+    "What are the deadlines for upcoming NSF and NIH submissions?",
+    "How do I prepare a budget for a federal grant?",
+    "What is Morgan State's federal F&A (indirect cost) rate?",
+    "What fringe benefit rate should I use for faculty and staff?",
+    "Where do I find Morgan State's UEI, EIN, FWA, and other institutional IDs?",
+    "How do I get an Advance Account before my award is fully set up?",
+    # Post-award
+    "How do I set up a new grant account after an award is made?",
+    "What are the rules for spending grant funds on travel or equipment?",
+    "How do I request a no-cost extension on an active award?",
+    "How do I close out a grant at the end of the project period?",
+    "When are effort reports due and how do I certify mine?",
+    "How do I add a subaward to an existing grant?",
+    # Compliance (IRB, IACUC, COI)
+    "How do I submit an IRB application for human subjects research?",
+    "When do I need IACUC approval for animal research?",
+    "What is required for a Conflict of Interest disclosure?",
+    "Where can I find training requirements for research compliance (CITI)?",
+    "How long does IRB approval typically take and when does the IRB meet?",
+    "Which IACUC SOPs apply to my animal study?",
+    "What do I need to know about NSPM-33 and research security?",
+    "How do I report a research-related incident or protocol deviation?",
+    # Forms & process
+    "Where can I find the internal routing form for proposal submission?",
+    "What forms do I need to add a co-investigator after an award?",
+    "Where are the standard ORA proposal-prep templates and checklists?",
+    # Staff & contacts
+    "Who is the contact for pre-award support in my department?",
+    "How do I reach the Office of Research Administration leadership?",
+    "Who handles subaward and subcontract questions?",
+    "Who do I contact about IRB or IACUC submissions?",
+    # Trainings & resources
+    "What does the monthly D-RED seminar cover and when is it held?",
+    "Where can I find the New Faculty Development Seminar schedule?",
+    "Where is the PI Handbook and what's the latest version?",
+    # General
+    "What services does the Office of Research Administration provide?",
+    "How do I get started as a new PI at Morgan State?",
+    "Where can I find current research policies and procedures?",
+]
+
+
 @app.get("/api/popular-questions")
 async def get_popular_questions():
-    """Returns 8 randomly selected ORA-themed questions from a curated pool."""
+    """Returns 10 randomly selected ORA-themed questions from the curated pool.
+    Used by the home-screen on the guest (unauthenticated) path. Authenticated
+    users get personalized suggestions via GET /api/me/suggested-questions."""
     import random
-
-    QUESTION_POOL = [
-        # Pre-award
-        "How do I find funding opportunities for my research?",
-        "What is the process for submitting a grant proposal?",
-        "Who reviews and approves proposals before submission?",
-        "What are the deadlines for upcoming NSF and NIH submissions?",
-        "How do I prepare a budget for a federal grant?",
-        # Post-award
-        "How do I set up a new grant account after an award is made?",
-        "What are the rules for spending grant funds on travel or equipment?",
-        "How do I request a no-cost extension on an active award?",
-        "How do I close out a grant at the end of the project period?",
-        # Compliance (IRB, IACUC, COI)
-        "How do I submit an IRB application for human subjects research?",
-        "When do I need IACUC approval for animal research?",
-        "What is required for a Conflict of Interest disclosure?",
-        "Where can I find training requirements for research compliance (CITI)?",
-        # Forms & process
-        "Where can I find the internal routing form for proposal submission?",
-        "What forms do I need to add a co-investigator after an award?",
-        "How do I report a research-related incident or protocol deviation?",
-        # Staff & contacts
-        "Who is the contact for pre-award support in my department?",
-        "How do I reach the Office of Research Administration leadership?",
-        "Who handles subaward and subcontract questions?",
-        # General
-        "What services does the Office of Research Administration provide?",
-        "How do I get started as a new PI at Morgan State?",
-        "Where can I find current research policies and procedures?",
-    ]
-
-    return {"questions": random.sample(QUESTION_POOL, 8)}
+    return {"questions": random.sample(DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL)))}
 
 @app.get("/health")
 def health():
@@ -2683,6 +2694,68 @@ def _chat_row_to_dict(c) -> dict:
     }
 
 
+@app.get("/api/me/suggested-questions")
+async def me_get_suggested_questions(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Personalized home-screen suggestions, precomputed in the post-commit
+    memory hook. Pure read — ~5ms. Always returns 200; on any error or
+    missing row, falls back to a shuffled sample of DEFAULT_QUESTION_POOL."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    from models import UserSuggestedQuestions
+    import random as _random
+
+    user_id = user["user_id"]
+    try:
+        row = db.query(UserSuggestedQuestions)\
+            .filter(UserSuggestedQuestions.user_id == user_id).first()
+        if row is None:
+            # First visit — no row yet. Return the default pool synchronously,
+            # kick off a background regen so next visit shows personalized.
+            try:
+                from services.suggestion_generator import regenerate_for_user
+                asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
+            except RuntimeError:
+                pass
+            return {
+                "questions": _random.sample(
+                    DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
+                ),
+                "generated_at": None,
+                "source": "default",
+            }
+
+        try:
+            questions = json.loads(row.questions or "[]")
+            if not isinstance(questions, list):
+                questions = []
+        except Exception:
+            questions = []
+
+        if not questions:
+            questions = _random.sample(
+                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
+            )
+
+        return {
+            "questions": questions,
+            "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+            "source": row.source or "default",
+        }
+    except Exception as e:
+        print(f"[SUGGEST] me_get_suggested_questions failed for user={user_id}: {e}")
+        return {
+            "questions": _random.sample(
+                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
+            ),
+            "generated_at": None,
+            "source": "default",
+        }
+
+
 @app.get("/api/me/memories")
 async def me_get_memories(
     user: dict = Depends(get_current_user),
@@ -2690,8 +2763,8 @@ async def me_get_memories(
 ):
     """Return everything the bot remembers about the current user.
 
-    Returns: facts (UserMemory rows), recent_conversations (last 50 embedded
-    turns), and the global memory_paused flag.
+    Returns: facts (UserMemory rows) and recent_conversations (last 50
+    embedded turns).
     """
     if not user:
         raise HTTPException(401, "Unauthorized")
@@ -2701,8 +2774,6 @@ async def me_get_memories(
         .order_by(UserMemory.updated_at.desc()).all()
     convos = db.query(ChatHistory).filter(ChatHistory.user_id == uid)\
         .order_by(ChatHistory.timestamp.desc()).limit(50).all()
-    u_row = db.query(User).filter(User.id == uid).first()
-    paused_global = bool(getattr(u_row, "memory_paused", False)) if u_row else False
     embedded_turn_count = db.query(ChatHistory).filter(
         ChatHistory.user_id == uid, ChatHistory.embedding.isnot(None),
     ).count()
@@ -2710,7 +2781,6 @@ async def me_get_memories(
     return {
         "facts": [_user_memory_to_dict(m) for m in facts],
         "recent_conversations": [_chat_row_to_dict(c) for c in convos],
-        "paused_global": paused_global,
         "stats": {
             "fact_count": len(facts),
             "embedded_turns": embedded_turn_count,
@@ -2843,28 +2913,6 @@ async def me_delete_all_memories(
     }
 
 
-@app.post("/api/me/memories/pause")
-async def me_toggle_memory_pause(
-    body: dict,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Toggle global memory pause. When True: chat skips both retrieval
-    paths (Phase 2 + Phase 4) and per-turn extraction (Phase 3).
-    The Phase 1 session summary keeps working — it's session-local, not
-    'memory about the user'.
-    """
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    paused = bool(body.get("paused", False))
-    row = db.query(User).filter(User.id == user["user_id"]).first()
-    if not row:
-        raise HTTPException(404, "User not found")
-    row.memory_paused = paused
-    db.commit()
-    return {"paused": paused}
-
-
 # ----------------------------------------------------------------------------
 # Phase 6 — Admin debug view (read-only)
 # ----------------------------------------------------------------------------
@@ -2900,7 +2948,6 @@ async def admin_get_user_memories(
             "id": target.id,
             "email": target.email,
             "name": target.name,
-            "memory_paused": bool(getattr(target, "memory_paused", False)),
             "last_chat_at": target.last_chat_at.isoformat() if getattr(target, "last_chat_at", None) else None,
         },
         "facts": [_user_memory_to_dict(m) for m in facts],

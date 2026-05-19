@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_rodent_quarantine",
+  "title": "SOP 29.2: Rodent Quarantine",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 29.2 — Rodent Quarantine",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_29.2_Rodent_Quarantine.pdf",
+  "content": "IACUC SOP describing the quarantine procedure for incoming rodents, including duration, health screening, and release criteria.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

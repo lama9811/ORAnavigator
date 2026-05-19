@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_euthanasia_alt_co2",
+  "title": "SOP 17.3: Euthanasia — Use of Alternatives to CO2",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 17.3 — Euthanasia — Use of Alternatives to CO2",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_17.3_Euthanasia%E2%80%93Use_of_alternatives_to_CO2_Euthanasia.pdf",
+  "content": "IACUC SOP describing approved alternatives to CO2 euthanasia for laboratory animals at the ARF, including cervical dislocation, pharmacological agents, and AVMA-approved methods.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

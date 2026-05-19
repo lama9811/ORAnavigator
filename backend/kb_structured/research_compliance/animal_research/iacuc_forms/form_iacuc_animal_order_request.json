@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_animal_order_request",
+  "title": "Animal Order Request Form",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Animal Order Request Form",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Animal%20%20Order%20Request%20Form.docx",
+  "content": "Form used by PIs to request the purchase of new animals for an IACUC-approved protocol. Submit through ARF Manager for vendor procurement.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

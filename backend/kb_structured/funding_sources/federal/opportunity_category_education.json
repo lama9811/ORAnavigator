@@ -1,0 +1,13 @@
+{
+  "doc_id": "opportunity_category_education",
+  "title": "Federal Funding — Education Agencies",
+  "category": "funding_sources",
+  "subcategory": "federal_category_education",
+  "display_label": "Federal Education Funding Agencies",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/funding-sources",
+  "content": "Education-focused federal sponsors and resources listed by Morgan State ORA on the Funding Sources page:\n\n- U.S. Department of Education (ED) — http://www.ed.gov/\n- Education Daily — http://www.educationdaily.com/GE/splash.jsp\n\nMorgan investigators in education research, teacher preparation, and education sciences also use the Institute of Education Sciences (IES) Research Training Programs and DoED HBCU/MSI-specific programs (see opportunity_category_hbcu_msi).",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "opportunities"
+}

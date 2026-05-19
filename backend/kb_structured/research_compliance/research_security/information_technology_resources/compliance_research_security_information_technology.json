@@ -1,0 +1,50 @@
+{
+  "doc_id": "compliance_research_security_information_technology",
+  "title": "Compliance — Research Security: Information Technology Resources",
+  "category": "research_compliance",
+  "subcategory": "research_security_subpage",
+  "display_label": "Research Security — Information Technology Resources",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/information-technology-resources",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/information-technology-resources",
+  "content": "Research Security — Information Technology Resources at Morgan State University.\n\nOverview: Morgan State University is committed to maintaining the security, integrity, and availability of its information assets. To support this mission, the university has developed a series of standards and procedures that align with industry best practices and regulatory requirements. These documents provide guidance on how MSU manages cybersecurity risks, responds to incidents, and protects sensitive information.\n\nThe page exposes four IT security standards/procedures via expandable accordions, each linking to a Google Drive PDF.\n\n=== ACCORDION 1: Information Security Incident Response ===\nDocument: Information Security Incident Response Standard & Procedure\nURL: https://drive.google.com/file/d/1vPcHPxFDJTbKZgOO4ANDzECex84l1-nB/view\nPurpose: Provides Morgan State University with a structured framework for identifying, managing, and responding to information security incidents. Its primary goal is to minimize the potential impact on the university's information assets while ensuring the confidentiality, integrity, and availability of critical systems and data.\n\n=== ACCORDION 2: Information Security Risk Management ===\nDocument: Information Security Risk Management Standard & Procedure\nURL: https://drive.google.com/file/d/1vohI7fvV3SsiNho1xv-5OrJjezM6NuGH/view\nPurpose: Establishes a formal process for identifying, assessing, and managing risks to Morgan State University's information systems. It defines the methodologies necessary to evaluate risks, implement mitigation strategies, and ensure the ongoing protection of information assets. This procedure aligns with national and international frameworks, including NIST SP 800-37, NIST SP 800-53, ISO 27005, and ISO 31000, to support a consistent, standards-based approach to information security risk management.\n\n=== ACCORDION 3: Data Encryption Procedure ===\nDocument: Data Encryption Procedure\nURL: https://drive.google.com/file/d/1D4IXLrV3CnHzMB5TwyvqBfajYODSSWLw/view\nPurpose: Ensures that Morgan State University's sensitive and confidential information is protected through the implementation of strong encryption practices. As a critical security measure, encryption safeguards data from unauthorized access by rendering it unreadable without the appropriate decryption credentials.\n\n=== ACCORDION 4: Data Classification ===\nDocument: Data Classification Procedure\nURL: https://drive.google.com/file/d/1gxKsfqaPvhJjyvbGbo9SyrAVPiTWJ5ta/view\nPurpose: Establishes a structured framework for categorizing, managing, and protecting Morgan State University data based on its sensitivity and the risks associated with unauthorized access or disclosure. Proper classification enables the implementation of appropriate security controls and safeguards, helping to prevent data breaches, loss, or misuse, and ensuring compliance with legal, regulatory, and institutional requirements.\n\nThese four documents collectively comprise the cybersecurity layer of MSU's Research Security Program (one of the four core domains: Cybersecurity, Export Controls, Conflict of Interest, Foreign Travel Security).\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "accordion_count": 4,
+    "accordion_titles": [
+      "Information Security Incident Response",
+      "Information Security Risk Management",
+      "Data Encryption Procedure",
+      "Data Classification"
+    ],
+    "frameworks_referenced": [
+      "NIST SP 800-37",
+      "NIST SP 800-53",
+      "ISO 27005",
+      "ISO 31000"
+    ],
+    "documents": [
+      {
+        "title": "Information Security Incident Response Standard & Procedure",
+        "url": "https://drive.google.com/file/d/1vPcHPxFDJTbKZgOO4ANDzECex84l1-nB/view"
+      },
+      {
+        "title": "Information Security Risk Management Standard & Procedure",
+        "url": "https://drive.google.com/file/d/1vohI7fvV3SsiNho1xv-5OrJjezM6NuGH/view"
+      },
+      {
+        "title": "Data Encryption Procedure",
+        "url": "https://drive.google.com/file/d/1D4IXLrV3CnHzMB5TwyvqBfajYODSSWLw/view"
+      },
+      {
+        "title": "Data Classification Procedure",
+        "url": "https://drive.google.com/file/d/1gxKsfqaPvhJjyvbGbo9SyrAVPiTWJ5ta/view"
+      }
+    ],
+    "domain": "cybersecurity",
+    "parent_program": "Research Security Program",
+    "contact_email": "ask.ora@morgan.edu"
+  },
+  "legacy_category": "compliance"
+}

@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_citi_training_program",
+  "title": "CITI Training Program",
+  "category": "research_compliance",
+  "subcategory": "compliance_pdf",
+  "display_label": "CITI Training Program (external)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/human-subjects-research",
+  "procedure_url": "https://about.citiprogram.org/",
+  "content": "External training provider used by Morgan State for all required compliance courses: Human Subjects Research (HSR, mandatory for human-subjects researchers), Responsible Conduct of Research (RCR, required for NIH/NSF awardees every four years), and Conflict of Interest (COI, required for sponsored-research investigators every four years). Researchers register at citiprogram.org and affiliate with Morgan State University.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

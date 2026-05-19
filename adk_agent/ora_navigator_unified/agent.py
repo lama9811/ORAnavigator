@@ -42,8 +42,10 @@ for env_path in env_paths:
 
 from google.adk.agents import LlmAgent
 from google.adk.agents.callback_context import CallbackContext
-from google.adk.tools import VertexAiSearchTool
+from google.adk.tools import VertexAiSearchTool, FunctionTool
 from google.genai import types
+
+from .list_kb_tool import list_kb_topics
 
 
 # =============================================================================
@@ -55,7 +57,7 @@ DS_PREFIX = f'projects/{PROJECT_ID}/locations/us/collections/default_collection/
 # Unified datastore containing all KB docs (academic, career, financial, general)
 UNIFIED_KB_ID = os.getenv(
     'UNIFIED_DATASTORE_ID',
-    f'{DS_PREFIX}/oranavigator-kb-v7',
+    f'{DS_PREFIX}/oranavigator-kb-v8',
 )
 
 # Default model (fallback when no preference set)
@@ -351,6 +353,7 @@ When users ask "who made this app" or similar, say: developed for Morgan State U
 2. NEVER use training data for Morgan State facts. Your training data is outdated. Trust ONLY the KB.
 3. NEVER fabricate names, emails, phones, course codes, rooms, or any specifics. If not in KB results, it does not exist as far as you know.
 4. When KB returns no or incomplete results: "Based on the information I have access to, [what you found]. For more details, contact ORA at (443) 885-4044 or ask.ora@morgan.edu."
+5. When the user asks "what do you have on X", "list all X", "show me your X", or any enumeration question, call `list_kb_topics` FIRST to get the deterministic inventory, then use the search tool for full content. The KB mirrors morgan.edu/ora's left-sidebar nav: 9 top-level sections (about, pre_award, post_award, policies_and_guidelines, research_compliance, trainings, resources, funding_sources, ora_announcements) with nested sub-pages. Start with `list_kb_topics()` if you don't know the section, then drill in with `list_kb_topics(path='<section>')` and deeper paths like `list_kb_topics(path='research_compliance/animal_research/iacuc_sops')`.
 
 ## RESPONSE FORMAT
 - Concise, direct. Bullets and headers for readability. **Bold** key info.
@@ -464,6 +467,9 @@ root_agent = LlmAgent(
         'pre-award, post-award, compliance (IRB/IACUC/COI), forms, policies, and staff lookup.'
     ),
     instruction=_build_instruction,
+    # Gemini API constraint: cannot mix VertexAiSearchTool with FunctionTool in
+    # the same agent. The list_kb_topics functionality is exposed via the
+    # backend pre-processor instead (see backend/main.py /chat handler).
     tools=[] if os.getenv('DISABLE_KB_TOOL') else [unified_kb],
     before_agent_callback=_greeting_fast_path,
     before_model_callback=_select_model,

@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_coi_flow_chart",
+  "title": "COI Flow Chart",
+  "category": "research_compliance",
+  "subcategory": "compliance_pdf",
+  "display_label": "COI Flow Chart (PDF)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/conflict-of-interest-x12058",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ott/COI-FlowChart.pdf",
+  "content": "Visual flowchart (PDF) showing how a COI disclosure moves from filer to Office of Technology Transfer intake, to Conflict of Interest Committee review, to determination, and (if applicable) management-plan implementation.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

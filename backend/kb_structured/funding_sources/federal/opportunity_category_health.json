@@ -1,0 +1,13 @@
+{
+  "doc_id": "opportunity_category_health",
+  "title": "Federal Funding — Health Agencies",
+  "category": "funding_sources",
+  "subcategory": "federal_category_health",
+  "display_label": "Federal Health Funding Agencies",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/funding-sources",
+  "content": "Health-focused federal sponsors listed by Morgan State ORA on the Funding Sources page:\n\n- National Institutes of Health (NIH) Office of Extramural Research — https://grants.nih.gov/grants/oer.htm\n- Substance Abuse and Mental Health Services Administration (SAMHSA) grants — http://www.samhsa.gov/grants/\n\nNIH is the primary biomedical and behavioral health research funder in the U.S., supporting R01, R15, R21, K-series, F-series, and T-series mechanisms among others. Morgan PIs should also see HBCU/MSI-specific NIH programs including NIGMS SuRE, NIMHD RCMI, and NCI CURE (documented in opportunity_category_hbcu_msi).",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "opportunities"
+}

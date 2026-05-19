@@ -1,0 +1,20 @@
+{
+  "doc_id": "compliance_news_and_updates",
+  "title": "Compliance — Updates and News",
+  "category": "research_compliance",
+  "subcategory": "news",
+  "display_label": "Research Compliance Updates & News",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-compliance-updates-and-news",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-compliance-updates-and-news",
+  "content": "The Research Compliance Updates and News page is the planned home for ongoing announcements about regulatory changes, policy revisions, training opportunities, and other compliance bulletins from the Office of Research Compliance. As of 2026-05-14 the page is marked 'Coming Soon!' and does not yet contain published items. Until updates are posted, faculty and staff should subscribe to ORA Announcements or contact the office directly at ask.ora@morgan.edu or 443-885-4044 (Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251) for current compliance information.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "page_status": "coming_soon",
+    "page_marker_text": "Coming Soon!",
+    "contact_email": "ask.ora@morgan.edu",
+    "alternate_channel": "ORA Announcements"
+  },
+  "legacy_category": "compliance"
+}

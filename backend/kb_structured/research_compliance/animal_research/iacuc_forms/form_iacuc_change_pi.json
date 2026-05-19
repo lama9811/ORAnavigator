@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_iacuc_change_pi",
+  "title": "IACUC Change of Principal Investigator Form",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC Change PI Form",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/IACUS%20FORMS/Change%20PI%20form.docx",
+  "content": "Form used to transfer the Principal Investigator of an active animal-research protocol to another qualified investigator. Requires IACUC review and approval.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

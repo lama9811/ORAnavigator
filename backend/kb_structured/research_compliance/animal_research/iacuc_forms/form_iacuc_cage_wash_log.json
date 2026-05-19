@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_cage_wash_log",
+  "title": "Cage Wash Log",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Cage Wash Log",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Cage%20Wash%20Log.docx",
+  "content": "Log used to record cage-washing cycles — date, room, number of cages, washer cycle, temperature, and operator initials.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

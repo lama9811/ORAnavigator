@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_vendor_health_review",
+  "title": "SOP 47.2: Vendor Health Report Review",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 47.2 — Vendor Health Report Review",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_47.2_Vendor_Health_Report_Review.pdf",
+  "content": "IACUC SOP describing the review of vendor health reports prior to accepting animals from external suppliers.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

@@ -1,0 +1,58 @@
+{
+  "doc_id": "compliance_research_security",
+  "title": "Compliance — Research Security",
+  "category": "research_compliance",
+  "subcategory": "security",
+  "display_label": "Research Security",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security",
+  "content": "Morgan State University's Research Security Program fosters a secure and ethical research environment, with particular focus on federally sponsored research. The program protects research integrity while ensuring compliance with federal regulations across four core domains: (1) Cybersecurity — safeguarding sensitive research data, systems, and networks against cyber threats, including guidance on data protection and breach prevention; (2) Export Controls — ensuring compliance with U.S. export-control laws that govern the sharing of sensitive technologies, data, and research results with international partners; (3) Conflict of Interest — maintaining transparency through policies and procedures for identifying, disclosing, and managing potential conflicts of interest in federally funded research; (4) Foreign Travel Security — providing researchers with strategies to protect themselves and their work when traveling abroad, including guidelines for handling sensitive data internationally. The program is anchored to the federal NSPM-33 framework (National Security Presidential Memorandum 33 on United States Government-Supported Research and Development National Security Policy), which the ORA site lists as a dedicated resource topic. A Research Compliance and Security Training component is offered, with additional resources available through the Research Security Program Committee. General inquiries go to ask.ora@morgan.edu or 443-885-4044; the Office of Research Administration is at Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251.\n\n=== PLAYWRIGHT RE-VERIFICATION 2026-05-14 — Subpage Map ===\nThe Research Security parent page links out to 5 subpages via the ORA side navigation:\n1. Information Technology Resources — /research-security/information-technology-resources — exposes 4 cybersecurity standards/procedures (Information Security Incident Response, Information Security Risk Management, Data Encryption, Data Classification). Aligns with NIST SP 800-37, NIST SP 800-53, ISO 27005, ISO 31000. See compliance_research_security_information_technology.\n2. Research Compliance and Security Training — /research-security/research-compliance-and-security-training — lists 3 approved training providers (CITI Program, NSF SECURE Center, NSF Research Security Training Modules). Certificate retention required. See compliance_research_security_training (compliance angle) and trainings_compliance_security (catalog angle).\n3. Technology Control Plan (TCP) — /research-security/technology-control-plan-(tcp) — STATUS: DocuSign template 'coming soon' as of 2026-05-14. Page has overview text only, no live form. See compliance_research_security_technology_control_plan.\n4. Research Security Program Committee — /research-security/research-security-program-committee — STATUS: roster not yet published. Page has one descriptive paragraph only — no member names, chair name, charter, or meeting cadence. Contact ORA for current committee information. See compliance_research_security_program_committee.\n5. NSPM-33 Overview — /research-security/nspm-33-overview — explains the $50M annual federal funding threshold trigger and lists NSF, NIH, DOE, DOD as the four agencies that built compliant training (delivered via CITI Programs). See compliance_research_security_nspm_33.\n\n=== Page-completeness summary ===\nFully populated subpages: Information Technology Resources, Research Compliance and Security Training. Stub subpages awaiting content: Technology Control Plan (DocuSign pending), Research Security Program Committee (roster pending). Brief but complete: NSPM-33 Overview.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "federal_framework": "NSPM-33",
+    "nspm_33_threshold_usd": 50000000,
+    "core_domains": [
+      "cybersecurity",
+      "export_controls",
+      "conflict_of_interest",
+      "foreign_travel_security"
+    ],
+    "training_offered": "Research Compliance and Security Training",
+    "contact_email": "ask.ora@morgan.edu",
+    "subpages": [
+      {
+        "label": "Information Technology Resources",
+        "doc_id": "compliance_research_security_information_technology",
+        "status": "populated",
+        "url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/information-technology-resources"
+      },
+      {
+        "label": "Research Compliance and Security Training",
+        "doc_id": "compliance_research_security_training",
+        "status": "populated",
+        "url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-compliance-and-security-training"
+      },
+      {
+        "label": "Technology Control Plan (TCP)",
+        "doc_id": "compliance_research_security_technology_control_plan",
+        "status": "stub_docusign_pending",
+        "url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/technology-control-plan-(tcp)"
+      },
+      {
+        "label": "Research Security Program Committee",
+        "doc_id": "compliance_research_security_program_committee",
+        "status": "stub_roster_pending",
+        "url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-security-program-committee"
+      },
+      {
+        "label": "NSPM-33 Overview",
+        "doc_id": "compliance_research_security_nspm_33",
+        "status": "brief_complete",
+        "url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/nspm-33-overview"
+      }
+    ]
+  },
+  "legacy_category": "compliance"
+}

@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_coi_disclosure",
+  "title": "Conflict of Interest in Research and Development Disclosure Form",
+  "category": "research_compliance",
+  "subcategory": "coi_form",
+  "display_label": "COI Disclosure Form",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/conflict-of-interest-x12058",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ott/COI-DisclosureForm.docx",
+  "content": "Word disclosure form used by Morgan personnel to declare significant financial interests, outside activities, or other relationships that may constitute conflicts of interest in research and development activities. Submit to the Office of Technology Transfer for COIC review.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

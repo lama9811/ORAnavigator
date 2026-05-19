@@ -1,7 +1,9 @@
 """
 Query Rewriter for Follow-up Resolution
 =========================================
-Two-layer system for resolving pronouns and references in follow-up queries:
+Two-layer system for resolving pronouns and references in follow-up queries.
+Tuned for the ORA Navigator domain: grants, awards, IRB/IACUC protocols,
+SOPs, policies, pre-/post-award processes, and ORA staff.
 
 Layer 1 (deterministic): Entity focus tracker. Extracts entities from both
 the user's query AND the bot's response. When both mention the same entity,
@@ -10,7 +12,7 @@ this focus with zero LLM calls.
 
 Layer 2 (LLM fallback): Gemini rewriter. For complex cases where regex
 can't determine the entity, uses a fast Gemini call with explicit
-"most recent exchange" priority.
+"most recent exchange" priority and a "when unsure, pass through" rule.
 """
 
 import os
@@ -71,16 +73,78 @@ def _get_client():
     return _gemini_client
 
 
+# =============================================================================
+# Entity patterns (ORA domain)
+# =============================================================================
+
+# People: ORA staff use a mix of Dr./Prof./Mr./Ms./Mrs. titles
+_PERSON_RE = re.compile(
+    r'(?:Dr\.?\s+|Professor\s+|Prof\.?\s+|Mr\.?\s+|Ms\.?\s+|Mrs\.?\s+)'
+    r'([A-Z][a-z]+(?:\s+(?:"[^"]+"\s+)?[A-Z][a-z]+)?)',
+)
+
+# Identifiers: grant/award IDs, IRB/IACUC protocols, SOPs, policy numbers.
+# Single compound alternation so a findall captures whichever class applies.
+_IDENTIFIER_RE = re.compile(
+    r'\b('
+    r'(?:[A-Z]\d{2}[-\s]?[A-Z]{0,2}\d{4,})'              # NIH (R01-XXXXXX, K99, T32)
+    r'|(?:NSF[-\s]?\d{5,})'                               # NSF (NSF-2XXXXXX)
+    r'|(?:DE[-\s]?[A-Z]{2}\d{2}[-\s]?[A-Z0-9]+)'          # DOE (DE-SC0012345)
+    r'|(?:(?:MSU[-\s])?IRB[-#\s]?\d{2,}(?:[-\s]\d+)?)'    # IRB protocol
+    r'|(?:(?:MSU[-\s])?IACUC[-#\s]?\d{2,}(?:[-\s]\d+)?)'  # IACUC protocol
+    r'|(?:SOP\s+\d{1,3})'                                  # IACUC SOP
+    r'|(?:Policy\s+\d+(?:\.\d+)?)'                         # Policy 5.4
+    r')\b',
+    re.IGNORECASE,
+)
+
+# Areas: ORA program / process areas the user might refer to as "that area"
+_AREA_RE = re.compile(
+    r'\b('
+    r'pre-?award|post-?award|'
+    r'IRB|IACUC|COI|conflict of interest|'
+    r'research security|NSPM-?33|TCP|technology control plan|'
+    r'RCR|responsible conduct of research|'
+    r'human subjects|animal research|'
+    r'F&A rate|fringe (?:benefit )?rate|indirect cost rate|'
+    r'no-?cost extension|NCE|'
+    r'effort report(?:ing)?|'
+    r'PI handbook|principal investigator handbook|'
+    r'export control|misconduct'
+    r')\b',
+    re.IGNORECASE,
+)
+
+# Topic keywords that signal the query is self-contained — presence of any
+# means "trust the query, don't bleed in prior turn's focus"
+_OWN_TOPIC_RE = re.compile(
+    r'\b('
+    r'grant|proposal|protocol|award|budget|funding|sponsor|'
+    r'irb|iacuc|coi|nce|f&a|fringe|effort|rcr|nspm|'
+    r'subaward|advance account|fwa|uei|ein|'
+    r'compliance|misconduct|policy|sop|form|template|checklist'
+    r')\b',
+    re.IGNORECASE,
+)
+
+# "My X" — user references their own ORA artifacts or assigned ORA contact
+_MY_ARTIFACT_RE = re.compile(
+    r'\bmy\s+(PI|grant|proposal|protocol|award|project|budget|effort|'
+    r'IRB|IACUC|COI|analyst|accountant|grant officer|pre-?award|post-?award)\b',
+    re.IGNORECASE,
+)
+
+
 def is_likely_followup(query: str) -> bool:
     """Detect if a query likely needs conversation context to be understood."""
     q = query.strip()
     if not q:
         return False
 
-    # Very short queries (2 words or fewer) with no specific entity are likely follow-ups
-    # Skip if query contains a course code (e.g., COSC 350) or looks self-contained
+    # Very short queries (≤ 2 words) without a specific ORA identifier are likely
+    # follow-ups. "SOP 38", "IRB-2025-001", "R01-AB12345" are self-contained.
     words = q.split()
-    if len(words) <= 2 and not re.search(r'\b[A-Z]{2,4}\s*\d{3}\b', q):
+    if len(words) <= 2 and not _IDENTIFIER_RE.search(q):
         return True
 
     if _PRONOUN_RE.search(q):
@@ -99,134 +163,148 @@ def is_likely_followup(query: str) -> bool:
 # LAYER 1: Deterministic Entity Focus Tracker
 # =============================================================================
 
-# Patterns to extract entities from text
-_PERSON_RE = re.compile(
-    r'(?:Dr\.?\s+|Professor\s+)([A-Z][a-z]+(?:\s+(?:"[^"]+"\s+)?[A-Z][a-z]+)?)',
-)
-_COURSE_RE = re.compile(r'\b([A-Z]{2,4}\s*\d{3})\b')
-_PROGRAM_RE = re.compile(r'\b(4\+1|accelerated master|honors program|cloud computing degree|MS in Advanced Computing)\b', re.IGNORECASE)
-
-
 def _extract_focus(user_query: str, bot_response: str) -> dict:
     """Extract the confirmed focus entity from a Q&A exchange.
     Cross-references what the user asked about with what the bot answered about.
-    When both sides mention the same entity, it's the confirmed focus."""
+    When both sides mention the same entity, it's the confirmed focus.
 
-    focus = {"person": None, "course": None, "program": None}
+    Returns: {"person": str|None, "identifier": str|None, "area": str|None}
+    """
 
-    # Extract from user query
+    focus = {"person": None, "identifier": None, "area": None}
+
     user_persons = _PERSON_RE.findall(user_query)
-    user_courses = _COURSE_RE.findall(user_query)
-    user_programs = _PROGRAM_RE.findall(user_query)
+    user_ids = _IDENTIFIER_RE.findall(user_query)
+    user_areas = _AREA_RE.findall(user_query)
 
-    # Also catch "my advisor" pattern
-    if re.search(r'\bmy advisor\b|\badvisor\b', user_query, re.IGNORECASE):
-        # Extract advisor name from bot response
-        advisor_match = _PERSON_RE.findall(bot_response[:300])
-        if advisor_match:
-            focus["person"] = advisor_match[0]
+    # "my PI" / "my analyst" -> pull the actual name from the bot reply
+    if _MY_ARTIFACT_RE.search(user_query):
+        ref_persons = _PERSON_RE.findall(bot_response[:400])
+        if ref_persons:
+            focus["person"] = ref_persons[0]
             return focus
 
-    # Extract from bot response (first 300 chars, where the main answer is)
-    bot_persons = _PERSON_RE.findall(bot_response[:300])
-    bot_courses = _COURSE_RE.findall(bot_response[:300])
+    bot_persons = _PERSON_RE.findall(bot_response[:400])
+    bot_ids = _IDENTIFIER_RE.findall(bot_response[:400])
+    bot_areas = _AREA_RE.findall(bot_response[:400])
 
-    # Cross-reference: if user asked about a person and bot answered about them
+    # Cross-reference person: user asked about a person, bot answered about them
     if user_persons and bot_persons:
-        # Check if any user person matches any bot person (by last name)
         for up in user_persons:
             up_last = up.split()[-1].lower()
             for bp in bot_persons:
                 bp_last = bp.split()[-1].lower()
                 if up_last == bp_last:
-                    focus["person"] = bp  # Use bot's version (more complete name)
+                    focus["person"] = bp  # bot's version tends to be more complete
                     break
 
-    # If user didn't mention a specific person but bot clearly answered about one
+    # User didn't name a person, but bot clearly answered about one
     if not focus["person"] and not user_persons and bot_persons:
-        # Bot response starts with a person's name = that's the focus
-        first_person = bot_persons[0]
-        focus["person"] = first_person
+        focus["person"] = bot_persons[0]
 
-    # Course focus
-    if user_courses and bot_courses:
-        for uc in user_courses:
-            uc_norm = uc.replace(" ", "")
-            for bc in bot_courses:
-                if uc.replace(" ", "") == bc.replace(" ", ""):
-                    focus["course"] = bc
+    # Identifier focus
+    if user_ids and bot_ids:
+        for uid in user_ids:
+            uid_norm = uid.replace(" ", "").lower()
+            for bid in bot_ids:
+                if bid.replace(" ", "").lower() == uid_norm:
+                    focus["identifier"] = bid
                     break
+    if not focus["identifier"] and user_ids:
+        focus["identifier"] = user_ids[0]
 
-    if not focus["course"] and user_courses:
-        focus["course"] = user_courses[0]
-
-    # Program focus
-    if user_programs:
-        focus["program"] = user_programs[0]
+    # Area focus (user's last-mentioned area wins — they set the topic)
+    if user_areas:
+        focus["area"] = user_areas[-1]
+    elif bot_areas:
+        focus["area"] = bot_areas[0]
 
     return focus
 
 
 def _detect_explicit_override(query: str) -> dict:
-    """Detect explicit topic switches like 'go back to Dr. Mack' or 'what about COSC 472'.
+    """Detect explicit topic switches like 'go back to Ms. Smith' or
+    'what about IRB' or 'switch to SOP 38'.
     Returns the new focus entity if found, or empty dict."""
     override = {}
 
-    # "go back to X", "back to X", "switch to X", "now about X"
-    back_match = re.search(
-        r'(?:go back to|back to|switch to|now (?:tell me )?about|let.s talk about)\s+(?:Dr\.?\s+)?(\w+)',
-        query, re.IGNORECASE
+    # Stop at sentence-ending [?!,;] but NOT '.' — periods are common inside
+    # titles like "Ms." or "Dr." and stopping there truncates the target name.
+    phrase = re.search(
+        r"(?:go back to|back to|switch to|now (?:tell me )?about|"
+        r"let'?s talk about|what about|how about)\s+"
+        r"(?:the\s+)?(.{1,60}?)(?:[?!,;]|$)",
+        query, re.IGNORECASE,
     )
-    if back_match:
-        name = back_match.group(1)
-        # Don't treat course prefixes (COSC, CLCO, etc.) as person names
-        if not re.match(r'^[A-Z]{2,4}$', name) and (name[0].isupper() or re.match(r'(?:dr|professor)', query, re.IGNORECASE)):
-            override["person"] = name
+    if not phrase:
+        return override
 
-    # "what about COSC XXX"
-    course_match = re.search(r'(?:what about|how about|switch to)\s+([A-Z]{2,4}\s*\d{3})', query, re.IGNORECASE)
-    if course_match:
-        override["course"] = course_match.group(1)
+    target = phrase.group(1).strip()
+    if not target:
+        return override
+
+    # Identifier wins (most specific)
+    ident_match = _IDENTIFIER_RE.search(target)
+    if ident_match:
+        override["identifier"] = ident_match.group(0)
+        return override
+
+    # Then area
+    area_match = _AREA_RE.search(target)
+    if area_match:
+        override["area"] = area_match.group(0)
+        return override
+
+    # Then person (title optional, capitalized name)
+    person_match = re.match(
+        r"(?:Dr\.?\s+|Prof\.?\s+|Professor\s+|Mr\.?\s+|Ms\.?\s+|Mrs\.?\s+)?"
+        r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)",
+        target,
+    )
+    if person_match:
+        override["person"] = person_match.group(1)
 
     return override
 
 
-def _apply_focus(query: str, focus: dict) -> str:
-    """Replace pronouns in query with the confirmed focus entity.
-    Returns the rewritten query, or original if no replacement was made."""
+def _apply_focus(query: str, focus: dict) -> str | None:
+    """Replace pronouns / references in `query` using the confirmed focus.
+    Returns the rewritten query, or None if no replacement was made."""
 
     original = query
     q = query
 
     if focus.get("person"):
         name = focus["person"]
-        # Replace gendered pronouns
-        q = re.sub(r'\bhe\b(?!\w)', f'Dr. {name.split()[-1]}', q, flags=re.IGNORECASE)
-        q = re.sub(r'\bhim\b(?!\w)', f'Dr. {name.split()[-1]}', q, flags=re.IGNORECASE)
-        q = re.sub(r'\bhis\b(?!\w)', f"Dr. {name.split()[-1]}'s", q, flags=re.IGNORECASE)
-        q = re.sub(r'\bshe\b(?!\w)', f'Dr. {name.split()[-1]}', q, flags=re.IGNORECASE)
-        q = re.sub(r'\bher\b(?!\w)', f"Dr. {name.split()[-1]}'s", q, flags=re.IGNORECASE)
-        q = re.sub(r'\bthey\b(?!\w)', f'Dr. {name.split()[-1]}', q, flags=re.IGNORECASE)
-        q = re.sub(r'\bthem\b(?!\w)', f'Dr. {name.split()[-1]}', q, flags=re.IGNORECASE)
-        q = re.sub(r'\btheir\b(?!\w)', f"Dr. {name.split()[-1]}'s", q, flags=re.IGNORECASE)
+        # Use the captured name as-is — not all ORA staff are "Dr."
+        q = re.sub(r'\bhe\b(?!\w)', name, q, flags=re.IGNORECASE)
+        q = re.sub(r'\bhim\b(?!\w)', name, q, flags=re.IGNORECASE)
+        q = re.sub(r'\bhis\b(?!\w)', f"{name}'s", q, flags=re.IGNORECASE)
+        q = re.sub(r'\bshe\b(?!\w)', name, q, flags=re.IGNORECASE)
+        q = re.sub(r'\bher\b(?!\w)', f"{name}'s", q, flags=re.IGNORECASE)
+        q = re.sub(r'\bthey\b(?!\w)', name, q, flags=re.IGNORECASE)
+        q = re.sub(r'\bthem\b(?!\w)', name, q, flags=re.IGNORECASE)
+        q = re.sub(r'\btheir\b(?!\w)', f"{name}'s", q, flags=re.IGNORECASE)
 
-    if focus.get("course"):
-        code = focus["course"]
-        q = re.sub(r'\bit\b(?!\w)', code, q, flags=re.IGNORECASE, count=1)
-        q = re.sub(r'\bthat course\b', code, q, flags=re.IGNORECASE)
-        q = re.sub(r'\bthe course\b', code, q, flags=re.IGNORECASE)
+    if focus.get("identifier"):
+        ident = focus["identifier"]
+        q = re.sub(r'\bit\b(?!\w)', ident, q, flags=re.IGNORECASE, count=1)
+        q = re.sub(r'\bthat (?:grant|award|protocol|sop|policy|form|number)\b', ident, q, flags=re.IGNORECASE)
+        q = re.sub(r'\bthe (?:grant|award|protocol|sop|policy|form|number)\b', ident, q, flags=re.IGNORECASE)
 
-    if focus.get("program"):
-        prog = focus["program"]
-        q = re.sub(r'\bthat program\b', prog, q, flags=re.IGNORECASE)
-        q = re.sub(r'\bthe program\b', prog, q, flags=re.IGNORECASE)
-        q = re.sub(r'\bit\b(?!\w)', prog, q, flags=re.IGNORECASE, count=1)
+    if focus.get("area"):
+        area = focus["area"]
+        q = re.sub(r'\bthat (?:area|process|program|topic)\b', area, q, flags=re.IGNORECASE)
+        q = re.sub(r'\bthe (?:area|process|program|topic)\b', area, q, flags=re.IGNORECASE)
+        # Only consume "it" if identifier didn't already
+        if not focus.get("identifier"):
+            q = re.sub(r'\bit\b(?!\w)', area, q, flags=re.IGNORECASE, count=1)
 
     if q != original:
         print(f"   [FOCUS] '{original}' -> '{q}'")
         return q
 
-    return None  # No replacement made, fall through to LLM rewriter
+    return None
 
 
 # =============================================================================
@@ -236,8 +314,9 @@ def _apply_focus(query: str, focus: dict) -> str:
 def rewrite_query(query: str, history: list[dict]) -> str:
     """Rewrite a follow-up query to be self-contained.
 
+    Layer 0: Regex override ("go back to X", "what about IRB")
     Layer 1: Deterministic focus tracker (cross-references user query + bot response)
-    Layer 2: Gemini rewriter (fallback for cases regex can't handle)
+    Layer 2: Gemini rewriter (fallback for ambiguous short follow-ups)
 
     Args:
         query: The user's current message
@@ -249,38 +328,38 @@ def rewrite_query(query: str, history: list[dict]) -> str:
     if not history or not is_likely_followup(query):
         return query
 
-    # Layer 0: Check for explicit topic overrides ("go back to Dr. Mack")
+    # Layer 0: explicit topic overrides
     override = _detect_explicit_override(query)
     if override:
-        # User explicitly named who/what they want. Use it as focus.
         print(f"   [OVERRIDE] Detected explicit switch: {override}")
         focused = _apply_focus(query, override)
         if focused:
             return focused
 
-    # Layer 1: Try deterministic focus replacement from last turn
-    # Only replaces when we have a HIGH-CONFIDENCE match (both user and bot agree on entity)
-    # SKIP if the current query already has its own clear entities (prevents context bleed)
-    has_own_course = bool(_COURSE_RE.search(query))
+    # Smart skip: if the query already names its own entities, don't smuggle
+    # the previous turn's focus into it. Prevents context-bleed bugs.
     has_own_person = bool(_PERSON_RE.search(query))
-    has_own_topic = bool(re.search(r'\b(calc|physics|gpa|grade|class|major|minor|credit)\b', query, re.IGNORECASE))
+    has_own_identifier = bool(_IDENTIFIER_RE.search(query))
+    has_own_area = bool(_AREA_RE.search(query))
+    has_own_topic = bool(_OWN_TOPIC_RE.search(query))
 
-    if not has_own_course and not has_own_person and not has_own_topic:
+    if not (has_own_person or has_own_identifier or has_own_area or has_own_topic):
+        # Layer 1: deterministic focus replacement from the last turn
         last_turn = history[-1]
         focus = _extract_focus(last_turn["user_query"], last_turn["bot_response"])
         focused = _apply_focus(query, focus)
         if focused:
             return focused
 
-    # Layer 2: LLM rewriter - only for very short ambiguous follow-ups.
-    # For 5+ word queries, the ADK agent has full session context and handles them fine.
-    # This saves ~200-400ms per follow-up by skipping the Gemini Flash call.
+    # Layer 2: LLM rewriter — only for very short ambiguous follow-ups.
+    # 5+ word queries: the ADK agent has full session context and handles them.
+    # Skipping the LLM here saves ~200-400ms per follow-up.
     if len(query.split()) >= 5:
         return query
 
     client = _get_client()
     if not client:
-        return query  # No LLM available, agent handles it with session context
+        return query
 
     recent = history[-3:]
     ctx = ""
@@ -291,16 +370,22 @@ def rewrite_query(query: str, history: list[dict]) -> str:
         response = client.models.generate_content(
             model="gemini-2.0-flash",
             contents=(
-                "Rewrite the follow-up question to be self-contained by replacing pronouns and references "
-                "with the specific names/entities they refer to.\n\n"
+                "You rewrite follow-up questions in an ORA (research administration) chatbot "
+                "to be self-contained — replacing pronouns and references with the specific "
+                "names, grant/protocol IDs, or program areas they refer to.\n\n"
                 "CRITICAL RULES:\n"
                 "1. Pronouns like 'he', 'she', 'they', 'it' refer to the entity in the MOST RECENT exchange.\n"
-                "2. If you are NOT SURE what the pronoun or reference refers to, return the ORIGINAL question "
-                "EXACTLY as written. Do NOT guess. The chatbot has full conversation history and will handle it.\n"
-                "3. 'tell me more' or 'explain more simply' -> return ORIGINAL unchanged. The chatbot already has context.\n"
-                "4. 'what about that class' without a clear specific class in recent history -> return ORIGINAL unchanged.\n"
-                "5. Generic follow-ups like 'what do I do first', 'thanks but thats not what i asked' -> return ORIGINAL unchanged.\n"
-                "6. ONLY rewrite when you can confidently replace a pronoun with a SPECIFIC named entity.\n\n"
+                "2. If you are NOT SURE what the pronoun or reference points to, return the ORIGINAL "
+                "question EXACTLY as written. Do NOT guess. The chatbot has full conversation history "
+                "and will handle it.\n"
+                "3. 'tell me more' or 'explain more simply' -> return ORIGINAL unchanged.\n"
+                "4. 'what about that protocol/grant/policy' WITHOUT a clear specific one in recent "
+                "history -> return ORIGINAL unchanged.\n"
+                "5. Generic follow-ups like 'what do I do first', 'thanks but that's not what i asked' "
+                "-> return ORIGINAL unchanged.\n"
+                "6. ONLY rewrite when you can confidently replace a pronoun with a SPECIFIC named "
+                "entity (a person, an identifier like IRB-2025-001 or SOP 38, or an area like IACUC "
+                "or pre-award).\n\n"
                 f"Recent conversation:\n{ctx}\n"
                 f"Follow-up question: {query}\n"
                 "Rewritten question (return ONLY the rewritten question, nothing else):"
@@ -310,20 +395,17 @@ def rewrite_query(query: str, history: list[dict]) -> str:
         rewritten = response.text.strip().strip('"').strip("'")
 
         if rewritten and 5 < len(rewritten) < 300:
-            # If the rewriter just returned the same thing, let the agent handle it
             if rewritten.lower().strip("?. ") == query.lower().strip("?. "):
                 print(f"   [REWRITE] Unchanged -> agent will handle with session context")
                 return query
-            # Safety: verify rewrite didn't completely change the topic
-            # Extract key nouns/entities from both and check overlap
+            # Intent-drift guard: reject rewrites that share fewer than 2 content
+            # words AND no identifiers with the original.
             orig_words = set(re.findall(r'\b[a-z]{4,}\b', query.lower()))
             new_words = set(re.findall(r'\b[a-z]{4,}\b', rewritten.lower()))
-            # Also check course codes
-            orig_codes = set(_COURSE_RE.findall(query.upper()))
-            new_codes = set(_COURSE_RE.findall(rewritten.upper()))
+            orig_ids = set(_IDENTIFIER_RE.findall(query))
+            new_ids = set(_IDENTIFIER_RE.findall(rewritten))
             shared = orig_words & new_words
-            # If rewrite shares fewer than 2 content words AND no course codes match, reject it
-            if len(shared) < 2 and not (orig_codes & new_codes) and not orig_codes.issubset(new_codes):
+            if len(shared) < 2 and not (orig_ids & new_ids) and not orig_ids.issubset(new_ids):
                 print(f"   [REWRITE] Rejected (intent drift): '{query}' -> '{rewritten}' (shared: {shared})")
                 return query
             print(f"   [REWRITE] '{query}' -> '{rewritten}'")
@@ -332,6 +414,4 @@ def rewrite_query(query: str, history: list[dict]) -> str:
     except Exception as e:
         print(f"   [REWRITE] Failed ({type(e).__name__}: {e})")
 
-    # All layers failed -> pass original to agent. Agent has session history
-    # and will either answer from context or ask for clarification.
     return query

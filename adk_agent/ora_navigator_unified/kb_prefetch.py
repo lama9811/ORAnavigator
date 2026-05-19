@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 # Config
 GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "infra-vertex-494621-v1")
-DATASTORE_ID = os.getenv("KB_PREFETCH_DATASTORE_ID", "oranavigator-kb-local")
+DATASTORE_ID = os.getenv("KB_PREFETCH_DATASTORE_ID", "oranavigator-kb-v8")
 LOCATION = "us"
 # Recall degrades sharply below ~20 docs (TF-IDF vocabulary distribution shift).
 # Current ORA corpus is 382 — well above. Warning fires on shrinkage.

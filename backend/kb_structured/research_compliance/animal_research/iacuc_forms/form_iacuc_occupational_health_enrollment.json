@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_occupational_health_enrollment",
+  "title": "Occupational Health Risk Assessment and Enrollment",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Occupational Health Risk Assessment and Enrollment",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/Forms/Occupational_Health_Enrollment_for_Laboratory_Animal_Contact_Form.docx",
+  "content": "Risk-assessment and enrollment form for the Occupational Health Program required for all personnel having laboratory animal contact at MSU.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

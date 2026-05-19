@@ -233,12 +233,17 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
         setSuggestionsLoading(false);
         return;
       }
+      const token = localStorage.getItem("token");
+      const url = token
+        ? `${API_BASE}/api/me/suggested-questions`
+        : `${API_BASE}/api/popular-questions`;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       try {
-        const response = await fetch(`${API_BASE}/api/popular-questions`);
+        const response = await fetch(url, { headers });
         if (response.ok) {
           const data = await response.json();
           if (data.questions && data.questions.length > 0) {
-            setSuggestions(data.questions.slice(0, 8));
+            setSuggestions(data.questions.slice(0, 10));
           }
         }
       } catch (error) {
@@ -1132,7 +1137,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
           >
             <img src="/msu_logo.webp" alt="MSU Logo" className="welcome-logo" />
             <h1 className="welcome-title">ORA Navigator</h1>
-            <p className="welcome-subtitle">How can I assist with your academic journey today?</p>
+            <p className="welcome-subtitle">How can I help with your research today?</p>
             <div className="suggestions">
               {suggestionsLoading ? (
                 <>

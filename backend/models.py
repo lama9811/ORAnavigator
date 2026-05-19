@@ -240,6 +240,26 @@ class UserMemory(Base):
     user = relationship("User", backref="memories")
 
 
+class UserSuggestedQuestions(Base):
+    """Precomputed home-screen suggestions for each user.
+    Refreshed in the post-commit hook after every chat turn — the GET
+    endpoint is a pure ~5ms read. Throttled by source_signature so unchanged
+    history doesn't trigger needless LLM calls."""
+    __tablename__ = "user_suggested_questions"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    # JSON-encoded list[str] (codebase convention: TEXT + json.dumps/loads).
+    questions = Column(Text, nullable=False)
+    generated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    # "{max_chat_id}:{max_memory_updated_epoch}" — used to skip regen when
+    # neither history nor memory facts have changed since last run.
+    source_signature = Column(String(64), nullable=False, default="")
+    # "personalized" (LLM + template) or "default" (cold-start pool sample).
+    source = Column(String(32), nullable=False, default="default")
+
+    user = relationship("User", backref="suggested_questions")
+
+
 class FailedQuery(Base):
     """Tracks questions the chatbot couldn't answer (KB misses).
     Used by the auto-research agent to find and fill knowledge gaps."""

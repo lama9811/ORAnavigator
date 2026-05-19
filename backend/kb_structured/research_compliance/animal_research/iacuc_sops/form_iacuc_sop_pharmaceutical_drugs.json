@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_pharmaceutical_drugs",
+  "title": "SOP 27.2: Pharmaceutical Drugs",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 27.2 — Pharmaceutical Drugs",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_27.2_Pharmaceutical_drugs.pdf",
+  "content": "IACUC SOP for the storage, dispensing, and record-keeping of pharmaceutical-grade drugs used in animal research at the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

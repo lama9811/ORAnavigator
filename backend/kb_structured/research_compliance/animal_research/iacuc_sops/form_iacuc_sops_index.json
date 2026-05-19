@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_iacuc_sops_index",
+  "title": "IACUC Standard Operating Procedures (SOPs)",
+  "category": "research_compliance",
+  "subcategory": "compliance_policy",
+  "display_label": "IACUC SOPs (Standard Operating Procedures)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "content": "Index of 50+ IACUC Standard Operating Procedures governing operations at the Animal Research Facility. Topics span training (SOP 1.2), rodent import/export (SOP 2.2, 22.2), anesthesia and analgesia (SOP 3.2), hazards (SOP 4.2), animal purchasing and receiving (SOPs 5.2 and 6.2), rodent breeding (SOPs 7.2 and 24.2), waste management (SOPs 8.2, 11.2, 19.2), cage labeling and washing (SOPs 9.2, 10.2, 35.2), controlled-substance access (SOP 12.2), carcass disposal (SOP 13.2), cleaning (SOPs 14.2 and 31.2), emergency and disaster planning (SOP 15.3), enrichment (SOP 16.2), euthanasia and alternatives to CO2 (SOP 17.3), animal transport (SOP 18.2), husbandry and training (SOP 20.2), identification (SOP 21.1), non-pharmaceutical-grade drugs (SOP 23.2), feed/bedding (SOP 25.2), PPE (SOP 26.2), pharmaceuticals (SOP 27.2), facility access (SOPs 28.2 and 41.2), quarantine (SOP 29.2), occupational health (SOP 30.2), sentinel procedures (SOP 32.2), overcrowding/fighting separation (SOP 33.2), survival surgery (SOP 34.2), veterinary clinical calls (SOP 36.2), water testing (SOP 38.2), weekend/holiday care (SOP 39.2), microisolator aseptic technique (SOP 40.2), post-approval monitoring and renewal (SOP 42.2), parasite treatment (SOP 43.2), rodent cage density (SOP 44.2), satellite areas (SOP 45.2), laboratory safety (SOP 46.2), vendor health-report review (SOP 47.2), and IACUC governance (SOPs 48.1 protocol review, 49.1 semiannual review, 50.1 member appointment, 51.1 responsibilities). Supporting documents include the Biological Safety Manual and Exposure Control Plan and the Emergency Declaration and Point of Contact Call List.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

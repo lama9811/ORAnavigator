@@ -204,7 +204,7 @@ export default function App() {
     localStorage.setItem("chat_sessions", JSON.stringify(sessions));
   }, [sessions]);
 
-  // 🔥 NEW: Fetch Chat History from RDS & GROUP BY SESSION ID
+  // Fetch chat history (from Cloud SQL) and group by session ID
   useEffect(() => {
     async function loadHistory() {
       if (!token) return;

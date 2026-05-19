@@ -1936,7 +1936,7 @@ export default function AdminDashboard() {
                 <div className={`health-card ${healthStatus.database?.status === "connected" ? "healthy" : "error"}`}>
                   <FaDatabase className="health-icon" />
                   <div className="health-info">
-                    <h4>Database (RDS)</h4>
+                    <h4>Database (Cloud SQL MySQL)</h4>
                     <span className="health-status">{healthStatus.database?.status}</span>
                     <p>{healthStatus.database?.message}</p>
                   </div>

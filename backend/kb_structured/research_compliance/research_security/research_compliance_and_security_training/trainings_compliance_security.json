@@ -1,0 +1,32 @@
+{
+  "doc_id": "trainings_compliance_security",
+  "title": "Trainings — Research Compliance and Security Training (Required)",
+  "category": "research_compliance",
+  "subcategory": "compliance_training",
+  "display_label": "Research Compliance & Security Training (ORA Trainings)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-compliance-and-security-training",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-compliance-and-security-training",
+  "content": "REQUIRED: All Morgan State University personnel engaged in federally funded research are required to complete Research Security Training. Individuals are required to complete one of the approved training options listed below. Certificate retention is mandatory for personal records and audit verification purposes.\n\nApproved training providers (complete ONE of the following):\n\n1) CITI Program — https://citiprogram.org/\n   MSU account establishment is required. CITI is the most widely used compliance training platform for U.S. research institutions and covers research security as well as Responsible Conduct of Research (RCR), human subjects research, animal welfare, biosafety, conflict of interest, and export controls.\n\n2) NSF SECURE Center — https://www.secure-center.org/ctm\n   The NSF-sponsored Safeguarding the Entire Community of the U.S. Research Ecosystem (SECURE) Center provides certified research security training modules.\n\n3) NSF Research Security Training Modules — https://www.nsf.gov/research-security/training\n   NSF's official research security training modules, free and open access.\n\nAfter completing one of the above, retain the certificate of completion in your personal records. Certificates may be requested during audits or for sponsor compliance documentation.\n\nNote: this page focuses specifically on Research Security Training as required by federal sponsors. Other compliance trainings (IRB human subjects, IACUC animal use, RCR, Conflict of Interest, Export Controls) are addressed through related ORA compliance pages and are also offered through the CITI Program. Specific Morgan-delivered presentations on RCR, COI, and Export Controls are archived in the Monthly D-RED Seminars catalog (e.g., Edet Isuk's RCR presentation 2022-11-09, Export Controls & COI presentation 2023-04-12).\n\nThe page does not specify a cadence; training is required upon engagement with federally funded research and renewed per sponsor or institutional policy.\n\nFor questions, contact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "key_facts": {
+    "required_for": "All MSU personnel engaged in federally funded research",
+    "approved_providers": [
+      {
+        "name": "CITI Program",
+        "url": "https://citiprogram.org/",
+        "notes": "Requires MSU account establishment"
+      },
+      {
+        "name": "NSF SECURE Center",
+        "url": "https://www.secure-center.org/ctm"
+      },
+      {
+        "name": "NSF Research Security Training Modules",
+        "url": "https://www.nsf.gov/research-security/training"
+      }
+    ],
+    "certificate_required": true,
+    "contact_email": "ask.ora@morgan.edu"
+  },
+  "legacy_category": "trainings"
+}

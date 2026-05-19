@@ -51,7 +51,6 @@ export default function ProfilePage({ userEmail, onLogout }) {
     loaded: false,
     facts: [],
     conversations: [],
-    paused: false,
     stats: { fact_count: 0, embedded_turns: 0 },
   });
   const [editingMemoryId, setEditingMemoryId] = useState(null);
@@ -71,36 +70,11 @@ export default function ProfilePage({ userEmail, onLogout }) {
           loaded: true,
           facts: data.facts || [],
           conversations: data.recent_conversations || [],
-          paused: !!data.paused_global,
           stats: data.stats || { fact_count: 0, embedded_turns: 0 },
         });
       }
     } catch (err) {
       console.error("Failed to fetch memory data:", err);
-    }
-  };
-
-  const handleToggleMemoryPause = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const next = !memorySection.paused;
-      const response = await fetch(`${API_BASE}/api/me/memories/pause`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ paused: next }),
-      });
-      if (response.ok) {
-        setMemorySection((s) => ({ ...s, paused: next }));
-        setMessage({
-          type: "success",
-          text: next ? "Memory paused. The bot won't store or recall." : "Memory resumed.",
-        });
-      }
-    } catch (err) {
-      setMessage({ type: "error", text: "Couldn't toggle memory pause." });
     }
   };
 
@@ -586,35 +560,19 @@ export default function ProfilePage({ userEmail, onLogout }) {
           )}
         </div>
 
-        {/* Phase 5: Memory Section — see / edit / pause / forget what the bot remembers */}
+        {/* Phase 5: Memory Section — see / edit / forget what the bot remembers */}
         {memoryUiEnabled && (
         <div className="profile-section memory-section">
           <div className="section-header">
             <h3><FaBrain /> Memory</h3>
-            <button
-              className={memorySection.paused ? "edit-btn memory-resume-btn" : "edit-btn memory-pause-btn"}
-              onClick={handleToggleMemoryPause}
-              title={memorySection.paused
-                ? "Resume memory — bot will start remembering again"
-                : "Pause memory — bot will stop storing or recalling"}
-            >
-              {memorySection.paused ? (<><FaPlay /> Resume Memory</>) : (<><FaPause /> Pause Memory</>)}
-            </button>
           </div>
 
           <div className="memory-explainer">
-            {memorySection.paused ? (
-              <p className="memory-paused-banner">
-                ⏸ Memory is paused. The bot won't remember new things from this conversation
-                or recall anything from past ones. Earlier-in-this-session context still works.
-              </p>
-            ) : (
-              <p className="memory-explainer-text">
-                The bot remembers facts about you (your role, grants, IRB/IACUC protocols)
-                AND past conversations so it can connect dots over time. Edit anything below,
-                pause memory whenever, or wipe everything with the danger button.
-              </p>
-            )}
+            <p className="memory-explainer-text">
+              The bot remembers facts about you (your role, grants, IRB/IACUC protocols)
+              AND past conversations so it can connect dots over time. Edit anything below,
+              pause individual facts, or wipe everything with the danger button.
+            </p>
             <div className="memory-stats">
               <span><strong>{memorySection.stats.fact_count}</strong> facts stored</span>
               <span>•</span>

@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_controlled_substances_vendors",
+  "title": "Controlled Substances Vendors",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Controlled Substances Vendors",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Controlled%20Substances%20vendors%20docx.docx",
+  "content": "IACUC-approved vendor list for DEA-controlled substances purchased for animal research.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

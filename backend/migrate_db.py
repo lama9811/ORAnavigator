@@ -8,6 +8,11 @@ def column_exists(table_name, column_name):
     columns = [col['name'] for col in inspector.get_columns(table_name)]
     return column_name in columns
 
+def table_exists(table_name):
+    """Check if a table exists in the database"""
+    inspector = inspect(engine)
+    return table_name in inspector.get_table_names()
+
 def migrate():
     print("🔄 Starting database migration...")
     
@@ -137,6 +142,25 @@ def migrate():
                 print("✅ Added column: users.memory_paused")
             else:
                 print("⏭️  Column 'users.memory_paused' already exists")
+
+            # =================================================================
+            # Personalized home-screen suggestions (precomputed per user)
+            # =================================================================
+            if not table_exists('user_suggested_questions'):
+                conn.execute(text("""
+                    CREATE TABLE user_suggested_questions (
+                        user_id INT NOT NULL PRIMARY KEY,
+                        questions MEDIUMTEXT NOT NULL,
+                        generated_at DATETIME NOT NULL,
+                        source_signature VARCHAR(64) NOT NULL DEFAULT '',
+                        source VARCHAR(32) NOT NULL DEFAULT 'default',
+                        CONSTRAINT fk_usq_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """))
+                conn.commit()
+                print("✅ Created table: user_suggested_questions")
+            else:
+                print("⏭️  Table 'user_suggested_questions' already exists")
 
             print("\n✅ Database migration completed successfully!")
             

@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_docusign_travel_request_title_iii",
+  "title": "Travel Request Form — Title III (DocuSign)",
+  "category": "post_award",
+  "subcategory": "docusign_post_award",
+  "display_label": "Travel Request Form — Title III",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
+  "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=0fe89713-9171-4c38-a801-4addf828aabe&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
+  "content": "DocuSign form for requesting grant-funded travel paid from Title III sources at Morgan State University. Use this version (instead of the Non-Title III form) when the funding is Title III. Submit via DocuSign to the MSU ORA signing group; consult the University Travel website for related travel policies. Questions to ora-docusign@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

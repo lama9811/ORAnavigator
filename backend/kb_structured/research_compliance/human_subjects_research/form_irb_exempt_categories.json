@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_irb_exempt_categories",
+  "title": "IRB Exempt Research Categories",
+  "category": "research_compliance",
+  "subcategory": "compliance_pdf",
+  "display_label": "IRB Exempt Research Categories",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/human-subjects-research",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/IRB%20Forms/2022-12-12_IRB_Exemption_Categories.pdf",
+  "content": "Reference PDF (dated 2022-12-12) listing the federal categories of human-subjects research that may qualify as exempt under 45 CFR 46. Use to assess whether a study can be reviewed under exemption rather than expedited or full-board review.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

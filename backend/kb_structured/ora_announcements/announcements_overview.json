@@ -1,0 +1,13 @@
+{
+  "doc_id": "announcements_overview",
+  "title": "ORA Announcements — Overview & Listserv Subscription",
+  "category": "ora_announcements",
+  "subcategory": "overview",
+  "display_label": "ORA Announcements Overview & Listserv",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/ora-announcements",
+  "content": "The Morgan State Office of Research Administration (ORA) Announcements page publishes time-sensitive updates relevant to faculty, principal investigators (PIs), research staff, and department administrators. Announcements cover regulatory and compliance changes (NIH/NSF/DOE requirements, training mandates, federal policy shifts), ORA leadership transitions, key deadlines, system rollouts, and other operational news that affects how Morgan investigators prepare proposals and manage awards.\n\nLISTSERV SUBSCRIPTION:\nTo subscribe to the ORA Announcements group list-serv and receive these notices by email, send a message to ask.ora@morgan.edu with the subject line: \"Sign me up for ORA Announcements group list-serv\".\n\nCONTACT:\n- Email: ask.ora@morgan.edu\n- Phone: 443-885-4044\n- Address: Office of Research Administration, Morgan State University, Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "announcements"
+}

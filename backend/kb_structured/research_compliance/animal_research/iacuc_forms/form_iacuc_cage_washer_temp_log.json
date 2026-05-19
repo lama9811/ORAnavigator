@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_cage_washer_temp_log",
+  "title": "Cage Washer Temperature Tape Log",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Cage Washer Temperature Tape Log",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/Cage%20Washer%20Temperature%20Tape%20Log%20%281%29.pdf",
+  "content": "Temperature-tape verification log for the cage washer — confirms each cycle reached the required sanitization temperature.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}
