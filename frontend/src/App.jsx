@@ -183,22 +183,20 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // chat‐session state
+  // chat‐session state. Past chats stay in the sidebar, but the app always
+  // opens on a fresh "New Chat" (the welcome screen) — never an old conversation.
   const [sessions, setSessions] = useState(() => {
-    // Try to load from local storage first for immediate UI
     const saved = JSON.parse(localStorage.getItem("chat_sessions") || "[]");
-    if (!saved.length) {
-      const id = Date.now().toString();
-      return [{ id, title: "New Chat", messages: [], pinned: false, archived: false }];
-    }
-    return saved.map(s => ({
+    const restored = saved.map(s => ({
       ...s,
       pinned: s.pinned || false,
       archived: s.archived || false
     }));
+    const freshId = Date.now().toString();
+    return [...restored, { id: freshId, title: "New Chat", messages: [], pinned: false, archived: false }];
   });
-  
-  const [activeId, setActiveId] = useState(sessions[0]?.id || "");
+
+  const [activeId, setActiveId] = useState(sessions[sessions.length - 1]?.id || "");
   
   useEffect(() => {
     localStorage.setItem("chat_sessions", JSON.stringify(sessions));
@@ -248,13 +246,14 @@ export default function App() {
                   archived: false
               }));
 
-              // Update state with database sessions
-              setSessions(dbSessions);
-
-              // Set the active chat to the most recent one (last in the list)
-              if (dbSessions.length > 0) {
-                setActiveId(dbSessions[dbSessions.length - 1].id);
-              }
+              // Keep past conversations in the sidebar, but always open on a
+              // fresh New Chat so the user lands on the welcome screen.
+              const freshId = Date.now().toString();
+              setSessions([
+                ...dbSessions,
+                { id: freshId, title: "New Chat", messages: [], pinned: false, archived: false }
+              ]);
+              setActiveId(freshId);
           } else {
               // New account or no history - reset to a fresh session
               // This clears any stale sessions from a previous account
