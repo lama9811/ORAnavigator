@@ -302,9 +302,9 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   // --- HANDLERS ---
 
   // Helper to add message to local state
-  const addMessage = (text, sender) => {
+  const addMessage = (text, sender, extra = {}) => {
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setMessages((prev) => [...prev, { text, sender, time }]);
+    setMessages((prev) => [...prev, { text, sender, time, ...extra }]);
   };
 
   // 🔥 Enhanced TTS using OpenAI API
@@ -557,7 +557,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
           icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="url(#tg2)" strokeWidth="2" strokeLinecap="round"/><path d="M12 7v5l3 3" stroke="url(#tg2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><defs><linearGradient id="tg2" x1="3" y1="3" x2="21" y2="21"><stop stopColor="#818cf8"/><stop offset="1" stopColor="#6366f1"/></linearGradient></defs></svg>,
         });
       } else {
-        addMessage(botResponse, "bot");
+        addMessage(botResponse, "bot", { citations: data.citations || [] });
         await speakWithTTS(botResponse);
       }
 
@@ -840,6 +840,16 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                                 newMessages[newMessages.length - 1] = {
                                     ...newMessages[newMessages.length - 1],
                                     text: fullText
+                                };
+                                return newMessages;
+                            });
+                        } else if (event.type === "citations") {
+                            // Attach source citations to the streaming message
+                            setMessages((prev) => {
+                                const newMessages = [...prev];
+                                newMessages[newMessages.length - 1] = {
+                                    ...newMessages[newMessages.length - 1],
+                                    citations: event.content || []
                                 };
                                 return newMessages;
                             });
@@ -1138,6 +1148,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
             <img src="/msu_logo.webp" alt="MSU Logo" className="welcome-logo" />
             <h1 className="welcome-title">ORA Navigator</h1>
             <p className="welcome-subtitle">How can I help with your research today?</p>
+            <p className="welcome-scope">I can help with pre-award, post-award, compliance (IRB / IACUC / COI), forms, policies, and ORA staff contacts for Morgan State faculty and research staff.</p>
             <div className="suggestions">
               {suggestionsLoading ? (
                 <>
@@ -1223,6 +1234,19 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                       <span className="streaming-cursor" aria-hidden="true">
                         <span className="cursor-bar"></span>
                       </span>
+                    )}
+
+                    {msg.sender === "bot" && !msg.isStreaming && msg.citations && msg.citations.length > 0 && (
+                      <div className="message-sources">
+                        <span className="message-sources-label">Sources</span>
+                        <ul className="message-sources-list">
+                          {msg.citations.map((c, ci) => (
+                            <li key={ci}>
+                              <a href={c.url} target="_blank" rel="noopener noreferrer">{c.title}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
 
                     {msg.sender === "bot" && !msg.isStreaming && (
@@ -1495,6 +1519,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
             </button>
           </div>
         </form>
+        <p className="chat-disclaimer">ORA Navigator is an AI assistant and can make mistakes. Verify compliance, policy, and funding details with ORA staff before acting.</p>
       </div>
     </div>
   );

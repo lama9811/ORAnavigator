@@ -161,6 +161,133 @@ def _apply_grounding_gate(text: str, chunks: int, coverage: float = 0.0, has_att
     return text + _GROUNDING_DISCLAIMER
 
 
+# =============================================================================
+# CITATIONS: map KB doc titles -> source URLs so answers can show "Sources"
+# =============================================================================
+_kb_url_map: Optional[dict] = None
+
+
+def _norm_title(t: str) -> str:
+    """Normalize a doc title for case/whitespace-insensitive matching."""
+    return " ".join((t or "").lower().split())
+
+
+def _get_kb_url_map() -> dict:
+    """Lazy-build a {normalized title -> source_url} map from the KB JSON files.
+    Grounding chunks carry the doc title; the live datastore does not store the
+    source URL, so we resolve titles back to morgan.edu URLs here."""
+    global _kb_url_map
+    if _kb_url_map is not None:
+        return _kb_url_map
+    _kb_url_map = {}
+    try:
+        import glob
+        kb_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kb_structured")
+        for path in glob.glob(os.path.join(kb_dir, "**", "*.json"), recursive=True):
+            if os.path.basename(path).startswith("_"):
+                continue
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    doc = json.load(fh)
+            except Exception:
+                continue
+            if isinstance(doc, dict):
+                title, url = doc.get("title"), doc.get("source_url")
+                if title and url:
+                    _kb_url_map[_norm_title(title)] = url
+        print(f"   [CITATIONS] Loaded {len(_kb_url_map)} KB title->URL mappings")
+    except Exception as e:
+        print(f"   [CITATIONS] Failed to load KB URL map: {e}")
+    return _kb_url_map
+
+
+def _extract_citations(chunks: list) -> list:
+    """Turn Gemini groundingChunks into a deduped list of {title, url} citations.
+    Only chunks that resolve to a real URL are kept, so every source is clickable.
+    Capped at 5."""
+    url_map = _get_kb_url_map()
+    citations: list = []
+    seen: set = set()
+    for c in chunks:
+        if not isinstance(c, dict):
+            continue
+        rc = c.get("retrievedContext") or c.get("web") or {}
+        title = (rc.get("title") or "").strip()
+        if not title:
+            continue
+        key = _norm_title(title)
+        if key in seen:
+            continue
+        seen.add(key)
+        url = url_map.get(key)
+        if not url:
+            uri = rc.get("uri", "") or ""
+            if uri.startswith("http"):
+                url = uri
+        if url:
+            citations.append({"title": title, "url": url})
+        if len(citations) >= 5:
+            break
+    return citations
+
+
+# =============================================================================
+# IDENTIFIER FAITHFULNESS: SOP/FWA/EIN/UEI numbers and rates must be KB-grounded
+# =============================================================================
+_IDENTIFIER_PATTERNS = [
+    ("SOP number", re.compile(r'\bSOP\s?#?\s?\d{1,3}\b', re.IGNORECASE)),
+    ("FWA number", re.compile(r'\bFWA\s?#?\s?\d{6,10}\b', re.IGNORECASE)),
+    ("EIN", re.compile(r'\b\d{2}-\d{7}\b')),
+    ("UEI", re.compile(r'\bUEI[:\s#]+[A-Z0-9]{12}\b', re.IGNORECASE)),
+]
+_RATE_KEYWORDS_RE = re.compile(r'F&A|facilities and administrative|indirect cost|fringe', re.IGNORECASE)
+_PERCENT_RE = re.compile(r'\b\d{1,3}(?:\.\d+)?\s?%')
+
+_IDENTIFIER_DISCLAIMER = (
+    "\n\n---\n*Some figures or identifiers above could not be verified against "
+    "ORA's knowledge base. Please confirm them with ORA at 443-885-4044 or "
+    "ask.ora@morgan.edu before relying on them.*"
+)
+
+
+def _norm_for_match(s: str) -> str:
+    """Lowercase and collapse whitespace for verbatim substring matching."""
+    return re.sub(r'\s+', ' ', (s or '').lower())
+
+
+def _join_chunk_texts(chunks: list) -> str:
+    """Concatenate the text snippets from grounding chunks (the retrieved KB
+    passages) so identifiers in the answer can be checked against them."""
+    parts = []
+    for c in chunks:
+        if isinstance(c, dict):
+            rc = c.get("retrievedContext") or c.get("web") or {}
+            t = rc.get("text") or ""
+            if t:
+                parts.append(t)
+    return "\n".join(parts)
+
+
+def _check_identifier_faithfulness(text: str, grounded_corpus: str) -> list:
+    """Return identifiers/rates stated in `text` that do not appear verbatim in
+    the retrieved KB text. Skipped when no KB text was retrieved, to avoid false
+    positives. Soft guardrail — the caller appends a disclaimer, never blocks."""
+    if not text or not grounded_corpus or len(grounded_corpus) < 50:
+        return []
+    corpus = _norm_for_match(grounded_corpus)
+    unverified = []
+    for label, pat in _IDENTIFIER_PATTERNS:
+        for token in pat.findall(text):
+            if _norm_for_match(token) not in corpus:
+                unverified.append(f"{label} '{token.strip()}'")
+    # Rates: only when the answer frames a number as an F&A/indirect/fringe rate
+    if _RATE_KEYWORDS_RE.search(text):
+        for pct in _PERCENT_RE.findall(text):
+            if _norm_for_match(pct) not in corpus:
+                unverified.append(f"rate '{pct.strip()}'")
+    return unverified[:6]
+
+
 # Session reuse settings
 SESSION_TTL = 28800  # 8 hours: shorter TTL prevents stale context
 
@@ -327,8 +454,13 @@ def query_agent(query: str, user_id: str = "default", context: str = "", model: 
 import threading
 _grounding_local = threading.local()
 
-def _set_grounding(kb_grounded: bool, chunks: int, coverage: float):
-    _grounding_local.data = {"kb_grounded": kb_grounded, "grounding_chunks": chunks, "grounding_coverage": coverage}
+def _set_grounding(kb_grounded: bool, chunks: int, coverage: float, citations: Optional[list] = None):
+    _grounding_local.data = {
+        "kb_grounded": kb_grounded,
+        "grounding_chunks": chunks,
+        "grounding_coverage": coverage,
+        "citations": citations or [],
+    }
 
 
 def _run_query(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", memory_context: str = "") -> str:
@@ -339,6 +471,7 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
     VertexAiSearchTool for context; retrieval results here are only for
     verification.
     """
+    _set_grounding(False, 0, 0.0)  # reset; a failed call must not leak stale citations
     # Build ADK payload (no retrieval context injected; agent searches KB itself)
     try:
         payload = {
@@ -390,6 +523,8 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
         final_text = ""
         grounding_chunks = 0
         grounding_coverage = 0.0
+        grounding_citations: list = []
+        grounded_corpus = ""
         for line in resp.iter_lines():
             if not line:
                 continue
@@ -409,6 +544,9 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
                 chunks = gm.get("groundingChunks", [])
                 supports = gm.get("groundingSupports", [])
                 grounding_chunks = len(chunks)
+                if chunks:
+                    grounding_citations = _extract_citations(chunks)
+                    grounded_corpus = _join_chunk_texts(chunks)
                 # Coverage: what fraction of the response is grounded in KB results
                 if supports and final_text:
                     total_chars = len(final_text)
@@ -436,7 +574,7 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
                     final_text = part["text"]  # Keep last model text (the final answer)
 
         # Store grounding signal for research_agent to read (thread-local)
-        _set_grounding(grounding_chunks > 0, grounding_chunks, grounding_coverage)
+        _set_grounding(grounding_chunks > 0, grounding_chunks, grounding_coverage, citations=grounding_citations)
 
         if final_text:
             # Clean up citation artifacts from Gemini grounding
@@ -471,6 +609,14 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
                 print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
                 if _FAITHFULNESS_DISCLAIMER not in final_text:
                     final_text = final_text + _FAITHFULNESS_DISCLAIMER
+
+            # Identifier faithfulness gate: flag SOP/FWA/EIN/UEI numbers and rates
+            # that don't appear in the retrieved KB text
+            unverified_ids = _check_identifier_faithfulness(final_text, grounded_corpus)
+            if unverified_ids:
+                print(f"   [FAITHFULNESS] Unverified identifiers: {unverified_ids}")
+                if _IDENTIFIER_DISCLAIMER not in final_text:
+                    final_text = final_text + _IDENTIFIER_DISCLAIMER
 
             # Inject procedure guide Drive links if the agent omitted them
             final_text = _inject_procedure_links(final_text)
@@ -507,7 +653,7 @@ def get_last_grounding() -> dict:
         grounding_chunks: Number of KB documents cited
         grounding_coverage: Fraction of response text backed by KB sources (0.0-1.0)
     """
-    return getattr(_grounding_local, "data", {"kb_grounded": True, "grounding_chunks": 0, "grounding_coverage": 1.0})
+    return getattr(_grounding_local, "data", {"kb_grounded": True, "grounding_chunks": 0, "grounding_coverage": 1.0, "citations": []})
 
 
 def check_agent_health() -> dict:
@@ -570,6 +716,7 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
     doc_texts for the post-stream VERIFICATION gate. The agent has its own
     VertexAiSearchTool for context.
     """
+    _set_grounding(False, 0, 0.0)  # reset; a failed stream must not leak stale citations
     try:
         payload = {
             "app_name": ADK_APP_NAME,
@@ -627,6 +774,8 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
         full_text = ""
         grounding_chunks = 0
         grounding_coverage = 0.0
+        grounding_citations: list = []
+        grounded_corpus = ""
         for line in resp.iter_lines():
             if not line:
                 continue
@@ -646,6 +795,9 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
                 chunks = gm.get("groundingChunks", [])
                 supports = gm.get("groundingSupports", [])
                 grounding_chunks = len(chunks)
+                if chunks:
+                    grounding_citations = _extract_citations(chunks)
+                    grounded_corpus = _join_chunk_texts(chunks)
                 if supports and full_text:
                     total_chars = len(full_text)
                     grounded_chars = sum(
@@ -695,7 +847,7 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
                             yield {"type": "chunk", "content": text}
 
         # Store grounding signal for research_agent (thread-local)
-        _set_grounding(grounding_chunks > 0, grounding_chunks, grounding_coverage)
+        _set_grounding(grounding_chunks > 0, grounding_chunks, grounding_coverage, citations=grounding_citations)
 
         # If Gemini self-reported a KB access failure, send a clearer error
         # (can't retry in streaming mode since broken chunks are already sent to client)
@@ -720,6 +872,13 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
             disclaimer = final[len(cleaned):]
             yield {"type": "chunk", "content": disclaimer}
 
+        # Identifier faithfulness gate: flag unverified SOP/FWA/EIN/UEI numbers and rates
+        unverified_ids = _check_identifier_faithfulness(final, grounded_corpus)
+        if unverified_ids and _IDENTIFIER_DISCLAIMER not in final:
+            print(f"   [FAITHFULNESS] Unverified identifiers (stream): {unverified_ids}")
+            final = final + _IDENTIFIER_DISCLAIMER
+            yield {"type": "chunk", "content": _IDENTIFIER_DISCLAIMER}
+
         # Inject procedure guide Drive links if the agent omitted them
         before_inject = final
         final = _inject_procedure_links(final)
@@ -727,6 +886,8 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
             link_chunk = final[len(before_inject):]
             yield {"type": "chunk", "content": link_chunk}
 
+        if grounding_citations:
+            yield {"type": "citations", "content": grounding_citations}
         yield {"type": "done", "content": final}
 
     except requests.exceptions.ConnectionError:

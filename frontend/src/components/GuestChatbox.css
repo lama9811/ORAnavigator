@@ -885,3 +885,51 @@ body.dark .signup-modal-btn.secondary:hover {
 body.dark .signup-modal-footer {
   background: var(--bg-card);
 }
+
+/* ============================================
+   Sources / citations block under bot answers
+   ============================================ */
+.message-sources {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.message-sources-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary, #8A7E6D);
+  margin-bottom: 6px;
+}
+
+.message-sources-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-sources-list li {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.message-sources-list a {
+  color: var(--msu-blue, #002D72);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.message-sources-list a:hover {
+  border-bottom-color: currentColor;
+}
+
+body.dark .message-sources-list a {
+  color: #8ab4f8;
+}

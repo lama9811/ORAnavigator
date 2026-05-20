@@ -57,7 +57,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, text
 
 # Vertex AI Agent Engine (replaces Pinecone + OpenAI RAG pipeline)
-from vertex_agent import query_agent, query_agent_stream, check_agent_health, reset_session
+from vertex_agent import query_agent, query_agent_stream, check_agent_health, reset_session, get_last_grounding
 
 # Query caching for faster responses
 from cache import query_cache, get_context_hash, log_cache_stats
@@ -1144,7 +1144,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
         except Exception:
             pass
 
-    return {"response": answer}
+    return {"response": answer, "citations": get_last_grounding().get("citations", [])}
 
 
 # ==============================================================================
@@ -1302,6 +1302,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                 elif event_type == "chunk":
                     full_response += content
                     yield f"data: {json.dumps({'type': 'chunk', 'content': content})}\n\n"
+                elif event_type == "citations":
+                    yield f"data: {json.dumps({'type': 'citations', 'content': content})}\n\n"
                 elif event_type == "done":
                     full_response = content or full_response
                     yield f"data: {json.dumps({'type': 'done', 'content': full_response})}\n\n"
@@ -1454,7 +1456,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
         except Exception:
             pass
 
-    return {"response": answer}
+    return {"response": answer, "citations": get_last_grounding().get("citations", [])}
 
 
 @app.get("/chat-history")

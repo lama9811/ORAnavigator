@@ -138,7 +138,7 @@ export default function GuestChatbox() {
           });
           const data = await res.json();
           const botReply = data.response || "I couldn't process that. Please try again.";
-          setMessages(prev => [...prev, { text: botReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+          setMessages(prev => [...prev, { text: botReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), citations: data.citations || [] }]);
         } catch {
           setMessages(prev => [...prev, { text: "Something went wrong. Please try again.", sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
         } finally {
@@ -269,6 +269,18 @@ export default function GuestChatbox() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {msg.text}
                   </ReactMarkdown>
+                  {msg.sender === "bot" && msg.citations && msg.citations.length > 0 && (
+                    <div className="message-sources">
+                      <span className="message-sources-label">Sources</span>
+                      <ul className="message-sources-list">
+                        {msg.citations.map((c, ci) => (
+                          <li key={ci}>
+                            <a href={c.url} target="_blank" rel="noopener noreferrer">{c.title}</a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
                 <div className="guest-timestamp">{msg.time}</div>
               </div>
