@@ -26,33 +26,12 @@ def migrate():
             else:
                 print("⏭️  Column 'name' already exists")
 
-            if not column_exists('users', 'student_id'):
-                conn.execute(text("ALTER TABLE users ADD COLUMN student_id VARCHAR(50) DEFAULT NULL"))
-                conn.commit()
-                print("✅ Added column: student_id")
-            else:
-                print("⏭️  Column 'student_id' already exists")
-
-            if not column_exists('users', 'major'):
-                conn.execute(text("ALTER TABLE users ADD COLUMN major VARCHAR(100) DEFAULT NULL"))
-                conn.commit()
-                print("✅ Added column: major")
-            else:
-                print("⏭️  Column 'major' already exists")
-
             if not column_exists('users', 'profile_picture'):
                 conn.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(500) DEFAULT '/user_icon.jpg'"))
                 conn.commit()
                 print("✅ Added column: profile_picture")
             else:
                 print("⏭️  Column 'profile_picture' already exists")
-
-            if not column_exists('users', 'morgan_connected'):
-                conn.execute(text("ALTER TABLE users ADD COLUMN morgan_connected BOOLEAN DEFAULT FALSE"))
-                conn.commit()
-                print("✅ Added column: morgan_connected")
-            else:
-                print("⏭️  Column 'morgan_connected' already exists")
 
             if not column_exists('users', 'created_at'):
                 conn.execute(text("ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP"))
@@ -161,6 +140,31 @@ def migrate():
                 print("✅ Created table: user_suggested_questions")
             else:
                 print("⏭️  Table 'user_suggested_questions' already exists")
+
+            # =================================================================
+            # Purge legacy student-data schema and rename the legacy role.
+            # Drops the degreeworks/banner/canvas tables, removes dead `users`
+            # columns, and renames role "student" -> "user".
+            # =================================================================
+            for dead_table in ('degreeworks_data', 'banner_student_data', 'canvas_student_data'):
+                if table_exists(dead_table):
+                    conn.execute(text(f"DROP TABLE {dead_table}"))
+                    conn.commit()
+                    print(f"✅ Dropped table: {dead_table}")
+                else:
+                    print(f"⏭️  Table '{dead_table}' already absent")
+
+            for dead_col in ('student_id', 'major', 'morgan_connected', 'morgan_connected_at'):
+                if column_exists('users', dead_col):
+                    conn.execute(text(f"ALTER TABLE users DROP COLUMN {dead_col}"))
+                    conn.commit()
+                    print(f"✅ Dropped column: users.{dead_col}")
+                else:
+                    print(f"⏭️  Column 'users.{dead_col}' already absent")
+
+            role_result = conn.execute(text("UPDATE users SET role='user' WHERE role='student'"))
+            conn.commit()
+            print(f"✅ Renamed role 'student' -> 'user' on {role_result.rowcount} row(s)")
 
             print("\n✅ Database migration completed successfully!")
             

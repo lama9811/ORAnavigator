@@ -2,7 +2,7 @@
 # Shared dependencies extracted from main.py for use by APIRouter modules.
 
 import os
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -58,7 +58,6 @@ def get_current_user(
             "email": user.email,
             "role": user.role,
             "name": user.name,
-            "student_id": user.student_id,
         }
     except JWTError as e:
         print(f"JWT decode error: {e}")
@@ -96,7 +95,6 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: Optional[str] = None
-    student_id: Optional[str] = None
 
     @staticmethod
     def validate_email_format(v):
@@ -134,17 +132,8 @@ class GuestQueryRequest(BaseModel):
     query: str
     guestProfile: Optional[dict] = None
 
-class Course(BaseModel):
-    course_code: str
-    course_name: str
-    credits: int
-    prerequisites: List[str] = []
-    offered: List[str] = []
-
 class ProfileUpdateRequest(BaseModel):
     name: Optional[str] = None
-    studentId: Optional[str] = None
-    major: Optional[str] = None
 
 class PasswordChangeRequest(BaseModel):
     currentPassword: str
@@ -153,19 +142,3 @@ class PasswordChangeRequest(BaseModel):
 class TTSRequest(BaseModel):
     text: str
     voice: str = "alloy"
-
-class DegreeWorksRequest(BaseModel):
-    student_name: Optional[str] = None
-    student_id: Optional[str] = None
-    degree_program: Optional[str] = None
-    catalog_year: Optional[str] = None
-    classification: Optional[str] = None
-    advisor: Optional[str] = None
-    overall_gpa: Optional[float] = None
-    major_gpa: Optional[float] = None
-    total_credits_earned: Optional[float] = None
-    credits_required: Optional[float] = None
-    credits_remaining: Optional[float] = None
-    courses_completed: Optional[List[Dict[str, Any]]] = None
-    courses_in_progress: Optional[List[Dict[str, Any]]] = None
-    courses_remaining: Optional[List[Dict[str, Any]]] = None

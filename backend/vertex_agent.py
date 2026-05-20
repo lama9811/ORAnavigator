@@ -7,7 +7,7 @@ Handles session management and SSE response parsing.
 
 v4.2: Smart session reuse. Sessions are cached per user with a TTL and
 context hash. If the same user sends multiple queries with the same
-DegreeWorks data, we reuse the existing session instead of creating a
+attached context, we reuse the existing session instead of creating a
 new one each time. Saves ~100-200ms per request.
 
 Usage:
@@ -139,25 +139,25 @@ def _check_faculty_faithfulness(text: str) -> list[str]:
     return hallucinated
 
 
-def _apply_grounding_gate(text: str, chunks: int, coverage: float = 0.0, has_student_data: bool = False) -> str:
+def _apply_grounding_gate(text: str, chunks: int, coverage: float = 0.0, has_attached_context: bool = False) -> str:
     """Append a disclaimer when the agent answered with insufficient data sources.
 
     Checks both chunk count AND coverage ratio. A response needs either:
     - At least 2 KB chunks cited, OR
     - Coverage >= 0.3 (30% of response backed by KB), OR
-    - Student data present (DegreeWorks/Canvas)
+    - Attached context present (account profile or uploaded file content)
 
     This prevents responses that cite 1 chunk but are 90% hallucinated from passing.
     """
     if not text or _SKIP_GROUNDING_RE.match(text):
         return text
-    if has_student_data:
+    if has_attached_context:
         return text
     if chunks >= _GROUNDING_MIN_CHUNKS:
         return text
     if coverage >= 0.3:
         return text
-    print(f"   [GROUNDING] Low confidence ({chunks} chunks, {coverage:.1%} coverage, no student data) - appending disclaimer")
+    print(f"   [GROUNDING] Low confidence ({chunks} chunks, {coverage:.1%} coverage, no attached context) - appending disclaimer")
     return text + _GROUNDING_DISCLAIMER
 
 
@@ -216,7 +216,7 @@ def _get_auth_headers() -> dict:
 
 
 def _compute_context_hash(context: str) -> str:
-    """Hash the DegreeWorks context string to detect changes between queries."""
+    """Hash the attached context string to detect changes between queries."""
     if not context:
         return ""
     return hashlib.md5(context.encode()).hexdigest()[:12]
@@ -247,7 +247,7 @@ def _create_session(user_id: str, state: Optional[dict] = None) -> str:
     return ""
 
 
-def _get_valid_session(user_id: str, context: str = "", model: str = "", canvas_context: str = "") -> Optional[str]:
+def _get_valid_session(user_id: str, context: str = "", model: str = "") -> Optional[str]:
     """Return a cached session ID if it exists, hasn't expired, and context/model matches."""
     cached = _session_cache.get(user_id)
     if not cached:
@@ -266,12 +266,6 @@ def _get_valid_session(user_id: str, context: str = "", model: str = "", canvas_
         _session_cache.pop(user_id, None)
         return None
 
-    canvas_hash = _compute_context_hash(canvas_context)
-    if cached.get("canvas_hash", "") != canvas_hash:
-        print(f"   ADK session Canvas data changed, creating new")
-        _session_cache.pop(user_id, None)
-        return None
-
     if cached.get("model", "") != model:
         print(f"   ADK session model changed ({cached.get('model', '')} -> {model}), creating new")
         _session_cache.pop(user_id, None)
@@ -281,41 +275,38 @@ def _get_valid_session(user_id: str, context: str = "", model: str = "", canvas_
     return cached["session_id"]
 
 
-def _cache_session(user_id: str, session_id: str, context: str = "", model: str = "", canvas_context: str = ""):
+def _cache_session(user_id: str, session_id: str, context: str = "", model: str = ""):
     """Store a session in the reuse cache."""
     _session_cache[user_id] = {
         "session_id": session_id,
         "created_at": time_module.time(),
         "context_hash": _compute_context_hash(context),
-        "canvas_hash": _compute_context_hash(canvas_context),
         "model": model,
     }
 
 
-def query_agent(query: str, user_id: str = "default", context: str = "", model: str = "", canvas_context: str = "", memory_context: str = "") -> str:
+def query_agent(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = "") -> str:
     """
     Send a query to the ORA Navigator agent and return the final text response.
 
-    Reuses ADK sessions when the user's DegreeWorks context hasn't changed.
-    Canvas + memory data sent via state_delta (volatile, changes often).
+    Reuses ADK sessions when the user's attached context hasn't changed.
+    Memory data is sent via state_delta (volatile, changes often).
 
     Args:
         query: The user's question
         user_id: Unique user identifier
-        context: DegreeWorks student data (injected into session state, stable)
+        context: Attached context — account profile and/or uploaded file content
+                 (injected into session state, stable across a session)
         model: Model preference ("inav-1.0" or "inav-1.1")
-        canvas_context: Canvas LMS data (sent via state_delta, volatile)
         memory_context: Long-term user memory (sent via state_delta, volatile)
     """
-    # Session reuse: hash DegreeWorks + Canvas for invalidation
-    session_id = _get_valid_session(user_id, context, model, canvas_context=canvas_context)
+    # Session reuse: hash the attached context for invalidation
+    session_id = _get_valid_session(user_id, context, model)
 
     if not session_id:
         state = {}
         if context:
-            state["degreeworks"] = context
-        if canvas_context:
-            state["canvas"] = canvas_context
+            state["user_context"] = context
         if memory_context:
             state["memory"] = memory_context
         if model:
@@ -323,9 +314,9 @@ def query_agent(query: str, user_id: str = "default", context: str = "", model: 
         session_id = _create_session(user_id, state=state if state else None)
         if not session_id:
             return _OUTAGE_MSG
-        _cache_session(user_id, session_id, context, model, canvas_context=canvas_context)
+        _cache_session(user_id, session_id, context, model)
 
-    return _run_query(query, user_id, session_id, context=context, model=model, canvas_context=canvas_context, memory_context=memory_context)
+    return _run_query(query, user_id, session_id, context=context, model=model, memory_context=memory_context)
 
 
 # Per-request grounding metadata. In async single-worker (uvicorn default),
@@ -340,7 +331,7 @@ def _set_grounding(kb_grounded: bool, chunks: int, coverage: float):
     _grounding_local.data = {"kb_grounded": kb_grounded, "grounding_chunks": chunks, "grounding_coverage": coverage}
 
 
-def _run_query(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", canvas_context: str = "", memory_context: str = "") -> str:
+def _run_query(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", memory_context: str = "") -> str:
     """Send a query to the ADK and parse the SSE response.
 
     Fast in-memory retrieval runs BEFORE the ADK call (<5ms) to collect
@@ -359,12 +350,10 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
                 "parts": [{"text": message}],
             },
         }
-        # Send volatile data via state_delta (Canvas/memory change often, model per-request)
+        # Send volatile data via state_delta (memory changes often, model per-request)
         state_delta = {}
         if model:
             state_delta["model_preference"] = model
-        if canvas_context:
-            state_delta["canvas"] = canvas_context
         if memory_context:
             state_delta["memory"] = memory_context
         if state_delta:
@@ -378,23 +367,21 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
             timeout=120,
         )
 
-        # Handle "Session not found": recreate with DegreeWorks + Canvas + memory state and retry once
+        # Handle "Session not found": recreate with context + memory state and retry once
         if resp.status_code == 404 and not retried:
             print(f"   ADK session {session_id} not found, creating a new one...")
             _session_cache.pop(user_id, None)
             state = {}
             if context:
-                state["degreeworks"] = context
-            if canvas_context:
-                state["canvas"] = canvas_context
+                state["user_context"] = context
             if memory_context:
                 state["memory"] = memory_context
             if model:
                 state["model_preference"] = model
             new_session_id = _create_session(user_id, state=state if state else None)
             if new_session_id:
-                _cache_session(user_id, new_session_id, context, model, canvas_context=canvas_context)
-                return _run_query(message, user_id, new_session_id, retried=True, context=context, model=model, canvas_context=canvas_context, memory_context=memory_context)
+                _cache_session(user_id, new_session_id, context, model)
+                return _run_query(message, user_id, new_session_id, retried=True, context=context, model=model, memory_context=memory_context)
             return _OUTAGE_MSG
 
         resp.raise_for_status()
@@ -472,11 +459,11 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
             if _KB_FAIL_RE.search(final_text) and not retried:
                 print("   [RETRY] Gemini reported KB access failure, retrying once...")
                 time_module.sleep(2)
-                return _run_query(message, user_id, session_id, retried=True, context=context, model=model, canvas_context=canvas_context, memory_context=memory_context)
+                return _run_query(message, user_id, session_id, retried=True, context=context, model=model, memory_context=memory_context)
 
             # Grounding validation gate: flag low-grounded responses
-            has_data = bool(context or canvas_context)
-            final_text = _apply_grounding_gate(final_text, grounding_chunks, coverage=grounding_coverage, has_student_data=has_data)
+            has_data = bool(context)
+            final_text = _apply_grounding_gate(final_text, grounding_chunks, coverage=grounding_coverage, has_attached_context=has_data)
 
             # Faithfulness gate: flag responses naming non-ORA-staff "Dr./Prof. X"
             hallucinated = _check_faculty_faithfulness(final_text)
@@ -550,21 +537,19 @@ def reset_session(user_id: str) -> None:
     _session_cache.pop(user_id, None)
 
 
-def query_agent_stream(query: str, user_id: str = "default", context: str = "", model: str = "", canvas_context: str = "", memory_context: str = ""):
+def query_agent_stream(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = ""):
     """
     Send a query to the ORA Navigator agent and stream text chunks as they arrive.
 
-    Session reuse based on DegreeWorks (stable). Canvas + memory sent via state_delta (volatile).
+    Session reuse based on the attached context (stable). Memory sent via state_delta (volatile).
     """
-    # Session reuse: hash DegreeWorks + Canvas for invalidation
-    session_id = _get_valid_session(user_id, context, model, canvas_context=canvas_context)
+    # Session reuse: hash the attached context for invalidation
+    session_id = _get_valid_session(user_id, context, model)
 
     if not session_id:
         state = {}
         if context:
-            state["degreeworks"] = context
-        if canvas_context:
-            state["canvas"] = canvas_context
+            state["user_context"] = context
         if memory_context:
             state["memory"] = memory_context
         if model:
@@ -573,12 +558,12 @@ def query_agent_stream(query: str, user_id: str = "default", context: str = "", 
         if not session_id:
             yield {"type": "error", "content": _OUTAGE_MSG}
             return
-        _cache_session(user_id, session_id, context, model, canvas_context=canvas_context)
+        _cache_session(user_id, session_id, context, model)
 
-    yield from _run_query_stream(query, user_id, session_id, context=context, model=model, canvas_context=canvas_context, memory_context=memory_context)
+    yield from _run_query_stream(query, user_id, session_id, context=context, model=model, memory_context=memory_context)
 
 
-def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", canvas_context: str = "", memory_context: str = ""):
+def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", memory_context: str = ""):
     """Stream query results from ADK, yielding text chunks as they arrive.
 
     Fast in-memory retrieval runs BEFORE the ADK call (<5ms) to collect
@@ -598,8 +583,6 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
         state_delta = {}
         if model:
             state_delta["model_preference"] = model
-        if canvas_context:
-            state_delta["canvas"] = canvas_context
         if memory_context:
             state_delta["memory"] = memory_context
         if state_delta:
@@ -613,23 +596,21 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
             timeout=120,
         )
 
-        # Handle "Session not found": recreate with DegreeWorks + Canvas + memory state and retry once
+        # Handle "Session not found": recreate with context + memory state and retry once
         if resp.status_code == 404 and not retried:
             print(f"   ADK session {session_id} not found, creating a new one...")
             _session_cache.pop(user_id, None)
             state = {}
             if context:
-                state["degreeworks"] = context
-            if canvas_context:
-                state["canvas"] = canvas_context
+                state["user_context"] = context
             if memory_context:
                 state["memory"] = memory_context
             if model:
                 state["model_preference"] = model
             new_session_id = _create_session(user_id, state=state if state else None)
             if new_session_id:
-                _cache_session(user_id, new_session_id, context, model, canvas_context=canvas_context)
-                yield from _run_query_stream(message, user_id, new_session_id, retried=True, context=context, model=model, canvas_context=canvas_context, memory_context=memory_context)
+                _cache_session(user_id, new_session_id, context, model)
+                yield from _run_query_stream(message, user_id, new_session_id, retried=True, context=context, model=model, memory_context=memory_context)
                 return
             yield {"type": "error", "content": _OUTAGE_MSG}
             return
@@ -733,8 +714,8 @@ def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool
             yield {"type": "chunk", "content": cleaned}
 
         # Grounding validation gate: append disclaimer if low-grounded
-        has_data = bool(context or canvas_context)
-        final = _apply_grounding_gate(cleaned, grounding_chunks, coverage=grounding_coverage, has_student_data=has_data)
+        has_data = bool(context)
+        final = _apply_grounding_gate(cleaned, grounding_chunks, coverage=grounding_coverage, has_attached_context=has_data)
         if final != cleaned:
             disclaimer = final[len(cleaned):]
             yield {"type": "chunk", "content": disclaimer}

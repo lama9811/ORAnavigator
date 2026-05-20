@@ -11,7 +11,7 @@ Architecture:
 L1: Fast, local to each server instance (cachetools TTLCache)
 L2: Shared across servers, persistent (Redis Cloud)
 Semantic: Matches similar queries via Google text-embedding-004 vectors.
-          "prerequisites for data structures" matches "what do I need before COSC 220"
+          "what is the F&A rate" matches "what indirect cost rate does Morgan charge"
 """
 
 import hashlib
@@ -267,8 +267,8 @@ class SemanticCache:
     Matches queries with similar meaning even when worded differently.
 
     Example matches (above 0.92 cosine similarity):
-      "prerequisites for data structures" ~ "what do I need before taking COSC 220"
-      "AI courses at Morgan State" ~ "what classes cover artificial intelligence"
+      "what is the F&A rate" ~ "what indirect cost rate does Morgan State charge"
+      "how do I request an NCE" ~ "what is the process for a no-cost extension"
 
     Entries are stored in-memory for fast search and persisted to Redis
     for durability across server restarts.
@@ -621,20 +621,12 @@ query_cache = MultiTierCache()
 # HELPER FUNCTIONS (Backwards Compatible)
 # ============================================================================
 
-def get_context_hash(user_id: int = None, has_degreeworks: bool = False, model: str = "", has_canvas: bool = False, dw_hash: str = "") -> str:
+def get_context_hash(user_id: int = None, model: str = "") -> str:
     """
     Generate a context hash for cache key differentiation.
-    Includes model and data sources so different contexts get separate cache entries.
+    Includes the model preference so different models get separate cache entries.
     """
     parts = []
-    if (has_degreeworks or has_canvas) and user_id:
-        parts.append(f"user:{user_id}")
-    if has_degreeworks:
-        parts.append("dw")
-    if dw_hash:
-        parts.append(f"dwh:{dw_hash}")
-    if has_canvas:
-        parts.append("canvas")
     if model:
         parts.append(f"m:{model}")
     if parts:

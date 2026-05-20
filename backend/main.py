@@ -159,19 +159,7 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add profile_picture_data column: {e}")
 
-        # 4. Add morgan_connected_at column if missing
-        try:
-            conn.execute(text("SELECT morgan_connected_at FROM users LIMIT 1"))
-        except (OperationalError, ProgrammingError):
-            print("[WARN] 'morgan_connected_at' column missing. Adding it now...")
-            try:
-                conn.execute(text("ALTER TABLE users ADD COLUMN morgan_connected_at DATETIME"))
-                conn.commit()
-                print("[OK] Successfully added 'morgan_connected_at' column!")
-            except Exception as e:
-                print(f"[ERROR] Failed to add morgan_connected_at column: {e}")
-
-        # 5. Add email auth columns if missing
+        # 4. Add email auth columns if missing
         for col, col_type in [
             ("email_verified", "BOOLEAN DEFAULT TRUE"),
             ("verification_token", "VARCHAR(255)"),
@@ -385,7 +373,6 @@ def get_current_user(
             "email": user.email,
             "role": user.role,
             "name": user.name,
-            "student_id": user.student_id,
         }
     except JWTError as e:
         print(f"JWT decode error: {e}")
@@ -401,7 +388,6 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: Optional[str] = None
-    student_id: Optional[str] = None
 
     @staticmethod
     def validate_email_format(v):
@@ -479,8 +465,6 @@ FORGOT_PW_RATE_WINDOW = 900  # 15 minutes
 
 class ProfileUpdateRequest(BaseModel):
     name: Optional[str] = None
-    studentId: Optional[str] = None
-    major: Optional[str] = None
 
 class PasswordChangeRequest(BaseModel):
     currentPassword: str
@@ -609,84 +593,7 @@ def root_dashboard(request: Request, user: Optional[dict] = Depends(get_optional
 # 8. API ENDPOINTS
 # ==============================================================================
 
-# --- Auth ---
-# Moved to routers/auth.py: register, verify-email, resend-verification, login
-# ALLOWED_EMAIL_DOMAINS = ["morgan.edu"]
-#
-# _register_timestamps: dict[str, list] = {}
-#
-# @app.post("/api/register", status_code=status.HTTP_201_CREATED)
-# def register(req: RegisterRequest, db: Session = Depends(get_db)):
-#     import re
-#     from email_service import generate_token, send_verification_email
-#
-#     email = req.email.strip().lower()
-#
-#     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-#         raise HTTPException(status_code=400, detail="Invalid email format")
-#
-#     # Rate limit per EMAIL (not per IP). On campus WiFi all students share one IP,
-#     # so IP-based limiting blocks innocent users. 3 attempts per email per hour.
-#     now_ts = time_module.time()
-#     reg_ts = _register_timestamps.get(email, [])
-#     reg_ts = [t for t in reg_ts if now_ts - t < 3600]
-#     if len(reg_ts) >= 3:
-#         raise HTTPException(status_code=429, detail="Too many attempts for this email. Try again in an hour.")
-#     reg_ts.append(now_ts)
-#     _register_timestamps[email] = reg_ts
-#
-#     # Only allow Morgan State email for new registrations
-#     email_domain = email.split("@")[-1].lower()
-#     allow_test = os.getenv("ALLOW_TEST_EMAILS", "false").lower() == "true"
-#     if email_domain not in ALLOWED_EMAIL_DOMAINS and not (allow_test and email.endswith("@test.com")):
-#         raise HTTPException(status_code=400, detail="Only @morgan.edu email addresses are allowed.")
-#
-#     if len(req.password) < 8:
-#         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-#     if db.query(User).filter(User.email == req.email).first():
-#         raise HTTPException(status_code=400, detail="Email already registered")
-#
-#     hashed = hash_password(req.password)
-#     token = generate_token()
-#     student = User(email=req.email, password_hash=hashed, role="student", email_verified=False, verification_token=token,
-#                    name=req.name.strip() if req.name else None, student_id=req.student_id.strip() if req.student_id else None)
-#     db.add(student)
-#     db.commit()
-#     db.refresh(student)
-#
-#     send_verification_email(req.email, token)
-#     return {"message": "Account created! Check your Morgan State email to verify.", "user_id": student.id}
-#
-#
-# @app.get("/api/verify-email")
-# def verify_email(token: str, db: Session = Depends(get_db)):
-#     from starlette.responses import RedirectResponse
-#     user = db.query(User).filter(User.verification_token == token).first()
-#     if not user:
-#         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
-#     user.email_verified = True
-#     user.verification_token = None
-#     db.commit()
-#     # Redirect to login with success flag
-#     app_url = os.getenv("APP_URL", "https://ora.inavigator.ai")
-#     return RedirectResponse(url=f"{app_url}/login?verified=true")
-#
-#
-# @app.post("/api/resend-verification")
-# async def resend_verification(request: Request, db: Session = Depends(get_db)):
-#     from email_service import generate_token, send_verification_email
-#     body = await request.json()
-#     email = body.get("email", "")
-#     user = db.query(User).filter(User.email == email).first()
-#     if not user:
-#         return {"message": "If an account exists, a verification email has been sent."}
-#     if user.email_verified:
-#         return {"message": "Email already verified."}
-#     token = generate_token()
-#     user.verification_token = token
-#     db.commit()
-#     send_verification_email(email, token)
-#     return {"message": "Verification email sent. Check your inbox."}
+# --- Auth: register, verify-email, resend-verification, login live in routers/auth.py ---
 
 
 @app.post("/api/forgot-password")
@@ -752,24 +659,6 @@ async def reset_password(request: Request, db: Session = Depends(get_db)):
     return {"message": "Password reset successfully. You can now log in."}
 
 
-# Moved to routers/auth.py
-# @app.post("/api/login")
-# def login(req: LoginRequest, db: Session = Depends(get_db)):
-#     user = db.query(User).filter(User.email == req.email).first()
-#     if not user or not verify_password(req.password, user.password_hash):
-#         raise HTTPException(status_code=401, detail="Invalid credentials")
-#
-#     # Require email verification (skip for admins and existing test accounts)
-#     if not getattr(user, 'email_verified', True) and user.role != "admin":
-#         raise HTTPException(status_code=403, detail="Please verify your email first. Check your inbox for the verification link.")
-#
-#     token = create_access_token({
-#         "user_id": user.id,
-#         "role": user.role,
-#         "email": user.email
-#     })
-#     return {"access_token": token, "token_type": "bearer"}
-
 # --- Profile Management ---
 @app.get("/api/profile")
 async def get_profile(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -785,11 +674,8 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
     return {
         "email": db_user.email,
         "name": getattr(db_user, 'name', None),
-        "studentId": getattr(db_user, 'student_id', None),
-        "major": getattr(db_user, 'major', None),
         "profilePicture": profile_pic,
-        "morganConnected": getattr(db_user, 'morgan_connected', False),
-        "role": getattr(db_user, 'role', "student")
+        "role": getattr(db_user, 'role', "user")
     }
 
 @app.put("/api/profile")
@@ -798,8 +684,6 @@ async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_cur
     if not db_user: raise HTTPException(404, "User not found")
     
     if req.name is not None and hasattr(db_user, 'name'): db_user.name = req.name
-    if req.studentId is not None and hasattr(db_user, 'student_id'): db_user.student_id = req.studentId
-    if req.major is not None and hasattr(db_user, 'major'): db_user.major = req.major
     
     db.commit()
     return {"message": "Profile updated"}
@@ -1737,8 +1621,7 @@ async def get_all_users(
         search_term = f"%{search}%"
         query = query.filter(
             (User.email.ilike(search_term)) |
-            (User.name.ilike(search_term)) |
-            (User.student_id.ilike(search_term))
+            (User.name.ilike(search_term))
         )
 
     if role and role != "all":
@@ -1753,9 +1636,6 @@ async def get_all_users(
                 "email": u.email,
                 "name": u.name,
                 "role": u.role,
-                "student_id": u.student_id,
-                "major": u.major,
-                "morgan_connected": u.morgan_connected,
                 "created_at": u.created_at.isoformat() if u.created_at else None
             }
             for u in users
@@ -1775,19 +1655,17 @@ async def get_user_stats(user: dict = Depends(get_current_user), db: Session = D
     month_ago = now - timedelta(days=30)
 
     total_users = db.query(User).count()
-    total_students = db.query(User).filter(User.role == "student").count()
+    total_regular = db.query(User).filter(User.role == "user").count()
     total_admins = db.query(User).filter(User.role == "admin").count()
     new_this_week = db.query(User).filter(User.created_at >= week_ago).count()
     new_this_month = db.query(User).filter(User.created_at >= month_ago).count()
-    morgan_connected = db.query(User).filter(User.morgan_connected == True).count()
 
     return {
         "total": total_users,
-        "students": total_students,
+        "users": total_regular,
         "admins": total_admins,
         "new_this_week": new_this_week,
-        "new_this_month": new_this_month,
-        "morgan_connected": morgan_connected
+        "new_this_month": new_this_month
     }
 
 @app.put("/api/admin/users/{user_id}/role")
@@ -1801,8 +1679,8 @@ async def update_user_role(
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    if new_role not in ["student", "admin"]:
-        raise HTTPException(status_code=400, detail="Role must be 'student' or 'admin'")
+    if new_role not in ["user", "admin"]:
+        raise HTTPException(status_code=400, detail="Role must be 'user' or 'admin'")
 
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:

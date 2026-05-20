@@ -858,7 +858,7 @@ body.dark .search-box:focus-within {
   text-transform: capitalize;
 }
 
-.role-badge.student {
+.role-badge.user {
   background: rgba(59, 130, 246, 0.15);
   color: #2563EB;
 }

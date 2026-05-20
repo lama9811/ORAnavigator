@@ -33,7 +33,7 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
         raise HTTPException(status_code=400, detail="Invalid email format")
 
-    # Rate limit per EMAIL (not per IP). On campus WiFi all students share one IP,
+    # Rate limit per EMAIL (not per IP). On campus WiFi all users share one IP,
     # so IP-based limiting blocks innocent users. 3 attempts per email per hour.
     now_ts = time_module.time()
     reg_ts = _register_timestamps.get(email, [])
@@ -56,21 +56,20 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
     hashed = hash_password(req.password)
     token = generate_token()
-    student = User(
+    new_user = User(
         email=req.email,
         password_hash=hashed,
-        role="student",
+        role="user",
         email_verified=False,
         verification_token=token,
         name=req.name.strip() if req.name else None,
-        student_id=req.student_id.strip() if req.student_id else None,
     )
-    db.add(student)
+    db.add(new_user)
     db.commit()
-    db.refresh(student)
+    db.refresh(new_user)
 
     send_verification_email(req.email, token)
-    return {"message": "Account created! Check your Morgan State email to verify.", "user_id": student.id}
+    return {"message": "Account created! Check your Morgan State email to verify.", "user_id": new_user.id}
 
 
 # ---------------------------------------------------------------------------
