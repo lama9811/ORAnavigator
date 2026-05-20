@@ -1,0 +1,23 @@
+{
+  "doc_id": "compliance_drug_alcohol_tobacco",
+  "title": "Compliance — Drug, Alcohol, and Tobacco Policies",
+  "category": "research_compliance",
+  "subcategory": "drug_alcohol",
+  "display_label": "Drug, Alcohol & Tobacco Policies",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/drug-alcohol-and-tobacco-policies",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Policy%20Documents/Smoke_Tobacco_Free_Campus.pdf",
+  "content": "Morgan State University maintains a tobacco- and smoke-free campus environment, documented through the MSU Board of Regents Policy Page and an accompanying policy document (Smoke_Tobacco_Free_Campus.pdf). The university is committed to a campus that is free of the illegal and/or abusive use of drugs and alcohol, with its Drug and Alcohol Abuse Policy posted on the Board of Regents Policy Page and in an accompanying document (Drug_Alcohol_Abuse_Policy.pdf). Both policies apply to faculty, staff, students, and visitors and are administered alongside other compliance functions by the Office of Research Administration for research-related inquiries: ask.ora@morgan.edu, 443-885-4044, Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "campus_status": "tobacco-free and smoke-free",
+    "policies": [
+      "Smoke/Tobacco-Free Campus Policy",
+      "Drug and Alcohol Abuse Policy"
+    ],
+    "policy_authority": "MSU Board of Regents",
+    "contact_email": "ask.ora@morgan.edu"
+  },
+  "legacy_category": "compliance"
+}

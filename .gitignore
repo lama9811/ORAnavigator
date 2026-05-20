@@ -108,3 +108,9 @@ cs-chatbot-key.*
 # Utility scripts (not part of app)
 generate_audio.py
 generate_pdf.py
+
+# Playwright MCP scratch snapshots (debugging / KB-scrape artifacts)
+.playwright-mcp/
+
+# Debug screenshots
+login-*.png

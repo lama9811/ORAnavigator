@@ -219,5 +219,3 @@ See `SECURITY.md`. Highlights:
 ## License
 
 MIT — see `LICENSE`.
-
-ORA Navigator was forked from [CS Navigator](https://github.com/lama9811/cs-navigator) on 2026-05-12. The CS Navigator codebase (academic advising for Computer Science students) is maintained independently.

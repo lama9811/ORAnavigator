@@ -71,7 +71,7 @@ export default function AdminDashboard() {
 
   // Users State
   const [users, setUsers] = useState([]);
-  const [userStats, setUserStats] = useState({ total: 0, students: 0, admins: 0, new_this_week: 0, morgan_connected: 0 });
+  const [userStats, setUserStats] = useState({ total: 0, users: 0, admins: 0, new_this_week: 0 });
   const [userSearch, setUserSearch] = useState("");
   const [userRoleFilter, setUserRoleFilter] = useState("all");
   const [usersLoading, setUsersLoading] = useState(false);
@@ -1263,8 +1263,8 @@ export default function AdminDashboard() {
             </div>
             <div className="stat-card open">
               <FaUserGraduate className="stat-icon" />
-              <span className="stat-number">{userStats.students}</span>
-              <span className="stat-label">Students</span>
+              <span className="stat-number">{userStats.users}</span>
+              <span className="stat-label">Users</span>
             </div>
             <div className="stat-card progress">
               <FaUserShield className="stat-icon" />
@@ -1283,13 +1283,13 @@ export default function AdminDashboard() {
               <FaSearch size={14} />
               <input
                 type="text"
-                placeholder="Search by email, name, or student ID..."
+                placeholder="Search by email or name..."
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
               />
             </div>
             <div className="filter-buttons">
-              {["all", "student", "admin"].map((role) => (
+              {["all", "user", "admin"].map((role) => (
                 <button
                   key={role}
                   className={`filter-btn ${userRoleFilter === role ? "active" : ""}`}
@@ -1311,8 +1311,6 @@ export default function AdminDashboard() {
                     <th>Email</th>
                     <th>Name</th>
                     <th>Role</th>
-                    <th>Major</th>
-                    <th>Morgan</th>
                     <th>Joined</th>
                     <th>Actions</th>
                   </tr>
@@ -1323,8 +1321,6 @@ export default function AdminDashboard() {
                       <td>{u.email}</td>
                       <td>{u.name || "-"}</td>
                       <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
-                      <td>{u.major || "-"}</td>
-                      <td>{u.morgan_connected ? <FaLink size={14} className="connected" /> : "-"}</td>
                       <td>{formatDate(u.created_at)}</td>
                       <td>
                         <select
@@ -1332,7 +1328,7 @@ export default function AdminDashboard() {
                           onChange={(e) => handleUpdateUserRole(u.id, e.target.value)}
                           className="role-select"
                         >
-                          <option value="student">Student</option>
+                          <option value="user">User</option>
                           <option value="admin">Admin</option>
                         </select>
                       </td>
@@ -1385,7 +1381,7 @@ export default function AdminDashboard() {
           {showFailedQueries && (
             <div style={{ marginBottom: "20px", background: "var(--bg-elevated)", borderRadius: "12px", padding: "16px", maxHeight: "300px", overflow: "auto" }}>
               <h4 style={{ marginBottom: "10px" }}>Recent Failed Queries</h4>
-              {failedQueries.length === 0 ? <p style={{ color: "var(--text-secondary)" }}>No failed queries yet. Students haven't asked anything the bot couldn't answer.</p> :
+              {failedQueries.length === 0 ? <p style={{ color: "var(--text-secondary)" }}>No failed queries yet. Users haven't asked anything the bot couldn't answer.</p> :
                 failedQueries.map(q => (
                   <div key={q.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--border-color)" }}>
                     <div style={{ fontWeight: 500 }}>{q.user_query}</div>
@@ -1418,7 +1414,7 @@ export default function AdminDashboard() {
                         {s.confidence} confidence
                       </span>
                       <span style={{ fontSize: "11px", padding: "2px 8px", borderRadius: "10px", background: "#e3f2fd", color: "#1565c0", fontWeight: 600 }}>
-                        {s.query_count} student{s.query_count !== 1 ? "s" : ""} asked
+                        {s.query_count} user{s.query_count !== 1 ? "s" : ""} asked
                       </span>
                     </div>
                     <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{new Date(s.created_at).toLocaleDateString()}</span>
@@ -1936,7 +1932,7 @@ export default function AdminDashboard() {
                 <div className={`health-card ${healthStatus.database?.status === "connected" ? "healthy" : "error"}`}>
                   <FaDatabase className="health-icon" />
                   <div className="health-info">
-                    <h4>Database (RDS)</h4>
+                    <h4>Database (Cloud SQL MySQL)</h4>
                     <span className="health-status">{healthStatus.database?.status}</span>
                     <p>{healthStatus.database?.message}</p>
                   </div>

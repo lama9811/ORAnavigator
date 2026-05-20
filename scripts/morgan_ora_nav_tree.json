@@ -1,0 +1,128 @@
+{
+  "scraped_at": "2026-05-18",
+  "source": "https://www.morgan.edu/ora",
+  "description": "Authoritative morgan.edu/ora left-sidebar navigation hierarchy. Used as ground truth for KB folder restructure.",
+  "tree": [
+    {
+      "slug": "about",
+      "title": "About",
+      "url": "/office-of-research-administration/about",
+      "children": [
+        { "slug": "mission-and-vision", "title": "Mission & Vision", "url": "/office-of-research-administration/about/mission-and-vision" },
+        { "slug": "history", "title": "History", "url": "/office-of-research-administration/about/history" },
+        { "slug": "staff-directory", "title": "Staff Directory", "url": "/office-of-research-administration/about/staff-directory" }
+      ]
+    },
+    {
+      "slug": "pre-award",
+      "title": "Pre-Award",
+      "url": "/office-of-research-administration/pre-award",
+      "children": [
+        { "slug": "university-application-information", "title": "University Application Information", "url": "/office-of-research-administration/pre-award/university-application-information" },
+        { "slug": "role-of-principal-investigator", "title": "Role of Principal Investigator", "url": "/office-of-research-administration/pre-award/role-of-principal-investigator" },
+        { "slug": "proposal-components", "title": "Proposal Components", "url": "/office-of-research-administration/pre-award/proposal-components" },
+        { "slug": "proposal-submission-checklist", "title": "Proposal Submission Checklist", "url": "/office-of-research-administration/pre-award/proposal-submission-checklist" },
+        { "slug": "internal-routing-form", "title": "Internal Routing Form", "url": "/office-of-research-administration/pre-award/internal-routing-form" },
+        { "slug": "budget-development", "title": "Budget Development", "url": "/office-of-research-administration/pre-award/budget-development" },
+        { "slug": "fringe-benefit-rate", "title": "Fringe Benefit Rate", "url": "/office-of-research-administration/pre-award/fringe-benefit-rate" },
+        { "slug": "fanda-cost-rates", "title": "F&A Cost Rates", "url": "/office-of-research-administration/pre-award/fanda-cost-rates" },
+        { "slug": "proposal-and-budget-examples", "title": "Proposal and Budget Examples", "url": "/office-of-research-administration/pre-award/proposal-and-budget-examples" },
+        { "slug": "pre-award-spending", "title": "Pre-Award Spending", "url": "/office-of-research-administration/pre-award/pre-award-spending" },
+        { "slug": "pre-award-subawards", "title": "Pre-Award Subawards", "url": "/office-of-research-administration/pre-award/pre-award-subawards" },
+        { "slug": "limited-submission", "title": "Limited Submission", "url": "/office-of-research-administration/pre-award/limited-submission" }
+      ]
+    },
+    {
+      "slug": "post-award",
+      "title": "Post-Award",
+      "url": "/office-of-research-administration/post-award",
+      "children": [
+        { "slug": "notification-and-setup-of-award", "title": "Notification and Setup of Award", "url": "/office-of-research-administration/post-award/notification-and-setup-of-award" },
+        { "slug": "changes-to-an-award", "title": "Changes to an Award", "url": "/office-of-research-administration/post-award/changes-to-an-award" },
+        { "slug": "post-award-subawards", "title": "Post-Award Subawards", "url": "/office-of-research-administration/post-award/post-award-subawards" },
+        { "slug": "reporting", "title": "Reporting", "url": "/office-of-research-administration/post-award/reporting" },
+        { "slug": "forms", "title": "Forms", "url": "/office-of-research-administration/post-award/forms" }
+      ]
+    },
+    {
+      "slug": "policies-and-guidelines",
+      "title": "Policies and Guidelines",
+      "url": "/office-of-research-administration/policies-and-guidelines",
+      "children": []
+    },
+    {
+      "slug": "research-compliance",
+      "title": "Research Compliance",
+      "url": "/office-of-research-administration/research-compliance",
+      "children": [
+        { "slug": "human-subjects-research", "title": "Human Subjects Research (IRB)", "url": "/office-of-research-administration/research-compliance/human-subjects-research" },
+        {
+          "slug": "animal-research", "title": "Animal Research (IACUC)", "url": "/office-of-research-administration/research-compliance/animal-research",
+          "children": [
+            { "slug": "animal-housing-capacity", "title": "Animal Housing Capacity", "url": "/office-of-research-administration/research-compliance/animal-research/animal-housing-capacity" },
+            { "slug": "available-equipment", "title": "Available Equipment", "url": "/office-of-research-administration/research-compliance/animal-research/available-equipment" },
+            { "slug": "iacuc-sops", "title": "IACUC SOPs", "url": "/office-of-research-administration/research-compliance/animal-research/iacuc-sops" },
+            { "slug": "iacuc-forms", "title": "IACUC Forms", "url": "/office-of-research-administration/research-compliance/animal-research/iacuc-forms" },
+            { "slug": "training-and-consultation", "title": "Training and Consultation", "url": "/office-of-research-administration/research-compliance/animal-research/training-and-consultation" }
+          ]
+        },
+        {
+          "slug": "conflict-of-interest", "title": "Conflict of Interest (COI)", "url": "/office-of-research-administration/research-compliance/conflict-of-interest-x12058",
+          "children": [
+            { "slug": "conflict-of-interest-for-sponsored-research", "title": "COI for Sponsored Research", "url": "/office-of-research-administration/research-compliance/conflict-of-interest/conflict-of-interest-for-sponsored-research" }
+          ]
+        },
+        { "slug": "responsible-conduct-of-research", "title": "Responsible Conduct of Research (RCR)", "url": "/office-of-research-administration/research-compliance/responsible-conduct-of-research" },
+        { "slug": "research-misconduct", "title": "Research Misconduct", "url": "/office-of-research-administration/research-compliance/research-misconduct" },
+        {
+          "slug": "research-security", "title": "Research Security", "url": "/office-of-research-administration/research-compliance/research-security",
+          "children": [
+            { "slug": "information-technology-resources", "title": "Information Technology Resources", "url": "/office-of-research-administration/research-compliance/research-security/information-technology-resources" },
+            { "slug": "research-compliance-and-security-training", "title": "Research Compliance and Security Training", "url": "/office-of-research-administration/research-compliance/research-security/research-compliance-and-security-training" },
+            { "slug": "technology-control-plan", "title": "Technology Control Plan (TCP)", "url": "/office-of-research-administration/research-compliance/research-security/technology-control-plan-(tcp)" },
+            { "slug": "research-security-program-committee", "title": "Research Security Program Committee", "url": "/office-of-research-administration/research-compliance/research-security/research-security-program-committee" },
+            { "slug": "nspm-33-overview", "title": "NSPM-33 Overview", "url": "/office-of-research-administration/research-compliance/research-security/nspm-33-overview" }
+          ]
+        },
+        { "slug": "state-of-maryland-ethics-and-financial-disclosure", "title": "State of Maryland Ethics and Financial Disclosure", "url": "/office-of-research-administration/research-compliance/state-of-maryland-ethics-and-financial-disclosure" },
+        { "slug": "diversity-and-eeo", "title": "Diversity and EEO", "url": "/office-of-research-administration/research-compliance/diversity-and-eeo" },
+        { "slug": "drug-alcohol-and-tobacco-policies", "title": "Drug Alcohol and Tobacco Policies", "url": "/office-of-research-administration/research-compliance/drug-alcohol-and-tobacco-policies" },
+        { "slug": "research-compliance-updates-and-news", "title": "Research Compliance Updates and News", "url": "/office-of-research-administration/research-compliance/research-compliance-updates-and-news" }
+      ]
+    },
+    {
+      "slug": "trainings",
+      "title": "Trainings",
+      "url": "/office-of-research-administration/trainings",
+      "children": [
+        { "slug": "e-training", "title": "e-Training", "url": "/office-of-research-administration/trainings/e-training" },
+        { "slug": "new-faculty-development-seminars", "title": "New Faculty Development Seminars", "url": "/office-of-research-administration/trainings/new-faculty-development-seminars" },
+        { "slug": "monthly-d-red-seminars", "title": "Monthly D-RED Seminars", "url": "/office-of-research-administration/trainings/monthly-d-red-seminars" },
+        { "slug": "special-workshops", "title": "Special Workshops", "url": "/office-of-research-administration/trainings/special-workshops" },
+        { "slug": "test-prep", "title": "Test Prep", "url": "/office-of-research-administration/trainings/test-prep" },
+        { "slug": "msu-trainings-outside-ora", "title": "MSU Trainings Outside ORA", "url": "/office-of-research-administration/trainings/msu-trainings-outside-ora" }
+      ]
+    },
+    {
+      "slug": "resources",
+      "title": "Resources",
+      "url": "/office-of-research-administration/resources",
+      "children": [
+        { "slug": "principal-investigator-handbooks", "title": "Principal Investigator Handbooks", "url": "/office-of-research-administration/resources/principal-investigator-handbooks" },
+        { "slug": "templates", "title": "Templates", "url": "/office-of-research-administration/resources/templates" }
+      ]
+    },
+    {
+      "slug": "funding-sources",
+      "title": "Funding Sources",
+      "url": "/office-of-research-administration/funding-sources",
+      "children": []
+    },
+    {
+      "slug": "ora-announcements",
+      "title": "ORA Announcements",
+      "url": "/office-of-research-administration/ora-announcements",
+      "children": []
+    }
+  ]
+}

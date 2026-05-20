@@ -1,0 +1,22 @@
+{
+  "doc_id": "compliance_research_security_program_committee",
+  "title": "Compliance — Research Security Program Committee",
+  "category": "research_compliance",
+  "subcategory": "research_security_subpage",
+  "display_label": "Research Security Program Committee",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-security-program-committee",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-security/research-security-program-committee",
+  "content": "Research Security Program Committee at Morgan State University.\n\nPage content (verbatim, complete): A dedicated Research Security Committee leads the university's efforts, bringing together expertise and perspectives from across the institution. This collaborative team ensures the program remains dynamic, responsive, and effective in meeting the ever-changing landscape of research security.\n\nSTATUS NOTE — Committee roster not published: As of the last scrape on 2026-05-14, the page contains ONLY the brief description above. No committee members, chair name, charter, meeting cadence, or contact emails are listed. There are no expandable sections, tables, or links beyond standard ORA navigation. Faculty asking 'who is on the Research Security Committee?' should be told the roster is not currently published on the website and that ORA (ask.ora@morgan.edu / 443-885-4044) should be contacted for that information.\n\nContrast with the COI Committee (COIC): Unlike this Research Security Committee, the Conflict of Interest Committee (COIC) has a published roster of 9 members chaired by Dr. Willie May (Vice President for Research and Economic Development) — see compliance_conflict_of_interest doc for the full COIC member list.\n\nContact: Office of Research Administration, Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251. Phone 443-885-4044. Fax 443-885-8280. Email ask.ora@morgan.edu.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "roster_published": false,
+    "members_listed": [],
+    "chair": null,
+    "page_completeness": "stub / description only",
+    "parent_program": "Research Security Program",
+    "contact_email": "ask.ora@morgan.edu"
+  },
+  "legacy_category": "compliance"
+}

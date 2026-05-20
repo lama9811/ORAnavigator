@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_white_sticker_letter_key",
+  "title": "White Sticker with Letter Key",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — White Sticker with Letter Key",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/White%20sticker%20with%20letter%20key.docx",
+  "content": "Reference key for the white-sticker letter-coding system used on ARF cages to indicate study, treatment, or status flags.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

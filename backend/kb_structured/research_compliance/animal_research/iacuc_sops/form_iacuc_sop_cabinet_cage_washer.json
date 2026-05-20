@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_cabinet_cage_washer",
+  "title": "SOP 35.2: Use and Monitoring of Cabinet Cage Washer",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 35.2 — Use and Monitoring of Cabinet Cage Washer",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_35.2_Use_and_Monitoring_of_Cabinet_Cage_Washer.pdf",
+  "content": "IACUC SOP for operation and routine monitoring (temperature, cycle log) of the cabinet cage washer used to sanitize ARF cages and equipment.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

@@ -1,0 +1,36 @@
+{
+  "doc_id": "compliance_overview",
+  "title": "Research Compliance — Overview",
+  "category": "research_compliance",
+  "subcategory": "overview",
+  "display_label": "Research Compliance Overview",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance",
+  "content": "The Office of Research Administration's Research Compliance program provides institutional oversight to ensure that Morgan State University faculty, students, and staff comply with federal, state, and award-specific regulations governing the responsible and ethical conduct of research. The Office of Research Compliance (ORC) administers programs across nine major compliance areas: (1) Human Subjects Research (IRB) — all human-subjects research must be reviewed and approved by the IRB in compliance with 45 CFR 46 before any activities begin; allow at least 30 days for review. (2) Animal Research (IACUC) — the Animal Research Facility in the Martin D. Jenkins Behavioral and Social Sciences Center supports humane laboratory animal research approved by the Institutional Animal Care and Use Committee, in compliance with the federal Animal Welfare Act. (3) Conflict of Interest — Morgan follows all applicable state and federal COI policies, including the Maryland Board of Regents Conflict of Interest in Research and Development Policy (approved 2017) and Public Health Service regulations at 42 CFR Part 50 Subpart F for sponsored research. (4) Responsible Conduct of Research (RCR) — guided by the core values of honesty, accuracy, objectivity, and trust; required for NIH and NSF awardees every four years. (5) Research Misconduct — defined under 42 CFR Part 93 as fabrication, falsification, or plagiarism, plus deliberate or repeated non-compliance with regulations. (6) Research Security — protects federally sponsored research across four domains: cybersecurity, export controls, conflict of interest, and foreign travel security (aligned with NSPM-33). (7) State of Maryland Ethics and Financial Disclosure — applies to all state employees regardless of grade. (8) Diversity and EEO — the university maintains a Nondiscrimination Policy and a Sexual Harassment and Prohibited Conduct Policy. (9) Drug, Alcohol, and Tobacco Policies — Morgan is a tobacco- and smoke-free campus and prohibits illegal/abusive drug and alcohol use. Required training: CITI Human Subjects Research (HSR) is mandatory for all researchers working with human subjects; RCR and COI CITI courses are strongly encouraged. General compliance questions go to ask.ora@morgan.edu or 443-885-4044; the Office of Research Administration is located at Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251.\n\nMission Statement (verbatim from Research Compliance page): Research Compliance provides oversight and serves as a resource for policy development, regulatory analysis and interpretation, training, and education to raise awareness of procedures and guidelines designed to support the responsible and ethical conduct of research at the University. The mission is to ensure that Morgan faculty, students and staff are in compliance with the complex web of regulatory requirements that govern research. Major areas include: human subjects, responsible conduct of research (RCR), research misconduct, export control, animal subjects, and financial conflicts of interest (FCOI).\n\nResearch Security Program (verbatim): At Morgan State University, we are dedicated to fostering a secure and ethical research environment, particularly for our federally sponsored research endeavors. As global research collaborations grow and technological advancements accelerate, it is essential to address emerging security risks that could compromise the integrity, confidentiality, and success of our work. Our Research Security Program is designed to protect the integrity of research and uphold federal regulations, ensuring that all research is conducted with the highest standards of security, compliance, and accountability.\n\nCITI Training note (verbatim): Researchers may select the HSR course most appropriate for their research area or 'Learner Group' (e.g., Biomedical, Social Behavioral Education (SBE), etc.). RCR training is to promote research ethics and avoid Research Misconduct (fabrication, falsification, and plagiarism). COI training is to promote timely disclosure of financial and other conflicts of interest.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "compliance_areas": [
+      "human_subjects_research",
+      "animal_research",
+      "conflict_of_interest",
+      "responsible_conduct_of_research",
+      "research_misconduct",
+      "research_security",
+      "maryland_ethics_financial_disclosure",
+      "diversity_eeo",
+      "drug_alcohol_tobacco"
+    ],
+    "required_training": "CITI Human Subjects Research (HSR)",
+    "encouraged_training": [
+      "CITI RCR",
+      "CITI COI"
+    ],
+    "office_address": "Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251",
+    "office_phone": "443-885-4044",
+    "office_fax": "443-885-8280",
+    "office_email": "ask.ora@morgan.edu"
+  },
+  "legacy_category": "compliance"
+}

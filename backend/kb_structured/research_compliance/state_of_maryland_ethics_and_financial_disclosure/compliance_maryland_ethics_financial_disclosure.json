@@ -1,0 +1,25 @@
+{
+  "doc_id": "compliance_maryland_ethics_financial_disclosure",
+  "title": "Compliance — State of Maryland Ethics and Financial Disclosure",
+  "category": "research_compliance",
+  "subcategory": "ethics",
+  "display_label": "Maryland Ethics & Financial Disclosure",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/state-of-maryland-ethics-and-financial-disclosure",
+  "procedure_url": "https://ethics.maryland.gov/employeeoffcials/financial-disclosure/",
+  "content": "As a state entity, Morgan State University is fully subject to the Maryland Public Ethics Law, codified in the General Provisions Article, Title 5, originally established in 1979. The conflict-of-interest provisions of the law apply to all state employees regardless of grade or years of service. The Maryland State Ethics Commission additionally requires more than 14,000 state employees, elected officials, candidates for state elected offices, and other designated categories — including agency managers, regulators, and purchasing staff — to file an annual financial disclosure statement. The disclosure form requires filers to identify real-estate interests, equity interests, employment relationships, debts, and gifts; the purpose is to safeguard the impartiality and independent judgment of state officials and employees. New financial-disclosure filers must complete two hours of ethics training within six months of the date they first become required to file. Training covers the full scope of the Public Ethics Law with emphasis on conflicts of interest and standards of conduct. Key links: the State Ethics Commission training portal is at ethics.maryland.gov/employeeoffcials/mandatory-training/; financial disclosure filing information is at ethics.maryland.gov/employeeoffcials/financial-disclosure/. General questions about how the Maryland ethics requirements interact with Morgan research roles go to ask.ora@morgan.edu or 443-885-4044; the Office of Research Administration is at Tyler Hall, Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "governing_law": "Maryland General Provisions Article, Title 5",
+    "law_established": 1979,
+    "applies_to": "All State Employees regardless of grade or years of service",
+    "statewide_filer_count_approx": 14000,
+    "new_filer_training_hours": 2,
+    "new_filer_training_deadline_months": 6,
+    "ethics_commission_portal": "https://ethics.maryland.gov/",
+    "financial_disclosure_url": "https://ethics.maryland.gov/employeeoffcials/financial-disclosure/",
+    "training_url": "https://ethics.maryland.gov/employeeoffcials/mandatory-training/"
+  },
+  "legacy_category": "compliance"
+}

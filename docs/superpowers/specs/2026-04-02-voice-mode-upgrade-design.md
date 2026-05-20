@@ -2,7 +2,7 @@
 
 **Date:** April 2, 2026
 **Status:** Design approved, ready for implementation planning
-**Branch:** version-5.0-canvas
+**Branch:** feat/voice-mode
 
 ## Problem
 
@@ -104,14 +104,14 @@ The voice mode handler will:
 
 **Pipeline:**
 ```
-LLM chunk: "The CS department is"
+LLM chunk: "The pre-award team handles"
   -> buffer (not a complete sentence yet)
-LLM chunk: " located in McMechen Hall, Room 507."
+LLM chunk: " proposal budgets and F&A rates."
   -> buffer has complete sentence -> send to TTS
   -> TTS audio arrives -> start playing
 LLM chunk: " The phone number is"
   -> buffer (accumulating next sentence)
-LLM chunk: " (443) 885-3962."
+LLM chunk: " (443) 885-4044."
   -> complete sentence -> send to TTS (queued behind first)
   -> plays automatically after first finishes
 ```

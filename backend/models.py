@@ -6,7 +6,7 @@ from db import Base
 
 
 class ChatHistory(Base):
-    """Stores chat history in AWS RDS (or local DB).
+    """Stores chat history in Cloud SQL.
     Linked to the User table via user_id."""
     __tablename__ = "chat_history"
     id = Column(Integer, primary_key=True, index=True)
@@ -15,6 +15,15 @@ class ChatHistory(Base):
     user_query = Column(Text)
     bot_response = Column(Text)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # Phase 1: rolling session summary. Populated on the row whose post-commit
+    # task fired the summarization. On read, latest non-null wins.
+    session_summary = Column(Text, nullable=True)
+    summary_through_id = Column(Integer, nullable=True)
+    # Phase 4: verbatim turn embedding for cross-session semantic recall.
+    # Embedded as f"User: {q}\nAssistant: {a[:1500]}" on post-commit hook.
+    embedding = Column(Text, nullable=True)
+    embedding_model = Column(String(64), nullable=True)
+    topic_label = Column(String(128), nullable=True)
 
 
 class Feedback(Base):
@@ -35,136 +44,24 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(50), nullable=False, default="student")  # "admin" or "student"
+    role = Column(String(50), nullable=False, default="user")  # "admin" or "user"
 
     #  Profile fields
     name = Column(String(255), nullable=True)
-    student_id = Column(String(50), nullable=True)
-    major = Column(String(100), nullable=True)
     profile_picture = Column(String(500), nullable=True, default="/user_icon.jpg")
     profile_picture_data = Column(Text, nullable=True)  # Store base64 image data
-    morgan_connected = Column(Boolean, nullable=False, default=False)
-    morgan_connected_at = Column(DateTime, nullable=True)  # When DegreeWorks was synced
     email_verified = Column(Boolean, nullable=False, default=False)
     verification_token = Column(String(255), nullable=True)
     reset_token = Column(String(255), nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-
-    # Relationship to DegreeWorks data
-    degreeworks = relationship("DegreeWorksData", back_populates="user", uselist=False)
-
-
-class DegreeWorksData(Base):
-    """Stores parsed DegreeWorks academic data for personalized chatbot responses"""
-    __tablename__ = "degreeworks_data"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-
-    # Student Info
-    student_name = Column(String(255), nullable=True)
-    student_id = Column(String(50), nullable=True)
-    degree_program = Column(String(255), nullable=True)  # e.g., "Bachelor of Science in Computer Science"
-    catalog_year = Column(String(20), nullable=True)  # e.g., "2022-2023"
-    classification = Column(String(50), nullable=True)  # e.g., "Senior", "Junior"
-    advisor = Column(String(255), nullable=True)
-
-    # Academic Progress
-    overall_gpa = Column(Float, nullable=True)
-    major_gpa = Column(Float, nullable=True)
-    total_credits_earned = Column(Float, nullable=True)
-    credits_required = Column(Float, nullable=True)
-    credits_remaining = Column(Float, nullable=True)
-
-    # Course Data (stored as JSON strings)
-    courses_completed = Column(Text, nullable=True)  # JSON: [{code, name, credits, grade, semester}]
-    courses_in_progress = Column(Text, nullable=True)  # JSON: [{code, name, credits, semester}]
-    courses_remaining = Column(Text, nullable=True)  # JSON: [{code, name, credits, category}]
-    requirements_status = Column(Text, nullable=True)  # JSON: [{category, status, details}]
-
-    # Raw data backup
-    raw_data = Column(Text, nullable=True)  # Full JSON dump for reference
-
-    # Data source tracking
-    data_source = Column(String(50), nullable=True, default="manual_entry")  # "pdf_parse", "banner_scrape", "html_scrape", "manual_entry"
-
-    # Metadata
-    synced_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationship
-    user = relationship("User", back_populates="degreeworks")
-
-
-class BannerStudentData(Base):
-    """All Banner-synced data beyond DegreeWorks, stored as JSON fields.
-    One row per student. Populated by Banner SSB REST API sync."""
-    __tablename__ = "banner_student_data"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-
-    # Student Profile (from Banner, supplements DegreeWorks)
-    student_phone = Column(String(20), nullable=True)
-    student_address = Column(Text, nullable=True)       # JSON
-
-    # Current Registration
-    current_term = Column(String(50), nullable=True)
-    registered_courses = Column(Text, nullable=True)     # JSON: [{crn, subject, number, title, credits, instructor, times, location}]
-    total_registered_credits = Column(Float, nullable=True)
-
-    # Registration History
-    registration_history = Column(Text, nullable=True)   # JSON: [{term, courses, term_gpa, credits_attempted, credits_earned}]
-
-    # Grade History
-    grade_history = Column(Text, nullable=True)          # JSON: [{term, courses: [{code, title, grade, credits}], term_gpa}]
-    cumulative_gpa = Column(Float, nullable=True)
-    total_credits_earned = Column(Float, nullable=True)
-    total_credits_attempted = Column(Float, nullable=True)
-    deans_list_terms = Column(Text, nullable=True)       # JSON: ["Fall 2025", "Spring 2026"]
-
-    # Metadata
-    synced_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationship
-    user = relationship("User", backref="banner_data")
-
-
-class CanvasStudentData(Base):
-    """Stores Canvas LMS data: courses, assignments, grades, deadlines.
-    Synced via Canvas REST API using Morgan State LDAP credentials."""
-    __tablename__ = "canvas_student_data"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
-
-    # Canvas Profile
-    canvas_user_id = Column(Integer, nullable=True)
-    canvas_login_id = Column(String(100), nullable=True)
-
-    # Courses (JSON array)
-    courses = Column(Text, nullable=True)  # [{id, name, code, grade, score}]
-
-    # Assignments (JSON array)
-    upcoming_assignments = Column(Text, nullable=True)  # [{title, type, due_at, points, course_name, submitted}]
-
-    # Missing/overdue (JSON array)
-    missing_assignments = Column(Text, nullable=True)  # [{title, course_id, due_at, points}]
-
-    # Grades per course (JSON dict)
-    grades = Column(Text, nullable=True)  # {course_id: {current_score, current_grade}}
-
-    # Full gradebook (JSON dict keyed by course_id)
-    gradebook = Column(Text, nullable=True)  # {course_id: {grading_type, assignment_groups, assignments}}
-
-    # Metadata
-    synced_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationship
-    user = relationship("User", backref="canvas_data")
+    # Phase 3: idle-sweep needs to know when the user last chatted so the cron
+    # can run extraction 5-10 min after they go quiet.
+    last_chat_at = Column(DateTime, nullable=True)
+    # Phase 5: global memory pause. When True, the chat path skips both
+    # semantic recall and per-turn extraction; per-row pause on UserMemory
+    # still works independently.
+    memory_paused = Column(Boolean, nullable=False, default=False)
 
 
 class SupportTicket(Base):
@@ -199,19 +96,49 @@ class SupportTicket(Base):
 
 
 class UserMemory(Base):
-    """Long-term user memory for chatbot personalization.
-    Consolidated from daily conversations via cron job.
-    Stored on our RDS (FERPA-safe), not Vertex AI."""
+    """Long-term user memory for ORA Navigator personalization.
+    Consolidated from daily conversations via Cloud Scheduler cron job.
+    Stored on the project's Cloud SQL instance, not Vertex AI.
+
+    Memory types: role, department, active_grant, irb_protocol, iacuc_protocol,
+    sponsor, interest, preference, goal, context."""
     __tablename__ = "user_memories"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    memory_type = Column(String(50), nullable=False)  # interest, preference, goal, context
+    memory_type = Column(String(50), nullable=False)  # role, department, active_grant, irb_protocol, iacuc_protocol, sponsor, interest, preference, goal, context
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Phase 2: JSON-encoded 256-float embedding for semantic recall. Stored as
+    # TEXT (codebase convention is TEXT + json.dumps/loads, not native JSON).
+    embedding = Column(Text, nullable=True)
+    embedding_model = Column(String(64), nullable=True)
+    # Per-row pause: when True, this row is skipped during semantic retrieval.
+    # Cooperates with Phase 5's global users.memory_paused.
+    paused = Column(Boolean, nullable=False, default=False)
 
     user = relationship("User", backref="memories")
+
+
+class UserSuggestedQuestions(Base):
+    """Precomputed home-screen suggestions for each user.
+    Refreshed in the post-commit hook after every chat turn — the GET
+    endpoint is a pure ~5ms read. Throttled by source_signature so unchanged
+    history doesn't trigger needless LLM calls."""
+    __tablename__ = "user_suggested_questions"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    # JSON-encoded list[str] (codebase convention: TEXT + json.dumps/loads).
+    questions = Column(Text, nullable=False)
+    generated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    # "{max_chat_id}:{max_memory_updated_epoch}" — used to skip regen when
+    # neither history nor memory facts have changed since last run.
+    source_signature = Column(String(64), nullable=False, default="")
+    # "personalized" (LLM + template) or "default" (cold-start pool sample).
+    source = Column(String(32), nullable=False, default="default")
+
+    user = relationship("User", backref="suggested_questions")
 
 
 class FailedQuery(Base):

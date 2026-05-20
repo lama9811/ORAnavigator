@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_environmental_concern",
+  "title": "Environmental Concern Form",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Environmental Concern Form",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Environmental%20Concern%20Form.docx",
+  "content": "Form used to report environmental concerns at the ARF — HVAC, lighting, plumbing, pest sightings, or other facility issues.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

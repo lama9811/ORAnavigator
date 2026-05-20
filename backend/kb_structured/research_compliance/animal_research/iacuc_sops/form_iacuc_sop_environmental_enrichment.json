@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_environmental_enrichment",
+  "title": "SOP 16.2: Environmental Enrichment",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 16.2 — Environmental Enrichment",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_16.2_Environmental_Enrichment.pdf",
+  "content": "IACUC SOP describing approved enrichment items, schedules, and species-appropriate enrichment practices for laboratory animals at the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_accident_report",
+  "title": "Accident Report (HR0001)",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC — Accident Report (HR0001)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/HR0001_AccidentInvestigation.pdf",
+  "content": "MSU HR0001 Accident Investigation form used to document and report accidents or near-misses occurring in the Animal Research Facility.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

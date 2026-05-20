@@ -171,7 +171,7 @@ deploy_adk() {
         --concurrency 80 \
         --no-allow-unauthenticated \
         --service-account "oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
-        --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,ADK_APP_NAME=ora_navigator_unified,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local,KB_PREFETCH_DATASTORE_ID=oranavigator-kb-local"
+        --set-env-vars "GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,ADK_APP_NAME=ora_navigator_unified,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,KB_PREFETCH_DATASTORE_ID=oranavigator-kb-v8"
 
     ADK_URL=$(gcloud run services describe ${ADK_SERVICE} \
         --region=${REGION} \
@@ -229,8 +229,8 @@ GOOGLE_CLOUD_PROJECT=${PROJECT_ID}@\
 GOOGLE_CLOUD_LOCATION=${REGION}@\
 GOOGLE_GENAI_USE_VERTEXAI=TRUE@\
 AGENT_MODEL=gemini-2.5-flash@\
-UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local@\
-VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-local@\
+UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8@\
+VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8@\
 ACCESS_TOKEN_EXPIRE_MINUTES=240@\
 ALGORITHM=HS256@\
 CORS_ORIGINS=https://ora.inavigator.ai,https://oranavigator-frontend-ollhkgeova-uc.a.run.app,http://localhost:3001,http://127.0.0.1:3001" \
@@ -238,7 +238,8 @@ CORS_ORIGINS=https://ora.inavigator.ai,https://oranavigator-frontend-ollhkgeova-
 DATABASE_URL=ora-database-url:latest,\
 JWT_SECRET=ora-jwt-secret:latest,\
 ADMIN_EMAIL=ora-admin-email:latest,\
-ADMIN_PASSWORD=ora-admin-password:latest"
+ADMIN_PASSWORD=ora-admin-password:latest,\
+REDIS_URL=ora-redis-url:latest"
 
     BACKEND_URL=$(gcloud run services describe ${BACKEND_SERVICE} \
         --region=${REGION} \

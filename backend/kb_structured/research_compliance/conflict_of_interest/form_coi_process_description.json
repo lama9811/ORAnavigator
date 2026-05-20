@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_coi_process_description",
+  "title": "COI Process Description",
+  "category": "research_compliance",
+  "subcategory": "compliance_pdf",
+  "display_label": "COI Process Description (PDF)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/conflict-of-interest-x12058",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ott/COI-DisclosureProcess.pdf",
+  "content": "PDF describing the end-to-end COI in R&D disclosure and review process, from filer obligations through Conflict of Interest Committee review and management-plan execution.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

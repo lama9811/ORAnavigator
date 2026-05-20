@@ -1,0 +1,33 @@
+{
+  "doc_id": "compliance_responsible_conduct_of_research",
+  "title": "Compliance — Responsible Conduct of Research (RCR)",
+  "category": "research_compliance",
+  "subcategory": "rcr",
+  "display_label": "Responsible Conduct of Research",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/responsible-conduct-of-research",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/responsible-conduct-of-research",
+  "content": "Morgan State University's Responsible Conduct of Research (RCR) program reinforces the university's expectation that scientific research benefits the public at large and must be guided by the core values of honesty, accuracy, objectivity, and trust. Researchers receiving support from National Institutes of Health (NIH) and/or National Science Foundation (NSF) grants must complete an RCR training at the start of their award and again every four years. The RCR curriculum addresses eight major content areas, including falsification and fabrication, conflicts of interest, authorship, and intellectual property (other areas commonly covered include data management, mentoring, peer review, collaborative research, and human/animal subjects). Morgan offers RCR training through two channels: (1) the CITI Program online course at citiprogram.org, with registration instructions provided on the ORA site; (2) in-person presentations, lectures, and topic-specific sessions led by subject-matter experts. ORA also maintains an RCR PowerPoint Presentation resource on its website summarizing core RCR concepts for self-study and classroom use. All compliance and training questions can be directed to the Office of Research Administration at ask.ora@morgan.edu or 443-885-4044; ORA is located at Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "required_for_funders": [
+      "NIH",
+      "NSF"
+    ],
+    "training_cycle_years": 4,
+    "training_providers": [
+      "CITI Program",
+      "In-person sessions"
+    ],
+    "citi_url": "https://citiprogram.org/",
+    "core_values": [
+      "honesty",
+      "accuracy",
+      "objectivity",
+      "trust"
+    ],
+    "topic_count": 8
+  },
+  "legacy_category": "compliance"
+}

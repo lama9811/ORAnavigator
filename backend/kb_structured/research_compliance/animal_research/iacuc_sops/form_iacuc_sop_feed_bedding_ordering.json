@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_feed_bedding_ordering",
+  "title": "SOP 25.2: Ordering and Receiving Feed and Bedding",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 25.2 — Ordering and Receiving Feed and Bedding",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_25.2_Ordering_and_Receiving_Feed_and_Bedding.pdf",
+  "content": "IACUC SOP describing the procurement, receipt, inspection, and storage of feed and bedding for the ARF.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

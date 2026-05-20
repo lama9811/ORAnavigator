@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_internal_routing_form_docusign",
+  "title": "Internal Routing Form (IRF) — DocuSign",
+  "category": "pre_award",
+  "subcategory": "pre_award_template",
+  "display_label": "Internal Routing Form (DocuSign)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/internal-routing-form",
+  "procedure_url": "https://powerforms.docusign.net/d952f118-fd7b-4b18-b238-57855dc939f7?env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&accountId=91e00bed-fb84-48ab-9c47-f3a2c0621225",
+  "content": "Required DocuSign form that initiates internal review of any proposal for external sponsored funding at Morgan State University. PIs complete and route the IRF (collecting signatures from the Department Chair, Dean/Center Director, Budget Specialist, Grants Manager, and ORA Director) at least two weeks before the sponsor's submission deadline.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

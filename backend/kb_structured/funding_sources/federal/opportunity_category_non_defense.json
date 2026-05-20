@@ -1,0 +1,13 @@
+{
+  "doc_id": "opportunity_category_non_defense",
+  "title": "Federal Funding — Non-Defense Agencies",
+  "category": "funding_sources",
+  "subcategory": "federal_category_non_defense",
+  "display_label": "Federal Non-Defense Funding Agencies",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/funding-sources",
+  "content": "Non-defense federal sponsors listed by Morgan State ORA on the Funding Sources page:\n\n- Economic Development Administration (EDA) — https://www.eda.gov/\n- Federal Register — https://www.archives.gov/federal-register\n- National Aeronautics and Space Administration (NASA) — https://www.nasa.gov/\n- National Science Foundation (NSF) funding opportunities — https://beta.nsf.gov/funding/opportunities?sort_bef_combine=nsf_funding_upcoming_due_dates_DESC\n- National Telecommunications & Information Administration (NTIA) — https://www.ntia.doc.gov/category/grants\n- U.S. Agency for International Development (USAID) — https://www.usaid.gov/\n- U.S. Department of Agriculture (USDA) — https://www.usda.gov/\n- U.S. Department of Commerce — https://www.commerce.gov/\n- U.S. Department of Energy (DOE) Office of Science & Innovation — https://www.energy.gov/science-innovation\n- U.S. Department of Health and Human Services (DHHS) grants — https://www.hhs.gov/grants/index.html\n- U.S. Department of Housing & Urban Development (HUD) — https://www.hud.gov/\n- U.S. Department of Justice (DOJ) funding — https://www.ojp.gov/funding\n- U.S. Department of State — https://www.state.gov/\n- U.S. Department of Transportation — http://www.dot.gov/\n\nThese sponsors cover a wide range of disciplines including science and engineering (NSF, NASA, DOE), agricultural and rural research (USDA), urban and community research (HUD), international development (USAID), justice and criminology (DOJ), and economic development (EDA, Commerce).",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "opportunities"
+}

@@ -11,7 +11,7 @@ Architecture:
 L1: Fast, local to each server instance (cachetools TTLCache)
 L2: Shared across servers, persistent (Redis Cloud)
 Semantic: Matches similar queries via Google text-embedding-004 vectors.
-          "prerequisites for data structures" matches "what do I need before COSC 220"
+          "what is the F&A rate" matches "what indirect cost rate does Morgan charge"
 """
 
 import hashlib
@@ -267,8 +267,8 @@ class SemanticCache:
     Matches queries with similar meaning even when worded differently.
 
     Example matches (above 0.92 cosine similarity):
-      "prerequisites for data structures" ~ "what do I need before taking COSC 220"
-      "AI courses at Morgan State" ~ "what classes cover artificial intelligence"
+      "what is the F&A rate" ~ "what indirect cost rate does Morgan State charge"
+      "how do I request an NCE" ~ "what is the process for a no-cost extension"
 
     Entries are stored in-memory for fast search and persisted to Redis
     for durability across server restarts.
@@ -299,33 +299,35 @@ class SemanticCache:
         self._load_from_redis()
 
     def _embed(self, text: str) -> Optional[np.ndarray]:
-        """Embed text into a 256-dim vector via Google's embedding API."""
+        """Embed text into a 256-dim vector via Google's embedding API.
+
+        Delegates to services.embedding_util.embed_text for shared lazy-init,
+        retry, and rate-limit handling. Wraps the result in np.array so the
+        in-memory entry list stays ndarray-typed for fast cosine math.
+        """
         if not self._available:
             return None
-        try:
-            from google import genai
-            start = time.time()
-            result = self._genai_client.models.embed_content(
-                model=SEMANTIC_EMBEDDING_MODEL,
-                contents=text,
-                config=genai.types.EmbedContentConfig(
-                    output_dimensionality=SEMANTIC_EMBEDDING_DIMS,
-                ),
-            )
-            elapsed = (time.time() - start) * 1000
-            self._stats["embed_time_ms"] += elapsed
-            return np.array(result.embeddings[0].values, dtype=np.float32)
-        except Exception as e:
+
+        from services.embedding_util import embed_text as _shared_embed
+
+        start = time.time()
+        values = _shared_embed(
+            text,
+            model=SEMANTIC_EMBEDDING_MODEL,
+            dims=SEMANTIC_EMBEDDING_DIMS,
+        )
+        self._stats["embed_time_ms"] += (time.time() - start) * 1000
+
+        if values is None:
             self._stats["errors"] += 1
-            logger.warning(f"[SEMANTIC] Embedding error: {e}")
             return None
+        return np.array(values, dtype=np.float32)
 
     @staticmethod
     def _cosine_sim(a: np.ndarray, b: np.ndarray) -> float:
-        """Fast cosine similarity between two vectors."""
-        dot = np.dot(a, b)
-        norm = np.linalg.norm(a) * np.linalg.norm(b)
-        return float(dot / norm) if norm > 0 else 0.0
+        """Fast cosine similarity between two vectors. Delegates to embedding_util."""
+        from services.embedding_util import cosine_sim
+        return cosine_sim(a, b)
 
     def get(self, query: str) -> Optional[str]:
         """Find a semantically similar cached response."""
@@ -619,20 +621,12 @@ query_cache = MultiTierCache()
 # HELPER FUNCTIONS (Backwards Compatible)
 # ============================================================================
 
-def get_context_hash(user_id: int = None, has_degreeworks: bool = False, model: str = "", has_canvas: bool = False, dw_hash: str = "") -> str:
+def get_context_hash(user_id: int = None, model: str = "") -> str:
     """
     Generate a context hash for cache key differentiation.
-    Includes model and data sources so different contexts get separate cache entries.
+    Includes the model preference so different models get separate cache entries.
     """
     parts = []
-    if (has_degreeworks or has_canvas) and user_id:
-        parts.append(f"user:{user_id}")
-    if has_degreeworks:
-        parts.append("dw")
-    if dw_hash:
-        parts.append(f"dwh:{dw_hash}")
-    if has_canvas:
-        parts.append("canvas")
     if model:
         parts.append(f"m:{model}")
     if parts:

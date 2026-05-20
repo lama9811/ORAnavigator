@@ -1,0 +1,27 @@
+{
+  "doc_id": "compliance_research_misconduct",
+  "title": "Compliance — Research Misconduct",
+  "category": "research_compliance",
+  "subcategory": "misconduct",
+  "display_label": "Research Misconduct",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-misconduct",
+  "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-misconduct",
+  "content": "Morgan State University defines research misconduct in alignment with 42 CFR Part 93 as fabrication, falsification, or plagiarism in proposing, performing, or reviewing research, or in reporting research results. Fabrication is making up data or results and recording or reporting them. Falsification is manipulating research materials, equipment, or processes, or changing or omitting data or results such that the research is not accurately represented in the research record. Plagiarism is the appropriation of another person's ideas, processes, results, or words without giving appropriate credit. Deliberate or repeated non-compliance with applicable regulations may also constitute research misconduct. Honest errors and differences of opinion do not qualify. To rise to the level of research misconduct, an allegation must satisfy three criteria: (1) it represents a significant departure from accepted practices of the relevant research community; (2) it was committed intentionally, knowingly, or recklessly; and (3) the allegation can be proven by a preponderance of the evidence. The Director of Research Compliance manages misconduct response procedures. Resources available on the ORA site include the Research Misconduct Policy adopted by the Morgan State University Board of Regents, a flowchart titled 'Responding to Research Misconduct Allegations,' and a PowerPoint guide on responding to allegations. Reports of suspected misconduct or general inquiries go to the Office of Research Administration at ask.ora@morgan.edu or 443-885-4044; the office is located at Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "key_facts": {
+    "federal_regulation": "42 CFR Part 93",
+    "misconduct_categories": [
+      "fabrication",
+      "falsification",
+      "plagiarism"
+    ],
+    "evidentiary_standard": "preponderance of the evidence",
+    "intent_standard": "intentionally, knowingly, or recklessly",
+    "exclusion": "honest errors and differences of opinion",
+    "contact_email": "ask.ora@morgan.edu",
+    "responsible_role": "Director of Research Compliance"
+  },
+  "legacy_category": "compliance"
+}

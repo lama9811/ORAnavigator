@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_iacuc_annual_review",
+  "title": "IACUC Annual Review Form",
+  "category": "research_compliance",
+  "subcategory": "iacuc_form",
+  "display_label": "IACUC Annual Review",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/Annual%20Review.pdf",
+  "content": "Annual continuing-review form for active IACUC-approved animal-research protocols. PIs report progress, animal numbers used, and any changes; submit before the protocol's annual anniversary.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

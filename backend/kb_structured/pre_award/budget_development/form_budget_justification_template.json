@@ -1,0 +1,12 @@
+{
+  "doc_id": "form_budget_justification_template",
+  "title": "Budget Justification Template",
+  "category": "pre_award",
+  "subcategory": "pre_award_template",
+  "display_label": "Budget Justification Template (Word)",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/pre-award/budget-development",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Budget-Justification-Template.docx",
+  "content": "Word template PIs use to write the narrative budget justification that accompanies the Excel budget. The narrative explains each cost line (personnel, fringe, equipment, travel, supplies, subawards, F&A, etc.) and is submitted to the ORA Budget Specialist with the budget workbook.",
+  "last_scraped": "2026-05-14",
+  "legacy_category": "form"
+}

@@ -23,11 +23,8 @@ export default function ProfilePage({ userEmail, onLogout }) {
   const [profile, setProfile] = useState({
     name: "",
     email: userEmail || "",
-    studentId: "",
-    major: "",
     profilePicture: "/user_icon.webp",
-    morganConnected: false,
-    role: "student"
+    role: "user"
   });
 
   const [passwords, setPasswords] = useState({
@@ -99,9 +96,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          name: profile.name,
-          studentId: profile.studentId,
-          major: profile.major
+          name: profile.name
         })
       });
 
@@ -395,7 +390,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
               <h3><FaShieldAlt /> Admin Access</h3>
             </div>
             <div className="admin-access-content">
-              <p>You have administrator privileges. Access the admin dashboard to manage tickets and curriculum.</p>
+              <p>You have administrator privileges. Access the admin dashboard to manage support tickets and the knowledge base.</p>
               <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
                 <button className="admin-access-btn" onClick={() => navigate("/admin")}>
                   <FaCog /> Open Admin Dashboard

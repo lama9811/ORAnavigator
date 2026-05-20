@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_animal_facility_access",
+  "title": "SOP 28.2: Animal Facility Access",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 28.2 — Animal Facility Access",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_28.2_Animal_Facility_Access.pdf",
+  "content": "IACUC SOP defining access authorization for the Animal Research Facility, including approval workflow, badge access, and visitor escort policy.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

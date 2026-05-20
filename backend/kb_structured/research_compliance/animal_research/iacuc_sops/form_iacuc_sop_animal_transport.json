@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_animal_transport",
+  "title": "SOP 18.2: Animal Transport Procedures",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 18.2 — Animal Transport Procedures",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_18.2%20Animal_Transport_Procedures.pdf",
+  "content": "IACUC SOP governing the transport of animals between rooms, buildings, or off-campus, including cage covers, biosecurity, and timing.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

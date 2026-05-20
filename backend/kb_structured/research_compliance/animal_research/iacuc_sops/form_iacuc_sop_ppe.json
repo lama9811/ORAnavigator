@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_ppe",
+  "title": "SOP 26.2: Personal Protective Equipment",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 26.2 — Personal Protective Equipment",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_26.2_Personal_Protective_Equipment.pdf",
+  "content": "IACUC SOP specifying required PPE (scrubs, gloves, masks, eye protection, shoe covers) for entry into ARF animal-housing rooms.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}

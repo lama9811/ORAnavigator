@@ -61,6 +61,7 @@ from vertex_agent import query_agent, query_agent_stream, check_agent_health, re
 
 # Query caching for faster responses
 from cache import query_cache, get_context_hash, log_cache_stats
+from kb_browser import try_browse
 
 
 # Legacy imports kept for /ingest endpoint and file analysis fallback
@@ -158,19 +159,7 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add profile_picture_data column: {e}")
 
-        # 4. Add morgan_connected_at column if missing
-        try:
-            conn.execute(text("SELECT morgan_connected_at FROM users LIMIT 1"))
-        except (OperationalError, ProgrammingError):
-            print("[WARN] 'morgan_connected_at' column missing. Adding it now...")
-            try:
-                conn.execute(text("ALTER TABLE users ADD COLUMN morgan_connected_at DATETIME"))
-                conn.commit()
-                print("[OK] Successfully added 'morgan_connected_at' column!")
-            except Exception as e:
-                print(f"[ERROR] Failed to add morgan_connected_at column: {e}")
-
-        # 5. Add email auth columns if missing
+        # 4. Add email auth columns if missing
         for col, col_type in [
             ("email_verified", "BOOLEAN DEFAULT TRUE"),
             ("verification_token", "VARCHAR(255)"),
@@ -384,7 +373,6 @@ def get_current_user(
             "email": user.email,
             "role": user.role,
             "name": user.name,
-            "student_id": user.student_id,
         }
     except JWTError as e:
         print(f"JWT decode error: {e}")
@@ -400,7 +388,6 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: Optional[str] = None
-    student_id: Optional[str] = None
 
     @staticmethod
     def validate_email_format(v):
@@ -478,8 +465,6 @@ FORGOT_PW_RATE_WINDOW = 900  # 15 minutes
 
 class ProfileUpdateRequest(BaseModel):
     name: Optional[str] = None
-    studentId: Optional[str] = None
-    major: Optional[str] = None
 
 class PasswordChangeRequest(BaseModel):
     currentPassword: str
@@ -608,84 +593,7 @@ def root_dashboard(request: Request, user: Optional[dict] = Depends(get_optional
 # 8. API ENDPOINTS
 # ==============================================================================
 
-# --- Auth ---
-# Moved to routers/auth.py: register, verify-email, resend-verification, login
-# ALLOWED_EMAIL_DOMAINS = ["morgan.edu"]
-#
-# _register_timestamps: dict[str, list] = {}
-#
-# @app.post("/api/register", status_code=status.HTTP_201_CREATED)
-# def register(req: RegisterRequest, db: Session = Depends(get_db)):
-#     import re
-#     from email_service import generate_token, send_verification_email
-#
-#     email = req.email.strip().lower()
-#
-#     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-#         raise HTTPException(status_code=400, detail="Invalid email format")
-#
-#     # Rate limit per EMAIL (not per IP). On campus WiFi all students share one IP,
-#     # so IP-based limiting blocks innocent users. 3 attempts per email per hour.
-#     now_ts = time_module.time()
-#     reg_ts = _register_timestamps.get(email, [])
-#     reg_ts = [t for t in reg_ts if now_ts - t < 3600]
-#     if len(reg_ts) >= 3:
-#         raise HTTPException(status_code=429, detail="Too many attempts for this email. Try again in an hour.")
-#     reg_ts.append(now_ts)
-#     _register_timestamps[email] = reg_ts
-#
-#     # Only allow Morgan State email for new registrations
-#     email_domain = email.split("@")[-1].lower()
-#     allow_test = os.getenv("ALLOW_TEST_EMAILS", "false").lower() == "true"
-#     if email_domain not in ALLOWED_EMAIL_DOMAINS and not (allow_test and email.endswith("@test.com")):
-#         raise HTTPException(status_code=400, detail="Only @morgan.edu email addresses are allowed.")
-#
-#     if len(req.password) < 8:
-#         raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-#     if db.query(User).filter(User.email == req.email).first():
-#         raise HTTPException(status_code=400, detail="Email already registered")
-#
-#     hashed = hash_password(req.password)
-#     token = generate_token()
-#     student = User(email=req.email, password_hash=hashed, role="student", email_verified=False, verification_token=token,
-#                    name=req.name.strip() if req.name else None, student_id=req.student_id.strip() if req.student_id else None)
-#     db.add(student)
-#     db.commit()
-#     db.refresh(student)
-#
-#     send_verification_email(req.email, token)
-#     return {"message": "Account created! Check your Morgan State email to verify.", "user_id": student.id}
-#
-#
-# @app.get("/api/verify-email")
-# def verify_email(token: str, db: Session = Depends(get_db)):
-#     from starlette.responses import RedirectResponse
-#     user = db.query(User).filter(User.verification_token == token).first()
-#     if not user:
-#         raise HTTPException(status_code=400, detail="Invalid or expired verification link")
-#     user.email_verified = True
-#     user.verification_token = None
-#     db.commit()
-#     # Redirect to login with success flag
-#     app_url = os.getenv("APP_URL", "https://ora.inavigator.ai")
-#     return RedirectResponse(url=f"{app_url}/login?verified=true")
-#
-#
-# @app.post("/api/resend-verification")
-# async def resend_verification(request: Request, db: Session = Depends(get_db)):
-#     from email_service import generate_token, send_verification_email
-#     body = await request.json()
-#     email = body.get("email", "")
-#     user = db.query(User).filter(User.email == email).first()
-#     if not user:
-#         return {"message": "If an account exists, a verification email has been sent."}
-#     if user.email_verified:
-#         return {"message": "Email already verified."}
-#     token = generate_token()
-#     user.verification_token = token
-#     db.commit()
-#     send_verification_email(email, token)
-#     return {"message": "Verification email sent. Check your inbox."}
+# --- Auth: register, verify-email, resend-verification, login live in routers/auth.py ---
 
 
 @app.post("/api/forgot-password")
@@ -751,24 +659,6 @@ async def reset_password(request: Request, db: Session = Depends(get_db)):
     return {"message": "Password reset successfully. You can now log in."}
 
 
-# Moved to routers/auth.py
-# @app.post("/api/login")
-# def login(req: LoginRequest, db: Session = Depends(get_db)):
-#     user = db.query(User).filter(User.email == req.email).first()
-#     if not user or not verify_password(req.password, user.password_hash):
-#         raise HTTPException(status_code=401, detail="Invalid credentials")
-#
-#     # Require email verification (skip for admins and existing test accounts)
-#     if not getattr(user, 'email_verified', True) and user.role != "admin":
-#         raise HTTPException(status_code=403, detail="Please verify your email first. Check your inbox for the verification link.")
-#
-#     token = create_access_token({
-#         "user_id": user.id,
-#         "role": user.role,
-#         "email": user.email
-#     })
-#     return {"access_token": token, "token_type": "bearer"}
-
 # --- Profile Management ---
 @app.get("/api/profile")
 async def get_profile(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -784,11 +674,8 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
     return {
         "email": db_user.email,
         "name": getattr(db_user, 'name', None),
-        "studentId": getattr(db_user, 'student_id', None),
-        "major": getattr(db_user, 'major', None),
         "profilePicture": profile_pic,
-        "morganConnected": getattr(db_user, 'morgan_connected', False),
-        "role": getattr(db_user, 'role', "student")
+        "role": getattr(db_user, 'role', "user")
     }
 
 @app.put("/api/profile")
@@ -797,8 +684,6 @@ async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_cur
     if not db_user: raise HTTPException(404, "User not found")
     
     if req.name is not None and hasattr(db_user, 'name'): db_user.name = req.name
-    if req.studentId is not None and hasattr(db_user, 'student_id'): db_user.student_id = req.studentId
-    if req.major is not None and hasattr(db_user, 'major'): db_user.major = req.major
     
     db.commit()
     return {"message": "Profile updated"}
@@ -931,12 +816,28 @@ def extract_file_content(filepath: str) -> str:
 # Tier 1: Query rewriting for follow-up resolution
 from services.query_rewriter import rewrite_query, is_likely_followup
 
-# Tier 2: Long-term user memory
-from services.memory_service import fetch_user_memories_sync, build_memory_context
+# Tier 2: Long-term user memory + Phase 1/2/3/4 helpers
+from services.memory_service import (
+    fetch_user_memories_sync,
+    build_memory_context,
+    fetch_latest_session_summary_sync,
+    run_session_summary,
+    retrieve_relevant_memories,
+    retrieve_relevant_turns,
+    embed_and_store_turn,
+    consolidate_user_memories_single,
+    consolidate_idle_users,
+    touch_user_last_chat_at,
+)
 
 
-def _fetch_history_sync(user_id: int, session_id: str, limit: int = 10) -> list:
-    """Fetch chat history in a separate DB session for parallel execution."""
+def _fetch_history_sync(user_id: int, session_id: str, limit: int = 10) -> tuple:
+    """Fetch chat history + latest rolling summary in one DB session.
+
+    Returns (turns_list, session_summary). turns_list keeps the previous
+    [{user_query, bot_response}] shape so query_rewriter / is_likely_followup
+    callers stay unchanged. session_summary is None until Phase 1 fires.
+    """
     db = SessionLocal()
     try:
         history = db.query(ChatHistory)\
@@ -944,24 +845,176 @@ def _fetch_history_sync(user_id: int, session_id: str, limit: int = 10) -> list:
             .order_by(ChatHistory.timestamp.desc())\
             .limit(limit)\
             .all()
-        return [{"user_query": h.user_query, "bot_response": h.bot_response} for h in reversed(history)]
+        turns = [
+            {"user_query": h.user_query, "bot_response": h.bot_response}
+            for h in reversed(history)
+        ]
+        summary_row = (
+            db.query(ChatHistory.session_summary)
+            .filter(
+                ChatHistory.user_id == user_id,
+                ChatHistory.session_id == session_id,
+                ChatHistory.session_summary.isnot(None),
+            )
+            .order_by(ChatHistory.id.desc())
+            .first()
+        )
+        summary = summary_row[0] if summary_row else None
+        return turns, summary
     finally:
         db.close()
 
 
-def _build_conversation_context(history_dicts: list) -> str:
-    """Format prior turns as plain text for the agent's context window."""
-    if not history_dicts:
-        return ""
-    lines = ["PRIOR CONVERSATION:"]
-    for h in history_dicts[-5:]:
-        u = (h.get("user_query") or "").strip()
-        b = (h.get("bot_response") or "").strip()
-        if u:
-            lines.append(f"User: {u}")
-        if b:
-            lines.append(f"Assistant: {b[:500]}")
-    return "\n".join(lines) + "\n"
+def _build_conversation_context(history_dicts: list, session_summary: Optional[str] = None) -> str:
+    """Format prior turns + optional rolling summary for the agent's context.
+
+    Phase 1: when session_summary is present (set after ~8+ turns), inject it
+    BEFORE the raw last-5-turn window so older context is preserved.
+    """
+    parts: list = []
+    if session_summary:
+        parts.append(f"EARLIER IN THIS SESSION:\n{session_summary.strip()}\n")
+    if history_dicts:
+        lines = ["PRIOR CONVERSATION:"]
+        for h in history_dicts[-5:]:
+            u = (h.get("user_query") or "").strip()
+            b = (h.get("bot_response") or "").strip()
+            if u:
+                lines.append(f"User: {u}")
+            if b:
+                lines.append(f"Assistant: {b[:500]}")
+        parts.append("\n".join(lines))
+    return ("\n".join(parts) + "\n") if parts else ""
+
+
+def _schedule_session_summary(user_id: int, session_id: str) -> None:
+    """Fire-and-forget background summarization after a chat commit.
+
+    Gated by ENABLE_SESSION_SUMMARY (default true). The task self-gates on
+    turn count, so calling this on every commit is safe.
+    """
+    if os.getenv("ENABLE_SESSION_SUMMARY", "true").lower() not in ("1", "true", "yes"):
+        return
+    try:
+        asyncio.create_task(asyncio.to_thread(run_session_summary, user_id, session_id))
+    except RuntimeError:
+        # No running event loop (sync test context). Silently skip.
+        pass
+
+
+def _schedule_embed_turn(chat_history_id: int) -> None:
+    """Fire-and-forget Phase 4 embedding for a freshly-committed turn.
+
+    Embeds the Q+A so future cross-session semantic recall can find it. Runs
+    after the response is already sent → zero added latency.
+    """
+    if os.getenv("ENABLE_VERBATIM_RECALL", "true").lower() not in ("1", "true", "yes"):
+        return
+    try:
+        asyncio.create_task(asyncio.to_thread(embed_and_store_turn, chat_history_id))
+    except RuntimeError:
+        pass
+
+
+# ----------------------------------------------------------------------------
+# Phase 3 — Real-time memory extraction (kill the 24h lag)
+# ----------------------------------------------------------------------------
+# Trigger extraction every 6 turns post-commit, gated by a per-user
+# asyncio.Lock so a flurry of rapid turns doesn't fire concurrent extractions
+# for the same user. Cross-replica safety is already handled by
+# _merge_memories' substring dedup, so we don't need a distributed lock.
+
+_realtime_extraction_locks: dict[int, asyncio.Lock] = {}
+
+
+def _get_user_realtime_lock(user_id: int) -> asyncio.Lock:
+    lock = _realtime_extraction_locks.get(user_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _realtime_extraction_locks[user_id] = lock
+    return lock
+
+
+async def _run_extraction_locked(user_id: int) -> None:
+    """Acquire the per-user lock then run extraction in a thread."""
+    lock = _get_user_realtime_lock(user_id)
+    if lock.locked():
+        # Another coroutine is already extracting for this user — skip; their
+        # run will pick up our new turn too (its hours_back=2 window covers it).
+        return
+    async with lock:
+        await asyncio.to_thread(consolidate_user_memories_single, user_id, 2)
+
+
+def _schedule_realtime_extraction(user_id: int, session_id: str) -> None:
+    """Fire extraction every 6 turns for this user+session.
+
+    Counts session turns post-commit with one cheap aggregate query. Skips
+    if the per-user lock is held or the flag is off.
+    """
+    if os.getenv("ENABLE_REALTIME_MEMORY", "true").lower() not in ("1", "true", "yes"):
+        return
+
+    try:
+        with SessionLocal() as _db:
+            turn_count = (
+                _db.query(ChatHistory)
+                .filter(
+                    ChatHistory.user_id == user_id,
+                    ChatHistory.session_id == session_id,
+                )
+                .count()
+            )
+    except Exception as e:
+        print(f"[MEMORY] turn-count query failed user={user_id}: {e}")
+        return
+
+    if turn_count <= 0 or turn_count % 6 != 0:
+        return
+
+    try:
+        asyncio.create_task(_run_extraction_locked(user_id))
+    except RuntimeError:
+        pass
+
+
+def _schedule_touch_last_chat(user_id: int) -> None:
+    """Update users.last_chat_at = now() in the background.
+
+    Powers the idle-sweep cron — fully best-effort, swallowed if migrate
+    hasn't added the column yet.
+    """
+    try:
+        asyncio.create_task(asyncio.to_thread(touch_user_last_chat_at, user_id))
+    except RuntimeError:
+        pass
+
+
+def _schedule_regenerate_suggestions(user_id: int) -> None:
+    """Refresh the user's home-screen suggestions in the background.
+    Internally throttled by source_signature + 10-min window."""
+    try:
+        from services.suggestion_generator import regenerate_for_user
+        asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
+    except RuntimeError:
+        pass  # No event loop — caller is outside an async context.
+
+
+def _schedule_post_commit_memory_tasks(
+    user_id: int,
+    session_id: str,
+    chat_id: int,
+) -> None:
+    """Fire all Phase 1+3+4 background tasks after a chat turn commits.
+
+    Runs *after* the response has been sent → zero added latency. Each
+    sub-task is independently feature-flagged and self-gates on triggers.
+    """
+    _schedule_session_summary(user_id, session_id)
+    _schedule_touch_last_chat(user_id)
+    _schedule_embed_turn(chat_id)
+    _schedule_realtime_extraction(user_id, session_id)
+    _schedule_regenerate_suggestions(user_id)
 
 
 # --- CHAT ROUTES (KB-only, with conversation memory) ---
@@ -978,20 +1031,45 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     file_match = re.search(r'uploads/chat_files/([^\)]+)', user_q)
 
     # Parallel fetch: history (for rewriting) + long-term memory
+    #   + Phase 2 semantic-fact recall + Phase 4 verbatim-turn recall.
+    # All 4 run concurrently to keep added latency near zero (~50-80ms total
+    # for the slowest = single Vertex embed call shared across both retrievals
+    # via lazy client memoization).
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user["user_id"], session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user["user_id"], 10),
+        asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55),
+        asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id),
     ]
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
-    history_dicts = results[0] if not isinstance(results[0], Exception) else []
+    if isinstance(results[0], Exception):
+        history_dicts, session_summary = [], None
+    else:
+        history_dicts, session_summary = results[0]
     memory_dicts = results[1] if not isinstance(results[1], Exception) else []
+    relevant_memories = (
+        results[2] if len(results) > 2 and not isinstance(results[2], Exception) else []
+    )
+    relevant_turns = (
+        results[3] if len(results) > 3 and not isinstance(results[3], Exception) else []
+    )
 
     # Tier 1: Rewrite follow-up queries to be self-contained
     if USE_VERTEX_AGENT and history_dicts and is_likely_followup(user_q):
         user_q = await asyncio.to_thread(rewrite_query, user_q, history_dicts)
 
-    memory_context = build_memory_context(memory_dicts)
-    conversation_context = _build_conversation_context(history_dicts)
+    memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
+    conversation_context = _build_conversation_context(history_dicts, session_summary)
+    # Phase 1: session summary + recent-turn context rides on memory_context so
+    # the ADK agent receives it via state_delta["memory"]. Falls back to no-op
+    # when both are empty.
+    if conversation_context:
+        memory_context = conversation_context + (memory_context or "")
+    print(
+        f"[MEMORY] user={user['user_id']} session={session_id} "
+        f"facts={len(memory_dicts)} relevant_facts={len(relevant_memories)} "
+        f"relevant_turns={len(relevant_turns)} summary={'Y' if session_summary else 'N'}"
+    )
 
     # Inject basic profile info so agent knows who they're talking to
     profile_parts = []
@@ -1042,7 +1120,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     else:
         answer = "AI system is initializing. Please try again in a moment."
 
-    # SAVE to RDS (User-Specific)
+    # Persist user-specific chat record
     try:
         new_chat = ChatHistory(
             user_id=user["user_id"],
@@ -1052,6 +1130,9 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
         )
         db.add(new_chat)
         db.commit()
+        # Phases 1/3/4: schedule all background memory tasks (summary, embed,
+        # realtime extraction, last_chat_at touch).
+        _schedule_post_commit_memory_tasks(user["user_id"], session_id, new_chat.id)
     except Exception as e:
         print(f"[ERROR] Failed to save chat history: {e}")
 
@@ -1080,20 +1161,41 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     session_id = req.session_id or "default"
     user_id = user["user_id"]
 
-    # Parallel fetch: history (for rewriting) + memory
+    # Parallel fetch: history + memory + Phase 2 semantic facts + Phase 4 verbatim turns
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user_id, session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user_id, 10),
+        asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55),
+        asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id),
     ]
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
-    history_dicts = results[0] if not isinstance(results[0], Exception) else []
+    if isinstance(results[0], Exception):
+        history_dicts, session_summary = [], None
+    else:
+        history_dicts, session_summary = results[0]
     memory_dicts = results[1] if not isinstance(results[1], Exception) else []
+    relevant_memories = (
+        results[2] if len(results) > 2 and not isinstance(results[2], Exception) else []
+    )
+    relevant_turns = (
+        results[3] if len(results) > 3 and not isinstance(results[3], Exception) else []
+    )
 
     # Tier 1: Rewrite follow-up queries
     if history_dicts and is_likely_followup(user_q):
         user_q = await asyncio.to_thread(rewrite_query, user_q, history_dicts)
 
-    memory_context = build_memory_context(memory_dicts)
+    memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
+    # Phase 1: prepend session summary + recent turns onto memory_context so the
+    # ADK agent receives it via state_delta["memory"].
+    _session_context_prefix = _build_conversation_context(history_dicts, session_summary)
+    if _session_context_prefix:
+        memory_context = _session_context_prefix + (memory_context or "")
+    print(
+        f"[MEMORY] (stream) user={user_id} session={session_id} "
+        f"facts={len(memory_dicts)} relevant_facts={len(relevant_memories)} "
+        f"relevant_turns={len(relevant_turns)} summary={'Y' if session_summary else 'N'}"
+    )
 
     profile_parts = []
     if user.get("name"): profile_parts.append(f"Name: {user['name']}")
@@ -1101,6 +1203,33 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     agent_context = ""
     if profile_parts:
         agent_context = "USER PROFILE (from account):\n" + "\n".join(profile_parts) + "\n"
+
+    # =========================================================================
+    # KB BROWSER - Enumeration queries answered deterministically (no LLM call)
+    # =========================================================================
+    browse_response = try_browse(user_q)
+    if browse_response and not req.skip_cache:
+        print(f"[KB_BROWSE] for query: {user_q[:50]}...")
+
+        async def generate_browse_sse():
+            yield f"data: {json.dumps({'type': 'status', 'content': 'Browsing knowledge base...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'content': browse_response})}\n\n"
+            try:
+                with SessionLocal() as save_db:
+                    new_chat = ChatHistory(
+                        user_id=user_id,
+                        session_id=session_id,
+                        user_query=original_q,
+                        bot_response=browse_response,
+                    )
+                    save_db.add(new_chat)
+                    save_db.commit()
+                    new_chat_id = new_chat.id
+                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id)
+            except Exception as e:
+                print(f"   Chat-history save error (browse): {e}")
+
+        return StreamingResponse(generate_browse_sse(), media_type="text/event-stream")
 
     # =========================================================================
     # CACHE CHECK
@@ -1133,6 +1262,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     )
                     save_db.add(new_chat)
                     save_db.commit()
+                    new_chat_id = new_chat.id
+                _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id)
             except Exception as e:
                 print(f"[ERROR] Failed to save cached chat history: {e}")
 
@@ -1204,6 +1335,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                 )
                 save_db.add(new_chat)
                 save_db.commit()
+                new_chat_id = new_chat.id
+            _schedule_post_commit_memory_tasks(user_id, session_id, new_chat_id)
         except Exception as e:
             print(f"[ERROR] Failed to save streamed chat history: {e}")
 
@@ -1276,6 +1409,15 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
         return {"response": "I'm here to help with research administration questions at Morgan State. Ask me about grants, compliance, pre/post-award, forms, or staff contacts."}
 
     # =========================================================================
+    # KB BROWSER - Enumeration queries answered deterministically from manifest
+    # Bypasses Gemini entirely (~5ms). Falls through to agent if not a list query.
+    # =========================================================================
+    browse_response = try_browse(user_q)
+    if browse_response:
+        print(f"[KB_BROWSE] (guest) for: {user_q[:50]}...")
+        return {"response": browse_response, "source": "kb_browser"}
+
+    # =========================================================================
     # CACHE CHECK - Return cached response instantly for guest queries
     # =========================================================================
     cached_response = query_cache.get(user_q, context_hash="")
@@ -1317,7 +1459,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
 
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
-    """Fetch chat history for the logged-in user from RDS"""
+    """Fetch chat history for the logged-in user."""
     chats = db.query(ChatHistory)\
               .filter(ChatHistory.user_id == user["user_id"])\
               .order_by(ChatHistory.timestamp.asc())\
@@ -1384,43 +1526,67 @@ async def text_to_speech(req: TTSRequest, _user=Depends(get_current_user)):
         print(f"TTS Error: {e}")
         raise HTTPException(500, f"TTS generation failed: {str(e)}")
 
+# ==============================================================================
+# HOME-SCREEN SUGGESTION POOL (shared by guest endpoint + cold-start path)
+# ==============================================================================
+# Single source of truth for the default ORA-themed question set. Sampled by:
+#   - GET /api/popular-questions             (guests / unauthenticated)
+#   - GET /api/me/suggested-questions        (cold-start: <3 turns / <2 facts)
+#   - services/suggestion_generator.py       (filler when LLM output fails validation)
+DEFAULT_QUESTION_POOL = [
+    # Pre-award
+    "How do I find funding opportunities for my research?",
+    "What is the process for submitting a grant proposal?",
+    "Who reviews and approves proposals before submission?",
+    "What are the deadlines for upcoming NSF and NIH submissions?",
+    "How do I prepare a budget for a federal grant?",
+    "What is Morgan State's federal F&A (indirect cost) rate?",
+    "What fringe benefit rate should I use for faculty and staff?",
+    "Where do I find Morgan State's UEI, EIN, FWA, and other institutional IDs?",
+    "How do I get an Advance Account before my award is fully set up?",
+    # Post-award
+    "How do I set up a new grant account after an award is made?",
+    "What are the rules for spending grant funds on travel or equipment?",
+    "How do I request a no-cost extension on an active award?",
+    "How do I close out a grant at the end of the project period?",
+    "When are effort reports due and how do I certify mine?",
+    "How do I add a subaward to an existing grant?",
+    # Compliance (IRB, IACUC, COI)
+    "How do I submit an IRB application for human subjects research?",
+    "When do I need IACUC approval for animal research?",
+    "What is required for a Conflict of Interest disclosure?",
+    "Where can I find training requirements for research compliance (CITI)?",
+    "How long does IRB approval typically take and when does the IRB meet?",
+    "Which IACUC SOPs apply to my animal study?",
+    "What do I need to know about NSPM-33 and research security?",
+    "How do I report a research-related incident or protocol deviation?",
+    # Forms & process
+    "Where can I find the internal routing form for proposal submission?",
+    "What forms do I need to add a co-investigator after an award?",
+    "Where are the standard ORA proposal-prep templates and checklists?",
+    # Staff & contacts
+    "Who is the contact for pre-award support in my department?",
+    "How do I reach the Office of Research Administration leadership?",
+    "Who handles subaward and subcontract questions?",
+    "Who do I contact about IRB or IACUC submissions?",
+    # Trainings & resources
+    "What does the monthly D-RED seminar cover and when is it held?",
+    "Where can I find the New Faculty Development Seminar schedule?",
+    "Where is the PI Handbook and what's the latest version?",
+    # General
+    "What services does the Office of Research Administration provide?",
+    "How do I get started as a new PI at Morgan State?",
+    "Where can I find current research policies and procedures?",
+]
+
+
 @app.get("/api/popular-questions")
 async def get_popular_questions():
-    """Returns 8 randomly selected ORA-themed questions from a curated pool."""
+    """Returns 10 randomly selected ORA-themed questions from the curated pool.
+    Used by the home-screen on the guest (unauthenticated) path. Authenticated
+    users get personalized suggestions via GET /api/me/suggested-questions."""
     import random
-
-    QUESTION_POOL = [
-        # Pre-award
-        "How do I find funding opportunities for my research?",
-        "What is the process for submitting a grant proposal?",
-        "Who reviews and approves proposals before submission?",
-        "What are the deadlines for upcoming NSF and NIH submissions?",
-        "How do I prepare a budget for a federal grant?",
-        # Post-award
-        "How do I set up a new grant account after an award is made?",
-        "What are the rules for spending grant funds on travel or equipment?",
-        "How do I request a no-cost extension on an active award?",
-        "How do I close out a grant at the end of the project period?",
-        # Compliance (IRB, IACUC, COI)
-        "How do I submit an IRB application for human subjects research?",
-        "When do I need IACUC approval for animal research?",
-        "What is required for a Conflict of Interest disclosure?",
-        "Where can I find training requirements for research compliance (CITI)?",
-        # Forms & process
-        "Where can I find the internal routing form for proposal submission?",
-        "What forms do I need to add a co-investigator after an award?",
-        "How do I report a research-related incident or protocol deviation?",
-        # Staff & contacts
-        "Who is the contact for pre-award support in my department?",
-        "How do I reach the Office of Research Administration leadership?",
-        "Who handles subaward and subcontract questions?",
-        # General
-        "What services does the Office of Research Administration provide?",
-        "How do I get started as a new PI at Morgan State?",
-        "Where can I find current research policies and procedures?",
-    ]
-
-    return {"questions": random.sample(QUESTION_POOL, 8)}
+    return {"questions": random.sample(DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL)))}
 
 @app.get("/health")
 def health():
@@ -1455,8 +1621,7 @@ async def get_all_users(
         search_term = f"%{search}%"
         query = query.filter(
             (User.email.ilike(search_term)) |
-            (User.name.ilike(search_term)) |
-            (User.student_id.ilike(search_term))
+            (User.name.ilike(search_term))
         )
 
     if role and role != "all":
@@ -1471,9 +1636,6 @@ async def get_all_users(
                 "email": u.email,
                 "name": u.name,
                 "role": u.role,
-                "student_id": u.student_id,
-                "major": u.major,
-                "morgan_connected": u.morgan_connected,
                 "created_at": u.created_at.isoformat() if u.created_at else None
             }
             for u in users
@@ -1493,19 +1655,17 @@ async def get_user_stats(user: dict = Depends(get_current_user), db: Session = D
     month_ago = now - timedelta(days=30)
 
     total_users = db.query(User).count()
-    total_students = db.query(User).filter(User.role == "student").count()
+    total_regular = db.query(User).filter(User.role == "user").count()
     total_admins = db.query(User).filter(User.role == "admin").count()
     new_this_week = db.query(User).filter(User.created_at >= week_ago).count()
     new_this_month = db.query(User).filter(User.created_at >= month_ago).count()
-    morgan_connected = db.query(User).filter(User.morgan_connected == True).count()
 
     return {
         "total": total_users,
-        "students": total_students,
+        "users": total_regular,
         "admins": total_admins,
         "new_this_week": new_this_week,
-        "new_this_month": new_this_month,
-        "morgan_connected": morgan_connected
+        "new_this_month": new_this_month
     }
 
 @app.put("/api/admin/users/{user_id}/role")
@@ -1519,8 +1679,8 @@ async def update_user_role(
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    if new_role not in ["student", "admin"]:
-        raise HTTPException(status_code=400, detail="Role must be 'student' or 'admin'")
+    if new_role not in ["user", "admin"]:
+        raise HTTPException(status_code=400, detail="Role must be 'user' or 'admin'")
 
     target_user = db.query(User).filter(User.id == user_id).first()
     if not target_user:
@@ -2360,6 +2520,322 @@ async def internal_memory_consolidate(request: Request):
     from services.memory_service import consolidate_user_memories
     result = await asyncio.to_thread(consolidate_user_memories, 24)
     return result
+
+
+@app.post("/api/internal/memory/idle-sweep")
+async def internal_memory_idle_sweep(request: Request):
+    """Phase 3 idle-sweep cron — runs every 5 min.
+
+    Picks up users who've been idle 5-10 minutes and runs realtime memory
+    extraction. Complements the per-turn trigger (every 6 turns) so users
+    who stop chatting mid-session still get their facts captured before the
+    3am cron. Auth via X-Research-Secret (same as consolidate endpoint).
+    """
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+    result = await asyncio.to_thread(consolidate_idle_users, 5, 10)
+    return result
+
+
+# ==============================================================================
+# Phase 5 — Per-User Memory Management API (Memory tab in ProfilePage)
+# ==============================================================================
+# Endpoints let a user see + edit + delete + pause what the bot remembers
+# about them. All authenticated via get_current_user. Path params are
+# validated against current_user.id (defense in depth — don't trust path).
+
+
+def _user_memory_to_dict(m) -> dict:
+    """Serialize a UserMemory row for the API (no embedding payload)."""
+    return {
+        "id": m.id,
+        "type": m.memory_type,
+        "content": m.content,
+        "created_at": m.created_at.isoformat() if m.created_at else None,
+        "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+        "paused": bool(m.paused),
+    }
+
+
+def _chat_row_to_dict(c) -> dict:
+    """Serialize a ChatHistory row for the Memory tab's 'Past conversations'."""
+    return {
+        "id": c.id,
+        "session_id": c.session_id,
+        "timestamp": c.timestamp.isoformat() if c.timestamp else None,
+        "user_query": (c.user_query or "")[:500],
+        "bot_response": (c.bot_response or "")[:1000],
+        "topic_label": c.topic_label,
+        "has_embedding": c.embedding is not None,
+    }
+
+
+@app.get("/api/me/suggested-questions")
+async def me_get_suggested_questions(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Personalized home-screen suggestions, precomputed in the post-commit
+    memory hook. Pure read — ~5ms. Always returns 200; on any error or
+    missing row, falls back to a shuffled sample of DEFAULT_QUESTION_POOL."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    from models import UserSuggestedQuestions
+    import random as _random
+
+    user_id = user["user_id"]
+    try:
+        row = db.query(UserSuggestedQuestions)\
+            .filter(UserSuggestedQuestions.user_id == user_id).first()
+        if row is None:
+            # First visit — no row yet. Return the default pool synchronously,
+            # kick off a background regen so next visit shows personalized.
+            try:
+                from services.suggestion_generator import regenerate_for_user
+                asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
+            except RuntimeError:
+                pass
+            return {
+                "questions": _random.sample(
+                    DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
+                ),
+                "generated_at": None,
+                "source": "default",
+            }
+
+        try:
+            questions = json.loads(row.questions or "[]")
+            if not isinstance(questions, list):
+                questions = []
+        except Exception:
+            questions = []
+
+        if not questions:
+            questions = _random.sample(
+                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
+            )
+
+        return {
+            "questions": questions,
+            "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+            "source": row.source or "default",
+        }
+    except Exception as e:
+        print(f"[SUGGEST] me_get_suggested_questions failed for user={user_id}: {e}")
+        return {
+            "questions": _random.sample(
+                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
+            ),
+            "generated_at": None,
+            "source": "default",
+        }
+
+
+@app.get("/api/me/memories")
+async def me_get_memories(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return everything the bot remembers about the current user.
+
+    Returns: facts (UserMemory rows) and recent_conversations (last 50
+    embedded turns).
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    uid = user["user_id"]
+    facts = db.query(UserMemory).filter(UserMemory.user_id == uid)\
+        .order_by(UserMemory.updated_at.desc()).all()
+    convos = db.query(ChatHistory).filter(ChatHistory.user_id == uid)\
+        .order_by(ChatHistory.timestamp.desc()).limit(50).all()
+    embedded_turn_count = db.query(ChatHistory).filter(
+        ChatHistory.user_id == uid, ChatHistory.embedding.isnot(None),
+    ).count()
+
+    return {
+        "facts": [_user_memory_to_dict(m) for m in facts],
+        "recent_conversations": [_chat_row_to_dict(c) for c in convos],
+        "stats": {
+            "fact_count": len(facts),
+            "embedded_turns": embedded_turn_count,
+        },
+    }
+
+
+@app.delete("/api/me/memories/{memory_id}", status_code=204)
+async def me_delete_memory(
+    memory_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Delete a single UserMemory row owned by the current user."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    row = db.query(UserMemory).filter(
+        UserMemory.id == memory_id,
+        UserMemory.user_id == user["user_id"],  # defense in depth
+    ).first()
+    if not row:
+        raise HTTPException(404, "Memory not found")
+    db.delete(row)
+    db.commit()
+    return
+
+
+@app.patch("/api/me/memories/{memory_id}")
+async def me_patch_memory(
+    memory_id: int,
+    body: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Edit a memory's content or pause flag. If content changes, the
+    embedding is recomputed so semantic recall stays accurate."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    row = db.query(UserMemory).filter(
+        UserMemory.id == memory_id,
+        UserMemory.user_id == user["user_id"],
+    ).first()
+    if not row:
+        raise HTTPException(404, "Memory not found")
+
+    content_changed = False
+    if "content" in body and isinstance(body["content"], str):
+        new_content = body["content"].strip()
+        if new_content and new_content != row.content:
+            row.content = new_content
+            content_changed = True
+    if "paused" in body:
+        row.paused = bool(body["paused"])
+
+    if content_changed:
+        # Recompute embedding so semantic recall reflects the new text.
+        from services.embedding_util import embed_text
+        from services.memory_service import _serialize_embedding, EMBEDDING_MODEL_VERSION
+        vec = embed_text(row.content)
+        if vec:
+            row.embedding = _serialize_embedding(vec)
+            row.embedding_model = EMBEDDING_MODEL_VERSION
+        else:
+            # Couldn't embed — null the column so retrieval skips this row
+            # rather than using stale embedding for new content.
+            row.embedding = None
+            row.embedding_model = None
+
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return _user_memory_to_dict(row)
+
+
+@app.delete("/api/me/conversations/{chat_id}")
+async def me_delete_conversation(
+    chat_id: int,
+    hard: bool = False,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Remove a past turn from semantic-recall results.
+
+    Default: soft-zero (clears the embedding so retrieve_relevant_turns
+    can't surface it; text remains for audit).
+    ?hard=true: full row delete.
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    row = db.query(ChatHistory).filter(
+        ChatHistory.id == chat_id,
+        ChatHistory.user_id == user["user_id"],
+    ).first()
+    if not row:
+        raise HTTPException(404, "Conversation not found")
+    if hard:
+        db.delete(row)
+    else:
+        row.embedding = None
+        row.embedding_model = None
+    db.commit()
+    return {"deleted": True, "hard": hard}
+
+
+@app.delete("/api/me/memories")
+async def me_delete_all_memories(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Right-to-erasure: hard-delete all UserMemory rows AND zero out every
+    chat_history.embedding for the current user. Text rows in chat_history
+    are kept so the user's own chat-history page still shows what they
+    asked — only the semantic index is wiped.
+    """
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    uid = user["user_id"]
+    fact_count = db.query(UserMemory).filter(UserMemory.user_id == uid).delete()
+    turn_count = (
+        db.query(ChatHistory)
+        .filter(ChatHistory.user_id == uid, ChatHistory.embedding.isnot(None))
+        .update({
+            ChatHistory.embedding: None,
+            ChatHistory.embedding_model: None,
+        }, synchronize_session=False)
+    )
+    db.commit()
+    return {
+        "deleted_facts": fact_count,
+        "cleared_embeddings": turn_count,
+    }
+
+
+# ----------------------------------------------------------------------------
+# Phase 6 — Admin debug view (read-only)
+# ----------------------------------------------------------------------------
+# Admins can see (but NOT edit) any user's memory state. Per GDPR, only the
+# user themselves can modify or delete their memories. This endpoint exists
+# for support and debugging.
+
+@app.get("/api/admin/memories/{target_user_id}")
+async def admin_get_user_memories(
+    target_user_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Admin read-only view of a user's memory state."""
+    if not user or user.get("role") != "admin":
+        raise HTTPException(403, "Admin access required")
+
+    target = db.query(User).filter(User.id == target_user_id).first()
+    if not target:
+        raise HTTPException(404, "User not found")
+
+    facts = db.query(UserMemory).filter(UserMemory.user_id == target_user_id)\
+        .order_by(UserMemory.updated_at.desc()).all()
+    embedded_turn_count = db.query(ChatHistory).filter(
+        ChatHistory.user_id == target_user_id, ChatHistory.embedding.isnot(None),
+    ).count()
+    total_turn_count = db.query(ChatHistory).filter(
+        ChatHistory.user_id == target_user_id,
+    ).count()
+
+    return {
+        "user": {
+            "id": target.id,
+            "email": target.email,
+            "name": target.name,
+            "last_chat_at": target.last_chat_at.isoformat() if getattr(target, "last_chat_at", None) else None,
+        },
+        "facts": [_user_memory_to_dict(m) for m in facts],
+        "stats": {
+            "fact_count": len(facts),
+            "embedded_turns": embedded_turn_count,
+            "total_turns": total_turn_count,
+            "coverage_pct": round(100 * embedded_turn_count / total_turn_count, 1) if total_turn_count else 0,
+        },
+    }
 
 
 # ==============================================================================

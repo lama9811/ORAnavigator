@@ -53,11 +53,11 @@ def _tokenize(text: str) -> list[str]:
 def _extract_entities(query: str) -> list[str]:
     """Extract high-value entities: course codes, names, specific terms."""
     entities = []
-    # Course codes (COSC 470, MATH 241)
+    # Identifier codes (uppercase letters + 3 digits, e.g. SOP/policy numbers)
     codes = re.findall(r'[A-Z]{2,4}\s*\d{3}', query.upper())
     entities.extend(c.replace(" ", " ") for c in codes)
-    # Faculty names (Dr. Wang, Professor Mack)
-    names = re.findall(r'(?:Dr\.?|Professor|Prof\.)\s+(\w+)', query, re.IGNORECASE)
+    # Person names (Dr./Prof./Mr./Ms. + surname)
+    names = re.findall(r'(?:Dr\.?|Professor|Prof\.|Mr\.|Ms\.|Mrs\.)\s+(\w+)', query, re.IGNORECASE)
     entities.extend(names)
     return entities
 
@@ -65,7 +65,7 @@ def _extract_entities(query: str) -> list[str]:
 def fast_search(query: str, top_k: int = 5) -> FastResult:
     """
     Search the in-memory KB cache using TF-IDF-like scoring.
-    Returns results in <5ms for 71 documents.
+    Returns results in <5ms over the in-memory KB cache.
     """
     import time
     start = time.time()

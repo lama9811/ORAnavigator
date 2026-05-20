@@ -1,0 +1,14 @@
+{
+  "doc_id": "form_iacuc_sop_rodent_cage_density",
+  "title": "SOP 44.2: Rodent Cage Density Policy",
+  "category": "research_compliance",
+  "subcategory": "iacuc_sop",
+  "display_label": "IACUC SOP 44.2 — Rodent Cage Density Policy",
+  "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-sops",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/SOPs/SOP_44.2_Rodent_Cage_Density_Policy.pdf",
+  "content": "IACUC SOP defining maximum cage densities for rats and mice in accordance with the Guide for the Care and Use of Laboratory Animals.",
+  "last_scraped": "2026-05-14",
+  "playwright_verified": true,
+  "playwright_verified_at": "2026-05-14",
+  "legacy_category": "form"
+}
