@@ -1,0 +1,404 @@
+[
+  {
+    "question": "Who is notified when Morgan State receives a new sponsored award?",
+    "answer": "When an award is received, ORA notifies the PI/PD, the VP for Finance and Management, and the Office of Restricted Funds Accounting (RFA), after which a Post-Award Briefing is scheduled with the PI and supporting units.",
+    "source": "backend/kb_structured/post_award/post_award_overview.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What is the ORA DocuSign submission email address?",
+    "answer": "DocuSign submissions for ORA post-award forms should be sent to ora-docusign@morgan.edu, and the signing group is MSU ORA.",
+    "source": "backend/kb_structured/post_award/post_award_overview.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "How long does account setup typically take after a sponsored award is formally accepted?",
+    "answer": "Account setup typically takes up to three (3) business days after the award documents are forwarded to the Office of Restricted Funds Accounting (RFA), which assigns an Index or Budget code number and establishes the account in Banner.",
+    "source": "backend/kb_structured/post_award/notification_and_setup_of_award/post_award_notification_and_setup.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What financial system does Morgan State use to establish sponsored project accounts?",
+    "answer": "RFA establishes the sponsored project account in Banner, which is Morgan State University's financial system.",
+    "source": "backend/kb_structured/post_award/notification_and_setup_of_award/post_award_notification_and_setup.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Can the university refuse to accept an award that was not processed through ORA?",
+    "answer": "Yes. Awards for proposals that did not undergo the normal internal processing, review, and approval through the Office of Research Administration (ORA) may be refused by the University.",
+    "source": "backend/kb_structured/post_award/notification_and_setup_of_award/post_award_notification_and_setup.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "How many business days in advance must a PI notify ORA to request a no-cost extension?",
+    "answer": "The PI must notify ORA in writing at least 60 days before the project's expiration date, after which ORA will work with the PI to obtain the sponsor's approval.",
+    "source": "backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What five offices participate in the Post-Award Briefing at Morgan State?",
+    "answer": "The primary offices involved in the Post-Award Briefing are: the Office of Research Administration (ORA), Office of Human Resources, Office of Procurement, Office of the Comptroller, and the Purchasing Card Office.",
+    "source": "backend/kb_structured/post_award/notification_and_setup_of_award/post_award_notification_and_setup.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What must be included in a request package when changing the PI or key personnel on an award?",
+    "answer": "A change of PI or key personnel requires approval from the department head, dean, and sponsor, and the request package must include the CV of the new PI or Co-PI. Requests are routed through the Associate Vice President for Research, Dr. Farin Kamangar.",
+    "source": "backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who is the Associate Vice President for Research at Morgan State University?",
+    "answer": "Dr. Farin Kamangar is the Associate Vice President for Research at Morgan State University, through whom change-of-PI and key-personnel requests are routed.",
+    "source": "backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What must happen before an award can be transferred OUT of Morgan State to another institution?",
+    "answer": "Before a transfer can be completed, a final accounting and certification is required from the responsible grant accountant confirming that all incurred obligations have been settled and that a remaining balance exists for transfer. If MSU retains the project, a new PI is appointed; if MSU releases the project, the departing PI must request transfer approval from the department head, dean, and sponsor.",
+    "source": "backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "In what two ways can a departing PI remain connected to a project when Morgan State elects to retain it?",
+    "answer": "When MSU retains the project after a PI departs, the departing PI may continue to be retained on the project through either a subaward or a consultant agreement.",
+    "source": "backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are some other names used for a subaward at Morgan State?",
+    "answer": "Subawards may also be called subgrants, subagreements, or subcontracts.",
+    "source": "backend/kb_structured/post_award/post_award_subawards/post_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who is responsible for pre-award subaward questions at ORA?",
+    "answer": "Pre-award subaward questions should be directed to Ailing Zhang, MS, at ailing.zhang@morgan.edu.",
+    "source": "backend/kb_structured/post_award/post_award_subawards/post_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who handles post-award subaward questions at Morgan State ORA?",
+    "answer": "Post-award subaward questions are handled by Matthew Lee, MBA, PMP (matthew.lee@morgan.edu) and Poline Mirithu (poline.mirithu@morgan.edu).",
+    "source": "backend/kb_structured/post_award/post_award_subawards/post_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Can a subaward be made to a lower-tier subrecipient, and what is required?",
+    "answer": "Yes. The term 'subaward' includes awards made by a subrecipient to a lower-tier subrecipient, but prior approval must be obtained.",
+    "source": "backend/kb_structured/post_award/post_award_subawards/post_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How many times per year are effort certifications generated at Morgan State, and when?",
+    "answer": "Effort certifications are generated three times per year: in February (for Fall semester effort), July (for Spring semester effort), and October (for Summer effort).",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Once effort reports are released to campus, how long do personnel have to complete their certification?",
+    "answer": "Once released to campus, effort certifications must be completed within 14 calendar days.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What platform does Morgan State use for effort certification?",
+    "answer": "Morgan State University uses Searchlight as the platform for effort certification. PIs/PDs and alternate certifiers are notified via email from Searchlight when reports are available.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What federal regulatory framework governs reporting on sponsored awards at Morgan State?",
+    "answer": "All reporting is governed by the Office of Management and Budget (OMB) guidelines, including 2 CFR 200 (Uniform Guidance).",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Are property and invention reports still required if a project acquired no equipment and produced no invention?",
+    "answer": "Yes. Property and invention reports must be completed even when the project acquired no equipment and produced no invention.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "When are final programmatic reports typically due after a sponsored project ends?",
+    "answer": "Final reports are normally due within 90 days after the end of the project period, and usually include the technical, property (major equipment), and invention reports.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who can certify an effort report at Morgan State University?",
+    "answer": "The electronic effort report may be certified by the employee, supervisor, or PI/PD who has personal familiarity with the employee's compensated effort. PIs/PDs may also designate an 'alternate certifier' to verify and certify on their behalf.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How many DocuSign post-award forms does Morgan State ORA maintain?",
+    "answer": "The ORA Post-Award Forms page lists eight DocuSign forms required for grant-funded requests processed through ORA.",
+    "source": "backend/kb_structured/post_award/forms/post_award_forms_index.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "For what type of person is an honorarium request memo used at Morgan State?",
+    "answer": "An honorarium request memo is used to request a one-time payment for participation to a person who is not an employee of, and not a student of, Morgan State University. Payments must reflect market-rate limitations, and international payments require guidance from MSU Accounts Payable before submission.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_honoraria_request.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the minimum advance time required when submitting a stipend request through ORA DocuSign?",
+    "answer": "The requested check issue date must be a minimum of 45 days after the date the stipend request is submitted, meaning PIs must submit at least 45 days in advance of the intended payment date.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_stipend_request.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What field became mandatory on the Non-Title III Travel Request Form as of May 30, 2024?",
+    "answer": "As of 2024-05-30, the 'Grant/Award End Date' field became mandatory on the Non-Title III Travel Request Form.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_travel_request_non_title_iii.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What state form format does the ORA Travel Reimbursement form follow?",
+    "answer": "The travel reimbursement form uses the State of Maryland Expense Account format, specifically GAD Form X-5.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_travel_reimbursement_gad_x5.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "For what purposes is the PF-10 Contractual Personnel form used, and who should NOT use it?",
+    "answer": "The PF-10 form is used exclusively for revisions and continuation requests for existing grant-funded contractual personnel. New employees must NOT be onboarded via PF-10; instead, they must use the EPAF system via WebSIS.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_pf10_contractual_personnel.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Does the Graduate Tuition and Fees Request Memo cover graduate student health insurance?",
+    "answer": "No. Graduate student health insurance is NOT covered by the Graduate Tuition and Fees Request Memo — it must be reimbursed via a separate requisition.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_tuition_fees_grad.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How many research policies and guidelines does Morgan State ORA maintain, and where are they compiled?",
+    "answer": "Morgan State ORA maintains 20 research policies and guidelines, all consolidated in PI Handbook 5: Policies & Guidelines (2024-07-01 edition).",
+    "source": "backend/kb_structured/policies_and_guidelines/policies_overview.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Which three Morgan State research policies are explicitly Board of Regents approved?",
+    "answer": "Three policies are explicitly Board of Regents Approved: (1) Conflicts of Interest in Research and Development, (2) Misconduct in Academic Research, and (6) Intellectual Property.",
+    "source": "backend/kb_structured/policies_and_guidelines/policies_overview.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the policy number for the Effort Reporting policy in the ORA numbered policy list?",
+    "answer": "Effort Reporting is policy number 13 in Morgan State ORA's numbered list of 20 research policies.",
+    "source": "backend/kb_structured/policies_and_guidelines/policies_overview.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the policy number for the Unallowable Costs policy?",
+    "answer": "Unallowable Costs is policy number 12 in Morgan State ORA's numbered list of 20 research policies, compiled in PI Handbook 5.",
+    "source": "backend/kb_structured/policies_and_guidelines/policies_overview.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the policy number for Extra Compensation on Sponsored Projects?",
+    "answer": "Extra Compensation on Sponsored Projects is policy number 17 in the ORA numbered policy list compiled in PI Handbook 5.",
+    "source": "backend/kb_structured/policies_and_guidelines/policies_overview.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the policy number for the Limited Submission policy in PI Handbook 5?",
+    "answer": "Limited Submission is policy number 20 in the ORA numbered policy list compiled in PI Handbook 5 (effective 2024-07-01).",
+    "source": "backend/kb_structured/policies_and_guidelines/policies_overview.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the PI Handbook 5 section number for the Cost Transfer policy?",
+    "answer": "The Cost Transfer policy is section 7 in PI Handbook 5: Policies & Guidelines.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_cost_transfer.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the PI Handbook 5 section number for the Residual Balance policy?",
+    "answer": "The Residual Balance policy is section 15 in PI Handbook 5: Policies & Guidelines.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_residual_balance.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What federal regulation does Morgan State's Effort Reporting policy align with regarding after-the-fact effort confirmation?",
+    "answer": "The Effort Reporting policy is consistent with 2 CFR 200.430, which establishes the requirement for after-the-fact effort confirmation by individuals with suitable means of verification.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_effort_reporting.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What U.S. export control regulatory frameworks does Morgan State's Export Control policy cover?",
+    "answer": "Morgan State's Export Control policy covers compliance with U.S. export control laws including ITAR, EAR, and OFAC sanctions, which govern the transfer of controlled technology, technical data, software, services, and equipment to foreign nationals, foreign institutions, or destinations outside the United States.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_export_control.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which PI Handbook 5 section covers the Solicitation and Acceptance of Sponsored Projects and Gifts policy?",
+    "answer": "The Solicitation and Acceptance of Sponsored Projects and Gifts policy is in PI Handbook 5 section 16. It distinguishes sponsored projects from gifts and defines the respective roles of the Office of Research Administration and the Office of Institutional Advancement.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_solicitation_acceptance.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What regulation governs the Protection of Human Subjects in Research policy at Morgan State?",
+    "answer": "The policy establishes MSU's commitment in accordance with the federal Common Rule (45 CFR 46) and other applicable regulations, and defines the role of the Institutional Review Board (IRB) in reviewing and overseeing all research involving human subjects.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_human_subjects.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What PI Handbook 5 section covers Payment for Incidental Activities, and what kinds of activities does it govern?",
+    "answer": "Payment for Incidental Activities is PI Handbook 5 section 18. It governs payments for activities outside an individual's regular institutional duties — such as one-time lectures, panel participation, or short-term consulting — when supported by sponsored project funds.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_incidental_activities.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which federal cost principles regulation applies to the Unallowable Costs policy and what does it cover at MSU?",
+    "answer": "The Unallowable Costs policy is governed by 2 CFR 200 Subpart E (federal cost principles). It identifies cost categories that may not be charged directly or indirectly to federally sponsored awards and establishes university procedures to identify, segregate, and exclude unallowable costs from sponsored project accounts and from the F&A (indirect cost) rate calculation.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_unallowable_costs.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What does the Travel policy require with respect to federally funded international travel?",
+    "answer": "The Travel policy governs allowability, documentation, and reimbursement of domestic and foreign travel charged to sponsored awards, including Fly America Act requirements where applicable, consistent with sponsor terms and federal cost principles.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_travel.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What PI Handbook covers the effective date 2024-07-01 and what does it compile?",
+    "answer": "PI Handbook 5: Policies & Guidelines, effective 2024-07-01, compiles the full text of all 20 research policies that govern sponsored research at Morgan State, including the three Board-of-Regents-approved policies (Conflicts of Interest in Research and Development, Misconduct in Academic Research, and Intellectual Property).",
+    "source": "backend/kb_structured/policies_and_guidelines/pi_handbooks/form_pi_handbook_5.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are the five PI Handbooks available from Morgan State ORA and what is each one about?",
+    "answer": "The five handbooks are: PI Handbook 1 — General Principles (overview of the sponsored programs lifecycle); PI Handbook 2 — Budget Preparation (creating and managing a project budget); PI Handbook 3 — Grant-Related Processes (pre- and post-award processes and roles); PI Handbook 4 — Research Facilities & Resources (MSU research capabilities and core facilities); PI Handbook 5 — Policies & Guidelines (all 20 research policies).",
+    "source": "backend/kb_structured/resources/principal_investigator_handbooks/resources_pi_handbooks.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the effective date of PI Handbook 3: Grant-Related Processes?",
+    "answer": "PI Handbook 3: Grant-Related Processes has an effective date of 2025-02-24.",
+    "source": "backend/kb_structured/resources/principal_investigator_handbooks/resources_pi_handbooks.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What are the effective dates for PI Handbooks 1 and 4?",
+    "answer": "Both PI Handbook 1: General Principles and PI Handbook 4: Research Facilities & Resources have an effective date of 2022-09-06.",
+    "source": "backend/kb_structured/resources/principal_investigator_handbooks/resources_pi_handbooks.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the effective date of PI Handbook 2: Budget Preparation?",
+    "answer": "PI Handbook 2: Budget Preparation has an effective date of 2023-09-05.",
+    "source": "backend/kb_structured/resources/principal_investigator_handbooks/form_pi_handbook_2.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "For which sponsor-specific systems must no-cost extension requests for NSF and NIH awards be submitted?",
+    "answer": "NSF awards require the no-cost extension to be requested through Research.gov, and NIH awards through eRA Commons. PIs must also notify ORA no less than 60 days prior to the end date of the award.",
+    "source": "backend/kb_structured/resources/templates/form_template_no_cost_extension_letter.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What letter template is required when Morgan State University will be a subrecipient on another institution's sponsored project?",
+    "answer": "The Subaward to MSU Commitment Letter Template is required. It must be signed by ORA and included as part of the prime applicant's proposal package documenting MSU's intent to participate as a subawardee.",
+    "source": "backend/kb_structured/resources/templates/form_template_subaward_to_msu_commitment_letter.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How many ORA letter templates are currently provided on the ORA Templates page, and what are they?",
+    "answer": "Five letter templates are provided: (1) Subaward to MSU Commitment Letter, (2) Civil Rights Protections for NIH Grants Letter, (3) Change of PI Request Letter, (4) No-Cost Extension Letter, and (5) Termination of Work Letter. Each has both a blank template and a completed sample.",
+    "source": "backend/kb_structured/resources/templates/resources_templates.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the Termination of Work Letter used for, and when is it required?",
+    "answer": "The Termination of Work Letter is required when ORA must formally issue a stop-work order to a contractual partner or subawardee on an MSU-led sponsored project, terminating a subaward or contract relationship.",
+    "source": "backend/kb_structured/resources/templates/form_template_termination_of_work_letter.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Do PIs need to check the Funding Opportunity Announcement to determine whether the Civil Rights Protections for NIH Grants Letter is required?",
+    "answer": "Yes. PIs should check the Funding Opportunity Announcement (FOA) carefully to confirm whether the Civil Rights Protections for NIH Grants Letter is required for their specific NIH submission, as it is only required for certain NIH grant solicitations.",
+    "source": "backend/kb_structured/resources/templates/form_template_civil_rights_nih_grants_letter.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "To which contact at ORA should errors in effort certifications be reported, and who else must be notified?",
+    "answer": "Any corrections to effort should be reported immediately to the ORA Director (Gillian.Silver@morgan.edu) and to the Grant Accountant assigned to the grant in Restricted Funds Accounting (RFA).",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Does cost sharing also apply to state grants and contracts at Morgan State, or only federal awards?",
+    "answer": "Effort certifications and cost-sharing commitments cover employees paid from federal AND state contracts or grants, including any mandatory cost sharing accounts — so state awards are also included.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What section of PI Handbook 5 covers Effort Reporting, and what section covers Cost Sharing?",
+    "answer": "In PI Handbook 5, Effort Reporting is covered on page 96 and Cost Sharing on page 36, according to the post-award reporting doc which references those specific pages.",
+    "source": "backend/kb_structured/post_award/reporting/post_award_reporting.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the direct download URL for PI Handbook 5: Policies & Guidelines?",
+    "answer": "The direct PDF download URL for PI Handbook 5 is https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/2024-07-01_PIHandbook5.pdf.",
+    "source": "backend/kb_structured/resources/principal_investigator_handbooks/resources_pi_handbooks.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the state form designation for the two travel request forms grouped on the ORA post-award forms page?",
+    "answer": "The two travel request forms (Title III and Non-Title III) are grouped under the heading 'Travel Request Form (COMP 01)', which is the State of Maryland COMP-01 form designation.",
+    "source": "backend/kb_structured/post_award/forms/post_award_forms_index.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Who is listed as the primary DocuSign contact on the current ORA post-award forms page?",
+    "answer": "The live page lists Rebecca Steiner (rebecca.steiner@morgan.edu, 443-885-4044) as the primary DocuSign forms contact; the older ora-docusign@morgan.edu inbox may still be monitored but is not displayed on the current page.",
+    "source": "backend/kb_structured/post_award/forms/post_award_forms_index.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Where can an ORA e-training module on Contractual Salaries be found for PF-10 guidance?",
+    "answer": "An ORA e-training module on Contractual Salaries, which provides PF-10 guidance on first-time and repeat employees (who use EPAF via WebSIS), is available at https://www.morgan.edu/office-of-research-administration/trainings/e-training.",
+    "source": "backend/kb_structured/post_award/forms/post_award_forms_index.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Does the undergraduate grant-funded tuition memo cover health insurance, and how does this differ from the graduate version?",
+    "answer": "Yes — the undergraduate version covers health insurance directly on the memo. The graduate version does NOT cover health insurance; graduate student health insurance must be reimbursed via a separate requisition.",
+    "source": "backend/kb_structured/post_award/forms/form_docusign_tuition_fees_undergrad.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the subject line a faculty member must use when subscribing to the ORA Announcements list-serv?",
+    "answer": "To subscribe to the ORA Announcements list-serv, email ask.ora@morgan.edu with the subject line: 'Sign me up for ORA Announcements'.",
+    "source": "backend/kb_structured/resources/resources_overview.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the Research Compliance Director's name and email at Morgan State ORA?",
+    "answer": "The Research Compliance Director is Dr. Edet Isuk, reachable at edet.isuk@morgan.edu.",
+    "source": "backend/kb_structured/post_award/notification_and_setup_of_award/post_award_notification_and_setup.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the PI Handbook 5 section number for the Conflicts of Interest in Research and Development policy?",
+    "answer": "The Conflicts of Interest in Research and Development policy is section 1 in PI Handbook 5: Policies & Guidelines.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_conflict_of_interest.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the PI Handbook 5 section number for the Misconduct in Academic Research policy, and what three categories of misconduct does it define?",
+    "answer": "Misconduct in Academic Research is section 2 in PI Handbook 5. The policy defines research misconduct as fabrication, falsification, and plagiarism in proposing, performing, or reviewing research, or in reporting research results.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_misconduct_in_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the PI Handbook 5 section for the Intellectual Property policy, and what types of IP does it cover?",
+    "answer": "Intellectual Property is section 6 in PI Handbook 5. It covers ownership, disclosure, protection, licensing, and commercialization of inventions, patents, copyrights, trademarks, and tangible research property created by MSU faculty, staff, and students in the course of university-supported or sponsored research activities.",
+    "source": "backend/kb_structured/policies_and_guidelines/numbered_policies/policy_intellectual_property.json",
+    "difficulty": "very_hard"
+  }
+]

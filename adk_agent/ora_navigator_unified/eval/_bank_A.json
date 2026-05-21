@@ -1,0 +1,374 @@
+[
+  {
+    "question": "What is the main email address for contacting the Office of Research Administration at Morgan State?",
+    "answer": "The main email address for ORA is ask.ora@morgan.edu.",
+    "source": "backend/kb_structured/about/staff_directory/ora_office_contact.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Where is the ORA office physically located on campus?",
+    "answer": "ORA is located in Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251.",
+    "source": "backend/kb_structured/about/staff_directory/ora_office_contact.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What is ORA's main phone number?",
+    "answer": "ORA's main phone number is 443-885-4044.",
+    "source": "backend/kb_structured/about/staff_directory/ora_office_contact.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What was the Office of Research Administration previously called?",
+    "answer": "ORA was previously called the Office of Sponsored Programs and Research (OSPR). It was renamed to the Office of Research Administration in 2020.",
+    "source": "backend/kb_structured/about/ora_about.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Who is the Director of the Office of Research Administration?",
+    "answer": "Gillian Silver (MPH, CPH, CRA, CFRA, CPRA) is the Director of the Office of Research Administration.",
+    "source": "backend/kb_structured/about/staff_directory/staff_gillian_silver.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Who should I contact at ORA if I need help with proposal budget preparation?",
+    "answer": "Deshun Li, the Research Budget Development Specialist, handles proposal budget preparation at ORA.",
+    "source": "backend/kb_structured/about/staff_directory/ora_services_routing.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What year was the Office of Sponsored Programs and Research (OSPR) established at Morgan State?",
+    "answer": "OSPR was established in 1988 under Dr. Edet Isuk as Founding Director.",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How much annual extramural funding did Morgan State's research office manage when it was founded in 1988?",
+    "answer": "Annual extramural funding averaged $7 million at the time OSPR was founded in 1988.",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who was the founding director of Morgan State's research office, and how many staff did it have when it started?",
+    "answer": "Dr. Edet Isuk was the Founding Director of OSPR, which started with one secretarial assistant in addition to himself.",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What was Morgan State's total new research commitments in 2022, and which grants drove that figure?",
+    "answer": "Morgan State reached $72 million in new commitments by 2022. The major grants driving that figure were GESTAR II ($28M), ASCEND expansion ($17M), RCMI ($15M), and ONR AI/ML research ($9M).",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who led Morgan State's research office from 2002 to 2020, and what happened to annual funding during that period?",
+    "answer": "Dr. Mildred Ofosu served as AVP for Research from 2002 to 2020, maintaining consistent growth and reaching approximately $30 million in annual extramural funding.",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is ORA's stated vision?",
+    "answer": "ORA's vision is: \"ORA provides research oversight and superb service to MSU researchers and their partners, one that propels MSU to the R1 space.\"",
+    "source": "backend/kb_structured/about/mission_and_vision/ora_mission_and_vision.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How many strategic goals does ORA have, and what is the fifth one?",
+    "answer": "ORA has five strategic goals. The fifth is: \"Facilitate research and offer consultation on strategies to streamline processes and increase research funding.\"",
+    "source": "backend/kb_structured/about/mission_and_vision/ora_mission_and_vision.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who handles grant close-out at ORA?",
+    "answer": "Ailing Zhang handles grant close-out at ORA.",
+    "source": "backend/kb_structured/about/staff_directory/ora_services_routing.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which two staff members handle contracts and subawards at ORA?",
+    "answer": "Matthew Lee and Poline Mirithu handle contracts and subawards at ORA.",
+    "source": "backend/kb_structured/about/staff_directory/ora_services_routing.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which staff members are responsible for expenditure approvals at ORA?",
+    "answer": "Dr. Lucy Manyara and Shamon Shine-Lee are responsible for expenditure approvals at ORA.",
+    "source": "backend/kb_structured/about/staff_directory/ora_services_routing.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who handles IRB and compliance matters at ORA?",
+    "answer": "Dr. Keyshawn Moncrieffe and Olatunde Aladesote handle IRB and compliance matters at ORA.",
+    "source": "backend/kb_structured/about/staff_directory/ora_services_routing.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are the five external funding databases that MSU subscribes to or recommends through ORA?",
+    "answer": "The five databases are: Pivot RP (ProQuest), InfoEd Global SPIN, Grants.gov, Grant Forward, and SAM.gov Contract Opportunities.",
+    "source": "backend/kb_structured/funding_sources/opportunities_overview.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the subject line I need to use when emailing ORA to subscribe to the ORA Announcements listserv?",
+    "answer": "The subject line must be exactly: \"Sign me up for ORA Announcements group list-serv\".",
+    "source": "backend/kb_structured/ora_announcements/announcements_overview.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Beginning in January 2026, which two federal agencies require investigators to use SciENcv to generate digitally certified Common Forms?",
+    "answer": "NIH and DOE require investigators to use SciENcv to generate digitally certified Common Forms, including the Biographical Sketch and Current and Pending Support, beginning January 2026.",
+    "source": "backend/kb_structured/ora_announcements/announcement_nih_nsf_doe_common_forms_2026_01_21.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What research security training must senior/key personnel complete before submitting an NSF or DOE proposal?",
+    "answer": "Senior/key personnel on NSF or DOE proposals must complete the one-hour CITI Research Security Training (Combined) module prior to proposal submission and certify completion.",
+    "source": "backend/kb_structured/ora_announcements/announcement_nih_nsf_doe_common_forms_2026_01_21.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who retired as Director of Research Compliance effective January 1, 2026, and how long had they served Morgan State?",
+    "answer": "Dr. Edet Isuk retired effective January 1, 2026, after 46 years of service to Morgan State University. He had served as Director of Research Compliance and Chief-of-Staff to the Vice President for Research and Economic Development.",
+    "source": "backend/kb_structured/ora_announcements/announcement_research_compliance_leadership_2025_12_01.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who is serving as Acting Director for Research Compliance following Dr. Isuk's retirement, and what is the planned tenure of this role?",
+    "answer": "Dr. Keyshawn Moncrieffe is serving as Acting Director for Research Compliance until a permanent Director is hired.",
+    "source": "backend/kb_structured/ora_announcements/announcement_research_compliance_leadership_2025_12_01.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Morgan State's Carnegie research classification, and what higher classification does the University's 2021-2030 Strategic Plan aspire to?",
+    "answer": "Morgan State is currently a Carnegie R2 doctoral research institution. The 2021-2030 Strategic Plan includes the goal of reaching Carnegie's R1 classification by 2030, with efficient ORA services identified as integral to achieving it.",
+    "source": "backend/kb_structured/about/ora_about.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What Maryland state program, administered by TEDCO, supports commercialization of research from qualifying universities including Morgan State?",
+    "answer": "The Maryland Innovation Initiative (MII), administered by TEDCO (Maryland Technology Development Corporation), supports the commercialization of research from Maryland's qualifying universities including Morgan State, advancing technology from lab to market.",
+    "source": "backend/kb_structured/funding_sources/state_of_maryland/opportunity_category_state.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What does the Maryland E-Nnovation Initiative Fund (MEIF) provide, and which agency administers it?",
+    "answer": "MEIF provides matching funds to Maryland universities for endowed research chairs in scientific and technical fields of study. It is administered by the Maryland Department of Commerce.",
+    "source": "backend/kb_structured/funding_sources/state_of_maryland/opportunity_category_state.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What was Ailing Zhang's role before becoming Grants Manager, and how many years of grants management experience does she have?",
+    "answer": "Before becoming Senior Grants Manager, Ailing Zhang was a Grants Specialist in the Office of Sponsored Programs and Research at Morgan State. She has over 20 years of experience in grants management.",
+    "source": "backend/kb_structured/about/staff_directory/staff_ailing_zhang.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What prior career did Ryan Mobley have at Morgan State before joining ORA?",
+    "answer": "Before joining ORA, Ryan Mobley was a Senior Program Administrator for two major NIH-funded cooperative agreements — ASCEND and RCMI — from 2015 to 2022, managing budget oversight, staff onboarding, training delivery on the Banner finance system, and processing internal administrative requests.",
+    "source": "backend/kb_structured/about/staff_directory/staff_ryan_mobley.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What phone number should I call to reach Ailing Zhang directly at ORA?",
+    "answer": "Ailing Zhang's direct phone number is 443-885-4118.",
+    "source": "backend/kb_structured/about/staff_directory/staff_ailing_zhang.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What phone number should I use to reach Ryan Mobley, ORA's Training and Communications Coordinator?",
+    "answer": "Ryan Mobley's direct phone number is 443-885-4771.",
+    "source": "backend/kb_structured/about/staff_directory/staff_ryan_mobley.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What phone number should I call to reach Dr. Lucy Manyara, the ORA Budget Officer?",
+    "answer": "Dr. Lucy Manyara's direct phone number is 443-885-3544.",
+    "source": "backend/kb_structured/about/staff_directory/staff_lucy_manyara.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What phone number should I call to reach Deshun Li at ORA?",
+    "answer": "Deshun Li's direct phone number is 443-885-3309.",
+    "source": "backend/kb_structured/about/staff_directory/staff_deshun_li.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What year did Deshun Li join Morgan State, and under whose leadership?",
+    "answer": "Deshun Li joined Morgan State University in 2018 in the Office of Sponsored Programs under the leadership of Dr. Mildred Ofosu.",
+    "source": "backend/kb_structured/about/staff_directory/staff_deshun_li.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What degree did Deshun Li earn from which institution before working in finance?",
+    "answer": "Deshun Li holds two bachelor's degrees: a BS in Quantitative Business Analysis and a BS in Health Information Management. Before joining Morgan State she also worked as a nurse in China.",
+    "source": "backend/kb_structured/about/staff_directory/staff_deshun_li.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many peer-reviewed publications has Dr. Farin Kamangar authored, and what is his Google Scholar h-index?",
+    "answer": "Dr. Farin Kamangar has published over 280 peer-reviewed articles and has a Google Scholar h-index of 87 with over 42,000 citations.",
+    "source": "backend/kb_structured/about/staff_directory/staff_farin_kamangar.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What three professional certifications does Dr. Farin Kamangar hold from the Research Administrators Certification Council?",
+    "answer": "Dr. Kamangar holds the Certified Research Administrator (CRA), Certified Financial Research Administrator (CFRA), and Certified Pre-Award Research Administrator (CPRA) credentials from the Research Administrators Certification Council.",
+    "source": "backend/kb_structured/about/staff_directory/staff_farin_kamangar.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Where did Dr. Farin Kamangar earn his PhD and what field was it in?",
+    "answer": "Dr. Kamangar earned his PhD in Epidemiology from Johns Hopkins University.",
+    "source": "backend/kb_structured/about/staff_directory/staff_farin_kamangar.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What NCURA leadership activity did Ailing Zhang complete in 2007, and what is the name of the organization?",
+    "answer": "Ailing Zhang was selected for a year-long 2007 NCURA Leadership Development Course. NCURA stands for the National Council of University Research Administrators.",
+    "source": "backend/kb_structured/about/staff_directory/staff_ailing_zhang.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "In what year did Morgan State's research office staff expand to 11 members, and who led the office at that time?",
+    "answer": "The office expanded to 11 members in 1997, when Dr. Henry Williams joined as Assistant Vice President for Sponsored Programs, elevating the office to report directly to the Vice President for Academic Affairs.",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the name of the NSF-funded initiative through which Dr. Keyshawn Moncrieffe is developing Morgan State's inaugural Research Security Program, and which other institutions are partners?",
+    "answer": "The initiative is called Research Integrity, Security, and Compliance (RISC), funded by NSF. It is developed in partnership with several Mid-Atlantic Minority Serving Institutions (MSIs).",
+    "source": "backend/kb_structured/about/staff_directory/staff_keyshawn_moncrieffe.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What certification does Poline Mirithu hold that is unrelated to grants administration, and who issues it?",
+    "answer": "Poline Mirithu holds the Certified Scrum Master (CSM) certification, issued by the Scrum Alliance.",
+    "source": "backend/kb_structured/about/staff_directory/staff_poline_mirithu.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Where did Gillian Silver earn her MPH, and what field did she study?",
+    "answer": "Gillian Silver earned her MPH in Health Policy from the Columbia University Mailman School of Public Health.",
+    "source": "backend/kb_structured/about/staff_directory/staff_gillian_silver.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What specific subject line is required when emailing to subscribe to the ORA Announcements listserv?",
+    "answer": "The email subject line must be exactly: \"Sign me up for ORA Announcements group list-serv\", sent to ask.ora@morgan.edu.",
+    "source": "backend/kb_structured/ora_announcements/announcements_overview.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many total opportunities does InfoEd Global SPIN track, and what is the name of its automated alerting tool?",
+    "answer": "InfoEd Global SPIN tracks over 40,000 opportunities across governments, foundations, and commercial entities worldwide. Its automated alerting tool is called SMARTS, which can send daily or weekly alerts on new or modified opportunities.",
+    "source": "backend/kb_structured/funding_sources/external_databases/opportunity_db_infoed_spin.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What was SAM.gov previously called, and what is the minimum contract value threshold for opportunities listed there?",
+    "answer": "SAM.gov Contract Opportunities was previously called FedBizOpps (FBO.gov). It lists federal contracting opportunities valued at $25,000 or more.",
+    "source": "backend/kb_structured/funding_sources/external_databases/opportunity_db_sam_gov.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which NSF HBCU-specific program focuses on undergraduate education at HBCUs?",
+    "answer": "NSF HBCU-Undergraduate Program (HBCU-UP) is the NSF program focused specifically on undergraduate education at Historically Black Colleges and Universities.",
+    "source": "backend/kb_structured/funding_sources/federal/opportunity_category_hbcu_msi.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which NIH institute runs the Research Centers in Minority Institutions (RCMI) program?",
+    "answer": "The NIH NIMHD (National Institute on Minority Health and Health Disparities) runs the Research Centers in Minority Institutions (RCMI) program.",
+    "source": "backend/kb_structured/funding_sources/federal/opportunity_category_hbcu_msi.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What DoD program provides HBCU faculty with startup support specifically in materials research, and which office runs it?",
+    "answer": "The Office of Naval Research (ONR) runs the HBCU/MI Faculty Start-up Program in Materials, which provides startup support to HBCU faculty in the area of materials science.",
+    "source": "backend/kb_structured/funding_sources/federal/opportunity_category_hbcu_msi.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How long did Dr. Victor McCrary serve as the inaugural Vice President of Morgan's Division of Research and Economic Development, and who created that division?",
+    "answer": "Dr. Victor McCrary served as inaugural VP of the Division of Research and Economic Development (D-RED) from 2012 to 2018, a tenure of six years. The division was created in 2012 by President Wilson.",
+    "source": "backend/kb_structured/about/history/ora_history.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What two bachelor's degrees did Katherine Talton earn, and from which university?",
+    "answer": "Katherine Talton earned a BA in Anthropology and a BA in Spanish, both from Northern Arizona University.",
+    "source": "backend/kb_structured/about/staff_directory/staff_katherine_talton.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Katherine Talton served in the Peace Corps — where did she serve?",
+    "answer": "Katherine Talton served in Mongolia and is a Returned Peace Corps Volunteer (RPCV).",
+    "source": "backend/kb_structured/about/staff_directory/staff_katherine_talton.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What prior work did Matthew Lee do before joining Morgan State in January 2020?",
+    "answer": "Before joining Morgan State in January 2020, Matthew Lee worked as a supervisor for a team of account advisors at a large telecommunications company, where his customers included the Department of Defense, Department of Justice, and U.S. Department of Agriculture. He brings over 10 years of leadership experience and over 15 years of customer-focused service.",
+    "source": "backend/kb_structured/about/staff_directory/staff_matthew_lee.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Shamon Shine-Lee's educational background, and what was her role before joining ORA in June 2022?",
+    "answer": "Shamon Shine-Lee holds a BS in Business Administration from Morgan State University. Immediately before joining ORA in June 2022, she was a Program Coordinator in the School of Computer, Mathematical, and Natural Sciences for four years (2018-2022), managing grants from NIH, NSF, DOD, and other agencies.",
+    "source": "backend/kb_structured/about/staff_directory/staff_shamon_shine_lee.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Olatunde Aladesote's highest earned degree and what degree is he currently pursuing at Morgan State?",
+    "answer": "Olatunde Aladesote has earned an M.Eng. in Civil Engineering from Morgan State University and is currently a candidate for a D.Eng. in Civil Engineering, also at Morgan State.",
+    "source": "backend/kb_structured/about/staff_directory/staff_olatunde_aladesote.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What federal agency does the Foundation Center (now part of Candid) help researchers identify funders from, and where is it accessed?",
+    "answer": "The Foundation Center (now part of Candid) is not a federal agency — it is the leading source of information about philanthropy worldwide, helping researchers identify private foundations and corporate funders. It is accessible at http://foundationcenter.org/.",
+    "source": "backend/kb_structured/funding_sources/private_foundations/opportunity_category_private.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which federal database should a Morgan State investigator use to find and apply for federal contracts (not grants), and what was that database formerly called?",
+    "answer": "Morgan State investigators pursuing federal contracts should use SAM.gov Contract Opportunities (formerly FedBizOpps / FBO.gov). Morgan must also be registered in SAM.gov as an entity before contracts can be awarded.",
+    "source": "backend/kb_structured/funding_sources/external_databases/opportunity_db_sam_gov.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which database is described as the flagship funding database MSU subscribes to, and how do faculty access it?",
+    "answer": "Pivot RP (ProQuest) is described as the flagship funding database MSU subscribes to. Faculty and staff access it using their Morgan credentials at https://pivot.proquest.com/.",
+    "source": "backend/kb_structured/funding_sources/external_databases/opportunity_db_pivot_rp.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which three federal arts and humanities agencies are listed on the ORA Funding Sources page?",
+    "answer": "The three federal arts and humanities agencies listed are: the Institute for Museum and Library Services (IMLS), the National Endowment for the Arts (NEA), and the National Endowment for the Humanities (NEH).",
+    "source": "backend/kb_structured/funding_sources/federal/opportunity_category_arts_humanities.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which three federal environmental science agencies does ORA list as sponsors on its Funding Sources page?",
+    "answer": "ORA lists the National Oceanic & Atmospheric Administration (NOAA), the National Renewable Energy Laboratory (NREL), and the U.S. Environmental Protection Agency (EPA) as environmental science federal sponsors.",
+    "source": "backend/kb_structured/funding_sources/federal/opportunity_category_environment.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the URL for Grants.gov, and what is its primary purpose for Morgan State investigators?",
+    "answer": "Grants.gov is accessible at https://www.grants.gov/. It is the U.S. federal government's central clearinghouse for finding and applying to federal grant opportunities from all federal grant-making agencies. Morgan investigators use it to locate federal funding announcements (NOFOs) and submit grant applications routed through ORA.",
+    "source": "backend/kb_structured/funding_sources/external_databases/opportunity_db_grants_gov.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which seven defense-related federal agencies does ORA list as sponsors on its Funding Sources page?",
+    "answer": "ORA lists seven defense-related sponsors: Air Force Office of Scientific Research (AFOSR), Defense Advanced Research Projects Agency (DARPA), U.S. Army Research Office, U.S. Department of Defense, U.S. Department of Veterans Affairs (VA), U.S. DOD Small Business Innovation Research / Small Business Technology Transfer (SBIR/STTR), and U.S. Office of Naval Research (ONR).",
+    "source": "backend/kb_structured/funding_sources/federal/opportunity_category_defense.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Taylor Boone is a Grant Administrator at ORA who graduated from Morgan State — what was their degree, and where did they work before returning to Morgan?",
+    "answer": "Taylor Boone holds a BS in Economics from Morgan State University. Before returning to Morgan, they worked in grant development and fundraising at Open Works and Digital Harbor Foundation, focusing on capacity building, donor relations, and operational support for education and workforce development programs.",
+    "source": "backend/kb_structured/about/staff_directory/staff_taylor_boone.json",
+    "difficulty": "very_hard"
+  }
+]
