@@ -70,6 +70,16 @@ MODEL_MAP = {
 # Single search tool for the unified knowledge base
 unified_kb = VertexAiSearchTool(data_store_id=UNIFIED_KB_ID)
 
+# Layer 1: warm the KB prefetch cache at startup so the first request after a
+# Cloud Run cold start still gets prefetched grounding context, instead of an
+# empty prefetch while the lazy background load runs. Non-blocking; if it fails
+# the agent still has its VertexAiSearchTool.
+try:
+    from .kb_prefetch import warm_cache as _warm_kb_cache
+    _warm_kb_cache()
+except Exception:
+    pass
+
 
 def _select_model(callback_context, llm_request):
     """Override model per-request and inject KB context on first turn."""

@@ -1322,7 +1322,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                 full_response = "An error occurred during streaming."
 
         # Cache the successful response
-        if full_response and "error" not in full_response.lower()[:50] and "I may not have complete information" not in full_response:
+        if full_response and "error" not in full_response.lower()[:50] and "I may not have complete information" not in full_response and "don't have reliable information" not in full_response:
             if query_cache.set(user_q, full_response, context_hash):
                 print(f"[CACHE] Stored response for: {user_q[:50]}...")
 
@@ -1439,7 +1439,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
                 context="",
             )
 
-            if answer and "error" not in answer.lower()[:50] and "I may not have complete information" not in answer:
+            if answer and "error" not in answer.lower()[:50] and "I may not have complete information" not in answer and "don't have reliable information" not in answer:
                 query_cache.set(user_q, answer, context_hash="")
 
         except Exception as e:
