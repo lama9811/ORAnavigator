@@ -38,3 +38,243 @@
   assert:
     - type: contains
       value: "26%"
+
+- description: "No-cost extension (NCE) process — 60-day advance notice"
+  vars:
+    prompt: "How do I request a no-cost extension on my grant?"
+    kb_context: >
+      A No Cost Extension (NCE) allows a PI to extend the project period at no
+      additional cost to the sponsor. The PI must notify ORA in writing at least
+      60 days before the project's expiration date. ORA will then work with the
+      PI to obtain the sponsor's approval. NCEs are one of four types of
+      post-award changes covered: Change of PI/Key Personnel, No Cost Extension,
+      Transfer of Award from another institution, and Transfer of Award to
+      another institution. Contact: ask.ora@morgan.edu, 443-885-4044.
+      Source: backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json
+  assert:
+    - type: llm-rubric
+      value: "describes the NCE process, grounded; no fabricated deadline"
+
+- description: "Effort reporting — three cycles per year, 14-day window"
+  vars:
+    prompt: "What is effort reporting and when is it due?"
+    kb_context: >
+      Effort reporting is a post-award compliance requirement for PIs, faculty,
+      professional staff, and students paid from federal grants and contracts.
+      Effort is defined as the amount of time spent on a particular activity,
+      including sponsored work where salary is directly charged or cost-shared.
+      Effort certifications are generated three times per year: February (Fall
+      semester effort), July (Spring semester effort), and October (Summer
+      effort). Once released to campus, certifications must be completed within
+      14 calendar days. The platform used is Searchlight. Corrections should be
+      reported to the ORA Director (Gillian.Silver@morgan.edu) and the assigned
+      RFA Grant Accountant. Framework: 2 CFR 200 (OMB Uniform Guidance).
+      Source: backend/kb_structured/post_award/reporting/post_award_reporting.json
+  assert:
+    - type: llm-rubric
+      value: "explains effort reporting as post-award compliance, grounded"
+
+- description: "IRB reviews human subjects research"
+  vars:
+    prompt: "Who reviews research involving human subjects?"
+    kb_context: >
+      Morgan State University requires all research involving human subjects to
+      be reviewed and approved by the Institutional Review Board (IRB) in
+      compliance with federal regulations at 45 CFR 46. The Office of Research
+      Compliance (ORC) oversees this process. Researchers should allow at least
+      30 days for review. No human subjects research may begin without IRB
+      approval. IRB Administrator: irb.research@morgan.edu. The IRB has 14
+      voting members; the Chair is Benjamin Welsh, Ph.D. The Institutional
+      Official is Willie May, Ph.D. (Vice President for Research and Economic
+      Development).
+      Source: backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json
+  assert:
+    - type: contains
+      value: "IRB"
+
+- description: "IACUC approves animal research protocols"
+  vars:
+    prompt: "What committee approves research involving animals?"
+    kb_context: >
+      All work at Morgan State University's Animal Research Facility (ARF) must
+      be approved by the Morgan State University Institutional Animal Care and
+      Use Committee (IACUC). The ARF is located in the Martin D. Jenkins
+      Behavioral and Social Sciences Center. The facility is AAALAC-accredited
+      and complies with the federal Animal Welfare Act. The IACUC convenes
+      monthly on the second Thursday from 1:00 to 3:00 PM; protocol submissions
+      are due the third Thursday of the prior month. IACUC Director:
+      Dr. Ingrid Tulloch (Ingrid.Tulloch@morgan.edu).
+      Source: backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json
+  assert:
+    - type: contains
+      value: "IACUC"
+
+- description: "Pre-award proposal submission — IRF and ORA review required"
+  vars:
+    prompt: "I want to submit a grant proposal. What do I do first?"
+    kb_context: >
+      Morgan State University requires all sponsored project proposals to undergo
+      review and approval through the Office of Research Administration (ORA).
+      The first step is submitting an Internal Routing Form (IRF), which must be
+      submitted at least two weeks before the sponsor's deadline. The IRF gives
+      ORA basic information about the PI and the funding opportunity and must
+      collect signatures from the PI/PD, Department Chair, Dean or Center
+      Director, ORA Research Budget Specialist, Grants Manager, and Director of
+      Research Administration. Concurrently, the PI must submit a Budget (Excel)
+      and Budget Justification (Word) to the ORA Budget Specialist. ORA also
+      provides access to the Pivot-RP Funding Opportunities Database
+      (https://pivot.proquest.com/dashboard). Contact: ask.ora@morgan.edu,
+      443-885-4044.
+      Source: backend/kb_structured/pre_award/pre_award_overview.json
+  assert:
+    - type: llm-rubric
+      value: "gives pre-award proposal-submission guidance, grounded"
+
+- description: "Conflict of interest — investigators must disclose financial interests"
+  vars:
+    prompt: "Do I need to file a conflict of interest disclosure?"
+    kb_context: >
+      Morgan State University's COI program covers Financial Conflicts of
+      Interest (FCOI) in federally funded research, governed by 42 CFR Part 50
+      Subpart F and NSF policies. All investigators must disclose significant
+      financial interests before any sponsored research is undertaken and must
+      complete CITI conflict-of-interest training, refreshed every four years.
+      Financial interests of the investigator, their spouse/domestic partner,
+      and dependent children are covered. Disclosure is filed via the Financial
+      Conflict of Interest Google Form. The Office of Research Compliance
+      establishes procedures for managing, reducing, or eliminating significant
+      financial conflicts. Contact: ask.ora@morgan.edu, 443-885-4044.
+      Source: backend/kb_structured/research_compliance/conflict_of_interest/compliance_conflict_of_interest.json
+  assert:
+    - type: llm-rubric
+      value: "gives COI disclosure guidance, grounded"
+
+- description: "Fringe benefit rates — 42% faculty academic year, 9% summer"
+  vars:
+    prompt: "What is the fringe benefit rate at Morgan State?"
+    kb_context: >
+      Morgan State University fringe benefit rates for sponsored project budgets:
+      Faculty (Academic Year): 42%. Faculty (Summer): 9%.
+      Full-Time / Non-Contractual (Year Round): 42%. Contractual (Year Round): 9%.
+      Contractual employees are defined as those who work less than 6 months or
+      less than 30 hours per week. Fringe benefits cover FICA/Medicare,
+      retirement, healthcare insurance, unemployment insurance, tuition
+      remission, TIAA/CREF, and worker's compensation. Contact: ask.ora@morgan.edu,
+      443-885-4044.
+      Source: backend/kb_structured/pre_award/fringe_benefit_rate/pre_award_fringe_benefit_rate.json
+  assert:
+    - type: llm-rubric
+      value: "explains the fringe benefit rate from the KB; states a rate only if the KB gives one"
+
+- description: "Internal Routing Form (IRF) — initiates proposal review at ORA"
+  vars:
+    prompt: "What is the internal routing form for?"
+    kb_context: >
+      The Internal Routing Form (IRF) is a required document that must be
+      submitted before applying for any external funding, preferably two weeks
+      prior to the sponsor's submission deadline. The IRF gives ORA basic
+      information about the PI and the funding opportunity, captures
+      certifications regarding Responsible Conduct of Research standards, and
+      confirms supervisory approval to proceed with the project. It is completed
+      via DocuSign and must collect signatures from the PI/PD, Department Chair,
+      Dean or Center Director, ORA Research Budget Specialist, Grants Manager,
+      and Director of Research Administration. Contact: Ms. Deshun Li
+      (deshun.li@morgan.edu) or ask.ora@morgan.edu, 443-885-4044.
+      Source: backend/kb_structured/pre_award/internal_routing_form/pre_award_internal_routing_form.json
+  assert:
+    - type: llm-rubric
+      value: "explains the internal routing form's purpose, grounded"
+
+- description: "Limited submission — FCFS within 6 weeks, AVP selects beyond 6 weeks"
+  vars:
+    prompt: "How does the limited submission process work?"
+    kb_context: >
+      Morgan State University's limited submission policy applies when a sponsor
+      restricts how many proposals a single university may submit. Researchers
+      must notify ORA as early as possible. If notification arrives within 6
+      weeks of the deadline, ORA uses a first-come, first-served approach. If
+      notification occurs more than 6 weeks before the deadline, Dr. Farin
+      Kamangar (Assistant Vice President for Research) selects among applications
+      and may convene a review group. If the number of internal applications is
+      at or below the sponsor's maximum, all are submitted without a selection
+      process. Competitive review requires a 4-page summary. Contact:
+      ask.ora@morgan.edu, ailing.zhang@morgan.edu, or gillian.silver@morgan.edu.
+      Source: backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json
+  assert:
+    - type: llm-rubric
+      value: "describes the limited-submission process, grounded"
+
+- description: "RCR training — required for NIH/NSF funded researchers every 4 years"
+  vars:
+    prompt: "What is RCR training?"
+    kb_context: >
+      Responsible Conduct of Research (RCR) training at Morgan State University
+      reinforces the expectation that research benefits the public and must be
+      guided by honesty, accuracy, objectivity, and trust. Researchers receiving
+      support from NIH and/or NSF grants must complete RCR training at the start
+      of their award and again every four years. The curriculum addresses eight
+      major content areas including falsification and fabrication, conflicts of
+      interest, authorship, and intellectual property. Training is offered via
+      the CITI Program online course (citiprogram.org) and in-person
+      presentations. Contact: ask.ora@morgan.edu, 443-885-4044.
+      Source: backend/kb_structured/research_compliance/responsible_conduct_of_research/compliance_responsible_conduct_of_research.json
+  assert:
+    - type: llm-rubric
+      value: "explains responsible conduct of research training, grounded"
+
+- description: "ORA acronym expansion — Office of Research Administration"
+  vars:
+    prompt: "What does ORA stand for?"
+    kb_context: >
+      ORA stands for the Office of Research Administration, formerly known as
+      the Office of Sponsored Programs and Research (OSPR). It is Morgan State
+      University's central coordinating unit for externally sponsored research.
+      ORA processes, monitors, and facilitates the evaluation of all sponsored
+      research projects to ensure compliance with institutional goals and
+      procedures.
+      Source: backend/kb_structured/about/ora_about.json
+  assert:
+    - type: contains
+      value: "Office of Research Administration"
+
+- description: "ORA mission — central coordinating unit for sponsored research at MSU"
+  vars:
+    prompt: "What does the Office of Research Administration do?"
+    kb_context: >
+      The Office of Research Administration (ORA), formerly the Office of
+      Sponsored Programs and Research (OSPR), is Morgan State University's
+      central coordinating unit for externally sponsored research. ORA processes,
+      monitors, and facilitates the evaluation of all sponsored research projects
+      to ensure compliance with institutional goals and procedures. ORA assists
+      MSU researchers by: (1) providing access to critical information for grant
+      submission; (2) offering grant-writing training materials; (3) sharing
+      resources about post-award grant management; (4) disseminating information
+      on research funding and productivity metrics; (5) gathering researcher
+      feedback for continuous improvement. Morgan State has over $50 million in
+      annual grants and contracts and aspires to Carnegie R1 classification by 2030.
+      Source: backend/kb_structured/about/ora_about.json
+  assert:
+    - type: llm-rubric
+      value: "describes ORA's role for Morgan State, grounded"
+
+- description: "Research misconduct — fabrication, falsification, plagiarism; 42 CFR Part 93"
+  vars:
+    prompt: "How do I report research misconduct?"
+    kb_context: >
+      Morgan State University defines research misconduct in alignment with
+      42 CFR Part 93 as fabrication, falsification, or plagiarism in proposing,
+      performing, or reviewing research, or in reporting research results.
+      Fabrication is making up data or results; falsification is manipulating
+      research materials or omitting data; plagiarism is appropriating another's
+      ideas or words without credit. To rise to the level of research misconduct,
+      an allegation must represent a significant departure from accepted practices,
+      be committed intentionally/knowingly/recklessly, and be proven by a
+      preponderance of the evidence. Honest errors and differences of opinion do
+      not qualify. The Director of Research Compliance manages misconduct response
+      procedures. Resources on the ORA site include a Research Misconduct Policy
+      and a flowchart 'Responding to Research Misconduct Allegations.' Reports
+      go to ask.ora@morgan.edu or 443-885-4044.
+      Source: backend/kb_structured/research_compliance/research_misconduct/compliance_research_misconduct.json
+  assert:
+    - type: llm-rubric
+      value: "describes the research-misconduct reporting process, grounded"
