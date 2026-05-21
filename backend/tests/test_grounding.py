@@ -1,8 +1,12 @@
-"""Tests for Layer 3 grounding verification: regenerate-then-refuse.
+"""Tests for Layer 3 grounding verification: regenerate-then-deliver.
 
-Layer 3 used to only append a soft disclaimer when an answer was poorly
-grounded in the KB. It now *verifies*: a weak answer is regenerated once with a
-strict prompt, and if it is still weak it is refused rather than shown.
+When an answer is not positively verified as KB-grounded, Layer 3 regenerates
+it once under a strict KB-only prompt. The regenerated answer is then trusted
+and delivered -- Gemini returns its groundingChunks metadata unreliably (it is
+frequently empty even for a correct, grounded answer; verified live: the same
+good answer came back with chunk counts 7, 0, 0, 0 on four identical runs), so
+refusing on a low chunk count refused good answers far more often than it caught
+a genuine miss. Only an empty or errored regeneration is refused.
 
 Run from the backend/ directory:
     cd backend && ../.venv/bin/python -m pytest tests/test_grounding.py -v
@@ -117,13 +121,28 @@ def test_weak_first_pass_regenerates_and_delivers_second(monkeypatch):
     assert "Vague ungrounded guess" not in final
 
 
-def test_weak_after_regeneration_is_refused(monkeypatch):
-    """When the regenerated answer is also weak, the answer is refused outright
-    rather than shown."""
+def test_weak_after_regeneration_is_still_delivered(monkeypatch):
+    """Regression test for the over-refusal bug. The strict regeneration's
+    answer is trusted and delivered even when its grounding metadata is weak --
+    Gemini reports groundingChunks unreliably, so a non-empty strict-regenerated
+    answer must NOT be refused on a low chunk count."""
     events = _drive(
         monkeypatch,
-        _result("Vague ungrounded guess.", chunks=0, coverage=0.0),
-        _result("Another ungrounded guess.", chunks=0, coverage=0.0),
+        _result("Vague first answer.", chunks=0, coverage=0.0),
+        _result("The off-campus F&A rate is 26%.", chunks=0, coverage=0.0),
+    )
+    final = _final(events)
+    assert "off-campus F&A rate is 26%" in final
+    assert final != vertex_agent._REFUSAL_MSG
+
+
+def test_empty_regeneration_is_refused(monkeypatch):
+    """If the strict regeneration genuinely produces no answer, the response is
+    refused -- the safeguard for a real failure is preserved."""
+    events = _drive(
+        monkeypatch,
+        _result("Vague first answer.", chunks=0, coverage=0.0),
+        _result("", chunks=0, coverage=0.0),
     )
     assert _final(events) == vertex_agent._REFUSAL_MSG
 

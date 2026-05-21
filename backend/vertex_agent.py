@@ -73,10 +73,13 @@ _OUTAGE_MSG = (
 # =============================================================================
 # LAYER 3: GROUNDING VERIFICATION (regenerate-then-refuse)
 # =============================================================================
-# An answer must be grounded in the KB: at least _GROUNDING_MIN_CHUNKS cited
-# docs, OR _GROUNDING_MIN_COVERAGE of the text backed by retrieved KB passages.
-# A weak answer is regenerated once with a strict prompt; if it is still weak it
-# is refused -- never shown. See _evaluate_grounding() and _run_verified().
+# An answer is treated as verified-grounded when Gemini reports at least
+# _GROUNDING_MIN_CHUNKS cited docs OR _GROUNDING_MIN_COVERAGE coverage. That
+# metadata is unreliable (often empty even for a correct, grounded answer), so
+# when it is absent the answer is NOT refused -- it is regenerated once under a
+# strict KB-only prompt that makes the model either ground its answer or emit an
+# explicit honest deflection, and that regenerated answer is then trusted. Only
+# an empty/errored regeneration is refused. See _evaluate_grounding() / _run_verified().
 _GROUNDING_MIN_CHUNKS = 2          # >= 2 cited KB docs clears the bar
 _GROUNDING_MIN_COVERAGE = 0.3      # OR >= 30% of the answer backed by KB text
 
@@ -89,10 +92,13 @@ _REFUSAL_MSG = (
 
 # Prepended to the user's question on the regeneration pass.
 _STRICT_PREFIX = (
-    "IMPORTANT: Answer using ONLY facts found in your knowledge base search "
-    "results. Do not use outside or remembered knowledge. If the knowledge base "
-    "does not clearly contain the answer, reply exactly: \"I don't have reliable "
-    "information on this in my knowledge base.\" Never guess or approximate. "
+    "IMPORTANT: Answer strictly from the ORA knowledge base. The knowledge base "
+    "includes BOTH the knowledge-base context already provided to you AND "
+    "anything from your knowledge-base search tool -- treat both as the "
+    "knowledge base. Do not use outside or remembered knowledge. Answer the "
+    "question fully and accurately from that knowledge base. Only if the "
+    "knowledge base genuinely does not contain the answer, say you do not have "
+    "that information and point the user to ORA. Never guess or approximate. "
     "Question: "
 )
 
@@ -739,7 +745,7 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
 
     # ---- PASS 2: regenerate when the first answer is weakly grounded -----
     if verdict == "weak":
-        print(f"   [LAYER3] Weak grounding ({result['chunks']} chunks, "
+        print(f"   [LAYER3] Grounding unverified ({result['chunks']} chunks, "
               f"{result['coverage']:.0%} coverage) - regenerating with a strict prompt")
         yield {"type": "status", "content": "Double-checking sources"}
 
@@ -756,13 +762,21 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
             if (result2 and not result2.get("outage") and not result2.get("error")
                     and not result2.get("kb_fail")):
                 text2 = _clean_answer_text(result2["text"])
-                if text2 and _evaluate_grounding(text2, result2["chunks"],
-                                                 result2["coverage"], has_data) == "ok":
+                # The strict regeneration instructed the model to answer ONLY
+                # from the KB or else reply with an explicit "I don't have
+                # reliable information" deflection. Trust that outcome: a
+                # non-empty answer is either KB-grounded or the model's own
+                # honest deflection -- deliver it either way. We deliberately do
+                # NOT re-gate on the groundingChunks count here: Gemini returns
+                # that metadata unreliably (often empty even for a correct,
+                # grounded answer), and gating on it is what made Layer 3 refuse
+                # good answers.
+                if text2:
                     result, text, verdict = result2, text2, "ok"
 
-        # ---- REFUSE: still weak after regeneration ----------------------
+        # ---- REFUSE: regeneration produced no usable answer -------------
         if verdict == "weak":
-            print("   [LAYER3] Still weak after regeneration - refusing")
+            print("   [LAYER3] Regeneration produced no usable answer - refusing")
             _set_grounding(False, 0, 0.0, [])
             yield {"type": "done", "content": _REFUSAL_MSG}
             return
