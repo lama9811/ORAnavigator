@@ -1,0 +1,37 @@
+# Factual accuracy — answers grounded in the ORA knowledge base.
+# Each case: vars.kb_context holds facts copied verbatim from the named KB doc.
+
+- description: "ORA main contact — phone and email"
+  vars:
+    prompt: "How do I get in touch with the Office of Research Administration?"
+    kb_context: >
+      ORA general contact: phone 443-885-4044, email ask.ora@morgan.edu,
+      fax 443-885-8280. Source: backend/kb_structured/about/staff_directory/ora_office_contact.json
+  assert:
+    - type: contains
+      value: "443-885-4044"
+    - type: contains
+      value: "ask.ora@morgan.edu"
+
+- description: "F&A Organized Research on-campus rate is 53%"
+  vars:
+    prompt: "What is Morgan State's F&A rate for organized research on campus?"
+    kb_context: >
+      Morgan State F&A (Facilities & Administrative / indirect cost) rates,
+      FY 2024-2025 (07/01/2024-06/30/2025): Organized Research (On-Campus) 53%,
+      Instruction (On-Campus) 64%, Other Sponsored Activities (On-Campus) 42%,
+      All Programs (Off-Campus) 26%.
+      Source: backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json
+  assert:
+    - type: contains
+      value: "53%"
+
+- description: "F&A off-campus rate is 26%"
+  vars:
+    prompt: "What F&A rate applies to off-campus work at Morgan State?"
+    kb_context: >
+      Morgan State F&A rates FY 2024-2025: All Programs (Off-Campus) 26%.
+      Source: backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json
+  assert:
+    - type: contains
+      value: "26%"
