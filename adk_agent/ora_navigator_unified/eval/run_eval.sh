@@ -41,8 +41,16 @@ fi
 echo ">>> Running promptfoo eval..."
 # "${arr[@]+"${arr[@]}"}" safely expands a possibly-empty array under `set -u`
 # (bare "${arr[@]}" is an unbound-variable error on macOS's bash 3.2).
+# `|| true`: promptfoo exits non-zero (100) whenever any case fails its
+# assertions — that is the NORMAL case for this harness. score.py is the real
+# gate; the genuine-failure signal is a missing results.json, checked below.
 npx promptfoo eval -c promptfooconfig.yaml --no-cache \
-  -o "${RESULTS}" "${PROVIDER_ARGS[@]+"${PROVIDER_ARGS[@]}"}"
+  -o "${RESULTS}" "${PROVIDER_ARGS[@]+"${PROVIDER_ARGS[@]}"}" || true
+
+if [[ ! -f "${RESULTS}" ]]; then
+  echo "ERROR: promptfoo did not produce ${RESULTS} — the eval did not run." >&2
+  exit 1
+fi
 
 echo ">>> Scoring..."
 if [[ "${UPDATE_BASELINE}" -eq 1 ]]; then
