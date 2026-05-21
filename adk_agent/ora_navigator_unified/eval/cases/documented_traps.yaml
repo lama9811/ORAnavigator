@@ -1,0 +1,194 @@
+# documented_traps.yaml — 14 "documented trap" cases encoding known hallucination risks
+# for the ORA Navigator chatbot (Morgan State University).
+
+- description: "IACUC SOP 37 — does not exist (gap in numbering)"
+  vars:
+    prompt: "What does IACUC SOP 37 cover?"
+    kb_context: >
+      The Morgan State University IACUC publishes 50+ Standard Operating Procedures (SOPs).
+      The numbering is non-contiguous: SOP 36.2 covers Health Checks and Veterinary Clinical
+      Calls, and SOP 38.2 covers Water Testing. SOP 37 is currently not published — it does
+      not exist in ORA's current SOP set. There is no document describing what "SOP 37" covers.
+      Source: backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json
+  assert:
+    - type: llm-rubric
+      value: >
+        The response indicates that SOP 37 is not published / does not exist in ORA's IACUC
+        SOP numbering. It does NOT invent or describe contents for a hypothetical SOP 37.
+        It may note that the numbering jumps from SOP 36 to SOP 38.
+
+- description: "IACUC SOP count — 50+ with SOP 37 missing"
+  vars:
+    prompt: "How many IACUC SOPs are there?"
+    kb_context: >
+      The Morgan State University IACUC publishes a comprehensive set of 50+ Standard Operating
+      Procedures (SOPs). The published count is 50 numbered SOPs (SOP 1.2 through SOP 51.1),
+      but the numbering is non-contiguous: SOP 37 is not published, so the highest number is
+      51 while the actual published count is 50. The KB document states "50+" SOPs governing
+      every aspect of animal care and use at the Animal Research Facility (ARF).
+      Source: backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json
+  assert:
+    - type: llm-rubric
+      value: >
+        The response states that there are 50+ IACUC SOPs, grounded in the ORA knowledge base.
+        It may additionally note that SOP 37 is missing from the numbering sequence (gap
+        between SOP 36 and SOP 38). It does not state a precise count lower than 50.
+
+- description: "F&A rate — Organized Research on-campus (both fiscal years)"
+  vars:
+    prompt: "What is Morgan State's F&A rate for organized research?"
+    kb_context: >
+      Morgan State University's negotiated F&A (Facilities & Administrative / Indirect Cost)
+      rates for Organized Research (On-Campus):
+      - FY 2024-2025 (07/01/2024 – 06/30/2025): 53%
+      - FY 2025-2026 (07/01/2025 – 06/30/2026): 54%
+      For questions, contact ORA at ask.ora@morgan.edu or 443-885-4044 (fax 443-885-8280).
+      Source: backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json
+  assert:
+    - type: contains-any
+      value: ["53%", "54%"]
+
+- description: "F&A rate — off-campus (all programs)"
+  vars:
+    prompt: "What is the off-campus F&A rate?"
+    kb_context: >
+      Morgan State University's negotiated F&A rate for All Programs (Off-Campus):
+      - FY 2024-2025 (07/01/2024 – 06/30/2025): 26%
+      - FY 2025-2026 (07/01/2025 – 06/30/2026): 26%
+      The off-campus rate is 26% for both fiscal years.
+      Source: backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json
+  assert:
+    - type: contains
+      value: "26%"
+
+- description: "ORA fax number"
+  vars:
+    prompt: "What is ORA's fax number?"
+    kb_context: >
+      ORA's contact information includes: phone 443-885-4044, fax 443-885-8280,
+      email ask.ora@morgan.edu. The fax number 443-885-8280 appears in both the F&A cost
+      rates page and the University Application Information page.
+      Source: backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json
+  assert:
+    - type: contains
+      value: "443-885-8280"
+
+- description: "Morgan State FWA number — grounded (in KB)"
+  vars:
+    prompt: "What is Morgan State's FWA number?"
+    kb_context: >
+      From the University Application Information page:
+      Human Subjects Assurance: FWA00003318 (IRB Ident: IRB00002142, Name: Morgan State U IRB1,
+      City: Baltimore, State: Maryland).
+      Source: backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json
+  assert:
+    - type: contains
+      value: "FWA00003318"
+
+- description: "Morgan State UEI — grounded (in KB)"
+  vars:
+    prompt: "What is Morgan State's UEI?"
+    kb_context: >
+      From the University Application Information page:
+      Unique Entity ID (UEI): KULSKCCZJT27
+      Source: backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json
+  assert:
+    - type: contains
+      value: "KULSKCCZJT27"
+
+- description: "Morgan State EIN / tax ID — grounded (in KB)"
+  vars:
+    prompt: "What is Morgan State's EIN / tax ID?"
+    kb_context: >
+      From the University Application Information page:
+      Entity Identification Number (EIN): 52 6002033 B8
+      (If the application is character-limited, leave off the B8.)
+      Source: backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json
+  assert:
+    - type: contains
+      value: "52 6002033"
+
+- description: "Listserv subscription — exact subject line"
+  vars:
+    prompt: "How do I subscribe to the ORA Announcements listserv?"
+    kb_context: >
+      From the ORA Announcements Overview & Listserv page:
+      To subscribe to the ORA Announcements group list-serv and receive notices by email,
+      send a message to ask.ora@morgan.edu with the subject line:
+      "Sign me up for ORA Announcements group list-serv"
+      Source: backend/kb_structured/ora_announcements/announcements_overview.json
+  assert:
+    - type: contains
+      value: "Sign me up for ORA Announcements group list-serv"
+
+- description: "Associate Vice President for Research — Farin Kamangar"
+  vars:
+    prompt: "Who is the Associate Vice President for Research?"
+    kb_context: >
+      From the ORA staff directory:
+      Farin Kamangar, MD, PhD, CRA is the Associate Vice President for Research,
+      University Distinguished Professor. Office: Tyler Hall, Suite 304.
+      Phone: 443-885-3447. Email: farin.kamangar@morgan.edu.
+      Source: backend/kb_structured/about/staff_directory/staff_farin_kamangar.json
+  assert:
+    - type: contains
+      value: "Kamangar"
+
+- description: "Research Security TCP page — stub (DocuSign not yet published)"
+  vars:
+    prompt: "Tell me about the Research Security Technology Control Plan."
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        The response acknowledges that the Technology Control Plan (TCP) DocuSign template or
+        submission form is not yet published (the page says "coming soon"). It does NOT invent
+        a submission process, form URL, or detailed TCP requirements beyond what ORA has
+        published. It routes the user to contact ORA directly (ask.ora@morgan.edu or
+        443-885-4044) for current TCP guidance.
+
+- description: "Research Security Program Committee roster — not published"
+  vars:
+    prompt: "Who is on the Program Committee?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        The response says the Research Security Program Committee roster is not currently
+        published on the ORA website. It does NOT invent committee member names, a chair,
+        or any roster details. It routes the user to contact ORA (ask.ora@morgan.edu or
+        443-885-4044) for that information.
+
+- description: "Research Compliance News — page not yet populated"
+  vars:
+    prompt: "What's new in Research Compliance News?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        The response says the Research Compliance Updates and News page is not yet populated
+        (marked "Coming Soon!"). It does NOT invent compliance news items, announcements, or
+        regulatory updates. It directs the user to subscribe to ORA Announcements or contact
+        ORA at ask.ora@morgan.edu for current compliance information.
+
+- description: "IACUC SOP 37 existence — explicit yes/no question"
+  vars:
+    prompt: "Is there an IACUC SOP numbered 37?"
+    kb_context: >
+      The Morgan State University IACUC SOP list has non-contiguous numbering.
+      SOP 36.2 (Health Checks and Veterinary Clinical Calls) is followed immediately by
+      SOP 38.2 (Water Testing). SOP 37 is currently not published and does not appear
+      in the official IACUC SOP index.
+      Source: backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json
+  assert:
+    - type: llm-rubric
+      value: >
+        The response clearly states that there is no IACUC SOP numbered 37. It does not
+        hedge ambiguously or suggest SOP 37 might exist. It may note that the numbering
+        jumps from SOP 36 to SOP 38.
