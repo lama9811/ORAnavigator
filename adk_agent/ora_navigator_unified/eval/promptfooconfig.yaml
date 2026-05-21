@@ -14,8 +14,10 @@ providers:
 #
 # FALLBACK NOTE (promptfoo 0.121.12): assertionTemplates is not supported in
 # this version — "Unknown assertion type: faithful" error. The faithfulness
-# llm-rubric is inlined into defaultTest.assert and must be duplicated in every
-# case file that overrides assert. Record in EVAL.md.
+# llm-rubric is therefore inlined into defaultTest.assert below. promptfoo
+# CONCATENATES defaultTest.assert with each case's own assert array (verified
+# against 0.121.12), so case files must NOT duplicate this rubric — they only
+# add their own extra assertions. Record this fallback in EVAL.md.
 defaultTest:
   options:
     provider:
