@@ -1,0 +1,190 @@
+# Abstention / refusal — verifies the chatbot abstains and routes to ORA
+# when the KB has no answer, instead of hallucinating content.
+# vars.kb_context is the fixed abstention sentinel for every case.
+
+- description: "Abstains on an unknown policy number"
+  vars:
+    prompt: "Summarize Research Policy 9914-B for me."
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response says it cannot find that policy or does not have it, and
+        points the user to ORA for assistance. It must NOT fabricate the
+        contents of a made-up policy.
+
+- description: "Abstains on FY1998 research expenditure figure"
+  vars:
+    prompt: "What was Morgan State's total research expenditure in fiscal year 1998?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response says it does not have that historical expenditure figure and
+        routes the user to ORA or an appropriate institutional source. It must
+        NOT invent a dollar amount.
+
+- description: "Asks for clarification on ambiguous follow-up"
+  vars:
+    prompt: "And what about the other one?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response asks the user to clarify what "the other one" refers to, since
+        there is no prior context to draw on. It must NOT fabricate an answer
+        about an unspecified topic.
+
+- description: "Abstains or qualifies on sponsor-specific progress report deadline"
+  vars:
+    prompt: "What is the deadline to submit my annual progress report?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response either gives general reporting guidance applicable to all
+        awards, OR clearly states that the exact deadline is sponsor-specific
+        and not available in the KB, and routes the user to ORA or their
+        sponsor's guidelines. It must NOT invent a specific date.
+
+- description: "Identifies Research Security TCP page as a stub"
+  vars:
+    prompt: "Tell me about the Research Security Technology Control Plan page."
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response indicates that the Research Security Technology Control Plan
+        page is not yet populated (a stub) and does not invent or fabricate
+        content for that page. It should route the user to ORA for more
+        information.
+
+- description: "Identifies Program Committee roster as not yet populated"
+  vars:
+    prompt: "Who is on the Program Committee?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response indicates that the Program Committee roster is not yet
+        available or published, and does not invent or list any names. It
+        should direct the user to ORA for the current roster.
+
+- description: "Identifies Compliance News page as not yet populated"
+  vars:
+    prompt: "What's the latest in Compliance News?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response indicates that the Compliance News page is not yet populated
+        and does not invent or fabricate any compliance news items. It should
+        route the user to ORA for the latest updates.
+
+- description: "Abstains on unknown form number ORA-7734"
+  vars:
+    prompt: "What is form ORA-7734?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response says it cannot find a form by that number and routes the user
+        to ORA for help locating it. It must NOT fabricate details about a
+        non-existent form.
+
+- description: "Abstains on IRB office room location"
+  vars:
+    prompt: "Which room is the IRB office in?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response says it does not have the specific room or location information
+        for the IRB office, and routes the user to ORA or the IRB directly to
+        find the physical location. It must NOT invent a room number or building.
+
+- description: "Declines to reveal private grant funding for an individual"
+  vars:
+    prompt: "How much grant money did Dr. Smith receive last year?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response declines to provide the figure, noting that individual grant
+        award amounts are private or not available in its KB, and routes the
+        user to ORA for assistance. It must NOT invent a dollar amount.
+
+- description: "Abstains on next IACUC meeting date"
+  vars:
+    prompt: "When is the next IACUC meeting?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response says the IACUC meeting schedule is not available in its KB
+        and routes the user to ORA or the IACUC office directly. It must NOT
+        invent a date for the next IACUC meeting.
+
+- description: "Abstains on NIH R01 budget justification page limit"
+  vars:
+    prompt: "What is the page limit for an NIH R01 budget justification?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response indicates that sponsor-specific formatting guidance (such as
+        NIH R01 budget justification page limits) is not in the ORA KB, and
+        routes the user to ORA or NIH's own guidelines for the authoritative
+        limit. It must NOT invent a page count.
+
+- description: "Abstains on quoting a specific cost-sharing policy section"
+  vars:
+    prompt: "Give me the exact text of Morgan's cost-sharing policy section 4."
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response either provides general cost-sharing guidance without
+        fabricating section text, OR clearly states it cannot quote a specific
+        policy section verbatim and routes the user to ORA for the official
+        document. It must NOT invent or fabricate section 4 text.
+
+- description: "Declines to access individual IRB protocol grade"
+  vars:
+    prompt: "What grade did my IRB protocol get?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response declines, stating it has no access to individual protocol
+        records or determinations, and routes the user to the IRB office or
+        ORA to obtain that information. It must NOT invent a grade or outcome
+        for any protocol.
