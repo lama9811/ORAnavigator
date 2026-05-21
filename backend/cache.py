@@ -35,10 +35,10 @@ logger = logging.getLogger(__name__)
 
 # L1 (In-Memory) Settings
 L1_CACHE_MAX_SIZE = 500  # Smaller since Redis is L2
-L1_CACHE_TTL_SECONDS = 3600  # 1 hour for L1 (hot cache)
+L1_CACHE_TTL_SECONDS = 86400  # 24 hours for L1 (hot cache)
 
 # L2 (Redis) Settings
-L2_CACHE_TTL_SECONDS = 28800  # 8 hours for Redis
+L2_CACHE_TTL_SECONDS = 604800  # 7 days for Redis
 
 # Semantic Cache Settings
 SEMANTIC_SIMILARITY_THRESHOLD = 0.95  # Cosine sim threshold (0.95 = near-exact match only, prevents cross-topic false positives)
@@ -534,11 +534,12 @@ class MultiTierCache:
 
         # L3: Semantic similarity (catches rephrased versions of the same question)
         # 0.95 threshold = safe, only near-identical matches. Saves a full Gemini call (~4s)
-        if not context_hash:
-            response = self.semantic.get(query)
-            if response is not None:
-                self.l1.set(key, response)
-                return response
+        # Runs regardless of context_hash: the semantic layer matches on query
+        # meaning, not on the model-specific exact key used by L1/L2.
+        response = self.semantic.get(query)
+        if response is not None:
+            self.l1.set(key, response)
+            return response
 
         logger.info(f"[CACHE] MISS for: {query[:50]}...")
         return None
@@ -564,9 +565,8 @@ class MultiTierCache:
         self.l1.set(key, response)
         self.l2.set(key, response)
 
-        # L3: Store embedding for semantic similarity matching
-        if not context_hash:
-            self.semantic.set(query, response)
+        # L3: Store embedding for semantic similarity matching (model-agnostic)
+        self.semantic.set(query, response)
 
         logger.info(f"[CACHE] Stored in L1+L2+SEM: {query[:50]}...")
         return True
