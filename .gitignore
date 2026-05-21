@@ -115,3 +115,6 @@ generate_pdf.py
 
 # Debug screenshots
 login-*.png
+
+# Eval results (generated, not committed)
+adk_agent/ora_navigator_unified/eval/results.json
