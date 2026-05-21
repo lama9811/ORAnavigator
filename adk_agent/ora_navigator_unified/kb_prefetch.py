@@ -121,6 +121,17 @@ def _load_cache() -> dict[str, dict]:
         return dict(_cache)
 
 
+def warm_cache() -> None:
+    """Trigger the KB doc-cache load at startup (non-blocking).
+
+    Without this, the cache loads lazily on the first request -- and
+    prefetch_kb_context() returns nothing until that background load finishes,
+    so the first user after a cold start gets no prefetched grounding context.
+    Calling this at agent startup closes that gap.
+    """
+    _load_cache()
+
+
 _ORA_ACRONYM_RE = re.compile(
     r"\b(IRB|IACUC|IBC|COI|RCR|D[- ]?RED|NCE|F&A|FWA\d{0,12}|UEI|EIN|"
     r"RACC|PCard|IDC|HHS|NIH|NSF|USDA|OLAW|OHRP|TCP|OVPRED)\b",
@@ -141,7 +152,7 @@ def _extract_entities(query: str) -> list[str]:
     return out
 
 
-def prefetch_kb_context(query: str, top_k: int = 3) -> str:
+def prefetch_kb_context(query: str, top_k: int = 5) -> str:
     """Search cached KB docs with TF-IDF scoring, return formatted context."""
     docs = _load_cache()
     if not docs:

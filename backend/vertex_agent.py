@@ -22,9 +22,9 @@ import hashlib
 import time as time_module
 import requests
 from typing import Optional
-# Gates (retrieval_gate, verification_gate, fast_retrieval) available as admin utilities
-# but removed from the hot path. The agent's built-in VertexAiSearchTool handles
-# retrieval. The grounding gate + faculty faithfulness check handle quality.
+# Retrieval is agent-first: the ADK agent's built-in VertexAiSearchTool handles
+# KB search. Answer quality is handled here by Layer 3 (_run_verified -- grounding
+# verification with regenerate-then-refuse) plus the faithfulness checks.
 
 # Configuration
 ADK_BASE_URL = os.getenv("ADK_BASE_URL", "http://127.0.0.1:8080")
@@ -70,11 +70,43 @@ _OUTAGE_MSG = (
     "Please try again in a minute. If the problem persists, contact ORA at 443-885-4044."
 )
 
-# Grounding validation: minimum thresholds before flagging a response
-_GROUNDING_MIN_CHUNKS = 2       # At least 2 KB docs must be cited
-_GROUNDING_DISCLAIMER = (
-    "\n\n---\n*I may not have complete information on this topic in my knowledge base. "
-    "Please verify with ORA at 443-885-4044 or ask.ora@morgan.edu.*"
+# =============================================================================
+# LAYER 3: GROUNDING VERIFICATION (regenerate-then-refuse)
+# =============================================================================
+# An answer must be grounded in the KB: at least _GROUNDING_MIN_CHUNKS cited
+# docs, OR _GROUNDING_MIN_COVERAGE of the text backed by retrieved KB passages.
+# A weak answer is regenerated once with a strict prompt; if it is still weak it
+# is refused -- never shown. See _evaluate_grounding() and _run_verified().
+_GROUNDING_MIN_CHUNKS = 2          # >= 2 cited KB docs clears the bar
+_GROUNDING_MIN_COVERAGE = 0.3      # OR >= 30% of the answer backed by KB text
+
+# Shown instead of an ungrounded answer when regeneration also fails.
+_REFUSAL_MSG = (
+    "I don't have reliable information on this in my knowledge base, so I'd "
+    "rather not guess. Please contact ORA at 443-885-4044 or ask.ora@morgan.edu "
+    "for accurate, up-to-date guidance."
+)
+
+# Prepended to the user's question on the regeneration pass.
+_STRICT_PREFIX = (
+    "IMPORTANT: Answer using ONLY facts found in your knowledge base search "
+    "results. Do not use outside or remembered knowledge. If the knowledge base "
+    "does not clearly contain the answer, reply exactly: \"I don't have reliable "
+    "information on this in my knowledge base.\" Never guess or approximate. "
+    "Question: "
+)
+
+# An answer that is already an honest "I don't have this" / "not published".
+# A low grounding score on these is correct, not a hallucination, so they are
+# delivered as-is -- never regenerated or refused.
+_HONEST_DEFLECTION_RE = re.compile(
+    r"based on the information i have access to"
+    r"|i (?:don'?t|do not|cannot|can'?t) (?:have|find|provide|locate|access)"
+    r"|don'?t have reliable information"
+    r"|not (?:published|yet available|currently available|listed)"
+    r"|isn'?t (?:published|available|listed)"
+    r"|no (?:published |specific )?information",
+    re.IGNORECASE,
 )
 
 # Patterns that are inherently non-KB (greetings, security refusals, outages)
@@ -139,26 +171,32 @@ def _check_faculty_faithfulness(text: str) -> list[str]:
     return hallucinated
 
 
-def _apply_grounding_gate(text: str, chunks: int, coverage: float = 0.0, has_attached_context: bool = False) -> str:
-    """Append a disclaimer when the agent answered with insufficient data sources.
+def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_context: bool) -> str:
+    """Classify an answer's KB grounding as 'ok' or 'weak'.
 
-    Checks both chunk count AND coverage ratio. A response needs either:
-    - At least 2 KB chunks cited, OR
-    - Coverage >= 0.3 (30% of response backed by KB), OR
-    - Attached context present (account profile or uploaded file content)
+    'weak' means the answer is not backed by the knowledge base and should be
+    regenerated (and, if still weak, refused). 'ok' means deliver it.
 
-    This prevents responses that cite 1 chunk but are 90% hallucinated from passing.
+    An answer is 'ok' when ANY of these hold:
+      - it is a greeting / security / outage reply (no KB needed),
+      - it is already an honest "I don't have this" deflection,
+      - it was answered from attached context (uploaded file / profile),
+      - it cites >= _GROUNDING_MIN_CHUNKS KB docs, or
+      - >= _GROUNDING_MIN_COVERAGE of it is backed by retrieved KB text.
     """
-    if not text or _SKIP_GROUNDING_RE.match(text):
-        return text
+    if not text:
+        return "weak"
+    if _SKIP_GROUNDING_RE.match(text):
+        return "ok"
+    if _HONEST_DEFLECTION_RE.search(text):
+        return "ok"
     if has_attached_context:
-        return text
+        return "ok"
     if chunks >= _GROUNDING_MIN_CHUNKS:
-        return text
-    if coverage >= 0.3:
-        return text
-    print(f"   [GROUNDING] Low confidence ({chunks} chunks, {coverage:.1%} coverage, no attached context) - appending disclaimer")
-    return text + _GROUNDING_DISCLAIMER
+        return "ok"
+    if coverage >= _GROUNDING_MIN_COVERAGE:
+        return "ok"
+    return "weak"
 
 
 # =============================================================================
@@ -412,38 +450,54 @@ def _cache_session(user_id: str, session_id: str, context: str = "", model: str 
     }
 
 
-def query_agent(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = "") -> str:
-    """
-    Send a query to the ORA Navigator agent and return the final text response.
+def _ensure_session(user_id: str, context: str = "", model: str = "", memory_context: str = "") -> str:
+    """Return a valid ADK session id -- a reused one when context/model are
+    unchanged, otherwise a freshly created one. Returns "" if creation fails."""
+    session_id = _get_valid_session(user_id, context, model)
+    if session_id:
+        return session_id
+    state = {}
+    if context:
+        state["user_context"] = context
+    if memory_context:
+        state["memory"] = memory_context
+    if model:
+        state["model_preference"] = model
+    session_id = _create_session(user_id, state=state if state else None)
+    if session_id:
+        _cache_session(user_id, session_id, context, model)
+    return session_id
 
-    Reuses ADK sessions when the user's attached context hasn't changed.
-    Memory data is sent via state_delta (volatile, changes often).
+
+def query_agent(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = "") -> str:
+    """Send a query to the ORA Navigator agent and return the final text answer.
+
+    Buffers the answer, verifies its KB grounding, regenerates once with a strict
+    prompt if it is weak, and refuses rather than return an ungrounded answer
+    (Layer 3). Used by the non-streaming /chat and /chat/guest endpoints.
 
     Args:
         query: The user's question
         user_id: Unique user identifier
-        context: Attached context — account profile and/or uploaded file content
-                 (injected into session state, stable across a session)
-        model: Model preference ("inav-1.0" or "inav-1.1")
+        context: Attached context -- account profile and/or uploaded file content
+        model: Model preference ("inav-1.0" / "inav-1.1" / "inav-2.0")
         memory_context: Long-term user memory (sent via state_delta, volatile)
     """
-    # Session reuse: hash the attached context for invalidation
-    session_id = _get_valid_session(user_id, context, model)
-
+    session_id = _ensure_session(user_id, context, model, memory_context)
     if not session_id:
-        state = {}
-        if context:
-            state["user_context"] = context
-        if memory_context:
-            state["memory"] = memory_context
-        if model:
-            state["model_preference"] = model
-        session_id = _create_session(user_id, state=state if state else None)
-        if not session_id:
-            return _OUTAGE_MSG
-        _cache_session(user_id, session_id, context, model)
+        return _OUTAGE_MSG
 
-    return _run_query(query, user_id, session_id, context=context, model=model, memory_context=memory_context)
+    final = "I'm sorry, I couldn't generate a response. Please try rephrasing your question."
+    for event in _run_verified(query, user_id, session_id, context=context,
+                               model=model, memory_context=memory_context):
+        etype = event.get("type")
+        if etype == "done":
+            final = event.get("content") or final
+        elif etype == "error":
+            return event.get("content") or _OUTAGE_MSG
+        # 'status' / 'citations' events: not needed here -- the non-streaming
+        # callers read citations separately via get_last_grounding().
+    return final
 
 
 # Per-request grounding metadata. In async single-worker (uvicorn default),
@@ -463,27 +517,60 @@ def _set_grounding(kb_grounded: bool, chunks: int, coverage: float, citations: O
     }
 
 
-def _run_query(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", memory_context: str = "") -> str:
-    """Send a query to the ADK and parse the SSE response.
+def _clean_answer_text(text: str) -> str:
+    """Strip citation artifacts, empty code blocks, leaked rate-limit errors,
+    and self-disclosure phrases from a raw agent answer."""
+    if not text:
+        return ""
+    text = re.sub(r'\s*\[cite:\s*[^\]]*\]', '', text).strip()
+    if text in ("```", "``` ```", "``````"):
+        return "I wasn't able to generate a proper response. Please try asking again."
+    if "429" in text and "RESOURCE_EXHAUSTED" in text:
+        return "The system is busy right now. Please try again in a moment."
+    text = re.sub(r'I am programmed to be a helpful[^.]*\.',
+                  'I can only help with Morgan State University academic questions.', text)
+    text = re.sub(r'I am still under development[^.]*\.', '', text).strip()
+    text = re.sub(r'I am a language model[^.]*\.', '', text).strip()
+    return text
 
-    Fast in-memory retrieval runs BEFORE the ADK call (<5ms) to collect
-    doc_texts for the post-agent VERIFICATION gate. The agent has its own
-    VertexAiSearchTool for context; retrieval results here are only for
-    verification.
+
+def _finalize_answer(text: str, grounded_corpus: str) -> str:
+    """Apply the soft faithfulness guardrails + procedure links to a *delivered*
+    answer (one that already cleared the grounding check)."""
+    hallucinated = _check_faculty_faithfulness(text)
+    if hallucinated and _FAITHFULNESS_DISCLAIMER not in text:
+        print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
+        text = text + _FAITHFULNESS_DISCLAIMER
+    unverified_ids = _check_identifier_faithfulness(text, grounded_corpus)
+    if unverified_ids and _IDENTIFIER_DISCLAIMER not in text:
+        print(f"   [FAITHFULNESS] Unverified identifiers: {unverified_ids}")
+        text = text + _IDENTIFIER_DISCLAIMER
+    return _inject_procedure_links(text)
+
+
+def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "",
+                   model: str = "", memory_context: str = "", retried: bool = False):
+    """One round-trip to the ADK agent.
+
+    A generator: yields {"type": "status", ...} events as the agent calls tools,
+    then finally yields exactly one {"type": "_result", "data": {...}} event.
+
+    The result dict has: text, chunks, coverage, citations, grounded_corpus,
+    kb_fail (bool), outage (bool), error (str or None). It is the *raw* pass --
+    no grounding verdict and no faithfulness gates are applied here.
     """
-    _set_grounding(False, 0, 0.0)  # reset; a failed call must not leak stale citations
-    # Build ADK payload (no retrieval context injected; agent searches KB itself)
+    result = {
+        "text": "", "chunks": 0, "coverage": 0.0, "citations": [],
+        "grounded_corpus": "", "kb_fail": False, "outage": False, "error": None,
+    }
     try:
         payload = {
             "app_name": ADK_APP_NAME,
             "user_id": user_id,
             "session_id": session_id,
-            "new_message": {
-                "role": "user",
-                "parts": [{"text": message}],
-            },
+            "new_message": {"role": "user", "parts": [{"text": message}]},
         }
-        # Send volatile data via state_delta (memory changes often, model per-request)
+        # Volatile data via state_delta (memory changes often, model per-request)
         state_delta = {}
         if model:
             state_delta["model_preference"] = model
@@ -500,147 +587,193 @@ def _run_query(message: str, user_id: str, session_id: str, retried: bool = Fals
             timeout=120,
         )
 
-        # Handle "Session not found": recreate with context + memory state and retry once
+        # "Session not found": recreate the session and retry the pass once.
         if resp.status_code == 404 and not retried:
             print(f"   ADK session {session_id} not found, creating a new one...")
             _session_cache.pop(user_id, None)
-            state = {}
-            if context:
-                state["user_context"] = context
-            if memory_context:
-                state["memory"] = memory_context
-            if model:
-                state["model_preference"] = model
-            new_session_id = _create_session(user_id, state=state if state else None)
+            new_session_id = _ensure_session(user_id, context, model, memory_context)
             if new_session_id:
-                _cache_session(user_id, new_session_id, context, model)
-                return _run_query(message, user_id, new_session_id, retried=True, context=context, model=model, memory_context=memory_context)
-            return _OUTAGE_MSG
+                yield from _do_agent_pass(message, user_id, new_session_id, context,
+                                          model, memory_context, retried=True)
+                return
+            result["outage"] = True
+            yield {"type": "_result", "data": result}
+            return
 
         resp.raise_for_status()
 
-        # Parse SSE events and extract the final text response + grounding metadata
+        # Map tool/agent names to user-friendly status messages
+        TOOL_STATUS_MAP = {
+            "vertex_ai_search": "Searching knowledge base",
+            "discovery_engine_search": "Searching knowledge base",
+        }
+
         final_text = ""
-        grounding_chunks = 0
-        grounding_coverage = 0.0
-        grounding_citations: list = []
-        grounded_corpus = ""
         for line in resp.iter_lines():
             if not line:
                 continue
             decoded = line.decode("utf-8")
             if not decoded.startswith("data: "):
                 continue
-
-            json_str = decoded[6:]  # Strip "data: " prefix
             try:
-                event = json.loads(json_str)
+                event = json.loads(decoded[6:])  # strip "data: " prefix
             except json.JSONDecodeError:
                 continue
 
-            # Extract grounding metadata (tells us if KB search returned results)
+            # Grounding metadata (how many KB docs, how much coverage)
             gm = event.get("groundingMetadata")
             if gm:
                 chunks = gm.get("groundingChunks", [])
                 supports = gm.get("groundingSupports", [])
-                grounding_chunks = len(chunks)
+                result["chunks"] = len(chunks)
                 if chunks:
-                    grounding_citations = _extract_citations(chunks)
-                    grounded_corpus = _join_chunk_texts(chunks)
-                # Coverage: what fraction of the response is grounded in KB results
+                    result["citations"] = _extract_citations(chunks)
+                    result["grounded_corpus"] = _join_chunk_texts(chunks)
                 if supports and final_text:
                     total_chars = len(final_text)
                     grounded_chars = sum(
                         s.get("segment", {}).get("endIndex", 0) - s.get("segment", {}).get("startIndex", 0)
                         for s in supports
                     )
-                    grounding_coverage = grounded_chars / total_chars if total_chars > 0 else 0.0
+                    result["coverage"] = grounded_chars / total_chars if total_chars > 0 else 0.0
                 elif chunks:
-                    grounding_coverage = 0.5  # Has chunks but no segment info
-                    print(f"   [GROUNDING] Chunks present ({grounding_chunks}) but no segment data - using conservative 0.5 coverage")
+                    result["coverage"] = 0.5  # chunks present but no segment data
+                    print(f"   [GROUNDING] Chunks present ({result['chunks']}) but no segment data - using conservative 0.5 coverage")
 
-            # Extract text from model responses (skip function_call / function_response)
             content = event.get("content", {})
             if not isinstance(content, dict):
                 continue
-
             role = content.get("role", "")
-            if role != "model":
-                continue
-
             parts = content.get("parts", [])
+
+            # Tool calls -> user-facing status updates
             for part in parts:
-                if isinstance(part, dict) and "text" in part:
-                    final_text = part["text"]  # Keep last model text (the final answer)
+                if isinstance(part, dict) and "functionCall" in part:
+                    func_name = part["functionCall"].get("name", "")
+                    args = part["functionCall"].get("args", {})
+                    if func_name == "transfer_to_agent":
+                        agent_name = args.get("agent_name", "specialist")
+                        status = TOOL_STATUS_MAP.get(agent_name, f"Consulting {agent_name.replace('_', ' ')}")
+                    else:
+                        status = TOOL_STATUS_MAP.get(func_name, f"Processing {func_name.replace('_', ' ')}")
+                    yield {"type": "status", "content": status}
 
-        # Store grounding signal for research_agent to read (thread-local)
-        _set_grounding(grounding_chunks > 0, grounding_chunks, grounding_coverage, citations=grounding_citations)
+            # Keep the last model text part (the final answer)
+            if role == "model":
+                for part in parts:
+                    if isinstance(part, dict) and "text" in part and part["text"].strip():
+                        final_text = part["text"]
 
-        if final_text:
-            # Clean up citation artifacts from Gemini grounding
-            final_text = re.sub(r'\s*\[cite:\s*[^\]]*\]', '', final_text).strip()
+        # Retry once if Gemini self-reported a (transient) KB access failure
+        if _KB_FAIL_RE.search(final_text) and not retried:
+            print("   [RETRY] Gemini reported KB access failure, retrying once...")
+            time_module.sleep(2)
+            yield from _do_agent_pass(message, user_id, session_id, context,
+                                      model, memory_context, retried=True)
+            return
 
-            # Strip empty code blocks (Gemini 2.0 Flash sometimes returns ``` with nothing)
-            if final_text.strip() in ("```", "``` ```", "``````"):
-                final_text = "I wasn't able to generate a proper response. Please try asking again."
-
-            # Catch 429 rate limit errors leaked into response
-            if "429" in final_text and "RESOURCE_EXHAUSTED" in final_text:
-                final_text = "The system is busy right now. Please try again in a moment."
-
-            # Strip self-disclosure phrases (Gemini sometimes ignores instruction)
-            final_text = re.sub(r'I am programmed to be a helpful[^.]*\.', 'I can only help with Morgan State University academic questions.', final_text)
-            final_text = re.sub(r'I am still under development[^.]*\.', '', final_text).strip()
-            final_text = re.sub(r'I am a language model[^.]*\.', '', final_text).strip()
-
-            # Retry once if Gemini self-reported a KB access failure (transient Vertex AI Search issue)
-            if _KB_FAIL_RE.search(final_text) and not retried:
-                print("   [RETRY] Gemini reported KB access failure, retrying once...")
-                time_module.sleep(2)
-                return _run_query(message, user_id, session_id, retried=True, context=context, model=model, memory_context=memory_context)
-
-            # Grounding validation gate: flag low-grounded responses
-            has_data = bool(context)
-            final_text = _apply_grounding_gate(final_text, grounding_chunks, coverage=grounding_coverage, has_attached_context=has_data)
-
-            # Faithfulness gate: flag responses naming non-ORA-staff "Dr./Prof. X"
-            hallucinated = _check_faculty_faithfulness(final_text)
-            if hallucinated:
-                print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
-                if _FAITHFULNESS_DISCLAIMER not in final_text:
-                    final_text = final_text + _FAITHFULNESS_DISCLAIMER
-
-            # Identifier faithfulness gate: flag SOP/FWA/EIN/UEI numbers and rates
-            # that don't appear in the retrieved KB text
-            unverified_ids = _check_identifier_faithfulness(final_text, grounded_corpus)
-            if unverified_ids:
-                print(f"   [FAITHFULNESS] Unverified identifiers: {unverified_ids}")
-                if _IDENTIFIER_DISCLAIMER not in final_text:
-                    final_text = final_text + _IDENTIFIER_DISCLAIMER
-
-            # Inject procedure guide Drive links if the agent omitted them
-            final_text = _inject_procedure_links(final_text)
-
-            return final_text
-        else:
-            return "I'm sorry, I couldn't generate a response. Please try rephrasing your question."
+        result["text"] = final_text
+        result["kb_fail"] = bool(_KB_FAIL_RE.search(final_text))
+        yield {"type": "_result", "data": result}
 
     except requests.exceptions.ConnectionError:
         print("   [OUTAGE] ADK server not reachable")
-        return _OUTAGE_MSG
+        result["outage"] = True
+        yield {"type": "_result", "data": result}
     except requests.exceptions.Timeout:
         print("   [OUTAGE] ADK query timed out after 120s")
-        return "The request took too long. Please try a simpler question or try again in a moment."
+        result["error"] = "The request took too long. Please try a simpler question or try again in a moment."
+        yield {"type": "_result", "data": result}
     except Exception as e:
         error_str = str(e)
-        if "403" in error_str or "Forbidden" in error_str:
-            print(f"   [OUTAGE] ADK returned 403 Forbidden: {e}")
-            return _OUTAGE_MSG
-        elif "API key" in error_str:
-            print(f"   [OUTAGE] ADK missing API key / Vertex AI config: {e}")
-            return _OUTAGE_MSG
-        print(f"   ADK query error: {e}")
-        return "An error occurred while processing your question. Please try again."
+        if "403" in error_str or "Forbidden" in error_str or "API key" in error_str:
+            print(f"   [OUTAGE] ADK auth/config error: {e}")
+            result["outage"] = True
+        else:
+            print(f"   ADK pass error: {e}")
+            result["error"] = "An error occurred while processing your question. Please try again."
+        yield {"type": "_result", "data": result}
+
+
+def _run_verified(message: str, user_id: str, session_id: str, context: str = "",
+                  model: str = "", memory_context: str = ""):
+    """Layer 3 orchestrator: run the agent, verify the answer is grounded in the
+    KB, regenerate once with a strict prompt if it is weak, and refuse rather
+    than deliver an ungrounded answer.
+
+    A generator: yields {"type": "status", ...} progress events, then exactly one
+    terminal event -- {"type": "done", "content": <answer>} or
+    {"type": "error", "content": <message>} -- optionally preceded by a
+    {"type": "citations", "content": [...]} event.
+
+    Both /chat (via query_agent) and /chat/stream (via query_agent_stream)
+    consume this. The buffered answer is delivered only after verification, so an
+    ungrounded answer is never shown to the user.
+    """
+    _set_grounding(False, 0, 0.0)  # reset; a failed run must not leak stale citations
+    yield {"type": "status", "content": "Searching knowledge base"}
+
+    # ---- PASS 1 ----------------------------------------------------------
+    result = None
+    for ev in _do_agent_pass(message, user_id, session_id, context, model, memory_context):
+        if ev["type"] == "_result":
+            result = ev["data"]
+        else:
+            yield ev
+
+    if result is None or result.get("outage") or result.get("kb_fail"):
+        yield {"type": "error", "content": _OUTAGE_MSG}
+        return
+    if result.get("error"):
+        yield {"type": "error", "content": result["error"]}
+        return
+
+    text = _clean_answer_text(result["text"])
+    if not text:
+        yield {"type": "error",
+               "content": "I'm sorry, I couldn't generate a response. Please try rephrasing your question."}
+        return
+
+    has_data = bool(context)
+    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
+
+    # ---- PASS 2: regenerate when the first answer is weakly grounded -----
+    if verdict == "weak":
+        print(f"   [LAYER3] Weak grounding ({result['chunks']} chunks, "
+              f"{result['coverage']:.0%} coverage) - regenerating with a strict prompt")
+        yield {"type": "status", "content": "Double-checking sources"}
+
+        reset_session(user_id)  # fresh slate so the weak answer is not in context
+        regen_session = _ensure_session(user_id, context, model, memory_context)
+        if regen_session:
+            result2 = None
+            for ev in _do_agent_pass(_STRICT_PREFIX + message, user_id, regen_session,
+                                     context, model, memory_context):
+                if ev["type"] == "_result":
+                    result2 = ev["data"]
+                else:
+                    yield ev
+            if (result2 and not result2.get("outage") and not result2.get("error")
+                    and not result2.get("kb_fail")):
+                text2 = _clean_answer_text(result2["text"])
+                if text2 and _evaluate_grounding(text2, result2["chunks"],
+                                                 result2["coverage"], has_data) == "ok":
+                    result, text, verdict = result2, text2, "ok"
+
+        # ---- REFUSE: still weak after regeneration ----------------------
+        if verdict == "weak":
+            print("   [LAYER3] Still weak after regeneration - refusing")
+            _set_grounding(False, 0, 0.0, [])
+            yield {"type": "done", "content": _REFUSAL_MSG}
+            return
+
+    # ---- DELIVER ---------------------------------------------------------
+    _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
+                   citations=result["citations"])
+    final = _finalize_answer(text, result["grounded_corpus"])
+    if result["citations"]:
+        yield {"type": "citations", "content": result["citations"]}
+    yield {"type": "done", "content": final}
 
 
 
@@ -684,223 +817,20 @@ def reset_session(user_id: str) -> None:
 
 
 def query_agent_stream(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = ""):
-    """
-    Send a query to the ORA Navigator agent and stream text chunks as they arrive.
+    """Send a query to the ORA Navigator agent and yield SSE-style events.
 
-    Session reuse based on the attached context (stable). Memory sent via state_delta (volatile).
-    """
-    # Session reuse: hash the attached context for invalidation
-    session_id = _get_valid_session(user_id, context, model)
+    Layer 3: the answer is buffered and verified before delivery -- it is
+    regenerated once if weakly grounded and refused if still weak, so an
+    ungrounded answer is never shown. Because verification needs the complete
+    answer (Gemini reports grounding only at the end), the answer is delivered in
+    one 'done' event rather than streamed token-by-token; 'status' events keep
+    the UI's progress indicator alive while the answer is produced.
 
+    Yields dicts: {"type": "status" | "citations" | "done" | "error", "content": ...}.
+    """
+    session_id = _ensure_session(user_id, context, model, memory_context)
     if not session_id:
-        state = {}
-        if context:
-            state["user_context"] = context
-        if memory_context:
-            state["memory"] = memory_context
-        if model:
-            state["model_preference"] = model
-        session_id = _create_session(user_id, state=state if state else None)
-        if not session_id:
-            yield {"type": "error", "content": _OUTAGE_MSG}
-            return
-        _cache_session(user_id, session_id, context, model)
-
-    yield from _run_query_stream(query, user_id, session_id, context=context, model=model, memory_context=memory_context)
-
-
-def _run_query_stream(message: str, user_id: str, session_id: str, retried: bool = False, context: str = "", model: str = "", memory_context: str = ""):
-    """Stream query results from ADK, yielding text chunks as they arrive.
-
-    Fast in-memory retrieval runs BEFORE the ADK call (<5ms) to collect
-    doc_texts for the post-stream VERIFICATION gate. The agent has its own
-    VertexAiSearchTool for context.
-    """
-    _set_grounding(False, 0, 0.0)  # reset; a failed stream must not leak stale citations
-    try:
-        payload = {
-            "app_name": ADK_APP_NAME,
-            "user_id": user_id,
-            "session_id": session_id,
-            "new_message": {
-                "role": "user",
-                "parts": [{"text": message}],
-            },
-        }
-        state_delta = {}
-        if model:
-            state_delta["model_preference"] = model
-        if memory_context:
-            state_delta["memory"] = memory_context
-        if state_delta:
-            payload["state_delta"] = state_delta
-
-        resp = requests.post(
-            f"{ADK_BASE_URL}/run_sse",
-            headers=_get_auth_headers(),
-            json=payload,
-            stream=True,
-            timeout=120,
-        )
-
-        # Handle "Session not found": recreate with context + memory state and retry once
-        if resp.status_code == 404 and not retried:
-            print(f"   ADK session {session_id} not found, creating a new one...")
-            _session_cache.pop(user_id, None)
-            state = {}
-            if context:
-                state["user_context"] = context
-            if memory_context:
-                state["memory"] = memory_context
-            if model:
-                state["model_preference"] = model
-            new_session_id = _create_session(user_id, state=state if state else None)
-            if new_session_id:
-                _cache_session(user_id, new_session_id, context, model)
-                yield from _run_query_stream(message, user_id, new_session_id, retried=True, context=context, model=model, memory_context=memory_context)
-                return
-            yield {"type": "error", "content": _OUTAGE_MSG}
-            return
-
-        resp.raise_for_status()
-
-        # Map tool/agent names to user-friendly status messages
-        TOOL_STATUS_MAP = {
-            "vertex_ai_search": "Searching knowledge base",
-            "discovery_engine_search": "Searching knowledge base",
-        }
-
-        # Stream SSE events and yield text chunks + status updates
-        full_text = ""
-        grounding_chunks = 0
-        grounding_coverage = 0.0
-        grounding_citations: list = []
-        grounded_corpus = ""
-        for line in resp.iter_lines():
-            if not line:
-                continue
-            decoded = line.decode("utf-8")
-            if not decoded.startswith("data: "):
-                continue
-
-            json_str = decoded[6:]  # Strip "data: " prefix
-            try:
-                event = json.loads(json_str)
-            except json.JSONDecodeError:
-                continue
-
-            # Extract grounding metadata
-            gm = event.get("groundingMetadata")
-            if gm:
-                chunks = gm.get("groundingChunks", [])
-                supports = gm.get("groundingSupports", [])
-                grounding_chunks = len(chunks)
-                if chunks:
-                    grounding_citations = _extract_citations(chunks)
-                    grounded_corpus = _join_chunk_texts(chunks)
-                if supports and full_text:
-                    total_chars = len(full_text)
-                    grounded_chars = sum(
-                        s.get("segment", {}).get("endIndex", 0) - s.get("segment", {}).get("startIndex", 0)
-                        for s in supports
-                    )
-                    grounding_coverage = grounded_chars / total_chars if total_chars > 0 else 0.0
-                elif chunks:
-                    grounding_coverage = 0.5
-                    print(f"   [GROUNDING] Chunks present ({grounding_chunks}) but no segment data - using conservative 0.5 coverage")
-
-            content = event.get("content", {})
-            if not isinstance(content, dict):
-                continue
-
-            role = content.get("role", "")
-            parts = content.get("parts", [])
-
-            # Check for tool calls and yield status updates
-            for part in parts:
-                if isinstance(part, dict):
-                    if "functionCall" in part:
-                        func_name = part["functionCall"].get("name", "")
-                        args = part["functionCall"].get("args", {})
-                        if func_name == "transfer_to_agent":
-                            agent_name = args.get("agent_name", "specialist")
-                            status = TOOL_STATUS_MAP.get(agent_name, f"Consulting {agent_name.replace('_', ' ')}")
-                        else:
-                            status = TOOL_STATUS_MAP.get(func_name, f"Processing {func_name.replace('_', ' ')}")
-                        yield {"type": "status", "content": status}
-
-            # Extract text from model responses
-            if role != "model":
-                continue
-
-            for part in parts:
-                if isinstance(part, dict) and "text" in part:
-                    text = part["text"]
-                    text = re.sub(r'\s*\[cite:\s*[^\]]*\]', '', text)
-                    if text.strip():
-                        if len(text) > len(full_text):
-                            chunk = text[len(full_text):]
-                            full_text = text
-                            yield {"type": "chunk", "content": chunk}
-                        elif text != full_text:
-                            full_text = text
-                            yield {"type": "chunk", "content": text}
-
-        # Store grounding signal for research_agent (thread-local)
-        _set_grounding(grounding_chunks > 0, grounding_chunks, grounding_coverage, citations=grounding_citations)
-
-        # If Gemini self-reported a KB access failure, send a clearer error
-        # (can't retry in streaming mode since broken chunks are already sent to client)
-        if _KB_FAIL_RE.search(full_text):
-            print("   [KB_FAIL] Gemini reported KB access failure during stream")
-            yield {"type": "error", "content": _OUTAGE_MSG}
-            return
-
-        # Post-process: catch 429 errors and empty code blocks in streamed text
-        cleaned = full_text.strip()
-        if cleaned in ("```", "``` ```", "``````", ""):
-            cleaned = "I wasn't able to generate a proper response. Please try asking again."
-            yield {"type": "chunk", "content": cleaned}
-        if "429" in cleaned and "RESOURCE_EXHAUSTED" in cleaned:
-            cleaned = "The system is busy right now. Please try again in a moment."
-            yield {"type": "chunk", "content": cleaned}
-
-        # Grounding validation gate: append disclaimer if low-grounded
-        has_data = bool(context)
-        final = _apply_grounding_gate(cleaned, grounding_chunks, coverage=grounding_coverage, has_attached_context=has_data)
-        if final != cleaned:
-            disclaimer = final[len(cleaned):]
-            yield {"type": "chunk", "content": disclaimer}
-
-        # Identifier faithfulness gate: flag unverified SOP/FWA/EIN/UEI numbers and rates
-        unverified_ids = _check_identifier_faithfulness(final, grounded_corpus)
-        if unverified_ids and _IDENTIFIER_DISCLAIMER not in final:
-            print(f"   [FAITHFULNESS] Unverified identifiers (stream): {unverified_ids}")
-            final = final + _IDENTIFIER_DISCLAIMER
-            yield {"type": "chunk", "content": _IDENTIFIER_DISCLAIMER}
-
-        # Inject procedure guide Drive links if the agent omitted them
-        before_inject = final
-        final = _inject_procedure_links(final)
-        if final != before_inject:
-            link_chunk = final[len(before_inject):]
-            yield {"type": "chunk", "content": link_chunk}
-
-        if grounding_citations:
-            yield {"type": "citations", "content": grounding_citations}
-        yield {"type": "done", "content": final}
-
-    except requests.exceptions.ConnectionError:
-        print("   [OUTAGE] ADK server not reachable (stream)")
         yield {"type": "error", "content": _OUTAGE_MSG}
-    except requests.exceptions.Timeout:
-        print("   [OUTAGE] ADK query timed out after 120s (stream)")
-        yield {"type": "error", "content": "The request took too long. Please try a simpler question or try again in a moment."}
-    except Exception as e:
-        error_str = str(e)
-        if "403" in error_str or "Forbidden" in error_str or "API key" in error_str:
-            print(f"   [OUTAGE] ADK auth/config error (stream): {e}")
-            yield {"type": "error", "content": _OUTAGE_MSG}
-        else:
-            print(f"   ADK stream error: {e}")
-            yield {"type": "error", "content": "An error occurred while processing your question. Please try again."}
+        return
+    yield from _run_verified(query, user_id, session_id, context=context,
+                             model=model, memory_context=memory_context)
