@@ -223,22 +223,34 @@ TOPIC_ALIASES: dict[str, str] = {
 
 # ---------------------------------------------------------------------------
 # Detection: is this an enumeration query?
-# Trigger phrases — any one of these in the query makes it a candidate for
-# the KB browser. Caller still requires a topic-alias match before returning
-# a list response (so factual questions like "how many docs are there?" with
-# no topic context fall through to the agent).
+#
+# Two tiers:
+#   STRONG - unambiguous "browse the KB" intent. Always eligible for the
+#            deterministic path, even mid-conversation.
+#   WEAK   - phrasing that reads as enumeration in isolation but is usually a
+#            substantive follow-up when prior conversation exists
+#            (e.g. "can you give me what forms do I need to fill?").
+#
+# When a request has conversation history and ONLY weak triggers fired,
+# try_browse() defers to the LLM agent so it can answer the follow-up in
+# context. Caller still requires a topic-alias match before returning a list
+# response.
 # ---------------------------------------------------------------------------
-ENUMERATION_TRIGGERS = re.compile(
+_STRONG_TRIGGERS = re.compile(
     r"\blist\b"
     r"|\benumerate\b"
     r"|\bbrowse\b"
     r"|\bshow me\b"
     r"|\bdo you have\b"
     r"|\bwhat do you have\b"
-    r"|\bgive me\b"
-    r"|\btell me about\b"
     r"|\bwhat'?s in\b"
-    r"|\bwhat is in\b"
+    r"|\bwhat is in\b",
+    re.IGNORECASE,
+)
+
+_WEAK_TRIGGERS = re.compile(
+    r"\bgive me\b"
+    r"|\btell me about\b"
     r"|\bhow many\b"
     r"|\bwhat (?:topics|docs|documents|files|materials|forms|templates|"
               r"policies|guidelines|sops|seminars|workshops|trainings|"
@@ -249,8 +261,15 @@ ENUMERATION_TRIGGERS = re.compile(
 )
 
 
-def _detect_enumeration(query: str) -> bool:
-    return bool(ENUMERATION_TRIGGERS.search(query))
+def _detect_enumeration(query: str) -> tuple[bool, bool]:
+    """Return (matched_any, matched_strong).
+
+    matched_any    - query contains at least one enumeration trigger.
+    matched_strong - query contains at least one STRONG (unambiguous) trigger.
+    """
+    strong = bool(_STRONG_TRIGGERS.search(query))
+    weak = bool(_WEAK_TRIGGERS.search(query))
+    return (strong or weak, strong)
 
 
 def _match_topic(query: str) -> Optional[str]:
@@ -334,27 +353,45 @@ def _format_root() -> str:
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
-def try_browse(query: str) -> Optional[str]:
+def try_browse(query: str, has_history: bool = False) -> Optional[str]:
     """If `query` looks like a KB-browse / enumeration question, return a
     formatted markdown response. Otherwise return None (caller should
     continue to the normal agent flow).
+
+    Args:
+        query:       the user's (possibly rewritten) message.
+        has_history: True when the request belongs to a conversation that
+                     already has prior turns. When set, ambiguous ("weak")
+                     enumeration phrasing is deferred to the LLM agent so it
+                     can answer the follow-up in context, and a strong-but-
+                     topicless query returns None instead of dumping the full
+                     KB tree.
 
     ~5-10ms when triggered; never calls Gemini or Vertex AI Search.
     """
     if not query or len(query) > 500:
         return None
-    if not _detect_enumeration(query):
+
+    matched_any, matched_strong = _detect_enumeration(query)
+    if not matched_any:
+        return None
+
+    # Mid-conversation + only weak/ambiguous triggers -> let the agent answer
+    # the follow-up in context ("can you give me what forms do I need?").
+    if has_history and not matched_strong:
         return None
 
     _load_manifest()
     path = _match_topic(query)
 
     if path is None:
-        # Enumeration phrasing but no topic match — show root index
-        return _format_root()
+        # Enumeration phrasing but no topic match. A fresh turn shows the root
+        # index; mid-conversation, dumping the 9-section tree is almost always
+        # wrong -> defer to the agent.
+        return None if has_history else _format_root()
 
     node = _INDEX.get(path)
     if not node:
-        return _format_root()
+        return None if has_history else _format_root()
 
     return _format_node(node)

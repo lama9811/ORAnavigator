@@ -1,0 +1,77 @@
+"""Regression tests for kb_browser.try_browse history-awareness.
+
+Run from the backend/ directory:
+    cd backend && ../.venv/bin/python -m pytest tests/test_kb_browser.py -v
+
+Background: try_browse() is a deterministic pre-agent fast-path. It used to be
+stateless, so a substantive follow-up like "can you give me what forms do I
+need to fill?" (which trips the enumeration regex via "give me" / "what forms")
+was misclassified as a KB-enumeration request and answered with a full KB-tree
+dump instead of reaching the context-aware agent. These tests pin the
+history-aware behavior that fixes that.
+"""
+import pytest
+
+from kb_browser import try_browse, _detect_enumeration
+
+
+# --- The reproduced bug -----------------------------------------------------
+
+def test_followup_weak_trigger_defers_to_agent():
+    """Turn 2 after 'explain post-awards' must NOT dump the KB tree."""
+    q = "can you give me what forms do I need to fill?"
+    assert try_browse(q, has_history=True) is None
+
+
+def test_same_query_first_turn_still_browses():
+    """Historyless first turn keeps the original deterministic behavior."""
+    q = "can you give me what forms do I need to fill?"
+    result = try_browse(q, has_history=False)
+    assert result is not None
+    assert "ORA Knowledge Base" in result
+
+
+# --- Strong vs weak x has_history matrix ------------------------------------
+
+@pytest.mark.parametrize("query", [
+    "list IACUC SOPs",
+    "what's in pre-award",
+    "show me the templates",
+])
+def test_strong_trigger_with_topic_browses_even_with_history(query):
+    """Genuine enumeration with a resolvable topic survives mid-conversation
+    (the advertised multi-turn drill-down)."""
+    assert try_browse(query, has_history=True) is not None
+
+
+def test_strong_trigger_no_topic_with_history_defers():
+    """Defense-in-depth: strong trigger but no topic -> no root dump mid-chat."""
+    assert try_browse("what do you have", has_history=True) is None
+
+
+def test_strong_trigger_no_topic_first_turn_shows_root():
+    """First turn with no topic still shows the root index."""
+    result = try_browse("what do you have", has_history=False)
+    assert result is not None
+    assert "ORA Knowledge Base" in result
+
+
+def test_weak_trigger_no_history_browses():
+    """Weak trigger on turn 1 still hits the deterministic path."""
+    assert try_browse("tell me about post-award forms", has_history=False) is not None
+
+
+def test_non_enumeration_query_returns_none():
+    """A plain question is never intercepted, regardless of history."""
+    assert try_browse("how do I submit an IRB protocol", has_history=False) is None
+    assert try_browse("how do I submit an IRB protocol", has_history=True) is None
+
+
+# --- _detect_enumeration classification -------------------------------------
+
+def test_detect_classifies_strong_and_weak():
+    """_detect_enumeration returns (matched_any, matched_strong)."""
+    assert _detect_enumeration("list IACUC SOPs") == (True, True)
+    assert _detect_enumeration("give me the forms") == (True, False)
+    assert _detect_enumeration("what forms do you have") == (True, True)
+    assert _detect_enumeration("how do I apply") == (False, False)

@@ -23,6 +23,7 @@ __pycache__/
 *.pyo
 *.pyd
 **/__pycache__/
+.pytest_cache/
 
 # Uploads (user profile pictures)
 backend/uploads/

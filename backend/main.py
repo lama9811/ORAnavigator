@@ -1207,7 +1207,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     # =========================================================================
     # KB BROWSER - Enumeration queries answered deterministically (no LLM call)
     # =========================================================================
-    browse_response = try_browse(user_q)
+    browse_response = try_browse(user_q, has_history=bool(history_dicts))
     if browse_response and not req.skip_cache:
         print(f"[KB_BROWSE] for query: {user_q[:50]}...")
 
@@ -1414,7 +1414,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
     # KB BROWSER - Enumeration queries answered deterministically from manifest
     # Bypasses Gemini entirely (~5ms). Falls through to agent if not a list query.
     # =========================================================================
-    browse_response = try_browse(user_q)
+    browse_response = try_browse(user_q, has_history=False)
     if browse_response:
         print(f"[KB_BROWSE] (guest) for: {user_q[:50]}...")
         return {"response": browse_response, "source": "kb_browser"}
