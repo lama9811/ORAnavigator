@@ -1,24 +1,46 @@
-"""Promptfoo provider that tests via the backend /chat/guest endpoint."""
+"""
+Promptfoo provider for the ORA Navigator backend `/chat/guest` endpoint.
+
+This exercises the FULL pipeline (Layers 1-3: cache, KB browser, ADK agent,
+regenerate-then-refuse). It is the default provider and the pre-deploy gate.
+
+Config (from promptfooconfig.yaml `providers[].config`):
+  base_url - backend base URL (default http://127.0.0.1:5002)
+Env:
+  BACKEND_URL - overrides base_url if set
+
+Run the backend with GUEST_RATE_LIMIT relaxed so the eval is not throttled:
+  GUEST_RATE_LIMIT=100000 uvicorn main:app --port 5002
+"""
+import os
+import time
+
 import requests
-import json
+
+DEFAULT_BASE_URL = "http://127.0.0.1:5002"
+MAX_RETRIES = 4
+RETRY_BACKOFF_SECONDS = 3
+
 
 def call_api(prompt, options, context):
-    """Send query to backend guest endpoint and return response."""
-    config = options.get("config", {})
-    base_url = config.get("base_url", "http://127.0.0.1:5001")
+    """Promptfoo provider entry point. Returns {"output": str} or {"error": str}."""
+    config = (options or {}).get("config", {})
+    base_url = os.getenv("BACKEND_URL") or config.get("base_url", DEFAULT_BASE_URL)
+    url = f"{base_url}/chat/guest"
 
-    try:
-        r = requests.post(
-            f"{base_url}/chat/guest",
-            json={"query": prompt},
-            timeout=60,
-        )
+    last_err = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            r = requests.post(url, json={"query": prompt}, timeout=90)
+        except Exception as e:  # noqa: BLE001
+            return {"output": "", "error": str(e)}
+
         if r.status_code == 200:
-            resp = r.json().get("response", "")
-            return {"output": resp}
-        elif r.status_code == 429:
-            return {"output": "RATE_LIMITED", "error": "429 Too Many Requests"}
-        else:
-            return {"output": "", "error": f"HTTP {r.status_code}"}
-    except Exception as e:
-        return {"output": "", "error": str(e)}
+            return {"output": r.json().get("response", "")}
+        if r.status_code == 429:
+            last_err = "429 Too Many Requests"
+            time.sleep(RETRY_BACKOFF_SECONDS * (attempt + 1))
+            continue
+        return {"output": "", "error": f"HTTP {r.status_code}"}
+
+    return {"output": "", "error": f"rate limited after {MAX_RETRIES} retries ({last_err})"}
