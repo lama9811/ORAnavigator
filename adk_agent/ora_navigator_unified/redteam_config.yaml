@@ -1,7 +1,7 @@
 description: "ORA Navigator v5 - Red Team Security Audit"
 
 targets:
-  - id: "python:adk_provider.py"
+  - id: "python:eval/adk_provider.py"
     label: "ORA Navigator v5 (ADK)"
 
 redteam:
