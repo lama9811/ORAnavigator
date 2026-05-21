@@ -1,5 +1,4 @@
 """Unit tests for the promptfoo provider scripts."""
-import importlib
 import sys
 from pathlib import Path
 
