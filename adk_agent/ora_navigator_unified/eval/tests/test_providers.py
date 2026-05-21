@@ -73,3 +73,15 @@ def test_backend_provider_uses_base_url_from_config(monkeypatch):
     monkeypatch.setattr(backend_provider.requests, "post", fake_post)
     backend_provider.call_api("hi", {"config": {"base_url": "http://host:9999"}}, {})
     assert seen["url"] == "http://host:9999/chat/guest"
+
+
+# --- backend rate-limit env override ---------------------------------------
+
+def test_guest_rate_limit_reads_env(monkeypatch):
+    """GUEST_RATE_LIMIT must be overridable via env var for eval runs."""
+    monkeypatch.setenv("GUEST_RATE_LIMIT", "100000")
+    backend_dir = EVAL_DIR.parent.parent.parent / "backend"
+    src = (backend_dir / "main.py").read_text()
+    # The constant must be derived from os.getenv, not a bare literal.
+    assert 'os.getenv("GUEST_RATE_LIMIT"' in src or \
+           "os.getenv('GUEST_RATE_LIMIT'" in src

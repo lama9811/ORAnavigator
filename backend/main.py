@@ -432,7 +432,9 @@ from collections import defaultdict
 import time as time_module
 
 guest_rate_limits = defaultdict(list)  # IP -> list of timestamps
-GUEST_RATE_LIMIT = 15  # requests per minute (time-based session provides natural limiting)
+# Requests per minute per IP. Override via env (e.g. GUEST_RATE_LIMIT=100000)
+# to un-throttle the faithfulness eval harness; production keeps the default 15.
+GUEST_RATE_LIMIT = int(os.getenv("GUEST_RATE_LIMIT", "15"))  # requests per minute
 GUEST_RATE_WINDOW = 60  # seconds
 _guest_rate_last_cleanup = time_module.time()
 
