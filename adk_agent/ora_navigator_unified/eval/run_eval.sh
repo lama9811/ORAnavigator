@@ -39,8 +39,10 @@ else
 fi
 
 echo ">>> Running promptfoo eval..."
+# "${arr[@]+"${arr[@]}"}" safely expands a possibly-empty array under `set -u`
+# (bare "${arr[@]}" is an unbound-variable error on macOS's bash 3.2).
 npx promptfoo eval -c promptfooconfig.yaml --no-cache \
-  -o "${RESULTS}" "${PROVIDER_ARGS[@]}"
+  -o "${RESULTS}" "${PROVIDER_ARGS[@]+"${PROVIDER_ARGS[@]}"}"
 
 echo ">>> Scoring..."
 if [[ "${UPDATE_BASELINE}" -eq 1 ]]; then
