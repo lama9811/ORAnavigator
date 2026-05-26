@@ -95,7 +95,10 @@ _STRICT_PREFIX = (
     "IMPORTANT: Answer strictly from the ORA knowledge base. The knowledge base "
     "includes BOTH the knowledge-base context already provided to you AND "
     "anything from your knowledge-base search tool -- treat both as the "
-    "knowledge base. Do not use outside or remembered knowledge. Answer the "
+    "knowledge base. You MAY also use facts the user has explicitly stated "
+    "about themselves earlier in this conversation (their department, role, "
+    "active grant, deadlines, preferences) -- the chat history is not 'outside "
+    "knowledge'. Do not use other outside or remembered knowledge. Answer the "
     "question fully and accurately from that knowledge base. Only if the "
     "knowledge base genuinely does not contain the answer, say you do not have "
     "that information and point the user to ORA. Never guess or approximate. "
@@ -124,6 +127,34 @@ _SKIP_GROUNDING_RE = re.compile(
 
 # Detects when Gemini self-reports a KB access failure (transient Vertex AI Search issue)
 _KB_FAIL_RE = re.compile(r"having trouble (accessing|connecting to) my knowledge base", re.IGNORECASE)
+
+# Questions that ask the bot to recall something the user said about THEMSELVES
+# earlier in the conversation (their department, role, sponsor, deadline...).
+# Those facts live in the chat history, not the KB, so Layer 3 must NOT
+# regenerate them under the strict KB-only prompt -- doing so discards the
+# correct conversational-recall answer and replies "I don't have that info."
+# Matched on the question; KB-fact questions ("What is the F&A rate?") must
+# NOT match -- those still need full KB grounding.
+_PERSONAL_RECALL_RE = re.compile(
+    r"\b(?:"
+    r"am\s+i\b"                                              # "am I", "what dept am I in"
+    r"|did\s+i\b"                                            # "did I tell/say/mention"
+    r"|remind\s+me\b"                                        # "remind me what I"
+    r"|about\s+(?:me|myself)\b"                              # "remember about me"
+    r"|(?:what|who|where|when)(?:'s|s|\s+is|\s+was|\s+are)?\s+my\b"  # "what's my", "what is my"
+    r"|who\s+am\s+i\b"                                       # "who am I"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _is_personal_recall(question: str) -> bool:
+    """True if the question asks the bot to recall something the user said
+    about themselves earlier in the conversation. Such questions are answered
+    from chat history, not the KB, so Layer 3 must skip strict regeneration."""
+    if not question:
+        return False
+    return bool(_PERSONAL_RECALL_RE.search(question))
 
 # =============================================================================
 # FAITHFULNESS GATE: ORA Staff Entity Whitelist
@@ -742,6 +773,13 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
 
     has_data = bool(context)
     verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
+
+    # Personal-recall questions ("what department am I in?", "what's my
+    # deadline?") are answered from the chat history, not the KB. The strict
+    # regeneration discards the recall answer and refuses, so short-circuit
+    # the gate -- deliver Pass 1 as-is even with zero KB grounding.
+    if verdict == "weak" and _is_personal_recall(message):
+        verdict = "ok"
 
     # ---- PASS 2: regenerate when the first answer is weakly grounded -----
     if verdict == "weak":

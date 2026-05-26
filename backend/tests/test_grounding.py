@@ -165,3 +165,90 @@ def test_outage_surfaces_an_error(monkeypatch):
     tail = [e for e in events if e["type"] in ("done", "error")]
     assert tail[-1]["type"] == "error"
     assert tail[-1]["content"] == vertex_agent._OUTAGE_MSG
+
+
+# ===========================================================================
+# Personal-recall short-circuit -- a question that asks the bot to recall
+# something the user said about themselves in this conversation must NOT
+# trigger Layer 3's KB-only regeneration. Those facts live in the chat
+# history, not the KB, so regenerating under the strict KB-only prompt
+# discards the correct answer and replies "I don't have that information."
+# ===========================================================================
+
+def test_personal_recall_question_skips_regeneration(monkeypatch):
+    """Weak first answer to a personal-recall question is delivered, not
+    regenerated. The user told the bot they're in Biology earlier in the chat;
+    asking 'What department am I in?' must surface the recall answer, not the
+    strict-prefix refusal."""
+    monkeypatch.setattr(
+        vertex_agent, "_do_agent_pass",
+        _fake_passes(
+            _result("You told me you're in the Biology department.",
+                    chunks=0, coverage=0.0),
+            _result("I do not have information about your specific department.",
+                    chunks=0, coverage=0.0),
+        ),
+    )
+    monkeypatch.setattr(vertex_agent, "_create_session",
+                        lambda *a, **k: "regen-session")
+    events = list(vertex_agent._run_verified(
+        "What department am I in?", "user-1", "sess-1"))
+    final = _final(events)
+    assert "Biology" in final
+    assert "do not have information" not in final
+
+
+def test_non_recall_question_still_regenerates(monkeypatch):
+    """Regression guard: a normal KB question whose first answer is weak
+    must still be regenerated -- the personal-recall short-circuit must not
+    let ungrounded KB-claims through."""
+    monkeypatch.setattr(
+        vertex_agent, "_do_agent_pass",
+        _fake_passes(
+            _result("Vague ungrounded guess.", chunks=0, coverage=0.0),
+            _result("The on-campus F&A rate is in the rate agreement.",
+                    chunks=4, coverage=0.8),
+        ),
+    )
+    monkeypatch.setattr(vertex_agent, "_create_session",
+                        lambda *a, **k: "regen-session")
+    events = list(vertex_agent._run_verified(
+        "What is the F&A rate?", "user-1", "sess-1"))
+    final = _final(events)
+    assert "rate agreement" in final
+    assert "Vague ungrounded guess" not in final
+
+
+def test_is_personal_recall_matches_self_reference_questions():
+    """Unit test for the personal-recall detector. These phrasings all ask
+    the bot to recall something the user said about themselves."""
+    matches = [
+        "What department am I in?",
+        "What sponsor did I tell you I work with?",
+        "Remind me what department I'm in.",
+        "What's my upcoming deadline?",
+        "What is my role on the NSF award?",
+        "Did I mention my IRB protocol?",
+        "What do you remember about me?",
+        "Tell me about myself based on what I've said.",
+        "Who am I working with on this grant?",
+    ]
+    for q in matches:
+        assert vertex_agent._is_personal_recall(q), \
+            f"should detect as personal-recall: {q!r}"
+
+
+def test_is_personal_recall_rejects_kb_questions():
+    """Regression guard: normal KB questions must NOT match the recall
+    detector, or they will skip Layer 3 and let ungrounded KB-claims through."""
+    non_matches = [
+        "What is Morgan State's F&A rate?",
+        "How long does IRB approval take?",
+        "Where do I find IACUC SOPs?",
+        "Who handles post-award setup?",
+        "What's the deadline for the NSF CAREER award?",
+        "Tell me about Research Security.",
+    ]
+    for q in non_matches:
+        assert not vertex_agent._is_personal_recall(q), \
+            f"should NOT detect as personal-recall: {q!r}"
