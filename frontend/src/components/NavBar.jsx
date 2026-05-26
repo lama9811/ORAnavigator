@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FaBars } from "@react-icons/all-files/fa/FaBars";
 import { FaUser } from "@react-icons/all-files/fa/FaUser";
+import { FaFileAlt } from "@react-icons/all-files/fa/FaFileAlt";
 import "../index.css";
 import "./NavBar.css";
 
@@ -111,9 +112,18 @@ export default function NavBar({ role, onToggleSidebar }) {
           </div>
         </div>
 
-        {/* Right side - Profile icon when authenticated */}
+        {/* Right side - Forms catalog + Profile icon when authenticated */}
         {isAuthed && (
           <div className="navbar-right">
+            <button
+              className="navbar-forms-btn"
+              onClick={() => navigate("/forms")}
+              title="Browse ORA forms, templates, and checklists"
+              aria-label="Open Forms catalog"
+            >
+              <FaFileAlt size={16} />
+              <span className="navbar-forms-label">Forms</span>
+            </button>
             <button
               className="profile-icon-btn"
               onClick={() => navigate("/profile")}

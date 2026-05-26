@@ -6,6 +6,7 @@ import NavBar         from "./components/NavBar";
 import ChatSidebar    from "./components/ChatSidebar";
 import Chatbox        from "./components/Chatbox";
 import ProfilePage    from "./components/ProfilePage";
+import FormsCatalog   from "./components/FormsCatalog";
 import AdminDashboard from "./components/AdminDashboard";
 import Forbidden      from "./components/Forbidden";
 import LandingPage    from "./components/LandingPage";
@@ -477,6 +478,32 @@ export default function App() {
                 onCollapse={toggleSidebar}
               >
                 <ProfilePage userEmail={userEmail} onLogout={handleLogout} />
+              </SidebarLayout>
+            </RequireAuth>
+          }
+        />
+
+        {/* protected: forms catalog */}
+        <Route
+          path="/forms"
+          element={
+            <RequireAuth>
+              <SidebarLayout
+                sessions={sessions}
+                activeId={activeId}
+                onNew={handleNew}
+                onSelect={handleSelect}
+                onDelete={handleDelete}
+                onLogout={handleLogout}
+                userEmail={userEmail}
+                onPin={handlePin}
+                onArchive={handleArchive}
+                onRename={handleRename}
+                darkMode={darkMode}
+                onToggleTheme={toggleTheme}
+                onCollapse={toggleSidebar}
+              >
+                <FormsCatalog />
               </SidebarLayout>
             </RequireAuth>
           }

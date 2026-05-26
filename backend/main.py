@@ -1461,6 +1461,26 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
     return {"response": answer, "citations": get_last_grounding().get("citations", [])}
 
 
+@app.get("/api/forms")
+async def get_forms_catalog(
+    category: str = "",
+    sponsor: str = "",
+    role: str = "",
+    user=Depends(get_current_user),
+):
+    """Browseable catalog of ORA forms, templates, checklists, and memos.
+    Read-only view over the bundled KB -- no LLM call. Filters intersect:
+    passing two narrows further; empty filters mean "any". Unknown values
+    yield an empty list rather than an error."""
+    from services.forms_catalog import list_forms
+    forms = list_forms(
+        category=category or None,
+        sponsor=sponsor or None,
+        role=role or None,
+    )
+    return {"forms": forms, "count": len(forms)}
+
+
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch chat history for the logged-in user."""
