@@ -1,0 +1,49 @@
+# Real chatbot misses mined from the failed_queries DB table, then curated.
+# Source run: eval/mine_failed_queries.py (4 raw candidates; 1 near-duplicate
+# dropped). Re-run the miner later to surface new misses.
+
+- description: "Mined — vague 'what forms do I need' question"
+  vars:
+    prompt: "can you give me what forms do i need to fill?"
+    kb_context: >
+      ORA forms fall into pre-award and post-award groups. The key pre-award
+      form is the Internal Routing Form (IRF), required before submitting any
+      external funding proposal. Post-award, ORA provides DocuSign forms
+      including Travel Request, Travel Reimbursement, Honoraria Request,
+      Stipend Request, Tuition & Fees, and Contractual Personnel (PF-10).
+      Which forms a researcher needs depends on whether they are at the
+      pre-award or post-award stage.
+      Source: backend/kb_structured/post_award/forms/post_award_forms_index.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes ORA's forms grounded in the KB CONTEXT and/or asks
+        the user to clarify whether they are at the pre-award or post-award
+        stage. It does not invent form names or form numbers not in the KB.
+
+- description: "Mined — asked to recall a past conversation (guest, no history)"
+  vars:
+    prompt: "do you know what we talked about one week ago?"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response explains it does not have access to a conversation from a week
+        ago (no stored history for this guest session) and does NOT fabricate
+        the contents of a past conversation. Asking the user to restate their
+        question is acceptable.
+
+- description: "Mined — asked to infer the user's interest from a prior turn"
+  vars:
+    prompt: "by the question i asked you what do you think im interested on?>"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response asks the user to clarify or restate their question, since
+        there is no prior question available in context. It does NOT fabricate
+        or guess the user's interests or invent a prior question.

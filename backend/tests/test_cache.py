@@ -59,3 +59,69 @@ def test_get_falls_through_to_semantic_with_context_hash():
     c.l1.clear()  # force an L1 miss so only L3 can answer
     assert c.get(Q, context_hash=CTX) == "AGENT-ANSWER"
     assert c.semantic.get_calls >= 1
+
+
+# =====================================================================
+# Personal-recall bypass -- session-specific recall answers must NEVER
+# enter the cache. The cache key is (md5(query) + model), with NO
+# user_id / session_id, so caching a recall answer leaks one user's
+# personal context to every other user and serves stale answers across
+# different conversations. Recall questions also produced the live
+# regression where a model refusal was cached and re-served forever.
+# =====================================================================
+
+def test_personal_recall_question_is_not_cached():
+    """Questions that ask the bot to recall something the user said about
+    themselves (department, role, sponsor, deadline, IRB/IACUC protocol)
+    must bypass the cache entirely. They are answered from the chat
+    history, not from a globally-shared KB result, so they are not safe
+    to share across users or sessions."""
+    c = _fresh_cache()
+    recall_questions = [
+        "What department am I in?",
+        "What sponsor did I tell you I work with?",
+        "Remind me what department I'm in.",
+        "What's my upcoming deadline?",
+        "Did I mention my IRB protocol?",
+        "What do you remember about me?",
+        "Do you remember my department?",
+        "What is the department I'm in?",
+    ]
+    for q in recall_questions:
+        stored = c.set(q, "You're in the Biology department.", context_hash=CTX)
+        assert stored is False, f"recall question must not be cached: {q!r}"
+        # And reading it back must return nothing
+        assert c.get(q, context_hash=CTX) is None, \
+            f"recall question must not have a cached entry: {q!r}"
+
+
+def test_refusal_responses_are_not_stored():
+    """Model refusals ('I do not have information...') must not be stored.
+    A cached refusal poisons the cache: once the bot is fixed to actually
+    answer, the cache keeps serving the old refusal until TTL expiry."""
+    c = _fresh_cache()
+    # Slightly different phrasings of the same refusal pattern
+    refusals = [
+        "I do not have information about your specific department.",
+        "I don't have that information available.",
+        "I cannot provide details about your protocol.",
+        "I can't access information about your role.",
+    ]
+    # Use a non-recall query so _should_cache() doesn't reject it for the
+    # WRONG reason -- this test isolates the response-content filter.
+    institutional_q = "What is the federal F&A rate for sponsored research at Morgan State"
+    for refusal in refusals:
+        stored = c.set(institutional_q, refusal, context_hash=CTX)
+        assert stored is False, \
+            f"refusal response must not be cached: {refusal!r}"
+
+
+def test_institutional_questions_still_cache():
+    """Regression guard: the bypass must not block legitimate cacheable
+    queries. KB-grounded institutional questions still go through cache."""
+    c = _fresh_cache()
+    institutional = "What is the federal F&A rate for sponsored research at Morgan State"
+    answer = "The on-campus organized research F&A rate is 54% for FY 2025-2026."
+    stored = c.set(institutional, answer, context_hash=CTX)
+    assert stored is True
+    assert c.get(institutional, context_hash=CTX) == answer

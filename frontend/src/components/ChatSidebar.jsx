@@ -125,7 +125,8 @@ export default function ChatSidebar({
   const pinnedSessions = filteredSessions.filter(s => s.pinned);
   const regularSessions = filteredSessions.filter(s => !s.pinned);
 
-  // Date grouping for chat history
+  // Date grouping for chat history. Within each group, sort newest first
+  // (descending by id, which is the ms-timestamp from when the chat was created).
   const groupSessionsByDate = (sessions) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -144,7 +145,39 @@ export default function ChatSidebar({
       else groups["Older"].push(s);
     });
 
+    // Newest-first within each group. Non-numeric ids (no ts) fall to the end.
+    Object.keys(groups).forEach(label => {
+      groups[label].sort((a, b) => {
+        const tb = parseInt(b.id);
+        const ta = parseInt(a.id);
+        if (isNaN(tb)) return -1;
+        if (isNaN(ta)) return 1;
+        return tb - ta;
+      });
+    });
+
     return groups;
+  };
+
+  // Format a session's id (a ms-timestamp) into a short, context-appropriate
+  // label that complements the group header. Today/Yesterday -> time of day
+  // ("3:45 PM"). Within 7 days -> day name ("Mon"). Older -> short date.
+  const formatChatTime = (id) => {
+    const ts = parseInt(id);
+    if (isNaN(ts)) return "";
+    const date = new Date(ts);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+
+    if (date >= today || date >= yesterday) {
+      return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    }
+    if (date >= weekAgo) {
+      return date.toLocaleDateString([], { weekday: "short" });
+    }
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   const dateGroups = groupSessionsByDate(regularSessions);
@@ -337,17 +370,20 @@ export default function ChatSidebar({
         className={`chat-history-item ${s.id === activeId ? "active" : ""} ${isArchived ? "archived-item" : ""}`}
         onClick={() => onSelect(s.id)}
         onContextMenu={(e) => handleContextMenu(e, s.id)}
-        title={`Select conversation: ${s.title}`} // 🔥 NEW: Hover Text
+        title={`Select conversation: ${s.title}`}
       >
         {s.pinned && <FaThumbtack className="pin-icon" size={10} />}
         <span className="chat-title">{s.title}</span>
+        <span className="chat-time" aria-label="Last activity">
+          {formatChatTime(s.id)}
+        </span>
         <button
           className="chat-menu-btn"
           onClick={(e) => {
             e.stopPropagation();
             handleContextMenu(e, s.id);
           }}
-          title="Chat options" // 🔥 NEW: Hover Text
+          title="Chat options"
           aria-label="More options"
         >
           <FaEllipsisV size={12} />

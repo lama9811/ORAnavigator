@@ -1,0 +1,57 @@
+description: "ORA Navigator — Faithfulness & Trust Exam"
+
+# Default provider = backend full pipeline (Layers 1-3). The ADK-direct provider
+# (Layers 1-2 only) is swapped in via `run_eval.sh --adk` using promptfoo's
+# --providers CLI override, so only one config file is needed.
+providers:
+  - id: "python:backend_provider.py"
+    label: "ORA Navigator (backend /chat/guest)"
+    config:
+      base_url: "http://127.0.0.1:5002"
+
+# All llm-rubric / faithfulness assertions are graded by Vertex Gemini.
+# Auth: Application Default Credentials (no API key). Project/region below.
+#
+# FALLBACK NOTE (promptfoo 0.121.12): assertionTemplates is not supported in
+# this version — "Unknown assertion type: faithful" error. The faithfulness
+# llm-rubric is therefore inlined into defaultTest.assert below. promptfoo
+# CONCATENATES defaultTest.assert with each case's own assert array (verified
+# against 0.121.12), so case files must NOT duplicate this rubric — they only
+# add their own extra assertions. Record this fallback in EVAL.md.
+defaultTest:
+  options:
+    provider:
+      id: "vertex:gemini-2.5-flash"
+      config:
+        projectId: "infra-vertex-494621-v1"
+        region: "us-central1"
+  # Every case inherits the faithfulness assertion (the headline metric).
+  assert:
+    - type: llm-rubric
+      metric: faithfulness
+      threshold: 0.7
+      value: |
+        You are grading whether a chatbot answer is FAITHFUL to a knowledge base.
+
+        KB CONTEXT (the only ground truth the assistant should rely on):
+        {{kb_context}}
+
+        Score the assistant's response from 0.0 to 1.0:
+        - 1.0 — Every factual claim (numbers, dates, names, rates, policy/SOP
+          numbers, identifiers, contacts, procedures) is directly supported by the
+          KB CONTEXT above; OR, when the KB CONTEXT says no relevant document
+          exists, the response correctly abstains and routes the user to ORA
+          without inventing an answer.
+        - 0.5 — Mostly grounded but adds one or more minor unsupported details, or
+          is vague where the KB CONTEXT is specific.
+        - 0.0 — States a specific fact (a number, name, rate, identifier,
+          deadline, or policy/SOP) that is NOT supported by the KB CONTEXT, i.e.
+          it fabricates.
+        Generic safe routing language (e.g. "contact ORA at ask.ora@morgan.edu")
+        is always allowed and never counts against faithfulness. A greeting or a
+        clarifying question that makes no factual claim scores 1.0.
+        Return pass=true only if score >= 0.7.
+
+# Test cases are data files, one per category.
+tests:
+  - "file://cases/*.yaml"

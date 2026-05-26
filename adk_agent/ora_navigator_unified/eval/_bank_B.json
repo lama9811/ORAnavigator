@@ -1,0 +1,440 @@
+[
+  {
+    "question": "What email address and phone number should I use to contact ORA about pre-award questions?",
+    "answer": "You can reach the Office of Research Administration at ask.ora@morgan.edu or by phone at 443-885-4044.",
+    "source": "backend/kb_structured/pre_award/pre_award_overview.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "How early should I submit the Internal Routing Form before my sponsor's deadline?",
+    "answer": "The Internal Routing Form (IRF) should be submitted at least two weeks before the agency deadline.",
+    "source": "backend/kb_structured/pre_award/pre_award_overview.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What database does ORA recommend for finding funding opportunities?",
+    "answer": "ORA recommends the Pivot-RP Funding Opportunities Database, accessible at https://pivot.proquest.com/dashboard.",
+    "source": "backend/kb_structured/pre_award/pre_award_overview.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What two documents must I send to the ORA Budget Specialist after submitting the IRF?",
+    "answer": "After submitting the IRF, you must send the budget in Excel format and the budget justification in Word format to the designated ORA Budget Specialist.",
+    "source": "backend/kb_structured/pre_award/pre_award_overview.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who are the named pre-award contacts at ORA?",
+    "answer": "Ms. Deshun Li and Ailing Zhang, MS are referenced as ORA pre-award contacts on the overview page.",
+    "source": "backend/kb_structured/pre_award/pre_award_overview.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the minimum acquisition cost for an item to be classified as equipment in a sponsored project budget at Morgan State?",
+    "answer": "Equipment is defined as property with an acquisition cost of $5,000 or more and an expected service life exceeding one year.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the fringe benefit rate for faculty working during the summer at Morgan State?",
+    "answer": "The fringe benefit rate for faculty during the summer is 9% of gross salary.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the 2025 State of Maryland mileage reimbursement rate for personal automobile travel?",
+    "answer": "The current 2025 reimbursable rate for personal automobile mileage under the State of Maryland is $0.70 per mile.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Can Morgan State University faculty be listed as paid consultants on a grant budget?",
+    "answer": "No. MSU faculty may not be listed as consultants on a sponsored project budget.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Are indirect costs allowed on participant support costs?",
+    "answer": "No. Indirect costs (F&A) are not allowed on participant support costs. Additionally, Morgan State employees do not qualify as participants; participants must be non-MSU employees receiving services, not providing them.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are the 2025 per diem meal rates for State of Maryland travel — breakfast, lunch, and dinner?",
+    "answer": "The 2025 State of Maryland meal per diem rates are $15 for breakfast, $18 for lunch, and $30 for dinner, totaling $63 per day.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What four budget categories does ORA say a typical sponsored project budget includes?",
+    "answer": "A typical sponsored project budget includes direct costs, other direct costs, indirect costs, and other budget elements.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What personnel categories can be budgeted in the salaries and wages section of a grant budget at Morgan State?",
+    "answer": "Personnel categories include senior personnel, post-doctoral researchers, lab technicians, graduate and undergraduate students, teaching assistants, and clerical staff.",
+    "source": "backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Morgan State's on-campus Organized Research F&A rate for FY 2024-2025?",
+    "answer": "For fiscal year 2024-2025 (July 1, 2024 through June 30, 2025), Morgan State's on-campus Organized Research F&A rate is 53%.",
+    "source": "backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State's on-campus Organized Research F&A rate for FY 2025-2026?",
+    "answer": "For fiscal year 2025-2026 (July 1, 2025 through June 30, 2026), Morgan State's on-campus Organized Research F&A rate is 54%.",
+    "source": "backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the off-campus F&A rate for all programs at Morgan State for both FY 2024-2025 and FY 2025-2026?",
+    "answer": "The off-campus F&A rate for all programs is 26% in both FY 2024-2025 and FY 2025-2026.",
+    "source": "backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the on-campus Instruction F&A rate at Morgan State for FY 2025-2026?",
+    "answer": "The on-campus Instruction F&A rate for FY 2025-2026 is 64%, the same as in FY 2024-2025.",
+    "source": "backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the on-campus Other Sponsored Activities F&A rate for FY 2024-2025 at Morgan State?",
+    "answer": "The on-campus Other Sponsored Activities F&A rate for FY 2024-2025 is 42%.",
+    "source": "backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What document can PIs provide to sponsors who need official documentation of Morgan State's F&A rates?",
+    "answer": "PIs can provide the official PDF titled 2024-2026_MorganState_FandA_ltr.pdf, which is the federally negotiated F&A rate agreement letter covering fiscal years 2024-2025 and 2025-2026.",
+    "source": "backend/kb_structured/pre_award/fanda_cost_rates/form_fanda_rate_agreement_2024_2026.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the fringe benefit rate for full-time, non-contractual (year-round) employees at Morgan State?",
+    "answer": "Full-time non-contractual year-round employees have a fringe benefit rate of 42% of gross salary.",
+    "source": "backend/kb_structured/pre_award/fringe_benefit_rate/pre_award_fringe_benefit_rate.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How does Morgan State define a contractual employee for fringe benefit rate purposes?",
+    "answer": "A contractual employee at Morgan State is defined as one who works less than 6 months or less than 30 hours per week. Contractual employees have a fringe benefit rate of 9%.",
+    "source": "backend/kb_structured/pre_award/fringe_benefit_rate/pre_award_fringe_benefit_rate.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What components does the fringe benefit package at Morgan State cover?",
+    "answer": "Morgan State's fringe benefits cover FICA/Medicare, retirement, healthcare insurance, unemployment insurance, tuition remission, TIAA/CREF, and worker's compensation.",
+    "source": "backend/kb_structured/pre_award/fringe_benefit_rate/pre_award_fringe_benefit_rate.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the fringe benefit rate for faculty during the academic year?",
+    "answer": "Faculty during the academic year have a fringe benefit rate of 42%.",
+    "source": "backend/kb_structured/pre_award/fringe_benefit_rate/pre_award_fringe_benefit_rate.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Who must sign the Internal Routing Form at Morgan State before a proposal can be submitted?",
+    "answer": "The IRF requires signatures from the PI/PD, Department Chair, Dean or Center Director, ORA Research Budget Specialist, Grants Manager, and Director of Research Administration.",
+    "source": "backend/kb_structured/pre_award/internal_routing_form/pre_award_internal_routing_form.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What information does the IRF capture about the funding opportunity?",
+    "answer": "The IRF captures the FOA URL, program name, CFDA/ALN number, sponsor type, and due date for the funding opportunity.",
+    "source": "backend/kb_structured/pre_award/internal_routing_form/pre_award_internal_routing_form.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which section of the IRF covers restrictions such as criminal convictions or conflicts of interest?",
+    "answer": "The Restrictions section of the IRF includes six surety questions covering federal/state bar status, criminal convictions, indictments, foreign nationals, and conflicts of interest.",
+    "source": "backend/kb_structured/pre_award/internal_routing_form/pre_award_internal_routing_form.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Who is the primary ORA contact for Internal Routing Form questions?",
+    "answer": "Ms. Deshun Li (deshun.li@morgan.edu) is the primary IRF contact at ORA.",
+    "source": "backend/kb_structured/pre_award/internal_routing_form/pre_award_internal_routing_form.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Is partner PI and institution information always required on the IRF?",
+    "answer": "No. Partner PI and institution information on the IRF is required only for subawards.",
+    "source": "backend/kb_structured/pre_award/internal_routing_form/pre_award_internal_routing_form.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What should a PI do if a limited submission opportunity arises with less than 6 weeks until the deadline?",
+    "answer": "If notification arrives within 6 weeks of the deadline, ORA uses a first-come, first-served approach to determine which applicant may submit.",
+    "source": "backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who decides which applicants may proceed when a limited submission opportunity has more than 6 weeks before the deadline?",
+    "answer": "When notification occurs more than 6 weeks prior to the deadline, Dr. Farin Kamangar, the Assistant Vice President for Research, selects among applicants and may convene a review group.",
+    "source": "backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How long is the summary required for competitive limited submission review, and what must it demonstrate?",
+    "answer": "A 4-page summary is required, demonstrating project impact, novelty, team strength, facility availability, institutional relevance, and student training opportunities, along with principal investigator biosketches.",
+    "source": "backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "If Morgan State receives fewer limited submission applications than the sponsor's maximum, does ORA run a selection process?",
+    "answer": "No. If the number of internal applications is fewer than or equal to the sponsor's maximum, all applications will be submitted and no selection process is invoked.",
+    "source": "backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the consequence for an authorized applicant who fails to submit a limited submission proposal?",
+    "answer": "At the Assistant Vice President for Research's discretion, an authorized applicant who fails to submit may be excluded from future limited submission considerations.",
+    "source": "backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Where is the Office of Research Administration physically located at Morgan State?",
+    "answer": "The ORA is located at Tyler Hall, Student Service Bldg, Suite 304, Baltimore, MD 21251.",
+    "source": "backend/kb_structured/pre_award/limited_submission/pre_award_limited_submission.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the spending cap for an Advance Account under Morgan State's pre-award spending program?",
+    "answer": "Approved pre-award spending is generally limited to 20% of total project costs or $100,000, whichever is less.",
+    "source": "backend/kb_structured/pre_award/pre_award_spending/pre_award_pre_award_spending.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Under what three circumstances may an Advance Account for pre-award spending be considered?",
+    "answer": "An Advance Account may be considered when (1) an award has been granted but the project period has not yet begun, (2) there is a high probability the University will receive the award, or (3) continuation funding for a multi-year award is pending.",
+    "source": "backend/kb_structured/pre_award/pre_award_spending/pre_award_pre_award_spending.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What form does a PI submit to request a pre-award advance account at Morgan State?",
+    "answer": "The PI submits the Application for Advance Account via DocuSign to request a pre-award advance account.",
+    "source": "backend/kb_structured/pre_award/pre_award_spending/pre_award_pre_award_spending.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which offices jointly review and approve Advance Account requests at Morgan State?",
+    "answer": "The Office of Research Administration, working with the Division of Finance & Administration, reviews and may authorize Advance Account requests.",
+    "source": "backend/kb_structured/pre_award/pre_award_spending/pre_award_pre_award_spending.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the very first step a PI should take when planning to initiate a subaward at Morgan State?",
+    "answer": "The first step is to contact Ms. Ailing Zhang, Senior Grants Administration, at ailing.zhang@morgan.edu with key information about the proposed subaward.",
+    "source": "backend/kb_structured/pre_award/pre_award_subawards/pre_award_pre_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are the two roles Morgan State University can play in a subaward arrangement?",
+    "answer": "Morgan State can be the Subawardee (receiving the subaward) or the Subawarder (issuing the subaward to another entity).",
+    "source": "backend/kb_structured/pre_award/pre_award_subawards/pre_award_pre_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What other names are used for subawards in the context of sponsored projects?",
+    "answer": "Subawards may also be called subgrants, subagreements, or subcontracts.",
+    "source": "backend/kb_structured/pre_award/pre_award_subawards/pre_award_pre_award_subawards.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What defines a subrecipient under Morgan State's sponsored projects framework?",
+    "answer": "A subrecipient is a legal entity to which a subaward is made and which is accountable for the use of the funds, has responsibility for programmatic and/or administrative decision-making, and must adhere to applicable sponsored program compliance requirements.",
+    "source": "backend/kb_structured/pre_award/pre_award_subawards/pre_award_pre_award_subawards.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Morgan State University's Unique Entity Identifier (UEI)?",
+    "answer": "Morgan State University's Unique Entity ID (UEI) is KULSKCCZJT27.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State University's EIN (Entity Identification Number)?",
+    "answer": "Morgan State University's EIN is 52 6002033 B8. If the application is character-limited, the B8 may be omitted.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State University's NAICS code?",
+    "answer": "Morgan State University's NAICS (North American Industry Classification System) code is 611310.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State's CAGE Code?",
+    "answer": "Morgan State University's Commercial and Government Entity (CAGE) Code is 8U547.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State University's Human Subjects Assurance number (FWA)?",
+    "answer": "Morgan State University's Human Subjects Assurance number is FWA00003318, with IRB Identifier IRB00002142 and the IRB named Morgan State U IRB1, located in Baltimore, Maryland.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State's Animal Welfare Assurance number and when does it expire?",
+    "answer": "Morgan State's Animal Welfare Assurance number is D21-01124, and it expires on January 31, 2027.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What congressional district is Morgan State University in?",
+    "answer": "Morgan State University is in Maryland's 7th Congressional District (MD-007).",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Who is Morgan State's cognizant federal agency and what is the contact information?",
+    "answer": "Morgan State's cognizant federal agency is DHHS, with contact Ernest Kineer at 214-767-3261.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "When did Morgan State's SAM (System for Award Management) registration expire?",
+    "answer": "Morgan State's SAM registration expiration date listed is November 15, 2025.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State University's official mailing address for grant applications?",
+    "answer": "Morgan State University's official address for grant applications is 1700 E. Cold Spring Lane, Baltimore, MD 21251-0001.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is Morgan State University's DUNS number and when was it phased out as a key identifier?",
+    "answer": "Morgan State's Dun & Bradstreet/DUNS number is 879941318. It was phased out as a key identifier on April 4, 2022.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is Morgan State's SIC code?",
+    "answer": "Morgan State University's Standard Industrial Classification (SIC) code is 8221.",
+    "source": "backend/kb_structured/pre_award/university_application_information/pre_award_university_application_information.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Who automatically qualifies to serve as Principal Investigator on a sponsored project at Morgan State?",
+    "answer": "Full-time tenure track faculty members at any academic rank automatically qualify as PI or Project Director.",
+    "source": "backend/kb_structured/pre_award/role_of_principal_investigator/pre_award_role_of_principal_investigator.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Can a visiting faculty member serve as PI on a sponsored project at Morgan State, and if so, what is required?",
+    "answer": "Yes, visiting faculty may serve as PI with dean approval. A formal Memorandum of Designation must be filed with ORA. If an adjunct faculty member serves as PI, a full-time co-PI/PD may also be required.",
+    "source": "backend/kb_structured/pre_award/role_of_principal_investigator/pre_award_role_of_principal_investigator.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Can full-time regular staff serve as PI on a sponsored project at Morgan State?",
+    "answer": "Yes, full-time regular staff with appropriate qualifications are eligible to serve as PI or Project Director.",
+    "source": "backend/kb_structured/pre_award/role_of_principal_investigator/pre_award_role_of_principal_investigator.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "For a fellowship application where the sponsor requires the Fellow to be the PI, how does Morgan State handle the administrative role?",
+    "answer": "A Sponsor or Mentor who meets normal PI eligibility criteria will serve as the Project Director on MSU records and handle administrative and scientific oversight of the award.",
+    "source": "backend/kb_structured/pre_award/role_of_principal_investigator/pre_award_role_of_principal_investigator.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What two proposal checklists does ORA provide for download on the Proposal Submission Checklist page?",
+    "answer": "ORA provides the Basic Proposal Preparation Checklist (PDF) and the NSF EIR Proposal Preparation Checklist (PDF).",
+    "source": "backend/kb_structured/pre_award/proposal_submission_checklist/pre_award_proposal_submission_checklist.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Approximately how long can it take to complete a successful grant proposal at Morgan State?",
+    "answer": "Completing a successful proposal can take several weeks to several months, so ORA advises starting early.",
+    "source": "backend/kb_structured/pre_award/proposal_submission_checklist/pre_award_proposal_submission_checklist.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What does the Key Personnel section of a proposal require regarding who is listed first?",
+    "answer": "The Key Personnel section should describe qualifications, relevant experience, and specific roles of all key personnel, with the Principal Investigator listed first.",
+    "source": "backend/kb_structured/pre_award/proposal_components/pre_award_proposal_components.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What should a proposal's Abstract/Executive Summary cover according to ORA guidance?",
+    "answer": "The abstract should concisely cover the problem, objectives, approach, and project cost within sponsor-specified space limits, and should clearly and accurately reflect and parallel the content of the proposal.",
+    "source": "backend/kb_structured/pre_award/proposal_components/pre_award_proposal_components.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "When is an Evaluation section required in a proposal, and what must it address?",
+    "answer": "An Evaluation section is required for training or demonstration projects. It must relate evaluation methods to stated objectives and describe data collection, timelines, resources, and the intended use of results.",
+    "source": "backend/kb_structured/pre_award/proposal_components/pre_award_proposal_components.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the NIH grant number for the chemistry sample proposal filed as 1-R01-AI121500-01A1 in ORA's example library?",
+    "answer": "The sample funded NIH R01 proposal has grant number 1-R01-AI121500-01A1 and is in the chemistry domain.",
+    "source": "backend/kb_structured/pre_award/proposal_and_budget_examples/form_nih_sample_proposal_ai121500.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the NIH grant number for the Muir sample R01 application available on ORA's proposal examples page?",
+    "answer": "The Muir sample NIH R01 application has grant number 2-R01-AI042783-16A1 and represents a competing-renewal application in the chemistry domain.",
+    "source": "backend/kb_structured/pre_award/proposal_and_budget_examples/form_nih_sample_proposal_muir.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which sample NSF proposal available from ORA was authored by Tom Hulse and what program was it for?",
+    "answer": "Tom Hulse authored a sample NSF Excellence in Research (EIR) proposal in 2018, which ORA shares as a model for PIs preparing NSF EIR submissions.",
+    "source": "backend/kb_structured/pre_award/proposal_and_budget_examples/form_nsf_eir_proposal_hulse.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What year was the NSF sociology sample awarded proposal from ORA's example library?",
+    "answer": "The NSF sample awarded proposal in sociology is from 2014.",
+    "source": "backend/kb_structured/pre_award/proposal_and_budget_examples/form_nsf_awarded_proposal_sociology.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What year was the NSF mathematics sample awarded proposal from ORA's example library?",
+    "answer": "The NSF sample awarded proposal in mathematics is from 2009.",
+    "source": "backend/kb_structured/pre_award/proposal_and_budget_examples/form_nsf_awarded_proposal_math.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the MSI certification letter that PIs can include in grant applications, and what is its date?",
+    "answer": "Morgan State has an official letter certifying it as a Minority-Serving Institution (MSI), dated February 12, 2024 (2024-02-12). PIs include this PDF when an agency requires evidence of MSI status.",
+    "source": "backend/kb_structured/pre_award/university_application_information/form_msu_msi_certification.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What Word template does ORA provide for writing the narrative portion of a grant budget?",
+    "answer": "ORA provides the Budget Justification Template (Word) — a Word document PIs use to write the narrative budget justification explaining each cost line, submitted to the ORA Budget Specialist alongside the Excel budget workbook.",
+    "source": "backend/kb_structured/pre_award/budget_development/form_budget_justification_template.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What Excel workbook does ORA provide specifically for building NSF proposal budgets?",
+    "answer": "ORA provides a protected Excel workbook called the NSF Budget Template (NSF-Budget-Template-protected-v4.xlsx) for building NSF-format proposal budgets, covering personnel, fringe, equipment, travel, participant support, materials, consultants, subawards, and F&A lines.",
+    "source": "backend/kb_structured/pre_award/budget_development/form_nsf_budget_template.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What additional information must be provided to the pass-through entity when Morgan State is the subawardee in a subaward arrangement?",
+    "answer": "When Morgan State is the subawardee, the PI must include contact information for the pass-through entity's office of research administration as part of the initial notification to Ms. Ailing Zhang.",
+    "source": "backend/kb_structured/pre_award/pre_award_subawards/pre_award_pre_award_subawards.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Must all prime award terms and conditions flow down to subaward documents at Morgan State?",
+    "answer": "Yes. All terms and conditions from the prime award must apply to the subrecipient entity and must be included in the subaward document.",
+    "source": "backend/kb_structured/pre_award/pre_award_subawards/pre_award_pre_award_subawards.json",
+    "difficulty": "hard"
+  }
+]

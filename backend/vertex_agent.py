@@ -73,10 +73,13 @@ _OUTAGE_MSG = (
 # =============================================================================
 # LAYER 3: GROUNDING VERIFICATION (regenerate-then-refuse)
 # =============================================================================
-# An answer must be grounded in the KB: at least _GROUNDING_MIN_CHUNKS cited
-# docs, OR _GROUNDING_MIN_COVERAGE of the text backed by retrieved KB passages.
-# A weak answer is regenerated once with a strict prompt; if it is still weak it
-# is refused -- never shown. See _evaluate_grounding() and _run_verified().
+# An answer is treated as verified-grounded when Gemini reports at least
+# _GROUNDING_MIN_CHUNKS cited docs OR _GROUNDING_MIN_COVERAGE coverage. That
+# metadata is unreliable (often empty even for a correct, grounded answer), so
+# when it is absent the answer is NOT refused -- it is regenerated once under a
+# strict KB-only prompt that makes the model either ground its answer or emit an
+# explicit honest deflection, and that regenerated answer is then trusted. Only
+# an empty/errored regeneration is refused. See _evaluate_grounding() / _run_verified().
 _GROUNDING_MIN_CHUNKS = 2          # >= 2 cited KB docs clears the bar
 _GROUNDING_MIN_COVERAGE = 0.3      # OR >= 30% of the answer backed by KB text
 
@@ -89,10 +92,16 @@ _REFUSAL_MSG = (
 
 # Prepended to the user's question on the regeneration pass.
 _STRICT_PREFIX = (
-    "IMPORTANT: Answer using ONLY facts found in your knowledge base search "
-    "results. Do not use outside or remembered knowledge. If the knowledge base "
-    "does not clearly contain the answer, reply exactly: \"I don't have reliable "
-    "information on this in my knowledge base.\" Never guess or approximate. "
+    "IMPORTANT: Answer strictly from the ORA knowledge base. The knowledge base "
+    "includes BOTH the knowledge-base context already provided to you AND "
+    "anything from your knowledge-base search tool -- treat both as the "
+    "knowledge base. You MAY also use facts the user has explicitly stated "
+    "about themselves earlier in this conversation (their department, role, "
+    "active grant, deadlines, preferences) -- the chat history is not 'outside "
+    "knowledge'. Do not use other outside or remembered knowledge. Answer the "
+    "question fully and accurately from that knowledge base. Only if the "
+    "knowledge base genuinely does not contain the answer, say you do not have "
+    "that information and point the user to ORA. Never guess or approximate. "
     "Question: "
 )
 
@@ -118,6 +127,34 @@ _SKIP_GROUNDING_RE = re.compile(
 
 # Detects when Gemini self-reports a KB access failure (transient Vertex AI Search issue)
 _KB_FAIL_RE = re.compile(r"having trouble (accessing|connecting to) my knowledge base", re.IGNORECASE)
+
+# Questions that ask the bot to recall something the user said about THEMSELVES
+# earlier in the conversation (their department, role, sponsor, deadline...).
+# Those facts live in the chat history, not the KB, so Layer 3 must NOT
+# regenerate them under the strict KB-only prompt -- doing so discards the
+# correct conversational-recall answer and replies "I don't have that info."
+# Matched on the question; KB-fact questions ("What is the F&A rate?") must
+# NOT match -- those still need full KB grounding.
+_PERSONAL_RECALL_RE = re.compile(
+    r"\b(?:"
+    r"am\s+i\b"                                              # "am I", "what dept am I in"
+    r"|did\s+i\b"                                            # "did I tell/say/mention"
+    r"|remind\s+me\b"                                        # "remind me what I"
+    r"|about\s+(?:me|myself)\b"                              # "remember about me"
+    r"|(?:what|who|where|when)(?:'s|s|\s+is|\s+was|\s+are)?\s+my\b"  # "what's my", "what is my"
+    r"|who\s+am\s+i\b"                                       # "who am I"
+    r")",
+    re.IGNORECASE,
+)
+
+
+def _is_personal_recall(question: str) -> bool:
+    """True if the question asks the bot to recall something the user said
+    about themselves earlier in the conversation. Such questions are answered
+    from chat history, not the KB, so Layer 3 must skip strict regeneration."""
+    if not question:
+        return False
+    return bool(_PERSONAL_RECALL_RE.search(question))
 
 # =============================================================================
 # FAITHFULNESS GATE: ORA Staff Entity Whitelist
@@ -730,16 +767,34 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
 
     text = _clean_answer_text(result["text"])
     if not text:
-        yield {"type": "error",
-               "content": "I'm sorry, I couldn't generate a response. Please try rephrasing your question."}
-        return
+        # Empty text but KB chunks exist: the model called the search tool
+        # (finding real KB docs) but failed to synthesize an answer -- common
+        # for vague or typo'd queries like "also abou the preawards" that
+        # confuse the model but not the search index. Fall through to Pass 2
+        # so the strict regeneration can take a second shot using the KB
+        # context that's already in hand. Zero chunks is a real model
+        # failure -- surface the error.
+        if result["chunks"] == 0:
+            yield {"type": "error",
+                   "content": "I'm sorry, I couldn't generate a response. Please try rephrasing your question."}
+            return
+        # Force a Pass-2 regeneration by marking the verdict as weak.
+        has_data = bool(context)
+        verdict = "weak"
+    else:
+        has_data = bool(context)
+        verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
 
-    has_data = bool(context)
-    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
+    # Personal-recall questions ("what department am I in?", "what's my
+    # deadline?") are answered from the chat history, not the KB. The strict
+    # regeneration discards the recall answer and refuses, so short-circuit
+    # the gate -- deliver Pass 1 as-is even with zero KB grounding.
+    if verdict == "weak" and _is_personal_recall(message):
+        verdict = "ok"
 
     # ---- PASS 2: regenerate when the first answer is weakly grounded -----
     if verdict == "weak":
-        print(f"   [LAYER3] Weak grounding ({result['chunks']} chunks, "
+        print(f"   [LAYER3] Grounding unverified ({result['chunks']} chunks, "
               f"{result['coverage']:.0%} coverage) - regenerating with a strict prompt")
         yield {"type": "status", "content": "Double-checking sources"}
 
@@ -756,13 +811,21 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
             if (result2 and not result2.get("outage") and not result2.get("error")
                     and not result2.get("kb_fail")):
                 text2 = _clean_answer_text(result2["text"])
-                if text2 and _evaluate_grounding(text2, result2["chunks"],
-                                                 result2["coverage"], has_data) == "ok":
+                # The strict regeneration instructed the model to answer ONLY
+                # from the KB or else reply with an explicit "I don't have
+                # reliable information" deflection. Trust that outcome: a
+                # non-empty answer is either KB-grounded or the model's own
+                # honest deflection -- deliver it either way. We deliberately do
+                # NOT re-gate on the groundingChunks count here: Gemini returns
+                # that metadata unreliably (often empty even for a correct,
+                # grounded answer), and gating on it is what made Layer 3 refuse
+                # good answers.
+                if text2:
                     result, text, verdict = result2, text2, "ok"
 
-        # ---- REFUSE: still weak after regeneration ----------------------
+        # ---- REFUSE: regeneration produced no usable answer -------------
         if verdict == "weak":
-            print("   [LAYER3] Still weak after regeneration - refusing")
+            print("   [LAYER3] Regeneration produced no usable answer - refusing")
             _set_grounding(False, 0, 0.0, [])
             yield {"type": "done", "content": _REFUSAL_MSG}
             return

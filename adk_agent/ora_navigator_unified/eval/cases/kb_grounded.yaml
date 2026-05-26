@@ -1,0 +1,364 @@
+- description: "KB-grounded — ORA history"
+  vars:
+    prompt: "What is the history of the Office of Research Administration?"
+    kb_context: >
+      The Office of Sponsored Programs and Research (OSPR) was established in 1988 under Dr. Edet Isuk as Founding Director with one secretarial assistant; annual extramural funding averaged $7 million at inception. In 1997 Dr. Henry Williams joined as AVP for Sponsored Programs, growing staff to 11 and annual funding to $24 million. In 2020 the office was renamed from OSPR to the Office of Research Administration (ORA) and Dr. Farin Kamangar was appointed AVP. By 2022 new commitments reached $72 million, including GESTAR II ($28M), ASCEND expansion ($17M), RCMI ($15M), and ONR AI/ML research ($9M).
+      Source: backend/kb_structured/about/history/ora_history.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes the history of ORA using facts present in the KB CONTEXT
+        and does not invent leadership names, dates, or funding figures not present there.
+    - type: contains
+      value: "1988"
+
+- description: "KB-grounded — ORA mission and vision"
+  vars:
+    prompt: "What is ORA's mission?"
+    kb_context: >
+      ORA's mission is: "The ORA will provide oversight and high-quality service to MSU researchers and research partners and work closely with the funding agencies." Service will be highly effective, efficient, and respectful, aiming to be highly respected by clients and partners for accuracy of oversight and quality of service. ORA's vision is to propel MSU to the R1 space. Its five strategic goals include enhancing staff and campus knowledge about grants, providing compliance oversight, improving efficiency, improving customer service, and facilitating research funding growth.
+      Source: backend/kb_structured/about/mission_and_vision/ora_mission_and_vision.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response accurately describes ORA's mission and/or vision using facts present
+        in the KB CONTEXT and does not invent strategic goals or policy statements
+        not present there.
+
+- description: "KB-grounded — federal HBCU/MSI funding opportunities"
+  vars:
+    prompt: "Where can I find federal funding opportunities?"
+    kb_context: >
+      Morgan State University, as an R2 HBCU, is eligible for and encouraged to pursue HBCU/MSI-targeted federal programs. Agencies with dedicated HBCU/MSI programs include the Department of Defense (DoD Research and Education Program for HBCU/MSI, Army Research Lab, Air Force Research Lab, Office of Naval Research), the Department of Education (Strengthening HBCUs, MSEIP), the Department of Energy (NNSA MSI Partnership Program), NASA (MUREP Small Projects), NIH (NIGMS SuRE, R15, RCMI), and NSF (HBCU-UP, Excellence in Research, CREST, LSAMP, S-STEM).
+      Source: backend/kb_structured/funding_sources/federal/opportunity_category_hbcu_msi.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes federal funding opportunities for Morgan State using agencies
+        and programs present in the KB CONTEXT and does not invent program names or
+        agency affiliations not present there.
+    - type: contains
+      value: "HBCU"
+
+- description: "KB-grounded — private foundation grants"
+  vars:
+    prompt: "How do I find private foundation grants?"
+    kb_context: >
+      Private and foundation funding resources listed by Morgan State ORA include the Foundation Center (now part of Candid, at foundationcenter.org), described as the leading source of information about philanthropy worldwide; researchers use it to identify private foundations and corporate funders aligned with their research interests. For strategy advice on approaching foundations or to coordinate with foundations Morgan already has a relationship with, investigators should contact ORA at ask.ora@morgan.edu.
+      Source: backend/kb_structured/funding_sources/private_foundations/opportunity_category_private.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes how to find private foundation grants using facts present
+        in the KB CONTEXT, including the Foundation Center resource and ORA contact
+        guidance, and does not invent additional databases or programs not present there.
+    - type: contains
+      value: "Foundation Center"
+
+- description: "KB-grounded — external funding databases (Grants.gov)"
+  vars:
+    prompt: "What external databases can I use to search for funding?"
+    kb_context: >
+      Grants.gov is the U.S. federal government's central clearinghouse for finding and applying to federal grant opportunities from all federal grant-making agencies. Morgan State investigators use Grants.gov to locate federal funding announcements (NOFOs) and submit grant applications routed through ORA. Investigators can search by agency, CFDA number, eligibility, or keyword at https://www.grants.gov/.
+      Source: backend/kb_structured/funding_sources/external_databases/opportunity_db_grants_gov.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes Grants.gov as a federal funding database using facts present
+        in the KB CONTEXT and does not invent search features or capabilities not
+        present there.
+    - type: contains
+      value: "Grants.gov"
+
+- description: "KB-grounded — NIH/NSF/DOE common forms announcement"
+  vars:
+    prompt: "What is the NIH/NSF/DOE common forms announcement?"
+    kb_context: >
+      Beginning January 2026, NIH and DOE require investigators to use SciENcv to generate digitally certified Common Forms, including the Biographical Sketch and Current and Pending Support. Faculty should create and maintain an up-to-date SciENcv profile at https://www.ncbi.nlm.nih.gov/sciencv/. NSF and DOE also require senior/key personnel to complete and certify research security training — the one-hour CITI Research Security Training (Combined) module — prior to proposal submission. Questions go to ask.ora@morgan.edu.
+      Source: backend/kb_structured/ora_announcements/announcement_nih_nsf_doe_common_forms_2026_01_21.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes the NIH/NSF/DOE common forms and research security
+        training requirements using facts present in the KB CONTEXT and does not
+        invent effective dates, agency requirements, or training details not present there.
+    - type: contains
+      value: "SciENcv"
+
+- description: "KB-grounded — research compliance leadership transition"
+  vars:
+    prompt: "Who is the new research compliance leadership?"
+    kb_context: >
+      Dr. Edet Isuk, Morgan's Director of Research Compliance and Chief-of-Staff to the Vice President for Research and Economic Development, retired effective January 1, 2026, after 46 years of service to Morgan State University. Dr. Keyshawn Moncrieffe serves as Acting Director for Research Compliance until a permanent Director is hired. Dr. Moncrieffe had been collaborating with Dr. Isuk for two years in the Research Compliance unit. Compliance questions during the transition go to ask.ora@morgan.edu or 443-885-4044.
+      Source: backend/kb_structured/ora_announcements/announcement_research_compliance_leadership_2025_12_01.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response accurately identifies the outgoing and acting research compliance
+        leadership using facts present in the KB CONTEXT and does not invent names,
+        roles, or years of service not present there.
+    - type: contains
+      value: "Dr. Keyshawn Moncrieffe"
+
+- description: "KB-grounded — intellectual property policy"
+  vars:
+    prompt: "What is Morgan's intellectual property policy?"
+    kb_context: >
+      Morgan State University's Intellectual Property Policy defines ownership, disclosure, protection, licensing, and commercialization of intellectual property — including inventions, patents, copyrights, trademarks, and tangible research property — created by faculty, staff, and students in the course of university-supported activities or sponsored research. The policy was approved by the Board of Regents and is compiled in PI Handbook 5 (effective 2024-07-01), Section 6.
+      Source: backend/kb_structured/policies_and_guidelines/numbered_policies/policy_intellectual_property.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes Morgan State's intellectual property policy using facts
+        present in the KB CONTEXT and does not invent policy numbers, clauses, or
+        ownership percentages not present there.
+    - type: contains
+      value: "PI Handbook 5"
+
+- description: "KB-grounded — cost sharing policy"
+  vars:
+    prompt: "What is Morgan's cost-sharing policy?"
+    kb_context: >
+      Morgan State University's Cost Sharing Policy governs the commitment, documentation, tracking, and reporting of cost sharing (matching or in-kind contributions) on sponsored projects. It defines mandatory vs. voluntary cost share, requirements for approval, and how committed cost share is recorded and verified. The policy is compiled in PI Handbook 5 (effective 2024-07-01), Section 4.
+      Source: backend/kb_structured/policies_and_guidelines/numbered_policies/policy_cost_sharing.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes Morgan State's cost-sharing policy using facts present
+        in the KB CONTEXT and does not invent approval thresholds, percentages,
+        or procedures not present there.
+    - type: contains
+      value: "PI Handbook 5"
+
+- description: "KB-grounded — residual balance policy"
+  vars:
+    prompt: "What happens to a residual balance on a grant?"
+    kb_context: >
+      Morgan State University's Residual Balance Policy governs the disposition of residual (unspent) balances remaining on fixed-price sponsored agreements after all project obligations are met and the scope of work is complete. It defines criteria for releasing residuals, where they may be transferred, and required documentation. The policy is compiled in PI Handbook 5 (effective 2024-07-01), Section 15.
+      Source: backend/kb_structured/policies_and_guidelines/numbered_policies/policy_residual_balance.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes what happens to residual balances on fixed-price sponsored
+        agreements using facts present in the KB CONTEXT and does not invent specific
+        transfer percentages or disbursement rules not present there.
+    - type: contains
+      value: "fixed-price"
+
+- description: "KB-grounded — cost overruns policy"
+  vars:
+    prompt: "How are cost overruns on a grant handled?"
+    kb_context: >
+      Morgan State University's Cost Overruns Policy defines how cost overruns — expenditures exceeding the awarded budget — on sponsored projects are identified, reviewed, approved, and resolved. It establishes responsibility for clearing overruns and the departmental/PI obligations when sponsor funds are insufficient to cover incurred costs. The policy is compiled in PI Handbook 5 (effective 2024-07-01), Section 8.
+      Source: backend/kb_structured/policies_and_guidelines/numbered_policies/policy_cost_overruns.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes how cost overruns are handled on sponsored projects using
+        facts present in the KB CONTEXT and does not invent dollar thresholds, approval
+        chains, or penalty procedures not present there.
+
+- description: "KB-grounded — post-award notification and setup"
+  vars:
+    prompt: "What happens after my grant is awarded?"
+    kb_context: >
+      Award notifications (award letter, purchase order, detailed contract, or agreement) are directed to the Assistant VP for Research Administration, who distributes copies to the PI/PD and VP for Finance. The Office of Restricted Funds Accounting (RFA) assigns an Index or Budget code number and establishes the account in Banner; account setup typically takes up to three business days. A Post-Award Briefing meeting is then scheduled with the PI, involving ORA, Human Resources, Procurement, the Comptroller's Office, and the Purchasing Card Office. Awards for proposals that did not go through ORA may be refused by the University.
+      Source: backend/kb_structured/post_award/notification_and_setup_of_award/post_award_notification_and_setup.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes what happens after a grant is awarded at Morgan State using
+        facts present in the KB CONTEXT and does not invent turnaround times, office
+        names, or procedural steps not present there.
+    - type: contains
+      value: "three (3) business days"
+
+- description: "KB-grounded — post-award reporting requirements"
+  vars:
+    prompt: "What reports do I have to file on my grant?"
+    kb_context: >
+      PIs/PDs prepare technical (programmatic) reports at intervals specified in the Notice of Award (monthly, quarterly, annually, or at closeout). Final reports are normally due within 90 days after the end of the project period and include the technical, property, and invention reports — property and invention reports are required even when the project acquired no equipment and produced no invention. Effort certifications are generated three times per year: February (Fall semester), July (Spring semester), and October (Summer effort), and must be completed within 14 calendar days of release. Reporting is governed by 2 CFR 200 (OMB Uniform Guidance).
+      Source: backend/kb_structured/post_award/reporting/post_award_reporting.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes post-award reporting requirements using facts present in
+        the KB CONTEXT and does not invent report types, deadlines, or regulatory
+        citations not present there.
+    - type: contains
+      value: "90 days"
+
+- description: "KB-grounded — post-award subawards"
+  vars:
+    prompt: "How do subawards work after the award?"
+    kb_context: >
+      A subaward is issued to a subrecipient for assistance in carrying out a specified programmatic effort on a sponsored project; Morgan State passes through a portion of the sponsored award to the other entity. Subawards may also be called subgrants, subagreements, or subcontracts. Subrecipients bear responsibility for programmatic and administrative decisions and for compliance with the prime award terms. Subaward monitoring is coordinated by ORA Post-Award staff in collaboration with the PI. A training video "Subawards: What You Need to Know" is available, and detailed procedures are in PI Handbook 3: Grant-Related Processes.
+      Source: backend/kb_structured/post_award/post_award_subawards/post_award_subawards.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes how post-award subawards work at Morgan State using facts
+        present in the KB CONTEXT and does not invent subrecipient monitoring procedures
+        or approval thresholds not present there.
+    - type: contains
+      value: "subrecipient"
+
+- description: "KB-grounded — post-award forms index"
+  vars:
+    prompt: "What post-award forms does ORA provide?"
+    kb_context: >
+      The Post-Award Forms page lists eight DocuSign forms: (1) Honoraria Request Memo, (2) PF-10 Contractual Personnel Request Form (for revisions and continuations of existing contractual personnel only), (3) Stipend Request Memo (minimum 45 days advance notice required), (4) Non-Title III Travel Request Form, (5) Title III Travel Request Form, (6) Travel Reimbursement Form (GAD Form X-5), (7) Grant-Funded Undergraduate Tuition, Fees, and Health Insurance Request Memo, and (8) Grant-Funded Graduate Tuition and Fees Request Memo. All submissions route through DocuSign; the primary contact is Rebecca Steiner (rebecca.steiner@morgan.edu).
+      Source: backend/kb_structured/post_award/forms/post_award_forms_index.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes ORA's post-award forms using facts present in the KB CONTEXT
+        and does not invent form names, counts, or procedural rules not present there.
+    - type: contains
+      value: "DocuSign"
+
+- description: "KB-grounded — budget development"
+  vars:
+    prompt: "How do I develop a grant budget?"
+    kb_context: >
+      ORA emphasizes that the budget (also called the cost proposal) is equally as important as the technical proposal. Budgets cover direct costs (personnel salaries and wages, fringe benefits, equipment, travel, participant support, materials, consultants, subawards) and indirect costs. Current fringe benefit rates include 42% for regular full-time or faculty during the academic year and 9% for faculty during summer or contractual employees. Equipment is defined as property costing $5,000 or more with a service life exceeding one year. Morgan State's negotiated F&A (indirect cost) rate for Organized Research (On-Campus) is 53–54% of modified total direct cost. Current 2025 Maryland mileage reimbursement is $0.70 per mile.
+      Source: backend/kb_structured/pre_award/budget_development/pre_award_budget_development.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes how to develop a grant budget using facts present in the
+        KB CONTEXT and does not invent fringe rates, F&A rates, equipment thresholds,
+        or travel rates not present there.
+    - type: contains
+      value: "$0.70 per mile"
+
+- description: "KB-grounded — proposal components"
+  vars:
+    prompt: "What are the components of a grant proposal?"
+    kb_context: >
+      Standard proposal components at Morgan State University include: Abstract/Executive Summary (concise summary within sponsor-specified space limits covering problem, objectives, approach, and project cost); Introduction/Background (demonstrates knowledge of the field and identifies research gaps); Goals & Objectives (broad long-term goals and clear, measurable specific objectives); Methodology (explains how objectives will be achieved and justifies selected methods); Key Personnel (qualifications, experience, and roles — list the PI first); and Evaluation (for training or demonstration projects, describes data collection and evaluation tied to objectives). Each Funding Opportunity Announcement (FoA) specifies its own requirements.
+      Source: backend/kb_structured/pre_award/proposal_components/pre_award_proposal_components.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes the components of a grant proposal using sections and
+        descriptions present in the KB CONTEXT and does not invent additional required
+        sections or sponsor-specific requirements not present there.
+
+- description: "KB-grounded — role of the principal investigator"
+  vars:
+    prompt: "What is the role of the principal investigator?"
+    kb_context: >
+      Full-time tenure track faculty members at any academic rank automatically qualify as PI/PD at Morgan State. Other university appointees (directors, senior administrators, visiting faculty, retired faculty) may serve as PI/PD with dean approval and a Memorandum of Designation filed with ORA. Adjunct faculty serving as PI/PD may need a full-time co-PI/PD. Full-time regular staff with appropriate qualifications are also eligible. For individual fellowship applications where a sponsor requires the Fellow to be PI/PD, a Sponsor or Mentor meeting the eligibility criteria will serve as the Project Director on MSU records.
+      Source: backend/kb_structured/pre_award/role_of_principal_investigator/pre_award_role_of_principal_investigator.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes PI/PD eligibility criteria at Morgan State using facts
+        present in the KB CONTEXT and does not invent eligibility rules, approval
+        processes, or exceptions not present there.
+    - type: contains
+      value: "tenure track"
+
+- description: "KB-grounded — proposal submission checklist"
+  vars:
+    prompt: "What's on the proposal submission checklist?"
+    kb_context: >
+      ORA recommends creating a timeline and/or table to help complete proposal sections, structuring proposals with outlines, and seeking external review. Completing a successful proposal can take several weeks to several months, so investigators should start early. Two downloadable checklists are available: the Basic Proposal Preparation Checklist (PDF) and the NSF EIR Proposal Preparation Checklist (PDF). Related pre-award pages include Proposal Components, Budget Development, Fringe Benefit Rate, F&A Cost Rates, and Internal Routing Form.
+      Source: backend/kb_structured/pre_award/proposal_submission_checklist/pre_award_proposal_submission_checklist.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes ORA's proposal submission checklist guidance using facts
+        present in the KB CONTEXT and does not invent specific checklist items or
+        mandatory steps not present there.
+
+- description: "KB-grounded — research security"
+  vars:
+    prompt: "What is research security?"
+    kb_context: >
+      Morgan State University's Research Security Program fosters a secure and ethical research environment with focus on federally sponsored research. The program covers four core domains: (1) Cybersecurity — safeguarding sensitive research data, systems, and networks; (2) Export Controls — compliance with U.S. export-control laws governing sharing of sensitive technologies with international partners; (3) Conflict of Interest — identifying, disclosing, and managing potential conflicts in federally funded research; (4) Foreign Travel Security — protecting researchers and their work when traveling abroad. The program is anchored to the federal NSPM-33 framework, which applies to institutions receiving $50 million or more in annual federal research funding.
+      Source: backend/kb_structured/research_compliance/research_security/compliance_research_security.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes Morgan State's research security program using the four
+        core domains and framework references present in the KB CONTEXT and does not
+        invent regulatory requirements or program components not present there.
+    - type: contains
+      value: "NSPM-33"
+
+- description: "KB-grounded — diversity and EEO in research"
+  vars:
+    prompt: "What does ORA say about diversity and EEO in research?"
+    kb_context: >
+      Morgan State University aims to maintain an academic and working environment in which students, faculty, and staff feel safe and are free to develop intellectually, professionally, personally, and socially. The university maintains a Nondiscrimination Policy and a Sexual Harassment and Prohibited Conduct Policy. The ORA Diversity and EEO compliance page links to institutional documents including the Annual Cultural Diversity Plan (2022), the Transformation Morgan 2030 Strategic Plan, and the Public Notice of Title VI Program Rights (2024). The university complies with Title VI of the federal civil-rights framework; Title IX information is on its own dedicated page.
+      Source: backend/kb_structured/research_compliance/diversity_and_eeo/compliance_diversity_and_eeo.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes ORA's diversity and EEO guidance using facts present in
+        the KB CONTEXT and does not invent specific policy clauses, protected categories,
+        or enforcement procedures not present there.
+    - type: contains
+      value: "Title VI"
+
+- description: "KB-grounded — Maryland financial disclosure requirement"
+  vars:
+    prompt: "Do I need to file a Maryland financial disclosure?"
+    kb_context: >
+      As a state entity, Morgan State University is fully subject to the Maryland Public Ethics Law (General Provisions Article, Title 5, established 1979). Its conflict-of-interest provisions apply to all state employees regardless of grade or years of service. More than 14,000 state employees, elected officials, and designated categories — including agency managers, regulators, and purchasing staff — must file an annual financial disclosure statement identifying real-estate interests, equity interests, employment relationships, debts, and gifts. New filers must complete two hours of ethics training within six months of first becoming required to file.
+      Source: backend/kb_structured/research_compliance/state_of_maryland_ethics_and_financial_disclosure/compliance_maryland_ethics_financial_disclosure.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes the Maryland financial disclosure requirement using facts
+        present in the KB CONTEXT and does not invent filer categories, training hours,
+        or disclosure deadlines not present there.
+    - type: contains
+      value: "two hours"
+
+- description: "KB-grounded — responsible conduct of research training"
+  vars:
+    prompt: "What training does responsible conduct of research require?"
+    kb_context: >
+      Morgan State University's RCR program requires researchers receiving support from NIH and/or NSF grants to complete RCR training at the start of their award and again every four years. The curriculum addresses eight major content areas, including falsification and fabrication, conflicts of interest, authorship, and intellectual property. Training is available through (1) the CITI Program online course at citiprogram.org and (2) in-person presentations and topic-specific sessions led by subject-matter experts. ORA also provides an RCR PowerPoint Presentation resource summarizing core RCR concepts.
+      Source: backend/kb_structured/research_compliance/responsible_conduct_of_research/compliance_responsible_conduct_of_research.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes RCR training requirements at Morgan State using facts
+        present in the KB CONTEXT and does not invent training intervals, topic areas,
+        or funder requirements not present there.
+    - type: contains
+      value: "every four years"
+
+- description: "KB-grounded — ORA letter templates"
+  vars:
+    prompt: "What templates does ORA provide?"
+    kb_context: >
+      ORA provides five letter templates (each with a blank fillable version and a completed sample): (1) Subaward to MSU Commitment Letter — required when MSU is planning to be a subrecipient; (2) Civil Rights Protections for NIH Grants Letter — required for certain NIH grants (check the FOA); (3) Change of PI Request Letter — required for any PI change along with supporting documentation; (4) No-Cost Extension Letter — ORA must be notified no less than 60 days prior to the award end date (NSF uses Research.gov; NIH uses eRA Commons); (5) Termination of Work Letter — required for stop-work orders to contractors or subawardees.
+      Source: backend/kb_structured/resources/templates/resources_templates.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes ORA's available letter templates using facts present in
+        the KB CONTEXT and does not invent additional templates or filing procedures
+        not present there.
+    - type: contains
+      value: "60 days"
+
+- description: "KB-grounded — ORA e-training modules"
+  vars:
+    prompt: "What e-training does ORA offer?"
+    kb_context: >
+      ORA provides eight self-paced eTraining modules covering post-award and grant operations: (1) Post Award Quick Guide, (2) Navigating Banner: Essentials for Research Administration, (3) Building the Project Team: Contractual Hiring and Compensation, (4) Travel on Sponsored Projects: Approval to Reimbursement, (5) Purchasing with Purpose: Procurement on Sponsored Projects / Banner Pool Level 08, (6) Supporting Participants: Payments, Benefits, and Indirect Costs, (7) Show Your Work: Understanding Time and Effort Reporting, and (8) It Takes a Village: Understanding Cost Share on Sponsored Projects. The modules are hosted on Articulate Rise and are self-service/evergreen.
+      Source: backend/kb_structured/trainings/e_training/trainings_e_training.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response describes ORA's e-training offerings using module names present in
+        the KB CONTEXT and does not invent module topics, required audiences, or
+        completion requirements not present there.
+    - type: contains
+      value: "eight"

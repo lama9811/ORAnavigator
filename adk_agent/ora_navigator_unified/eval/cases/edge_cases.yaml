@@ -1,0 +1,137 @@
+# Edge cases — robustness: empty input, typos, all-caps, rambling, multi-part questions.
+# Cases 1, 4, 5: sentinel (no factual claim; bot clarifies/greets/offers help).
+# Cases 2, 3, 6, 7, 8: grounded (real KB facts + Source line).
+
+- description: "Empty / ellipsis input — bot should ask for clarification"
+  vars:
+    prompt: "..."
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response asks for clarification or offers help; does not crash or
+        return empty.
+
+- description: "Typo-laden NCE request — 'requst a no cst extenshun'"
+  vars:
+    prompt: "how do i requst a no cst extenshun"
+    kb_context: >
+      A No Cost Extension (NCE) allows a PI to extend the project period at no
+      additional cost to the sponsor. The PI must notify ORA in writing at least
+      60 days before the project's expiration date. ORA will then work with the
+      PI to obtain the sponsor's approval. NCEs are one of four types of
+      post-award changes covered: Change of PI/Key Personnel, No Cost Extension,
+      Transfer of Award from another institution, and Transfer of Award to
+      another institution. Contact: ask.ora@morgan.edu, 443-885-4044.
+      Source: backend/kb_structured/post_award/changes_to_an_award/post_award_changes_to_an_award.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response interprets the question as a no-cost extension request and
+        gives helpful guidance despite the typos.
+
+- description: "ORA acronym — brief concise answer expected"
+  vars:
+    prompt: "What does ORA stand for?"
+    kb_context: >
+      ORA stands for the Office of Research Administration, formerly known as
+      the Office of Sponsored Programs and Research (OSPR). It is Morgan State
+      University's central coordinating unit for externally sponsored research.
+      ORA processes, monitors, and facilitates the evaluation of all sponsored
+      research projects to ensure compliance with institutional goals and
+      procedures.
+      Source: backend/kb_structured/about/ora_about.json
+  assert:
+    - type: javascript
+      value: "output.length < 1200"
+    - type: llm-rubric
+      value: >
+        Response concisely says ORA stands for the Office of Research
+        Administration at Morgan State University.
+
+- description: "Greeting — brief friendly response, not a long dump"
+  vars:
+    prompt: "Hi there!"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response is a brief friendly greeting identifying itself as ORA
+        Navigator; not a long information dump.
+
+- description: "Rambling grant intro — bot offers to help despite run-on phrasing"
+  vars:
+    prompt: "hi i was just wondering if maybe you could possibly help me out with something about grants because i have a lot of questions and i dont really know where to start honestly"
+    kb_context: >
+      No ORA knowledge-base document covers this query. The only faithful
+      response is to abstain and route the user to ORA without inventing an answer.
+  assert:
+    - type: llm-rubric
+      value: >
+        Response handles the rambling input gracefully, responds helpfully,
+        and offers to help with grant questions without being confused by the
+        informal phrasing.
+
+- description: "All-caps F&A rate question — answered normally despite shouting"
+  vars:
+    prompt: "WHAT IS THE F&A RATE??"
+    kb_context: >
+      Morgan State F&A (Facilities & Administrative / indirect cost) rates for
+      Organized Research (On-Campus): FY 2024-2025 (07/01/2024-06/30/2025) is
+      53%; FY 2025-2026 (07/01/2025-06/30/2026) is 54%. Other on-campus rates
+      (both fiscal years): Instruction 64%, Other Sponsored Activities 42%.
+      All Programs (Off-Campus) is 26% for both fiscal years.
+      Source: backend/kb_structured/pre_award/fanda_cost_rates/pre_award_fanda_cost_rates.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response answers the F&A rate question normally and accurately; not
+        thrown off by the all-caps formatting or double question marks.
+
+- description: "Thanks + effort-reporting follow-up — handles both parts"
+  vars:
+    prompt: "thanks! also what is effort reporting?"
+    kb_context: >
+      Effort reporting is a post-award compliance requirement for PIs, faculty,
+      professional staff, and students paid from federal grants and contracts.
+      Effort is defined as the amount of time spent on a particular activity,
+      including sponsored work where salary is directly charged or cost-shared.
+      Effort certifications are generated three times per year: February (Fall
+      semester effort), July (Spring semester effort), and October (Summer
+      effort). Once released to campus, certifications must be completed within
+      14 calendar days. The platform used is Searchlight. Corrections should be
+      reported to the ORA Director (Gillian.Silver@morgan.edu) and the assigned
+      RFA Grant Accountant. Framework: 2 CFR 200 (OMB Uniform Guidance).
+      Source: backend/kb_structured/post_award/reporting/post_award_reporting.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response handles the thanks briefly then answers the effort-reporting
+        question accurately.
+
+- description: "Multi-part IRB + IACUC + contact question — all three parts answered"
+  vars:
+    prompt: "What is the IRB and what is the IACUC and who do I contact for each?"
+    kb_context: >
+      The Institutional Review Board (IRB) reviews and approves all Morgan State
+      University research involving human subjects, in compliance with federal
+      regulations at 45 CFR 46. No human subjects research may begin without IRB
+      approval. IRB Administrator: irb.research@morgan.edu. The IRB Chair is
+      Benjamin Welsh, Ph.D.; the Institutional Official is Willie May, Ph.D.
+      The Institutional Animal Care and Use Committee (IACUC) must approve all
+      work at Morgan State's Animal Research Facility (ARF). The ARF is
+      AAALAC-accredited and complies with the federal Animal Welfare Act. IACUC
+      Director: Dr. Ingrid Tulloch (Ingrid.Tulloch@morgan.edu). For general ORA
+      inquiries covering both offices, contact ask.ora@morgan.edu or 443-885-4044.
+      Source: backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json
+  assert:
+    - type: llm-rubric
+      value: >
+        Response answers all three parts: explains IRB (Institutional Review
+        Board, human subjects research), explains IACUC (Institutional Animal
+        Care and Use Committee, animal research), and provides contact
+        information for each.

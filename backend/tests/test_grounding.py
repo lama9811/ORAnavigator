@@ -1,8 +1,12 @@
-"""Tests for Layer 3 grounding verification: regenerate-then-refuse.
+"""Tests for Layer 3 grounding verification: regenerate-then-deliver.
 
-Layer 3 used to only append a soft disclaimer when an answer was poorly
-grounded in the KB. It now *verifies*: a weak answer is regenerated once with a
-strict prompt, and if it is still weak it is refused rather than shown.
+When an answer is not positively verified as KB-grounded, Layer 3 regenerates
+it once under a strict KB-only prompt. The regenerated answer is then trusted
+and delivered -- Gemini returns its groundingChunks metadata unreliably (it is
+frequently empty even for a correct, grounded answer; verified live: the same
+good answer came back with chunk counts 7, 0, 0, 0 on four identical runs), so
+refusing on a low chunk count refused good answers far more often than it caught
+a genuine miss. Only an empty or errored regeneration is refused.
 
 Run from the backend/ directory:
     cd backend && ../.venv/bin/python -m pytest tests/test_grounding.py -v
@@ -117,13 +121,28 @@ def test_weak_first_pass_regenerates_and_delivers_second(monkeypatch):
     assert "Vague ungrounded guess" not in final
 
 
-def test_weak_after_regeneration_is_refused(monkeypatch):
-    """When the regenerated answer is also weak, the answer is refused outright
-    rather than shown."""
+def test_weak_after_regeneration_is_still_delivered(monkeypatch):
+    """Regression test for the over-refusal bug. The strict regeneration's
+    answer is trusted and delivered even when its grounding metadata is weak --
+    Gemini reports groundingChunks unreliably, so a non-empty strict-regenerated
+    answer must NOT be refused on a low chunk count."""
     events = _drive(
         monkeypatch,
-        _result("Vague ungrounded guess.", chunks=0, coverage=0.0),
-        _result("Another ungrounded guess.", chunks=0, coverage=0.0),
+        _result("Vague first answer.", chunks=0, coverage=0.0),
+        _result("The off-campus F&A rate is 26%.", chunks=0, coverage=0.0),
+    )
+    final = _final(events)
+    assert "off-campus F&A rate is 26%" in final
+    assert final != vertex_agent._REFUSAL_MSG
+
+
+def test_empty_regeneration_is_refused(monkeypatch):
+    """If the strict regeneration genuinely produces no answer, the response is
+    refused -- the safeguard for a real failure is preserved."""
+    events = _drive(
+        monkeypatch,
+        _result("Vague first answer.", chunks=0, coverage=0.0),
+        _result("", chunks=0, coverage=0.0),
     )
     assert _final(events) == vertex_agent._REFUSAL_MSG
 
@@ -146,3 +165,135 @@ def test_outage_surfaces_an_error(monkeypatch):
     tail = [e for e in events if e["type"] in ("done", "error")]
     assert tail[-1]["type"] == "error"
     assert tail[-1]["content"] == vertex_agent._OUTAGE_MSG
+
+
+# ===========================================================================
+# Personal-recall short-circuit -- a question that asks the bot to recall
+# something the user said about themselves in this conversation must NOT
+# trigger Layer 3's KB-only regeneration. Those facts live in the chat
+# history, not the KB, so regenerating under the strict KB-only prompt
+# discards the correct answer and replies "I don't have that information."
+# ===========================================================================
+
+def test_personal_recall_question_skips_regeneration(monkeypatch):
+    """Weak first answer to a personal-recall question is delivered, not
+    regenerated. The user told the bot they're in Biology earlier in the chat;
+    asking 'What department am I in?' must surface the recall answer, not the
+    strict-prefix refusal."""
+    monkeypatch.setattr(
+        vertex_agent, "_do_agent_pass",
+        _fake_passes(
+            _result("You told me you're in the Biology department.",
+                    chunks=0, coverage=0.0),
+            _result("I do not have information about your specific department.",
+                    chunks=0, coverage=0.0),
+        ),
+    )
+    monkeypatch.setattr(vertex_agent, "_create_session",
+                        lambda *a, **k: "regen-session")
+    events = list(vertex_agent._run_verified(
+        "What department am I in?", "user-1", "sess-1"))
+    final = _final(events)
+    assert "Biology" in final
+    assert "do not have information" not in final
+
+
+def test_non_recall_question_still_regenerates(monkeypatch):
+    """Regression guard: a normal KB question whose first answer is weak
+    must still be regenerated -- the personal-recall short-circuit must not
+    let ungrounded KB-claims through."""
+    monkeypatch.setattr(
+        vertex_agent, "_do_agent_pass",
+        _fake_passes(
+            _result("Vague ungrounded guess.", chunks=0, coverage=0.0),
+            _result("The on-campus F&A rate is in the rate agreement.",
+                    chunks=4, coverage=0.8),
+        ),
+    )
+    monkeypatch.setattr(vertex_agent, "_create_session",
+                        lambda *a, **k: "regen-session")
+    events = list(vertex_agent._run_verified(
+        "What is the F&A rate?", "user-1", "sess-1"))
+    final = _final(events)
+    assert "rate agreement" in final
+    assert "Vague ungrounded guess" not in final
+
+
+def test_is_personal_recall_matches_self_reference_questions():
+    """Unit test for the personal-recall detector. These phrasings all ask
+    the bot to recall something the user said about themselves."""
+    matches = [
+        "What department am I in?",
+        "What sponsor did I tell you I work with?",
+        "Remind me what department I'm in.",
+        "What's my upcoming deadline?",
+        "What is my role on the NSF award?",
+        "Did I mention my IRB protocol?",
+        "What do you remember about me?",
+        "Tell me about myself based on what I've said.",
+        "Who am I working with on this grant?",
+    ]
+    for q in matches:
+        assert vertex_agent._is_personal_recall(q), \
+            f"should detect as personal-recall: {q!r}"
+
+
+def test_is_personal_recall_rejects_kb_questions():
+    """Regression guard: normal KB questions must NOT match the recall
+    detector, or they will skip Layer 3 and let ungrounded KB-claims through."""
+    non_matches = [
+        "What is Morgan State's F&A rate?",
+        "How long does IRB approval take?",
+        "Where do I find IACUC SOPs?",
+        "Who handles post-award setup?",
+        "What's the deadline for the NSF CAREER award?",
+        "Tell me about Research Security.",
+    ]
+    for q in non_matches:
+        assert not vertex_agent._is_personal_recall(q), \
+            f"should NOT detect as personal-recall: {q!r}"
+
+
+# ===========================================================================
+# Empty Pass 1 with KB chunks -- a vague / typo'd query like "also abou the
+# preawards" makes the ADK call the KB search tool (finding real Pre-Award
+# docs) but then emit no text. The old behavior gave up with the generic
+# "couldn't generate" error even though usable KB grounding was already in
+# hand. The fix retries via Pass 2's strict regeneration -- the strict
+# prefix tells the model to answer fully from the KB context it already
+# has, which is the exact recovery path that's needed.
+# ===========================================================================
+
+def test_empty_first_pass_with_chunks_triggers_regeneration(monkeypatch):
+    """Pass 1 returns no text but found 5 KB chunks (typical of vague or
+    typo'd queries where the model called the search tool but failed to
+    synthesize an answer). Pass 2's strict regeneration should fire and
+    its answer must be delivered."""
+    events = _drive(
+        monkeypatch,
+        _result("", chunks=5, coverage=0.0,
+                citations=[{"title": "Pre-Award — Overview", "url": "x"}]),
+        _result("Pre-award covers proposal preparation, budgets, and F&A rates.",
+                chunks=4, coverage=0.7),
+    )
+    final = _final(events)
+    assert "Pre-award" in final
+    assert "couldn't generate" not in final
+
+
+def test_empty_first_pass_with_no_chunks_still_errors(monkeypatch):
+    """Regression guard: empty text AND zero KB chunks is a genuine model
+    failure -- it must still surface the 'couldn't generate' error, not
+    burn a Pass 2 call on a hopeless case."""
+    monkeypatch.setattr(
+        vertex_agent, "_do_agent_pass",
+        _fake_passes(_result("", chunks=0, coverage=0.0)),
+    )
+    monkeypatch.setattr(vertex_agent, "_create_session",
+                        lambda *a, **k: "regen-session")
+    events = list(vertex_agent._run_verified(
+        "garbled query", "user-1", "sess-1"))
+    tail = [e for e in events if e["type"] in ("done", "error")]
+    assert tail, "expected a done/error event"
+    assert tail[-1]["type"] == "error"
+    assert "couldn't generate" in tail[-1]["content"]

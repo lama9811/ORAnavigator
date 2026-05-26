@@ -1,0 +1,374 @@
+[
+  {
+    "question": "Which committee reviews all human subjects research at Morgan State University, and under what federal regulation does it operate?",
+    "answer": "All research involving human subjects at Morgan State University must be reviewed and approved by the Institutional Review Board (IRB), which operates in compliance with federal regulations at 45 CFR 46.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "How long should researchers allow for IRB review of a new human subjects protocol?",
+    "answer": "Researchers should allow at least 30 days for IRB review, after which the IRB notifies them in writing of approval, disapproval, or conditional approval.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "Who is the current Chair of Morgan State University's IRB, and what department are they from?",
+    "answer": "The IRB Chair is Benjamin Welsh, Ph.D., an Associate Professor in the Education department.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the application submission deadline for the October 2025 IRB meeting?",
+    "answer": "The application submission deadline for the October 29, 2025 IRB meeting is October 17, 2025.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many voting members does the Morgan State University IRB currently have, and who is the non-affiliated community member?",
+    "answer": "The IRB has 14 voting members. The non-affiliated community member is Mona Addison, MA.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which CITI training course is mandatory for anyone involved in human subjects research at Morgan State?",
+    "answer": "All personnel engaged in human subjects research must complete the CITI Human Subjects Research (HSR) course before submitting an IRB application or accessing private identifiable data.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "I'm a faculty advisor on a student research project with human subjects. Am I considered 'engaged in research' and required to complete CITI training?",
+    "answer": "Yes. Faculty Advisors are always considered engaged in research due to their oversight responsibilities and must complete CITI Human Subjects Research (HSR) training before any research activities begin.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What form must be submitted to formally close out a completed IRB-approved human subjects study at Morgan State?",
+    "answer": "The Human Research Protection Program Closure Form is used to formally document the completion of IRB-approved human subjects research. It is submitted via a Google Form at forms.gle/DgqtsWKViCeodgLx6.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "An external researcher from another university wants to recruit Morgan State students for their study. What must they provide before recruiting can begin?",
+    "answer": "Non-affiliated investigators must contact irb.research@morgan.edu before any recruitment. They must provide a memorandum describing the recruitment plan, a home-IRB approval letter with protocol number, the IRB application, consent forms, recruitment materials, instruments, and other supporting documents. Recruitment may not begin until written site authorization is granted by Morgan's Authorized Institutional Official.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who is the Acting Director for Research Compliance at Morgan State as of 2026, and what credentials does they hold?",
+    "answer": "The Acting Director for Research Compliance is Keyshawn Moncrieffe, Ph.D., MBA, CCEP, CRA, who assumed the role after Dr. Edet Isuk's retirement on 2026-01-01.",
+    "source": "backend/kb_structured/research_compliance/human_subjects_research/compliance_human_subjects_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Where is Morgan State University's Animal Research Facility located, and when was it built?",
+    "answer": "The Animal Research Facility (ARF) is located in the Martin D. Jenkins Behavioral and Social Sciences Center. It was built in 2017 and is 2,725 square feet.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What accreditation standard was the Morgan State ARF constructed to meet?",
+    "answer": "The ARF was constructed, staffed, and equipped to the standards of the American Association for Accreditation of Laboratory Animal Care (AAALAC).",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "When does the IACUC meet, and when must protocol submissions be received?",
+    "answer": "The IACUC convenes monthly on the second Thursday from 1:00 to 3:00 PM. Protocol submissions are due by the third Thursday of the prior month.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What is the total animal housing capacity at the Morgan State ARF, and how many mice can be housed in individually ventilated cages?",
+    "answer": "The total housing capacity is 1,836 animals. Mice can be housed in individually ventilated cages (IVC) with a capacity of 960, spread across 2 rooms with 80 cages per rack and 3 racks.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many rats can the ARF house, and how are they distributed across racks and rooms?",
+    "answer": "The ARF can house 720 rats in individually ventilated cages (IVC) across 2 rooms, with 2 animals per cage, 30 cages per rack, and 12 racks.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How do I anonymously report an animal welfare concern at the Morgan State ARF?",
+    "answer": "Animal welfare concerns can be reported anonymously through a Google Form at forms.gle/ivF2WuiqG566uWZGA.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who is the Clinical Veterinarian at the Morgan State ARF, and how can I contact them?",
+    "answer": "The Clinical Veterinarian is Dr. Matthew Terzi, reachable at M.Terzi@morgan.edu.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How many IACUC Standard Operating Procedures (SOPs) are currently published, and is there a gap in the numbering?",
+    "answer": "50 SOPs are currently published. SOP 37 is not in the published list; the numbering jumps from SOP 36 to SOP 38.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What SOP number governs the Emergency and Disaster Plan at the ARF, and what is its version number?",
+    "answer": "SOP 15.3 is the Emergency and Disaster Plan.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which IACUC SOP covers IACUC governance procedures for protocol review, and what is its number?",
+    "answer": "SOP 48.1 covers IACUC Procedures for Protocol Review.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What SOP covers the approved alternatives to CO2 euthanasia at the ARF?",
+    "answer": "SOP 17.3 (Euthanasia — Use of alternatives to CO2 Euthanasia) describes approved alternatives to CO2 euthanasia, including cervical dislocation, pharmacological agents, and AVMA-approved methods.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/form_iacuc_sop_euthanasia_alt_co2.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What SOP governs access, storage, dispensing, and record-keeping for DEA-controlled substances used in animal research at the ARF?",
+    "answer": "SOP 12.2 (Access to Controlled Substances) defines access, storage, dispensing, and record-keeping requirements for DEA-controlled substances used in animal research.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/form_iacuc_sop_controlled_substances.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What SOP covers survival surgical procedures at the ARF, and what does it require?",
+    "answer": "SOP 34.2 (Survival Surgery) defines requirements for survival surgical procedures, including aseptic technique, anesthesia, analgesia, and post-operative monitoring.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/form_iacuc_sop_survival_surgery.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What health and safety training workshop cadence does the ARF offer, and how do researchers schedule specialized technique training?",
+    "answer": "Health and safety training workshops are offered semi-annually and by appointment. Individualized training for specialized surgical, behavioral, or other technical procedures is available by appointment only. Researchers can schedule via MSU's Microsoft Bookings link or by emailing Dr. Ingrid Tulloch directly.",
+    "source": "backend/kb_structured/research_compliance/animal_research/training_and_consultation/compliance_iacuc_training_consultation.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How long does it take to set up an iLab Solutions account for the ARF, and what must the PI do after a researcher registers?",
+    "answer": "Once registration is submitted, it may take up to 24 hours for the iLab account to be created. After submission, the PI will receive a notification and must approve the researcher's membership and assign Accounts (indices) for their use.",
+    "source": "backend/kb_structured/research_compliance/animal_research/training_and_consultation/compliance_iacuc_training_consultation.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What federal regulation governs Financial Conflicts of Interest (FCOI) in federally sponsored research at Morgan State?",
+    "answer": "Financial Conflicts of Interest in federally sponsored research are governed by Public Health Service regulations at 42 CFR Part 50 Subpart F, as well as National Science Foundation conflict-of-interest policies.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/compliance_conflict_of_interest.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "How often must investigators complete CITI conflict-of-interest training for sponsored research, and whose financial interests are covered by the FCOI policy?",
+    "answer": "Investigators must complete CITI conflict-of-interest training and refresh it every four years. The FCOI policy covers the financial interests of the Investigator and those of the Investigator's spouse/domestic partner and/or dependent children.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/compliance_conflict_of_interest.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "In what year did the Morgan State Board of Regents approve the Conflict of Interest Policy in Research and Development, and what two laws anchor it?",
+    "answer": "The Board of Regents approved the COI Policy in Research and Development in 2017. It is anchored in the Maryland Public Ethics Law and the Public-Private Partnership Act for Institutions of Higher Education.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/compliance_conflict_of_interest.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who chairs the Conflict of Interest Committee (COIC) at Morgan State, and how many members does it have?",
+    "answer": "The Conflict of Interest Committee (COIC) is chaired by Dr. Willie May (Vice President for Research and Economic Development) and has nine members.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/compliance_conflict_of_interest.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Where is the Office of Technology Transfer located, and what is its phone number?",
+    "answer": "The Office of Technology Transfer (OTT) is located at Earl S. Richardson Library, Suite 207, 1700 E. Cold Spring Lane, Baltimore, MD 21251, and can be reached at 443-885-1003.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/compliance_conflict_of_interest.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What are the three things the Office of Research Compliance has established procedures for with respect to financial conflicts of interest in sponsored research?",
+    "answer": "The Office of Research Compliance has established procedures for: (1) disclosing significant conflicts before any research is undertaken; (2) managing, reducing, or eliminating significant financial conflicts of interest; and (3) providing subsequent reports on how the conflicts were handled.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/conflict_of_interest_for_sponsored_research/compliance_coi_sponsored_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which two federal agencies adopted the conflict-of-interest policies that govern objectivity in federally funded research?",
+    "answer": "The Public Health Service (PHS) and the National Science Foundation (NSF) adopted conflict-of-interest policies (e.g., 42 CFR Part 50 Subpart F) to promote objectivity in research and ensure it is free from bias resulting from financial conflicts.",
+    "source": "backend/kb_structured/research_compliance/conflict_of_interest/conflict_of_interest_for_sponsored_research/compliance_coi_sponsored_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What are the core values underpinning Morgan State's Responsible Conduct of Research program, and which funders require RCR training?",
+    "answer": "Morgan State's RCR program is guided by the core values of honesty, accuracy, objectivity, and trust. Researchers receiving support from NIH and/or NSF grants must complete RCR training at the start of their award and again every four years.",
+    "source": "backend/kb_structured/research_compliance/responsible_conduct_of_research/compliance_responsible_conduct_of_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What are the two channels through which Morgan State offers RCR training?",
+    "answer": "Morgan offers RCR training through: (1) the CITI Program online course at citiprogram.org; and (2) in-person presentations, lectures, and topic-specific sessions led by subject-matter experts.",
+    "source": "backend/kb_structured/research_compliance/responsible_conduct_of_research/compliance_responsible_conduct_of_research.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "How does Morgan State's research misconduct definition handle honest errors or differences of scientific opinion?",
+    "answer": "Under Morgan State's research misconduct policy (aligned with 42 CFR Part 93), honest errors and differences of opinion do not qualify as research misconduct.",
+    "source": "backend/kb_structured/research_compliance/research_misconduct/compliance_research_misconduct.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What three criteria must be satisfied for an allegation to rise to the level of research misconduct at Morgan State?",
+    "answer": "The allegation must: (1) represent a significant departure from accepted practices of the relevant research community; (2) have been committed intentionally, knowingly, or recklessly; and (3) be provable by a preponderance of the evidence.",
+    "source": "backend/kb_structured/research_compliance/research_misconduct/compliance_research_misconduct.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What federal regulation defines research misconduct as fabrication, falsification, or plagiarism at Morgan State?",
+    "answer": "Morgan State University defines research misconduct in alignment with 42 CFR Part 93 as fabrication, falsification, or plagiarism in proposing, performing, or reviewing research, or in reporting research results.",
+    "source": "backend/kb_structured/research_compliance/research_misconduct/compliance_research_misconduct.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What are the four core domains of Morgan State's Research Security Program?",
+    "answer": "The four core domains of Morgan State's Research Security Program are: (1) Cybersecurity, (2) Export Controls, (3) Conflict of Interest, and (4) Foreign Travel Security.",
+    "source": "backend/kb_structured/research_compliance/research_security/compliance_research_security.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What annual federal funding threshold triggers the NSPM-33 requirement for institutions to certify they have a research security program?",
+    "answer": "NSPM-33 requires federal research agencies to ensure that institutions receiving over $50 million annually in federal R&D funding certify they have a research security program.",
+    "source": "backend/kb_structured/research_compliance/research_security/nspm_33_overview/compliance_research_security_nspm_33.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Which four federal agencies developed online research security training in response to NSPM-33, and through which platform is this training delivered?",
+    "answer": "NSF, NIH, DOE, and DOD developed online research security training in response to NSPM-33. The training is available through CITI Programs.",
+    "source": "backend/kb_structured/research_compliance/research_security/nspm_33_overview/compliance_research_security_nspm_33.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What are the three approved training options for the Research Security Training requirement at Morgan State?",
+    "answer": "Personnel must complete one of these approved options: (1) CITI Program (citiprogram.org); (2) NSF SECURE Center (secure-center.org/ctm); or (3) NSF Research Security Training Modules (nsf.gov/research-security/training). A copy of the completed certificate must be retained.",
+    "source": "backend/kb_structured/research_compliance/research_security/research_compliance_and_security_training/compliance_research_security_training.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What four IT security documents does Morgan State publish for its Research Security Information Technology Resources page?",
+    "answer": "The four documents are: (1) Information Security Incident Response Standard & Procedure; (2) Information Security Risk Management Standard & Procedure; (3) Data Encryption Procedure; and (4) Data Classification Procedure.",
+    "source": "backend/kb_structured/research_compliance/research_security/information_technology_resources/compliance_research_security_information_technology.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which national and international frameworks does Morgan's Information Security Risk Management procedure align with?",
+    "answer": "The Information Security Risk Management Standard & Procedure aligns with NIST SP 800-37, NIST SP 800-53, ISO 27005, and ISO 31000.",
+    "source": "backend/kb_structured/research_compliance/research_security/information_technology_resources/compliance_research_security_information_technology.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "When was the Maryland Public Ethics Law originally established, and who must comply with its conflict-of-interest provisions?",
+    "answer": "The Maryland Public Ethics Law (codified in the General Provisions Article, Title 5) was originally established in 1979. Its conflict-of-interest provisions apply to all state employees regardless of grade or years of service.",
+    "source": "backend/kb_structured/research_compliance/state_of_maryland_ethics_and_financial_disclosure/compliance_maryland_ethics_financial_disclosure.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Approximately how many state employees are required to file an annual financial disclosure statement with the Maryland State Ethics Commission?",
+    "answer": "The Maryland State Ethics Commission requires more than 14,000 state employees, elected officials, candidates for state elected offices, and other designated categories to file an annual financial disclosure statement.",
+    "source": "backend/kb_structured/research_compliance/state_of_maryland_ethics_and_financial_disclosure/compliance_maryland_ethics_financial_disclosure.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How much ethics training must new financial-disclosure filers complete, and by when must they complete it?",
+    "answer": "New financial-disclosure filers must complete two hours of ethics training within six months of the date they first become required to file.",
+    "source": "backend/kb_structured/research_compliance/state_of_maryland_ethics_and_financial_disclosure/compliance_maryland_ethics_financial_disclosure.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Is Morgan State University's campus smoke- and tobacco-free? What policies govern alcohol and drug use?",
+    "answer": "Yes, Morgan State maintains a tobacco- and smoke-free campus, documented in the Smoke/Tobacco-Free Campus Policy. The university also maintains a Drug and Alcohol Abuse Policy prohibiting the illegal and/or abusive use of drugs and alcohol. Both policies apply to faculty, staff, students, and visitors.",
+    "source": "backend/kb_structured/research_compliance/drug_alcohol_and_tobacco_policies/compliance_drug_alcohol_tobacco.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What strategic plan does Morgan State reference in its Diversity and EEO compliance resources, and what year is the Annual Cultural Diversity Plan?",
+    "answer": "Morgan State references the Transformation Morgan 2030 strategic plan. The Annual Cultural Diversity Plan is from 2022.",
+    "source": "backend/kb_structured/research_compliance/diversity_and_eeo/compliance_diversity_and_eeo.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many self-paced eTraining modules does ORA offer, and what topic does the module 'It Takes a Village' cover?",
+    "answer": "ORA offers eight self-paced eTraining modules. 'It Takes a Village: Understanding Cost Share on Sponsored Projects' covers cost share types, approval processes, and documentation.",
+    "source": "backend/kb_structured/trainings/e_training/trainings_e_training.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "What is the name and direct URL of the eTraining module covering Banner Pool Level 08 and procurement on sponsored projects?",
+    "answer": "The module is called 'Purchasing with Purpose: Procurement on Sponsored Projects / Banner Pool Level 08.' Its direct URL is https://rise.articulate.com/share/5gROiZqb81HR0jfGreHGt00baHxOl2m2.",
+    "source": "backend/kb_structured/trainings/e_training/trainings_e_training.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the typical scheduling pattern for the Monthly D-RED Seminars, and approximately how many seminars are archived going back to when?",
+    "answer": "Monthly D-RED Seminars are typically held on the second Wednesday of each month. Approximately 60 seminars are archived, with the earliest archived date being 2019-10-02.",
+    "source": "backend/kb_structured/trainings/monthly_d_red_seminars/trainings_monthly_d_red.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "Who presented the March 2026 D-RED seminar on nation-state research espionage, and what was the title?",
+    "answer": "Erdal Ozkaya, PhD presented the March 11, 2026 D-RED seminar titled 'The Hunter Becomes the Hunted: Protecting High Value Research from Nation-State Espionage.'",
+    "source": "backend/kb_structured/trainings/monthly_d_red_seminars/trainings_monthly_d_red.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the most recent seminar added to the New Faculty Development Seminars catalog, who presented it, and when was it held?",
+    "answer": "The most recent addition is 'Harnessing AI for Research Funding Success,' presented by Gillian Silver, MPH, CPH, CRA, CPRA, CFRA on September 30, 2025.",
+    "source": "backend/kb_structured/trainings/new_faculty_development_seminars/trainings_new_faculty.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What one-time Special Workshop on cost compliance did ORA host in December 2022, and how many presentations did it include?",
+    "answer": "The Cost Allowability Workshop was held on December 9, 2022. It included four sequential presentations covering Cost Allowability Principles & Examples, Budget Info in the FOA, Understanding Federal Notices of Award, and Cost Allowability, Processes & Support Documents.",
+    "source": "backend/kb_structured/trainings/special_workshops/trainings_special_workshops.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What professional certifications does ORA's Test Prep program support, and which body grants them?",
+    "answer": "ORA's Test Prep program supports the CRA (Certified Research Administrator), CPRA (Certified Pre-Award Research Administrator), and CFRA (Certified Financial Research Administrator) credentials, all granted by the Research Administrators Certification Council (RACC).",
+    "source": "backend/kb_structured/trainings/test_prep/trainings_test_prep.json",
+    "difficulty": "easy"
+  },
+  {
+    "question": "How many chapter-based PDF study guides does ORA provide for RACC exam preparation, and which chapter topic was added beyond the originally listed fifteen?",
+    "answer": "ORA provides 16 chapter-based PDF study guides. The 16th topic is Contracting, which brings the total to 16 (the page originally described 'fifteen' but the verified count is 16 chapters).",
+    "source": "backend/kb_structured/trainings/test_prep/trainings_test_prep.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "Which ORA staff members hold all three RACC credentials (CRA, CPRA, and CFRA) and serve as informal mentors for exam preparation?",
+    "answer": "Farin Kamangar (CRA, CPRA, CFRA), Gillian Silver (CRA, CPRA, CFRA), and Ryan Mobley (CRA, CFRA, CPRA) hold all three RACC credentials and serve as informal mentors for staff preparing for these exams.",
+    "source": "backend/kb_structured/trainings/test_prep/trainings_test_prep.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "What is the current status of the Research Compliance Updates and News page, and what should faculty do in the meantime?",
+    "answer": "As of 2026-05-14, the Research Compliance Updates and News page is marked 'Coming Soon!' and does not yet contain published items. Until updates are posted, faculty and staff should subscribe to ORA Announcements or contact the office directly at ask.ora@morgan.edu or 443-885-4044.",
+    "source": "backend/kb_structured/research_compliance/research_compliance_updates_and_news/compliance_news_and_updates.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What equipment is available for histology work at the Morgan State ARF?",
+    "answer": "Histology equipment at the ARF includes a Biosafety Level II cabinet, a chemical fume hood for perfusions, a HistoCore Arcadia tissue processor/embedder, a Leica RM2255 fully automated rotary microtome, hot plates, scales, a pH meter, and a sonicator.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many IACUC forms are published on the IACUC Forms page at Morgan State?",
+    "answer": "35 forms are published on the IACUC Forms page.",
+    "source": "backend/kb_structured/research_compliance/animal_research/compliance_animal_research.json",
+    "difficulty": "hard"
+  },
+  {
+    "question": "What supporting documents (beyond the SOPs themselves) are listed on the IACUC SOPs page?",
+    "answer": "Three supporting documents are listed: (1) 2-Factor Authentication (2FA) Self Enrollment - Push Notifications; (2) Biological Safety Manual and Exposure Control Plan; and (3) Emergency Declaration and Point of Contact Call List.",
+    "source": "backend/kb_structured/research_compliance/animal_research/iacuc_sops/compliance_iacuc_sops.json",
+    "difficulty": "very_hard"
+  },
+  {
+    "question": "How many compliance areas does the Office of Research Compliance administer, and which one covers the Maryland Board of Regents policy approved in 2017?",
+    "answer": "The Office of Research Compliance administers programs across nine major compliance areas. The Conflict of Interest area covers the Maryland Board of Regents Conflict of Interest in Research and Development Policy, which was approved in 2017.",
+    "source": "backend/kb_structured/research_compliance/compliance_overview.json",
+    "difficulty": "hard"
+  }
+]
