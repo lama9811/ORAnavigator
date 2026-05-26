@@ -87,6 +87,113 @@ def create_submission(
     return sub
 
 
+def create_submission_from_solicitation(
+    db: Session,
+    user_id: int,
+    extracted: dict,
+    title_override: Optional[str] = None,
+) -> Submission:
+    """Build a Submission from an extractor dict (see services/
+    solicitation_extractor.py). Title defaults to extracted program_name
+    or program_id; user can override via title_override. Tasks are the
+    sponsor template PLUS solicitation-specific tasks for each
+    required_attachment that isn't already in the generic checklist.
+
+    The user has reviewed/edited the extracted dict in the UI before this
+    call -- we trust what's passed in. This function does not call out
+    to Gemini."""
+    sponsor = (extracted.get("sponsor") or "Internal").strip() or "Internal"
+    program_name = extracted.get("program_name") or extracted.get("program_id") or "Proposal"
+    title = (title_override or program_name).strip() or "Proposal"
+
+    # Parse deadline from contract: ISO datetime / plain date / None
+    deadline_raw = extracted.get("deadline")
+    deadline: Optional[datetime] = None
+    if isinstance(deadline_raw, str) and deadline_raw.strip():
+        try:
+            deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                deadline = datetime.strptime(deadline_raw[:10], "%Y-%m-%d")
+            except ValueError:
+                deadline = None
+
+    # Build a structured notes blob carrying the rest of the extracted
+    # metadata. This is human-readable AND machine-parseable for any
+    # future downstream feature (calendar export, draft critic, etc.).
+    notes_lines = []
+    if extracted.get("program_id"):
+        notes_lines.append(f"Program ID: {extracted['program_id']}")
+    if extracted.get("eligibility"):
+        notes_lines.append(f"Eligibility: {extracted['eligibility']}")
+    if extracted.get("budget_cap"):
+        notes_lines.append(f"Budget cap: ${extracted['budget_cap']:,}")
+    if extracted.get("submission_portal"):
+        notes_lines.append(f"Submission portal: {extracted['submission_portal']}")
+    page_limits = extracted.get("page_limits") or {}
+    if page_limits:
+        pl = ", ".join(f"{k}: {v}p" for k, v in page_limits.items())
+        notes_lines.append(f"Page limits: {pl}")
+    notes = "\n".join(notes_lines) if notes_lines else None
+
+    sub = Submission(
+        user_id=user_id,
+        title=title,
+        sponsor=sponsor,
+        deadline=deadline,
+        status="active",
+        notes=notes,
+    )
+    db.add(sub)
+    db.flush()
+
+    # Start with the sponsor's standard template
+    base_template = get_template(sub.sponsor)
+    seen_titles = {t["title"].lower() for t in base_template}
+    for order, t in enumerate(base_template):
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=t["title"],
+            description=t.get("description"),
+            kb_doc_id=t.get("kb_doc_id"),
+            due_offset_days=t.get("due_offset_days"),
+            status="pending",
+            sort_order=order,
+        ))
+
+    # Add a task per solicitation-listed attachment that isn't already
+    # covered by the base template. This is how the seeded checklist
+    # diverges from the generic NSF/NIH template -- THIS solicitation
+    # explicitly requires these.
+    next_order = len(base_template)
+    for attachment in extracted.get("required_attachments") or []:
+        att_text = str(attachment).strip()
+        if not att_text:
+            continue
+        if any(att_text.lower() in seen for seen in seen_titles):
+            continue
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=f"Prepare required attachment: {att_text}",
+            description=(
+                f"Required by the solicitation. Confirm the format and "
+                f"page limit before submission."
+            ),
+            kb_doc_id=None,
+            due_offset_days=14,
+            status="pending",
+            sort_order=next_order,
+        ))
+        next_order += 1
+
+    # Mirror into long-term memory so the chat agent picks it up
+    _record_active_grant_memory(db, user_id, sub.title, sub.sponsor)
+
+    db.commit()
+    db.refresh(sub)
+    return sub
+
+
 def list_submissions(db: Session, user_id: int) -> list[Submission]:
     """All of THIS user's submissions, newest first."""
     return (

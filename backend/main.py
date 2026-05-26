@@ -3037,6 +3037,73 @@ async def list_proposal_templates(user: dict = Depends(get_current_user)):
 
 
 # ----------------------------------------------------------------------------
+# Solicitation ingestion: PDF -> structured fields -> seeded Submission.
+# Two-step flow:
+#   1) POST /from-solicitation (file upload) -> returns extracted dict
+#   2) POST /from-solicitation/confirm (JSON body) -> creates Submission
+# This keeps "extract" cheap+idempotent and "commit" explicit so the user
+# always reviews the AI-extracted fields before they become a real proposal.
+
+_MAX_SOLICITATION_PDF_BYTES = 25 * 1024 * 1024  # 25 MB
+
+
+@app.post("/api/me/submissions/from-solicitation")
+async def extract_solicitation(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """Step 1: parse a sponsor PDF and return the extracted JSON. Does
+    NOT create a Submission -- the user reviews/edits, then calls the
+    confirm endpoint."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    filename = (file.filename or "").lower()
+    ctype = (file.content_type or "").lower()
+    if not (filename.endswith(".pdf") or "pdf" in ctype):
+        raise HTTPException(400, "Only PDF uploads are supported.")
+
+    pdf_bytes = await file.read()
+    if not pdf_bytes:
+        raise HTTPException(400, "Uploaded file is empty.")
+    if len(pdf_bytes) > _MAX_SOLICITATION_PDF_BYTES:
+        raise HTTPException(413, "PDF is larger than 25 MB.")
+
+    from services import solicitation_extractor as _sx
+    extracted = _sx.extract_from_pdf_bytes(pdf_bytes)
+    if extracted is None:
+        raise HTTPException(
+            422,
+            "Couldn't read this PDF -- the file may be scanned or "
+            "image-only. Try a text-based PDF, or create the proposal "
+            "manually.",
+        )
+    return {"extracted": extracted}
+
+
+@app.post("/api/me/submissions/from-solicitation/confirm")
+async def confirm_solicitation_submission(
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Step 2: commit a user-reviewed extracted dict as a real Submission.
+    Body shape:
+        { "extracted": {<contract dict>}, "title_override": "optional" }"""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    extracted = payload.get("extracted")
+    if not isinstance(extracted, dict):
+        raise HTTPException(400, "Missing 'extracted' dict in body.")
+    title_override = payload.get("title_override")
+
+    sub = _proposals_service.create_submission_from_solicitation(
+        db, user_id=user["user_id"], extracted=extracted,
+        title_override=title_override,
+    )
+    return _submission_to_dict(sub, include_tasks=True)
+
+
+# ----------------------------------------------------------------------------
 # Admins can see (but NOT edit) any user's memory state. Per GDPR, only the
 # user themselves can modify or delete their memories. This endpoint exists
 # for support and debugging.
