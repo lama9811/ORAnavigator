@@ -2817,6 +2817,225 @@ async def me_delete_all_memories(
 
 # ----------------------------------------------------------------------------
 # Phase 6 — Admin debug view (read-only)
+# ============================================================================
+# PROPOSALS TRACKER -- in-flight grant submissions with task checklists
+# ============================================================================
+from services import proposals_service as _proposals_service
+from services.proposal_templates import available_templates as _available_templates
+
+
+def _submission_to_dict(s, include_tasks: bool = True) -> dict:
+    """Serialize a Submission ORM row for the API. Hard-deletes mean the
+    user never sees ghost rows; tasks ride along by default."""
+    out = {
+        "id": s.id,
+        "title": s.title,
+        "sponsor": s.sponsor,
+        "deadline": s.deadline.isoformat() if s.deadline else None,
+        "status": s.status,
+        "notes": s.notes,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+    }
+    if include_tasks:
+        out["tasks"] = [_submission_task_to_dict(t) for t in s.tasks]
+    return out
+
+
+def _submission_task_to_dict(t) -> dict:
+    return {
+        "id": t.id,
+        "title": t.title,
+        "description": t.description,
+        "kb_doc_id": t.kb_doc_id,
+        "due_offset_days": t.due_offset_days,
+        "status": t.status,
+        "notes": t.notes,
+        "sort_order": t.sort_order,
+    }
+
+
+def _parse_deadline(raw):
+    """Accept ISO datetime, plain date (YYYY-MM-DD), or None."""
+    if not raw:
+        return None
+    if isinstance(raw, str):
+        try:
+            return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                return datetime.strptime(raw, "%Y-%m-%d")
+            except ValueError:
+                raise HTTPException(400, f"Invalid deadline format: {raw!r}")
+    raise HTTPException(400, f"Invalid deadline type: {type(raw).__name__}")
+
+
+@app.get("/api/me/submissions")
+async def list_my_submissions(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """All of the current user's proposal submissions, newest first."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    subs = _proposals_service.list_submissions(db, user_id=user["user_id"])
+    return {
+        "submissions": [_submission_to_dict(s, include_tasks=False) for s in subs],
+        "count": len(subs),
+    }
+
+
+@app.post("/api/me/submissions")
+async def create_my_submission(
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create a new submission and seed its task list from the sponsor's
+    template. Body: {title, sponsor, deadline?, notes?}."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    title = (payload.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "title is required")
+    sponsor = (payload.get("sponsor") or "Internal").strip() or "Internal"
+    deadline = _parse_deadline(payload.get("deadline"))
+    notes = payload.get("notes")
+    sub = _proposals_service.create_submission(
+        db, user_id=user["user_id"], title=title,
+        sponsor=sponsor, deadline=deadline, notes=notes,
+    )
+    return _submission_to_dict(sub, include_tasks=True)
+
+
+@app.get("/api/me/submissions/{submission_id}")
+async def get_my_submission(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(
+        db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    return _submission_to_dict(sub, include_tasks=True)
+
+
+@app.patch("/api/me/submissions/{submission_id}")
+async def update_my_submission(
+    submission_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    deadline = payload.get("deadline")
+    deadline_parsed = _parse_deadline(deadline) if deadline else None
+    sub = _proposals_service.update_submission(
+        db, submission_id=submission_id, user_id=user["user_id"],
+        title=payload.get("title"),
+        sponsor=payload.get("sponsor"),
+        deadline=deadline_parsed if deadline else None,
+        status=payload.get("status"),
+        notes=payload.get("notes"),
+    )
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    return _submission_to_dict(sub, include_tasks=True)
+
+
+@app.delete("/api/me/submissions/{submission_id}", status_code=204)
+async def delete_my_submission(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    ok = _proposals_service.delete_submission(
+        db, submission_id=submission_id, user_id=user["user_id"])
+    if not ok:
+        raise HTTPException(404, "Submission not found")
+    return None
+
+
+@app.post("/api/me/submissions/{submission_id}/tasks")
+async def create_my_submission_task(
+    submission_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Append a custom task to a submission."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    title = (payload.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "title is required")
+    task = _proposals_service.add_task(
+        db, submission_id=submission_id, user_id=user["user_id"],
+        title=title,
+        description=payload.get("description"),
+        due_offset_days=payload.get("due_offset_days"),
+    )
+    if task is None:
+        raise HTTPException(404, "Submission not found")
+    return _submission_task_to_dict(task)
+
+
+@app.patch("/api/me/submissions/{submission_id}/tasks/{task_id}")
+async def update_my_submission_task(
+    submission_id: int,
+    task_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Toggle status (pending/done), edit title, etc."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    task = _proposals_service.update_task(
+        db, submission_id=submission_id, task_id=task_id,
+        user_id=user["user_id"],
+        title=payload.get("title"),
+        description=payload.get("description"),
+        status=payload.get("status"),
+        notes=payload.get("notes"),
+    )
+    if task is None:
+        raise HTTPException(404, "Task not found")
+    return _submission_task_to_dict(task)
+
+
+@app.delete("/api/me/submissions/{submission_id}/tasks/{task_id}", status_code=204)
+async def delete_my_submission_task(
+    submission_id: int,
+    task_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    ok = _proposals_service.delete_task(
+        db, submission_id=submission_id, task_id=task_id,
+        user_id=user["user_id"])
+    if not ok:
+        raise HTTPException(404, "Task not found")
+    return None
+
+
+@app.get("/api/me/submissions/templates/list")
+async def list_proposal_templates(user: dict = Depends(get_current_user)):
+    """The set of sponsor templates the user can pick from when creating
+    a submission. Drives the template dropdown in the create modal."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    return {"templates": _available_templates()}
+
+
 # ----------------------------------------------------------------------------
 # Admins can see (but NOT edit) any user's memory state. Per GDPR, only the
 # user themselves can modify or delete their memories. This endpoint exists

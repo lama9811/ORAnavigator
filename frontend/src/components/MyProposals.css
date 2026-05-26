@@ -1,0 +1,603 @@
+/* MyProposals -- design language matches FormsCatalog: card surfaces,
+   MSU-blue accent, tabular numerics for dates and counts. */
+
+.proposals {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 32px 60px;
+  color: var(--text-primary);
+}
+
+.proposals-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.proposals-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.proposals-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  max-width: 640px;
+}
+
+.proposals-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: var(--msu-blue, #4285F4);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.proposals-new-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
+}
+
+.proposals-header-detail {
+  align-items: center;
+}
+
+.proposals-back-btn,
+.proposals-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.proposals-back-btn:hover {
+  border-color: var(--msu-blue, #4285F4);
+  color: var(--msu-blue, #4285F4);
+}
+
+.proposals-delete-btn:hover {
+  border-color: #d93025;
+  color: #d93025;
+}
+
+.proposals-error {
+  background: rgba(217, 48, 37, 0.08);
+  border: 1px solid rgba(217, 48, 37, 0.28);
+  color: #c0392b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  margin-bottom: 14px;
+}
+
+.proposals-loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-tertiary);
+}
+
+/* Empty state */
+.proposals-empty {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+}
+
+.proposals-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.proposals-empty h2 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.proposals-empty p {
+  margin: 0 auto;
+  max-width: 460px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* List of proposal cards */
+.proposals-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.proposal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.proposal-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--msu-blue, #4285F4);
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.12);
+}
+
+.proposal-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.proposal-card-sponsor {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--msu-blue, #4285F4);
+}
+
+.proposal-card-status {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.proposal-card-status.status-active {
+  background: rgba(66, 133, 244, 0.14);
+  color: var(--msu-blue, #4285F4);
+}
+
+.proposal-card-status.status-submitted {
+  background: rgba(52, 168, 83, 0.14);
+  color: #1e8e3e;
+}
+
+.proposal-card-status.status-withdrawn {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-tertiary);
+}
+
+body.dark .proposal-card-status.status-withdrawn {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.proposal-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.proposal-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.proposal-card-countdown {
+  margin-left: auto;
+  font-weight: 600;
+  padding: 2px 8px;
+  background: rgba(66, 133, 244, 0.1);
+  border-radius: 6px;
+  color: var(--msu-blue, #4285F4);
+}
+
+.proposal-card-countdown.urgent {
+  background: rgba(250, 178, 0, 0.16);
+  color: #b06a00;
+}
+
+.proposal-card-countdown.overdue {
+  background: rgba(217, 48, 37, 0.14);
+  color: #c0392b;
+}
+
+/* ============================================================
+   DETAIL VIEW
+   ============================================================ */
+
+.proposal-detail-summary {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.proposal-detail-title-row {
+  margin-bottom: 18px;
+}
+
+.proposal-detail-sponsor {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--msu-blue, #4285F4);
+  margin-bottom: 4px;
+}
+
+.proposal-detail-summary h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.proposal-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.proposal-detail-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.meta-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.meta-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.meta-countdown {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-pill.status-active {
+  background: rgba(66, 133, 244, 0.14);
+  color: var(--msu-blue, #4285F4);
+}
+
+.status-pill.status-submitted {
+  background: rgba(52, 168, 83, 0.14);
+  color: #1e8e3e;
+}
+
+.status-pill.status-withdrawn {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text-tertiary);
+}
+
+.proposal-progress-bar {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+body.dark .proposal-progress-bar {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.proposal-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--msu-blue, #4285F4), #66a8f5);
+  transition: width 0.3s;
+}
+
+.proposal-tasks h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+/* Task list */
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  transition: background 0.15s;
+}
+
+.task-row:hover {
+  background: var(--bg-card-hover, rgba(66, 133, 244, 0.04));
+}
+
+.task-row.task-done {
+  opacity: 0.62;
+}
+
+.task-row.task-done .task-title {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.task-check {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.task-check-icon-done {
+  color: var(--msu-blue, #4285F4);
+}
+
+.task-check-icon-pending {
+  color: var(--text-tertiary);
+  transition: color 0.15s;
+}
+
+.task-check:hover .task-check-icon-pending {
+  color: var(--msu-blue, #4285F4);
+}
+
+.task-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+  line-height: 1.35;
+}
+
+.task-description {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+
+.task-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   CREATE MODAL
+   ============================================================ */
+
+.proposals-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fade-in 0.15s;
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.proposals-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 540px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.proposals-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.proposals-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.proposals-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.proposals-modal-close:hover {
+  background: var(--bg-card-hover, rgba(0, 0, 0, 0.05));
+}
+
+.proposals-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+.proposals-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.proposals-field input,
+.proposals-field select,
+.proposals-field textarea {
+  appearance: none;
+  background: var(--bg-input, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.proposals-field input:focus,
+.proposals-field select:focus,
+.proposals-field textarea:focus {
+  border-color: var(--msu-blue, #4285F4);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.18);
+}
+
+.proposals-field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.proposals-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: normal;
+}
+
+.proposals-hint-warn {
+  color: #b06a00;
+}
+
+.proposals-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.proposals-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.proposals-modal-actions .btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.proposals-modal-actions .btn-secondary:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.proposals-modal-actions .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--msu-blue, #4285F4);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.proposals-modal-actions .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
+}
+
+.proposals-modal-actions .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  .proposals { padding: 18px 16px 40px; }
+  .proposals-header { flex-direction: column; align-items: stretch; }
+  .proposals-field-row { grid-template-columns: 1fr; }
+}

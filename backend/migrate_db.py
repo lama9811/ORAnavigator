@@ -142,6 +142,53 @@ def migrate():
                 print("⏭️  Table 'user_suggested_questions' already exists")
 
             # =================================================================
+            # Proposals tracker -- in-flight grant submissions with task lists.
+            # =================================================================
+            if not table_exists('submissions'):
+                conn.execute(text("""
+                    CREATE TABLE submissions (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        user_id INT NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        sponsor VARCHAR(64) NOT NULL DEFAULT 'Internal',
+                        deadline DATETIME NULL,
+                        status VARCHAR(32) NOT NULL DEFAULT 'active',
+                        notes TEXT NULL,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX ix_submissions_user_id (user_id),
+                        CONSTRAINT fk_submissions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """))
+                conn.commit()
+                print("✅ Created table: submissions")
+            else:
+                print("⏭️  Table 'submissions' already exists")
+
+            if not table_exists('submission_tasks'):
+                conn.execute(text("""
+                    CREATE TABLE submission_tasks (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        submission_id INT NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        description TEXT NULL,
+                        kb_doc_id VARCHAR(128) NULL,
+                        due_offset_days INT NULL,
+                        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+                        notes TEXT NULL,
+                        sort_order INT NOT NULL DEFAULT 0,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX ix_submission_tasks_submission_id (submission_id),
+                        CONSTRAINT fk_submission_tasks_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
+                    )
+                """))
+                conn.commit()
+                print("✅ Created table: submission_tasks")
+            else:
+                print("⏭️  Table 'submission_tasks' already exists")
+
+            # =================================================================
             # Purge legacy student-data schema and rename the legacy role.
             # Drops the degreeworks/banner/canvas tables, removes dead `users`
             # columns, and renames role "student" -> "user".
