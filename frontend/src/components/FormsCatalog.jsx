@@ -217,6 +217,36 @@ export default function FormsCatalog() {
               </div>
               <FaExternalLinkAlt className="form-card-open" />
             </a>
+            {/* Source attribution: the morgan.edu/ora page that lists this
+                form. Lives outside the main click target so users can verify
+                provenance without leaving the catalog. */}
+            {f.source_url && (
+              <div className="form-card-source">
+                <span className="form-card-source-label">Source:</span>
+                <a
+                  className="form-card-source-link"
+                  href={f.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="View where this form is listed on the live ORA site"
+                >
+                  morgan.edu/ora{(() => {
+                    try {
+                      const p = new URL(f.source_url).pathname;
+                      // Strip the /office-of-research-administration prefix
+                      // so the path is readable: "/forms" not "/office-of-..."
+                      const trimmed = p.replace(
+                        "/office-of-research-administration",
+                        "",
+                      );
+                      return trimmed === "" ? "" : trimmed;
+                    } catch {
+                      return "";
+                    }
+                  })()}
+                </a>
+              </div>
+            )}
           </li>
         ))}
       </ul>

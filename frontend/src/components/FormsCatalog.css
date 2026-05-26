@@ -83,9 +83,12 @@
   position: relative;
 }
 
-.forms-search-input input {
+/* Selector matches specificity of .forms-filter-group input[type="text"]
+   above; without it the shorthand `padding: 8px 12px` wins and the
+   placeholder text collides with the search icon. */
+.forms-search-input input[type="text"] {
   width: 100%;
-  padding-left: 34px;
+  padding-left: 38px;
   box-sizing: border-box;
 }
 
@@ -243,6 +246,40 @@ body.dark .form-tag-role {
 .form-card:hover .form-card-open {
   opacity: 1;
   color: var(--msu-blue);
+}
+
+/* Source attribution row at the foot of each card. */
+.form-card-source {
+  border-top: 1px solid var(--border-color);
+  padding: 8px 16px 10px;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.form-card-source-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  opacity: 0.8;
+}
+
+.form-card-source-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  border-bottom: 1px dotted var(--text-tertiary);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.form-card-source-link:hover {
+  color: var(--msu-blue);
+  border-bottom-color: var(--msu-blue);
 }
 
 /* Compact mobile */

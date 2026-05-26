@@ -29,7 +29,8 @@ def test_returns_form_like_docs_only():
 
 def test_each_form_has_required_fields():
     """Every form has the fields the UI needs to render a card."""
-    required = {"doc_id", "title", "category", "url", "sponsors", "roles"}
+    required = {"doc_id", "title", "category", "url", "source_url",
+                "sponsors", "roles"}
     for f in list_forms():
         missing = required - set(f.keys())
         assert not missing, f"form {f.get('doc_id')!r} missing fields: {missing}"
@@ -37,6 +38,21 @@ def test_each_form_has_required_fields():
         assert f["url"], f"form {f.get('doc_id')!r} has empty url"
         assert isinstance(f["sponsors"], list)
         assert isinstance(f["roles"], list)
+
+
+def test_source_url_points_at_morgan_edu():
+    """The source_url field surfaces the morgan.edu/ora page that lists the
+    form -- so the catalog visibly cites where each entry came from. Every
+    form must carry one (most are on a couple of canonical ORA pages)."""
+    forms = list_forms()
+    with_source = [f for f in forms if f["source_url"]]
+    # At least 90% of forms have a source_url; allow a couple of legacy gaps.
+    assert len(with_source) >= int(len(forms) * 0.9), (
+        f"{len(forms) - len(with_source)}/{len(forms)} forms missing source_url")
+    for f in with_source:
+        assert "morgan.edu" in f["source_url"], (
+            f"source_url should point at morgan.edu, got {f['source_url']!r} "
+            f"for {f['doc_id']!r}")
 
 
 def test_filter_by_category_post_award():

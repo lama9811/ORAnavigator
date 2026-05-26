@@ -136,12 +136,20 @@ def _load_catalog() -> list[dict]:
             roles = _detect_roles(doc.get("category", ""),
                                   doc.get("subcategory", ""))
 
+            procedure = doc.get("procedure_url") or ""
+            source = doc.get("source_url") or ""
             forms.append({
                 "doc_id": doc["doc_id"],
                 "title": title,
                 "category": doc.get("category", ""),
                 "subcategory": doc.get("subcategory", ""),
-                "url": doc.get("procedure_url") or doc.get("source_url") or "",
+                # The clickable "open this form" link (DocuSign / PDF / Word).
+                "url": procedure or source,
+                # The morgan.edu/ora page that lists this form. Shown to the
+                # user as a "View on morgan.edu" link so the catalog visibly
+                # cites its source -- nothing here is made up; every form is
+                # something you can find on the live ORA site.
+                "source_url": source,
                 "summary": (content[:240] + "...") if len(content) > 240 else content,
                 "sponsors": sponsors,
                 "roles": roles,
