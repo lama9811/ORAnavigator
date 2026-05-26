@@ -49,22 +49,38 @@ SEMANTIC_EMBEDDING_DIMS = 256  # Matryoshka truncation, 256 is fast + accurate e
 # Minimum query length to cache (avoid caching "hi", "hello", etc.)
 MIN_QUERY_LENGTH = 15
 
-# Queries containing these words should NOT be cached (personalized responses)
+# Queries containing these words should NOT be cached (personalized responses).
+# The cache key is md5(query) + model -- it has NO user_id and NO session_id,
+# so a personalized answer cached against one user's session would be served
+# to every other user that asked the same question. Anything that recalls a
+# user's self-stated facts (department, role, sponsor, deadlines, IRB/IACUC
+# protocols) is therefore unsafe to cache.
 NO_CACHE_KEYWORDS = [
     "my grant",
     "my proposal",
     "my protocol",
     "my irb",
+    "my iacuc",
     "my pi",
     "my project",
     "my award",
     "my budget",
     "my effort",
     "my name",
+    "my department",
+    "my role",
+    "my deadline",
+    "my sponsor",
     "i have",
     "i need",
     "i am",
     "i'm",
+    "am i",                # "what dept am I in", "where am I"
+    "did i",               # "what sponsor did I tell you"
+    "remind me",           # "remind me what I said about X"
+    "about me",            # "what do you remember about me"
+    "about myself",        # "tell me about myself"
+    "remember",            # "do you remember my X"
     "recommend me",
     "for me",
 ]
@@ -505,6 +521,23 @@ class MultiTierCache:
             if keyword in query_lower:
                 return False
 
+        # Personal-recall questions ("what's my upcoming deadline?", "what
+        # department am I in?", "do you remember my X?") must NEVER be cached
+        # -- they are answered from the user's chat history, not from a
+        # globally-shared KB result. The cache key has no user_id, so caching
+        # would leak one user's personal context to every other user. Defer
+        # to vertex_agent's recall detector so the cache layer and the agent
+        # layer stay in sync on what counts as recall.
+        try:
+            from vertex_agent import _is_personal_recall
+            if _is_personal_recall(query):
+                return False
+        except ImportError:
+            # vertex_agent not available (e.g. isolated cache unit tests
+            # without the full backend on path) -- fall through to the
+            # keyword check above, which catches the most common cases.
+            pass
+
         return True
 
     def get(self, query: str, context_hash: str = "") -> Optional[str]:
@@ -557,6 +590,27 @@ class MultiTierCache:
 
         # Don't cache responses with grounding disclaimers (they indicate low confidence)
         if "I may not have complete information" in response or "Please verify with the Office of Research Administration" in response:
+            return False
+
+        # Don't cache model refusals / honest deflections. A cached refusal
+        # poisons the cache: once the bot is fixed to actually answer (e.g.
+        # the system prompt is updated to permit conversational recall), the
+        # cache keeps serving the old refusal until TTL expiry. Refusals are
+        # also session-specific by nature -- the model refused because it
+        # lacked context this user happens to have provided in chat history,
+        # which other users have not.
+        response_lc = response.lower()
+        if any(phrase in response_lc for phrase in (
+            "i do not have",
+            "i don't have",
+            "i cannot provide",
+            "i can't provide",
+            "i cannot access",
+            "i can't access",
+            "i do not retain",
+            "i don't retain",
+            "i only retain",
+        )):
             return False
 
         key = self._generate_key(query, context_hash)
