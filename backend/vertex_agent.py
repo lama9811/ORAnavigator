@@ -767,12 +767,23 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
 
     text = _clean_answer_text(result["text"])
     if not text:
-        yield {"type": "error",
-               "content": "I'm sorry, I couldn't generate a response. Please try rephrasing your question."}
-        return
-
-    has_data = bool(context)
-    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
+        # Empty text but KB chunks exist: the model called the search tool
+        # (finding real KB docs) but failed to synthesize an answer -- common
+        # for vague or typo'd queries like "also abou the preawards" that
+        # confuse the model but not the search index. Fall through to Pass 2
+        # so the strict regeneration can take a second shot using the KB
+        # context that's already in hand. Zero chunks is a real model
+        # failure -- surface the error.
+        if result["chunks"] == 0:
+            yield {"type": "error",
+                   "content": "I'm sorry, I couldn't generate a response. Please try rephrasing your question."}
+            return
+        # Force a Pass-2 regeneration by marking the verdict as weak.
+        has_data = bool(context)
+        verdict = "weak"
+    else:
+        has_data = bool(context)
+        verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
 
     # Personal-recall questions ("what department am I in?", "what's my
     # deadline?") are answered from the chat history, not the KB. The strict

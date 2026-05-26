@@ -252,3 +252,48 @@ def test_is_personal_recall_rejects_kb_questions():
     for q in non_matches:
         assert not vertex_agent._is_personal_recall(q), \
             f"should NOT detect as personal-recall: {q!r}"
+
+
+# ===========================================================================
+# Empty Pass 1 with KB chunks -- a vague / typo'd query like "also abou the
+# preawards" makes the ADK call the KB search tool (finding real Pre-Award
+# docs) but then emit no text. The old behavior gave up with the generic
+# "couldn't generate" error even though usable KB grounding was already in
+# hand. The fix retries via Pass 2's strict regeneration -- the strict
+# prefix tells the model to answer fully from the KB context it already
+# has, which is the exact recovery path that's needed.
+# ===========================================================================
+
+def test_empty_first_pass_with_chunks_triggers_regeneration(monkeypatch):
+    """Pass 1 returns no text but found 5 KB chunks (typical of vague or
+    typo'd queries where the model called the search tool but failed to
+    synthesize an answer). Pass 2's strict regeneration should fire and
+    its answer must be delivered."""
+    events = _drive(
+        monkeypatch,
+        _result("", chunks=5, coverage=0.0,
+                citations=[{"title": "Pre-Award — Overview", "url": "x"}]),
+        _result("Pre-award covers proposal preparation, budgets, and F&A rates.",
+                chunks=4, coverage=0.7),
+    )
+    final = _final(events)
+    assert "Pre-award" in final
+    assert "couldn't generate" not in final
+
+
+def test_empty_first_pass_with_no_chunks_still_errors(monkeypatch):
+    """Regression guard: empty text AND zero KB chunks is a genuine model
+    failure -- it must still surface the 'couldn't generate' error, not
+    burn a Pass 2 call on a hopeless case."""
+    monkeypatch.setattr(
+        vertex_agent, "_do_agent_pass",
+        _fake_passes(_result("", chunks=0, coverage=0.0)),
+    )
+    monkeypatch.setattr(vertex_agent, "_create_session",
+                        lambda *a, **k: "regen-session")
+    events = list(vertex_agent._run_verified(
+        "garbled query", "user-1", "sess-1"))
+    tail = [e for e in events if e["type"] in ("done", "error")]
+    assert tail, "expected a done/error event"
+    assert tail[-1]["type"] == "error"
+    assert "couldn't generate" in tail[-1]["content"]
