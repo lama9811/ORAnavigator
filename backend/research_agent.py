@@ -254,7 +254,7 @@ OUTPUT FORMAT (return ONLY valid JSON, no markdown fences):
         client = genai.Client(vertexai=True, project="oranavigator-vertex-ai", location="us-central1")
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.1,

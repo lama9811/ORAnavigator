@@ -368,7 +368,7 @@ def rewrite_query(query: str, history: list[dict]) -> str:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=(
                 "You rewrite follow-up questions in an ORA (research administration) chatbot "
                 "to be self-contained — replacing pronouns and references with the specific "

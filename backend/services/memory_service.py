@@ -238,7 +238,7 @@ Return a JSON array like: [{{"type": "role", "content": "PI on an NSF grant in e
 If nothing new worth remembering, return: []"""
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config={"temperature": 0.1, "max_output_tokens": 1000},
         )
@@ -397,7 +397,7 @@ def summarize_older_turns(transcript: str) -> Optional[str]:
         )
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config={"temperature": 0.1, "max_output_tokens": 500},
         )

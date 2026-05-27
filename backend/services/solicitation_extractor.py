@@ -113,14 +113,32 @@ def _call_gemini(prompt_text: str) -> str:
     empty string on error so callers can fail gracefully."""
     client = _get_client()
     if client is None:
+        print("   [SOLICITATION] Gemini client is None (init failed)")
         return ""
     try:
+        # max_output_tokens bumped to 6000: Gemini-2.5-Flash uses some of
+        # the output budget for implicit reasoning, which silently truncates
+        # the JSON mid-document at 2000 tokens (observed for solicitations
+        # with 8+ required_attachments).
+        # response_mime_type=application/json forces clean JSON output (no
+        # markdown fences, no preamble text) so _parse_response doesn't
+        # have to guess.
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=_PROMPT + prompt_text,
-            config={"temperature": 0.0, "max_output_tokens": 2000},
+            config={
+                "temperature": 0.0,
+                "max_output_tokens": 6000,
+                "response_mime_type": "application/json",
+            },
         )
-        return (response.text or "").strip()
+        raw = (response.text or "").strip()
+        # Log a short preview so we can diagnose downstream parse failures.
+        # Length + first 240 chars is enough to see what Gemini returned
+        # without flooding logs with the full 2k-token response.
+        preview = raw[:240].replace("\n", "\\n")
+        print(f"   [SOLICITATION] Gemini OK, len={len(raw)}, preview={preview}")
+        return raw
     except Exception as e:
         print(f"   [SOLICITATION] Gemini call failed: {e}")
         return ""
@@ -140,9 +158,16 @@ def _parse_response(raw: str) -> Optional[dict]:
         text = text.strip()
     try:
         parsed = json.loads(text)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        # Diagnostic: dump the first 400 chars of the offending text so
+        # we can see HOW Gemini broke the contract (preamble text? trailing
+        # commas? truncated mid-JSON?). Without this the endpoint just
+        # returns 422 with no hint of what went wrong.
+        snippet = text[:400].replace("\n", "\\n")
+        print(f"   [SOLICITATION] JSON parse failed at pos {e.pos}: {snippet}")
         return None
     if not isinstance(parsed, dict):
+        print(f"   [SOLICITATION] Parsed but not a dict: {type(parsed).__name__}")
         return None
     return parsed
 
