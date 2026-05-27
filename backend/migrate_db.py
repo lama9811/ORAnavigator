@@ -188,6 +188,27 @@ def migrate():
             else:
                 print("⏭️  Table 'submission_tasks' already exists")
 
+            # Deadline Watcher idempotency log -- one row per (submission, threshold)
+            # email we've sent. The watcher consults this on every run to avoid
+            # double-sending the same "deadline in N days" reminder.
+            if not table_exists('deadline_reminder_log'):
+                conn.execute(text("""
+                    CREATE TABLE deadline_reminder_log (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        submission_id INT NOT NULL,
+                        threshold_days INT NOT NULL,
+                        sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        sent_to VARCHAR(255) NULL,
+                        INDEX ix_deadline_reminder_submission_id (submission_id),
+                        INDEX ix_deadline_reminder_threshold (submission_id, threshold_days),
+                        CONSTRAINT fk_deadline_reminder_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
+                    )
+                """))
+                conn.commit()
+                print("✅ Created table: deadline_reminder_log")
+            else:
+                print("⏭️  Table 'deadline_reminder_log' already exists")
+
             # =================================================================
             # Purge legacy student-data schema and rename the legacy role.
             # Drops the degreeworks/banner/canvas tables, removes dead `users`
