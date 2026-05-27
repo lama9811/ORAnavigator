@@ -86,7 +86,8 @@ body.dark .proposals-upload-btn {
 }
 
 .proposals-back-btn,
-.proposals-delete-btn {
+.proposals-delete-btn,
+.proposals-critique-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -99,6 +100,7 @@ body.dark .proposals-upload-btn {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  font-family: inherit;
 }
 
 .proposals-back-btn:hover {
@@ -109,6 +111,18 @@ body.dark .proposals-upload-btn {
 .proposals-delete-btn:hover {
   border-color: #d93025;
   color: #d93025;
+}
+
+/* Critique Draft is a "primary positive" action on the detail view --
+   give it a subtle blue tint so it reads as the recommended next step. */
+.proposals-critique-btn {
+  background: rgba(66, 133, 244, 0.1);
+  color: var(--msu-blue, #4285F4);
+  border-color: rgba(66, 133, 244, 0.3);
+}
+.proposals-critique-btn:hover {
+  background: rgba(66, 133, 244, 0.18);
+  border-color: rgba(66, 133, 244, 0.5);
 }
 
 .proposals-error {

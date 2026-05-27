@@ -13,8 +13,10 @@ import { FaCheckCircle } from "@react-icons/all-files/fa/FaCheckCircle";
 import { FaCalendarAlt } from "@react-icons/all-files/fa/FaCalendarAlt";
 import { FaArrowLeft } from "@react-icons/all-files/fa/FaArrowLeft";
 import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
+import { FaClipboardCheck } from "@react-icons/all-files/fa/FaClipboardCheck";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
+import DraftCritiqueModal from "./DraftCritiqueModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -287,6 +289,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
   const total = tasks.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const dleft = daysUntil(submission.deadline);
+  const [showCritique, setShowCritique] = useState(false);
 
   return (
     <div className="proposals">
@@ -294,10 +297,26 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
         <button className="proposals-back-btn" onClick={onBack}>
           <FaArrowLeft size={12} /> All Proposals
         </button>
-        <button className="proposals-delete-btn" onClick={onDelete}>
-          <FaTrash size={12} /> Delete
-        </button>
+        <div className="proposals-header-actions">
+          <button
+            className="proposals-critique-btn"
+            onClick={() => setShowCritique(true)}
+            title="Upload a draft PDF and check it against this proposal's solicitation requirements."
+          >
+            <FaClipboardCheck size={13} /> Critique Draft
+          </button>
+          <button className="proposals-delete-btn" onClick={onDelete}>
+            <FaTrash size={12} /> Delete
+          </button>
+        </div>
       </header>
+
+      {showCritique && (
+        <DraftCritiqueModal
+          submission={submission}
+          onClose={() => setShowCritique(false)}
+        />
+      )}
 
       <section className="proposal-detail-summary">
         <div className="proposal-detail-title-row">

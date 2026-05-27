@@ -341,3 +341,72 @@ def delete_task(db: Session, submission_id: int, task_id: int,
     db.delete(task)
     db.commit()
     return True
+
+
+# =====================================================================
+# Solicitation context reconstruction (for Draft Critic, etc.)
+# =====================================================================
+
+import re as _re
+
+
+_BUDGET_NOTE_RE = _re.compile(r"Budget cap:\s*\$?([\d,]+)")
+_PAGE_LIMITS_NOTE_RE = _re.compile(r"Page limits:\s*(.+)")
+_REQUIRED_ATTACHMENT_TASK_PREFIX = "Prepare required attachment:"
+
+
+def reconstruct_solicitation_context(sub: Submission) -> dict:
+    """Pull the structured solicitation context back out of a Submission
+    that was created via the from-solicitation flow. Required for Draft
+    Critic without a schema change.
+
+    Sources:
+      - budget_cap: parsed from notes line "Budget cap: $600,000"
+      - page_limits: parsed from notes line "Page limits: project_description: 15p, ..."
+      - required_attachments: read from tasks titled "Prepare required attachment: X"
+
+    Returns the shape Draft Critic expects:
+        {budget_cap: int|None, page_limits: dict, required_attachments: list[str]}
+
+    For submissions created MANUALLY (not from a solicitation), every
+    field is empty/None and Draft Critic falls back to sponsor defaults."""
+    out: dict = {
+        "budget_cap": None,
+        "page_limits": {},
+        "required_attachments": [],
+    }
+
+    notes = sub.notes or ""
+    if notes:
+        m = _BUDGET_NOTE_RE.search(notes)
+        if m:
+            try:
+                out["budget_cap"] = int(m.group(1).replace(",", ""))
+            except ValueError:
+                pass
+        pm = _PAGE_LIMITS_NOTE_RE.search(notes)
+        if pm:
+            # Format: "project_description: 15p, data_management_plan: 2p"
+            parts = pm.group(1).split(",")
+            page_limits: dict = {}
+            for part in parts:
+                if ":" not in part:
+                    continue
+                k, v = part.split(":", 1)
+                k = k.strip()
+                v = v.strip().rstrip("p").rstrip("P").strip()
+                try:
+                    page_limits[k] = int(v)
+                except ValueError:
+                    continue
+            out["page_limits"] = page_limits
+
+    # Required attachments live in the task list as "Prepare required attachment: X"
+    for task in (sub.tasks or []):
+        title = (task.title or "").strip()
+        if title.startswith(_REQUIRED_ATTACHMENT_TASK_PREFIX):
+            att = title[len(_REQUIRED_ATTACHMENT_TASK_PREFIX):].strip()
+            if att:
+                out["required_attachments"].append(att)
+
+    return out

@@ -2563,6 +2563,32 @@ async def internal_memory_idle_sweep(request: Request):
     return result
 
 
+@app.post("/api/internal/deadlines/check")
+async def internal_deadline_check(request: Request):
+    """Deadline Watcher cron — fires every morning.
+
+    Scans active Submissions, finds the ones sitting on a reminder
+    bucket (14 / 7 / 3 / 1 / 0 days from deadline), emails the owner
+    once per (submission, bucket) pair. Idempotent: a DeadlineReminderLog
+    row is written after each successful send so repeat runs (manual
+    retries, Cloud Scheduler retries) never double-email.
+
+    Auth via X-Research-Secret (same shared secret as the memory crons)."""
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+
+    from services import deadline_watcher as _dw
+
+    def _run():
+        with SessionLocal() as db:
+            return _dw.send_due_reminders(db)
+
+    result = await asyncio.to_thread(_run)
+    return result
+
+
 # ==============================================================================
 # Phase 5 — Per-User Memory Management API (Memory tab in ProfilePage)
 # ==============================================================================
@@ -3101,6 +3127,106 @@ async def confirm_solicitation_submission(
         title_override=title_override,
     )
     return _submission_to_dict(sub, include_tasks=True)
+
+
+# ----------------------------------------------------------------------------
+# Sponsor Fit-Finder: rank funding opportunities against the user's profile.
+# Deterministic keyword + signal scoring backed by an optional Gemini-Flash
+# "Why this matches you" explanation. Tier-1 AI agent #3.
+
+@app.get("/api/me/sponsor-fits")
+async def list_sponsor_fits(
+    limit: int = 12,
+    explain: bool = True,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return ranked funding sources for the current user.
+
+    Query params:
+      - limit (default 12, capped at 30 to keep payloads sane)
+      - explain (default true): when false, skips the per-match LLM
+        explanation -- useful for cheap "did anything change?" polling.
+
+    The matching is fully deterministic given the user's UserMemory +
+    Submission history; the LLM is only used for the one-sentence
+    rationale on each card and gracefully falls back to a template."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    capped = max(1, min(int(limit or 12), 30))
+
+    from services import sponsor_fit_finder as _sff
+    result = await asyncio.to_thread(
+        _sff.find_matches,
+        db,
+        user["user_id"],
+        capped,
+        bool(explain),
+    )
+    return result
+
+
+# ----------------------------------------------------------------------------
+# Draft Critic: upload a draft PDF, get a mechanical pre-submission check
+# against the solicitation already attached to this Submission. No LLM call,
+# so no hallucination risk -- every check is deterministic from the PDF text.
+
+_MAX_DRAFT_PDF_BYTES = 25 * 1024 * 1024  # 25 MB, same as solicitation upload
+
+
+@app.post("/api/me/submissions/{submission_id}/critique")
+async def critique_draft(
+    submission_id: int,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Run Draft Critic on an uploaded draft PDF. The submission's
+    existing solicitation context (page limits, required attachments,
+    budget cap) is reconstructed from notes + tasks and passed in.
+    Submissions created manually still get a useful critique against
+    sponsor-default sections."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    sub = _proposals_service.get_submission(
+        db, submission_id=submission_id, user_id=user["user_id"],
+    )
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    filename = (file.filename or "").lower()
+    ctype = (file.content_type or "").lower()
+    if not (filename.endswith(".pdf") or "pdf" in ctype):
+        raise HTTPException(400, "Only PDF uploads are supported.")
+
+    pdf_bytes = await file.read()
+    if not pdf_bytes:
+        raise HTTPException(400, "Uploaded file is empty.")
+    if len(pdf_bytes) > _MAX_DRAFT_PDF_BYTES:
+        raise HTTPException(413, "PDF is larger than 25 MB.")
+
+    from services import draft_critic as _dc
+    solicitation = _proposals_service.reconstruct_solicitation_context(sub)
+    critique = _dc.critique_pdf(
+        pdf_bytes=pdf_bytes,
+        sponsor=sub.sponsor,
+        solicitation=solicitation,
+    )
+    if critique is None:
+        raise HTTPException(
+            422,
+            "Couldn't read this PDF -- the file may be scanned or "
+            "image-only. Try a text-based PDF.",
+        )
+
+    return {
+        "submission_id": submission_id,
+        "submission_title": sub.title,
+        "sponsor": sub.sponsor,
+        "solicitation_context": solicitation,
+        "critique": critique,
+    }
 
 
 # ----------------------------------------------------------------------------
