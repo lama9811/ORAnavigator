@@ -1,0 +1,280 @@
+/* SponsorFits -- Funding Matches page. Card grid + filter chips +
+   live search. Visually mirrors MyProposals / FormsCatalog. */
+
+.sponsor-fits {
+  padding: 24px 28px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sponsor-fits-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sponsor-fits-header h1 {
+  margin: 0 0 4px;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.sponsor-fits-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  max-width: 720px;
+  line-height: 1.5;
+}
+
+.sponsor-fits-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.sponsor-fits-refresh:hover:not(:disabled) {
+  border-color: var(--msu-blue, #4285F4);
+  color: var(--msu-blue, #4285F4);
+}
+.sponsor-fits-refresh:disabled { opacity: 0.6; cursor: default; }
+
+.sponsor-fits-refresh .spin {
+  animation: sf-spin 0.9s linear infinite;
+}
+@keyframes sf-spin { to { transform: rotate(360deg); } }
+
+.sponsor-fits-error {
+  background: rgba(217, 48, 37, 0.08);
+  border: 1px solid rgba(217, 48, 37, 0.28);
+  color: #c0392b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  margin-bottom: 14px;
+}
+
+.sponsor-fits-loading {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.sponsor-fits-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(66, 133, 244, 0.08);
+  border: 1px solid rgba(66, 133, 244, 0.25);
+  border-radius: 10px;
+  margin-bottom: 16px;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.sponsor-fits-hint svg { color: var(--msu-blue, #4285F4); margin-top: 2px; flex-shrink: 0; }
+
+.sponsor-fits-link {
+  background: none;
+  border: none;
+  color: var(--msu-blue, #4285F4);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.sponsor-fits-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.sponsor-fits-search-wrap {
+  position: relative;
+  flex: 0 0 260px;
+}
+.sponsor-fits-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+.sponsor-fits-search {
+  width: 100%;
+  padding: 9px 12px 9px 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.sponsor-fits-search:focus {
+  outline: none;
+  border-color: var(--msu-blue, #4285F4);
+}
+
+.sponsor-fits-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.chip:hover { border-color: var(--msu-blue, #4285F4); color: var(--msu-blue, #4285F4); }
+.chip-active {
+  background: var(--msu-blue, #4285F4);
+  color: white;
+  border-color: var(--msu-blue, #4285F4);
+}
+
+.sponsor-fits-empty {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.sponsor-fits-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sponsor-fit-card {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sponsor-fit-card:hover {
+  border-color: rgba(66, 133, 244, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.sponsor-fit-rank {
+  flex: 0 0 36px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 4px;
+}
+.rank-num {
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+.trophy { color: #c0c0c0; }
+.trophy-1 { color: #f5c518; }
+.trophy-2 { color: #a8a8a8; }
+.trophy-3 { color: #cd7f32; }
+
+.sponsor-fit-body { flex: 1; min-width: 0; }
+
+.sponsor-fit-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sponsor-fit-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.sponsor-fit-score {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 11px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.score-strong { background: rgba(46, 194, 126, 0.18); color: #2ec27e; }
+.score-good   { background: rgba(66, 133, 244, 0.16); color: var(--msu-blue, #4285F4); }
+.score-ok     { background: rgba(245, 166, 35, 0.15); color: #d4901c; }
+.score-low    { background: rgba(125, 133, 144, 0.14); color: #7d8590; }
+
+.sponsor-fit-meta {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.sponsor-fit-group {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.sponsor-fit-why {
+  margin: 10px 0 6px;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.sponsor-fit-signals {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.signal-chip {
+  font-size: 0.76rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 2px 9px;
+  border-radius: 12px;
+  color: var(--text-secondary);
+}
+
+.sponsor-fit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--msu-blue, #4285F4);
+  text-decoration: none;
+  font-weight: 500;
+}
+.sponsor-fit-link:hover { text-decoration: underline; }
