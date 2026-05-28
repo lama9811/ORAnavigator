@@ -87,17 +87,33 @@ def _select_model(callback_context, llm_request):
     if pref in MODEL_MAP:
         llm_request.model = MODEL_MAP[pref]
 
-    # Inject pre-fetched KB docs on first turn (belt-and-suspenders grounding)
-    # Uses Discovery Engine API (NOT Gemini), cached in memory for 5 min. Zero LLM quota impact.
-    has_tool_response = any(
-        hasattr(c, 'parts') and any(
-            hasattr(p, 'function_response') and p.function_response
-            for p in (c.parts or [])
-        )
-        for c in (llm_request.contents or [])
-    )
+    # Inject pre-fetched KB docs on every fresh user turn (belt-and-suspenders
+    # grounding). Uses Discovery Engine API (NOT Gemini), cached in memory for
+    # 5 min. Zero LLM quota impact.
+    #
+    # We're "mid-tool-loop" only when the LAST content item is a function_response
+    # -- i.e. we just got a tool result back and the model is about to write the
+    # tool-grounded reply. In that case re-injecting prefetch would be redundant
+    # AND would push real tool output further from the model's working window.
+    #
+    # Bug fix: the previous version scanned ALL contents for any
+    # function_response. In a multi-turn ADK session, turn 1's function_response
+    # stayed in `contents` forever, so prefetch was silently skipped on every
+    # turn after the first tool call -- which left the model with no KB
+    # context on follow-ups (e.g. "give me a different training video"). When
+    # the model then declined to re-invoke the search tool, it produced empty
+    # text and Layer 3 surfaced the "couldn't generate a response" error.
+    contents = llm_request.contents or []
+    in_tool_loop = False
+    if contents:
+        last = contents[-1]
+        if hasattr(last, 'parts'):
+            in_tool_loop = any(
+                hasattr(p, 'function_response') and p.function_response
+                for p in (last.parts or [])
+            )
 
-    if not has_tool_response:
+    if not in_tool_loop:
         user_text = ""
         for c in reversed(llm_request.contents or []):
             if hasattr(c, 'role') and c.role == 'user' and c.parts:
