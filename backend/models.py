@@ -62,6 +62,17 @@ class User(Base):
     # semantic recall and per-turn extraction; per-row pause on UserMemory
     # still works independently.
     memory_paused = Column(Boolean, nullable=False, default=False)
+    # Research-admin profile fields. Optional; surfaced to the agent via
+    # profile_parts in /chat endpoints so it can tailor answers (a PI vs.
+    # research staff vs. dept admin needs different guidance). The mirror
+    # in services/memory_service.mirror_profile_to_memories() also writes
+    # department / primary_role into user_memories so Sponsor Fit Finder
+    # picks them up without code changes.
+    department = Column(String(128), nullable=True)
+    title = Column(String(128), nullable=True)
+    # Allowed values (validated at the API layer, see deps.PROFILE_ROLE_ENUM):
+    # PI, Co-PI, Research Staff, Department Admin, Faculty, Postdoc, Student.
+    primary_role = Column(String(32), nullable=True)
 
 
 class SupportTicket(Base):

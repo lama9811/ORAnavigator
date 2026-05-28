@@ -234,6 +234,30 @@ def migrate():
             conn.commit()
             print(f"✅ Renamed role 'student' -> 'user' on {role_result.rowcount} row(s)")
 
+            # =================================================================
+            # Research-admin profile fields (department / title / primary_role)
+            # =================================================================
+            if not column_exists('users', 'department'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN department VARCHAR(128) NULL"))
+                conn.commit()
+                print("✅ Added column: users.department")
+            else:
+                print("⏭️  Column 'users.department' already exists")
+
+            if not column_exists('users', 'title'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN title VARCHAR(128) NULL"))
+                conn.commit()
+                print("✅ Added column: users.title")
+            else:
+                print("⏭️  Column 'users.title' already exists")
+
+            if not column_exists('users', 'primary_role'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN primary_role VARCHAR(32) NULL"))
+                conn.commit()
+                print("✅ Added column: users.primary_role")
+            else:
+                print("⏭️  Column 'users.primary_role' already exists")
+
             print("\n✅ Database migration completed successfully!")
             
         except Exception as e:

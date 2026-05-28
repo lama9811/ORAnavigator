@@ -8,7 +8,22 @@ import { FaLock } from "@react-icons/all-files/fa/FaLock";
 import { FaCamera } from "@react-icons/all-files/fa/FaCamera";
 import { FaCog } from "@react-icons/all-files/fa/FaCog";
 import { FaShieldAlt } from "@react-icons/all-files/fa/FaShieldAlt";
+import { FaUniversity } from "@react-icons/all-files/fa/FaUniversity";
+import { FaIdBadge } from "@react-icons/all-files/fa/FaIdBadge";
+import { FaUserTag } from "@react-icons/all-files/fa/FaUserTag";
 import "./ProfilePage.css";
+
+// Must match backend/deps.py PROFILE_ROLE_ENUM. Server-side validation will
+// reject anything outside this list, so keep the two in sync.
+const ROLE_OPTIONS = [
+  "PI",
+  "Co-PI",
+  "Research Staff",
+  "Department Admin",
+  "Faculty",
+  "Postdoc",
+  "Student",
+];
 
 import { getApiBase } from "../lib/apiBase";
 const API_BASE = getApiBase();
@@ -24,7 +39,10 @@ export default function ProfilePage({ userEmail, onLogout }) {
     name: "",
     email: userEmail || "",
     profilePicture: "/user_icon.webp",
-    role: "user"
+    role: "user",
+    department: "",
+    title: "",
+    primary_role: "",
   });
 
   const [passwords, setPasswords] = useState({
@@ -96,7 +114,10 @@ export default function ProfilePage({ userEmail, onLogout }) {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          name: profile.name
+          name: profile.name,
+          department: profile.department || "",
+          title: profile.title || "",
+          primary_role: profile.primary_role || "",
         })
       });
 
@@ -272,6 +293,48 @@ export default function ProfilePage({ userEmail, onLogout }) {
                 disabled
                 className="disabled-input"
               />
+            </div>
+
+            <div className="form-group">
+              <label>
+                <FaUniversity /> Department
+              </label>
+              <input
+                type="text"
+                value={profile.department || ""}
+                onChange={(e) => setProfile({ ...profile, department: e.target.value })}
+                disabled={!isEditing}
+                placeholder="e.g. Biology, Computer Science"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>
+                <FaIdBadge /> Title
+              </label>
+              <input
+                type="text"
+                value={profile.title || ""}
+                onChange={(e) => setProfile({ ...profile, title: e.target.value })}
+                disabled={!isEditing}
+                placeholder="e.g. Associate Professor, Research Scientist"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>
+                <FaUserTag /> Role
+              </label>
+              <select
+                value={profile.primary_role || ""}
+                onChange={(e) => setProfile({ ...profile, primary_role: e.target.value })}
+                disabled={!isEditing}
+              >
+                <option value="">— Select your role —</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
             </div>
 
             {isEditing && (

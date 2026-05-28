@@ -677,17 +677,44 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
         "email": db_user.email,
         "name": getattr(db_user, 'name', None),
         "profilePicture": profile_pic,
-        "role": getattr(db_user, 'role', "user")
+        "role": getattr(db_user, 'role', "user"),
+        "department": getattr(db_user, 'department', None),
+        "title": getattr(db_user, 'title', None),
+        "primary_role": getattr(db_user, 'primary_role', None),
     }
 
 @app.put("/api/profile")
 async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.id == user["user_id"]).first()
     if not db_user: raise HTTPException(404, "User not found")
-    
+
     if req.name is not None and hasattr(db_user, 'name'): db_user.name = req.name
-    
+    if req.department is not None and hasattr(db_user, 'department'):
+        db_user.department = req.department or None
+    if req.title is not None and hasattr(db_user, 'title'):
+        db_user.title = req.title or None
+    if req.primary_role is not None and hasattr(db_user, 'primary_role'):
+        # request validator already constrained primary_role to the enum or None
+        db_user.primary_role = req.primary_role
+
     db.commit()
+
+    # Mirror the structured profile fields into user_memories so the agent's
+    # memory_context AND the Sponsor Fit Finder see them automatically.
+    # Best-effort: a mirror failure must not roll back the profile save.
+    try:
+        from services.memory_service import mirror_profile_to_memories
+        mirror_profile_to_memories(
+            db,
+            user_id=db_user.id,
+            department=req.department,
+            primary_role=req.primary_role,
+        )
+        db.commit()
+    except Exception as e:
+        print(f"[PROFILE] memory mirror failed for user {db_user.id}: {e}")
+        db.rollback()
+
     return {"message": "Profile updated"}
 
 @app.post("/api/change-password")
@@ -1077,6 +1104,9 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     profile_parts = []
     if user.get("name"): profile_parts.append(f"Name: {user['name']}")
     if user.get("email"): profile_parts.append(f"Email: {user['email']}")
+    if user.get("department"): profile_parts.append(f"Department: {user['department']}")
+    if user.get("title"): profile_parts.append(f"Title: {user['title']}")
+    if user.get("primary_role"): profile_parts.append(f"Role: {user['primary_role']}")
     profile_ctx = ""
     if profile_parts:
         profile_ctx = "USER PROFILE (from account):\n" + "\n".join(profile_parts) + "\n"
@@ -1202,6 +1232,9 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     profile_parts = []
     if user.get("name"): profile_parts.append(f"Name: {user['name']}")
     if user.get("email"): profile_parts.append(f"Email: {user['email']}")
+    if user.get("department"): profile_parts.append(f"Department: {user['department']}")
+    if user.get("title"): profile_parts.append(f"Title: {user['title']}")
+    if user.get("primary_role"): profile_parts.append(f"Role: {user['primary_role']}")
     agent_context = ""
     if profile_parts:
         agent_context = "USER PROFILE (from account):\n" + "\n".join(profile_parts) + "\n"

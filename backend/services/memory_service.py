@@ -266,6 +266,77 @@ If nothing new worth remembering, return: []"""
         return []
 
 
+def mirror_profile_to_memories(
+    db: Session,
+    user_id: int,
+    *,
+    department: Optional[str] = None,
+    primary_role: Optional[str] = None,
+) -> dict:
+    """Mirror explicit profile fields into UserMemory rows so
+    build_memory_context() and Sponsor Fit Finder see them without code
+    changes there.
+
+    Mapping:
+      department    -> UserMemory(memory_type="department", content=...)
+      primary_role  -> UserMemory(memory_type="role",       content=...)
+
+    Title has no matching memory_type, so it is intentionally not mirrored.
+
+    Behavior per field:
+      - value is a non-empty string -> upsert (overwrite content of any
+        existing row of that memory_type for this user; create otherwise).
+        The profile value WINS over previously auto-extracted facts.
+      - value is None              -> no-op (left untouched; clearing the
+        profile field does NOT delete past memories of that type).
+      - value is "" (empty string) -> delete any existing row of that type
+        (user explicitly cleared the field on the form).
+
+    Returns a small status dict for logging/tests:
+      {"department": "updated"|"created"|"deleted"|"noop", "role": ...}
+    """
+    from models import UserMemory
+
+    status: dict[str, str] = {}
+
+    def _upsert(memory_type: str, value: Optional[str]) -> str:
+        if value is None:
+            return "noop"
+        existing = (
+            db.query(UserMemory)
+            .filter(
+                UserMemory.user_id == user_id,
+                UserMemory.memory_type == memory_type,
+            )
+            .order_by(UserMemory.updated_at.desc(), UserMemory.id.desc())
+            .first()
+        )
+        clean = value.strip()
+        if clean == "":
+            if existing is not None:
+                db.delete(existing)
+                return "deleted"
+            return "noop"
+        if existing is None:
+            db.add(UserMemory(
+                user_id=user_id,
+                memory_type=memory_type,
+                content=clean,
+            ))
+            return "created"
+        existing.content = clean
+        existing.updated_at = datetime.utcnow()
+        # Profile-sourced facts are inherently fresh; clear stale embeddings
+        # so retrieve_relevant_memories re-embeds on next consolidation run.
+        existing.embedding = None
+        existing.embedding_model = None
+        return "updated"
+
+    status["department"] = _upsert("department", department)
+    status["role"] = _upsert("role", primary_role)
+    return status
+
+
 def _merge_memories(db: Session, user_id: int, new_memories: list[dict], existing: list):
     """Merge new memories with existing ones. Update if same type exists, else create."""
     from models import UserMemory
