@@ -673,6 +673,21 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
     if not profile_pic:
         profile_pic = getattr(db_user, 'profile_picture', None)
 
+    # Interests live in user_memories (multi-value). Read them here so the
+    # profile form can render the user's current list as a comma-separated
+    # string. Ordered by id ASC so a re-save preserves the user's typing order.
+    from models import UserMemory as _UserMemory
+    interest_rows = (
+        db.query(_UserMemory)
+        .filter(
+            _UserMemory.user_id == db_user.id,
+            _UserMemory.memory_type == "interest",
+        )
+        .order_by(_UserMemory.id.asc())
+        .all()
+    )
+    interests_str = ", ".join((r.content or "").strip() for r in interest_rows if (r.content or "").strip())
+
     return {
         "email": db_user.email,
         "name": getattr(db_user, 'name', None),
@@ -681,6 +696,7 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
         "department": getattr(db_user, 'department', None),
         "title": getattr(db_user, 'title', None),
         "primary_role": getattr(db_user, 'primary_role', None),
+        "interests": interests_str,
     }
 
 @app.put("/api/profile")
@@ -709,6 +725,7 @@ async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_cur
             user_id=db_user.id,
             department=req.department,
             primary_role=req.primary_role,
+            interests=req.interests,
         )
         db.commit()
     except Exception as e:

@@ -11,6 +11,7 @@ import { FaShieldAlt } from "@react-icons/all-files/fa/FaShieldAlt";
 import { FaUniversity } from "@react-icons/all-files/fa/FaUniversity";
 import { FaIdBadge } from "@react-icons/all-files/fa/FaIdBadge";
 import { FaUserTag } from "@react-icons/all-files/fa/FaUserTag";
+import { FaLightbulb } from "@react-icons/all-files/fa/FaLightbulb";
 import "./ProfilePage.css";
 
 // Must match backend/deps.py PROFILE_ROLE_ENUM. Server-side validation will
@@ -43,6 +44,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
     department: "",
     title: "",
     primary_role: "",
+    interests: "",
   });
 
   const [passwords, setPasswords] = useState({
@@ -118,6 +120,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
           department: profile.department || "",
           title: profile.title || "",
           primary_role: profile.primary_role || "",
+          interests: profile.interests || "",
         })
       });
 
@@ -335,6 +338,22 @@ export default function ProfilePage({ userEmail, onLogout }) {
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="form-group">
+              <label>
+                <FaLightbulb /> Research Interests
+              </label>
+              <input
+                type="text"
+                value={profile.interests || ""}
+                onChange={(e) => setProfile({ ...profile, interests: e.target.value })}
+                disabled={!isEditing}
+                placeholder="e.g. cybersecurity, machine learning, HCI"
+              />
+              <small style={{ color: "var(--text-secondary)", fontSize: "0.8rem", marginTop: "4px", display: "block" }}>
+                Comma-separated. Used to personalize funding matches and chat answers.
+              </small>
             </div>
 
             {isEditing && (

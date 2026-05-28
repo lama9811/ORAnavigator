@@ -112,7 +112,11 @@ def test_mirror_creates_department_and_role_rows(db):
         db, user_id=db.user_id, department="Biology", primary_role="PI"
     )
     db.commit()
-    assert status == {"department": "created", "role": "created"}
+    assert status == {
+        "department": "created",
+        "role": "created",
+        "interests": "noop",  # interests not provided -> untouched
+    }
     dept = _memory_rows(db, db.user_id, "department")
     role = _memory_rows(db, db.user_id, "role")
     assert len(dept) == 1 and dept[0].content == "Biology"
@@ -132,12 +136,17 @@ def test_mirror_strips_whitespace(db):
 
 
 def test_mirror_no_fields_provided_does_nothing(db):
-    """If neither department nor primary_role is given, no memory rows touched."""
+    """If no fields are given, no memory rows touched."""
     status = mirror_profile_to_memories(db, user_id=db.user_id)
     db.commit()
-    assert status == {"department": "noop", "role": "noop"}
+    assert status == {
+        "department": "noop",
+        "role": "noop",
+        "interests": "noop",
+    }
     assert _memory_rows(db, db.user_id, "department") == []
     assert _memory_rows(db, db.user_id, "role") == []
+    assert _memory_rows(db, db.user_id, "interest") == []
 
 
 # =====================================================================
@@ -257,3 +266,113 @@ def test_mirror_does_not_create_title_memory(db):
     # Ensure no spurious 'title' memory row was created.
     titles = _memory_rows(db, db.user_id, "title")
     assert titles == []
+
+
+# =====================================================================
+# Interests -- multi-value, replace-all semantics
+# =====================================================================
+
+def test_interests_creates_one_row_per_token(db):
+    """A comma-separated interests string becomes one UserMemory(memory_type=
+    'interest') row per non-empty token."""
+    status = mirror_profile_to_memories(
+        db, user_id=db.user_id,
+        interests="cybersecurity, machine learning, HCI",
+    )
+    db.commit()
+    assert status["interests"] == "replaced:3"
+    rows = _memory_rows(db, db.user_id, "interest")
+    contents = sorted(r.content for r in rows)
+    assert contents == ["HCI", "cybersecurity", "machine learning"]
+
+
+def test_interests_strips_whitespace_and_drops_empties(db):
+    """Extra commas, leading/trailing whitespace, and double-commas don't
+    create blank interest rows."""
+    mirror_profile_to_memories(
+        db, user_id=db.user_id,
+        interests="  cybersecurity ,, , machine learning,  ",
+    )
+    db.commit()
+    rows = _memory_rows(db, db.user_id, "interest")
+    contents = sorted(r.content for r in rows)
+    assert contents == ["cybersecurity", "machine learning"]
+
+
+def test_interests_dedupes_case_insensitively(db):
+    """If a user types the same interest twice (different casing), only one
+    row is created. Preserves the first occurrence's casing."""
+    mirror_profile_to_memories(
+        db, user_id=db.user_id,
+        interests="Cybersecurity, cybersecurity, CYBERSECURITY",
+    )
+    db.commit()
+    rows = _memory_rows(db, db.user_id, "interest")
+    assert len(rows) == 1
+    assert rows[0].content == "Cybersecurity"
+
+
+def test_interests_replace_all_overwrites_old_list(db):
+    """The replace-all semantic: a second save with a different list deletes
+    the old rows and writes the new list. Old interests don't linger."""
+    mirror_profile_to_memories(db, user_id=db.user_id,
+                               interests="cybersecurity, ML")
+    db.commit()
+    assert len(_memory_rows(db, db.user_id, "interest")) == 2
+
+    # New save: completely different list.
+    status = mirror_profile_to_memories(db, user_id=db.user_id,
+                                        interests="biology, genetics")
+    db.commit()
+    assert status["interests"] == "replaced:2"
+    rows = _memory_rows(db, db.user_id, "interest")
+    contents = sorted(r.content for r in rows)
+    assert contents == ["biology", "genetics"]
+
+
+def test_interests_empty_string_clears_all_rows(db):
+    """Saving an empty string explicitly clears all interest rows. (User
+    wiped the field on the form.)"""
+    mirror_profile_to_memories(db, user_id=db.user_id,
+                               interests="cybersecurity, ML, HCI")
+    db.commit()
+    assert len(_memory_rows(db, db.user_id, "interest")) == 3
+
+    status = mirror_profile_to_memories(db, user_id=db.user_id, interests="")
+    db.commit()
+    assert status["interests"] == "cleared:3"
+    assert _memory_rows(db, db.user_id, "interest") == []
+
+
+def test_interests_none_is_noop_and_preserves_rows(db):
+    """interests=None means the form didn't send the field -- existing rows
+    stay untouched. Distinguishes 'unchanged' from 'cleared'."""
+    db.add(UserMemory(user_id=db.user_id, memory_type="interest",
+                      content="cybersecurity"))
+    db.commit()
+
+    status = mirror_profile_to_memories(db, user_id=db.user_id)
+    db.commit()
+    assert status["interests"] == "noop"
+    rows = _memory_rows(db, db.user_id, "interest")
+    assert len(rows) == 1
+    assert rows[0].content == "cybersecurity"
+
+
+def test_interests_only_touches_its_own_user(db):
+    """Replace-all must NOT delete other users' interest rows."""
+    user_b = User(email="b@morgan.edu", password_hash="x", role="user")
+    db.add(user_b)
+    db.commit()
+    db.add(UserMemory(user_id=user_b.id, memory_type="interest",
+                      content="genomics"))
+    db.commit()
+
+    mirror_profile_to_memories(db, user_id=db.user_id,
+                               interests="cybersecurity")
+    db.commit()
+
+    a_rows = _memory_rows(db, db.user_id, "interest")
+    b_rows = _memory_rows(db, user_b.id, "interest")
+    assert [r.content for r in a_rows] == ["cybersecurity"]
+    assert [r.content for r in b_rows] == ["genomics"]

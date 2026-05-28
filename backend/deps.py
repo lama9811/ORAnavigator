@@ -156,6 +156,10 @@ class ProfileUpdateRequest(BaseModel):
     department: Optional[str] = None
     title: Optional[str] = None
     primary_role: Optional[str] = None
+    # Comma-separated list of research interests. We split server-side and
+    # mirror each non-empty token to its own UserMemory(memory_type="interest")
+    # row -- those are what Sponsor Fit Finder + the chat agent read.
+    interests: Optional[str] = None
 
     @field_validator("primary_role", mode="before")
     @classmethod
