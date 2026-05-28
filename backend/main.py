@@ -80,6 +80,12 @@ except ImportError:
 # Local Imports (Auth & DB) - These must run AFTER load_dotenv
 from db import SessionLocal, engine, Base
 from models import User, SupportTicket, FailedQuery, KBSuggestion, UserMemory, ChatHistory, Feedback
+# Single source of truth for ProfileUpdateRequest -- main.py used to
+# redefine it locally (only `name`), which silently masked the extended
+# version in deps.py and broke profile saves once new fields were added.
+# Import from deps.py instead so the schema and validator are shared.
+from deps import ProfileUpdateRequest as _DepsProfileUpdateRequest
+ProfileUpdateRequest = _DepsProfileUpdateRequest
 from security import hash_password, verify_password, create_access_token
 from jose import JWTError, jwt
 
@@ -465,8 +471,10 @@ _forgot_pw_last_cleanup = time_module.time()
 FORGOT_PW_RATE_LIMIT = 5   # max requests per window
 FORGOT_PW_RATE_WINDOW = 900  # 15 minutes
 
-class ProfileUpdateRequest(BaseModel):
-    name: Optional[str] = None
+# ProfileUpdateRequest is imported from deps.py (see top-of-file note).
+# Local redefinition removed to fix the dead-import shadowing that
+# silently dropped department / title / primary_role / interests fields
+# on PUT /api/profile.
 
 class PasswordChangeRequest(BaseModel):
     currentPassword: str
