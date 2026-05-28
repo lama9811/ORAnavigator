@@ -314,7 +314,39 @@ _IDENTIFIER_PATTERNS = [
     ("FWA number", re.compile(r'\bFWA\s?#?\s?\d{6,10}\b', re.IGNORECASE)),
     ("EIN", re.compile(r'\b\d{2}-\d{7}\b')),
     ("UEI", re.compile(r'\bUEI[:\s#]+[A-Z0-9]{12}\b', re.IGNORECASE)),
+    # Dates -- "March 15, 2026", "Mar 15", "3/15/2026", "2026-03-15"
+    ("date", re.compile(
+        r'\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|'
+        r'Jul(?:y)?|Aug(?:ust)?|Sept?(?:ember)?|Oct(?:ober)?|Nov(?:ember)?|'
+        r'Dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{4})?\b',
+        re.IGNORECASE,
+    )),
+    ("date", re.compile(r'\b\d{1,2}/\d{1,2}/\d{2,4}\b')),
+    ("date", re.compile(r'\b\d{4}-\d{2}-\d{2}\b')),
+    # Dollar amounts -- only flag amounts large enough to matter for grants.
+    # Skips small "$5" / "$42" mentions to avoid false positives in policy text.
+    ("dollar amount", re.compile(r'\$\d{1,3}(?:,\d{3})+(?:\.\d+)?')),       # $500,000
+    ("dollar amount", re.compile(r'\$\d+(?:\.\d+)?\s?(?:thousand|million|billion|[KMB])\b', re.IGNORECASE)),  # $500K, $1.5M
+    ("dollar amount", re.compile(r'\$\d{4,}(?:\.\d+)?\b')),                 # $1500+ no commas
+    # Email addresses
+    ("email", re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b')),
+    # Phone numbers (US-style, 10 digits with optional formatting)
+    ("phone", re.compile(r'(?<!\d)\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\d)')),
 ]
+
+# Identifiers that appear in the bot's canned routing / refusal messages and
+# must never be flagged as hallucinations -- the bot is allowed to give the
+# ORA main phone and email without KB grounding (they are the documented
+# universal fallback contacts, hard-coded in _REFUSAL_MSG / _OUTAGE_MSG).
+# Stored already-normalized (lowercased, single-spaced) to match _norm_for_match.
+_IDENTIFIER_WHITELIST_NORM = {
+    "443-885-4044",
+    "(443) 885-4044",
+    "(443)885-4044",
+    "4438854044",
+    "ask.ora@morgan.edu",
+}
+
 _RATE_KEYWORDS_RE = re.compile(r'F&A|facilities and administrative|indirect cost|fringe', re.IGNORECASE)
 _PERCENT_RE = re.compile(r'\b\d{1,3}(?:\.\d+)?\s?%')
 
@@ -346,19 +378,39 @@ def _join_chunk_texts(chunks: list) -> str:
 def _check_identifier_faithfulness(text: str, grounded_corpus: str) -> list:
     """Return identifiers/rates stated in `text` that do not appear verbatim in
     the retrieved KB text. Skipped when no KB text was retrieved, to avoid false
-    positives. Soft guardrail — the caller appends a disclaimer, never blocks."""
+    positives. Soft guardrail — the caller appends a disclaimer, never blocks.
+
+    Whitelisted contacts (ORA main phone / email baked into canned routing
+    messages) are always allowed, since they ship with the bot regardless of
+    what the KB returned. Each (label, normalized-token) pair is reported at
+    most once so a repeated identifier doesn't fill the disclaimer."""
     if not text or not grounded_corpus or len(grounded_corpus) < 50:
         return []
     corpus = _norm_for_match(grounded_corpus)
     unverified = []
+    seen: set[tuple[str, str]] = set()
     for label, pat in _IDENTIFIER_PATTERNS:
         for token in pat.findall(text):
-            if _norm_for_match(token) not in corpus:
+            norm = _norm_for_match(token)
+            if not norm:
+                continue
+            if norm in _IDENTIFIER_WHITELIST_NORM:
+                continue
+            key = (label, norm)
+            if key in seen:
+                continue
+            seen.add(key)
+            if norm not in corpus:
                 unverified.append(f"{label} '{token.strip()}'")
     # Rates: only when the answer frames a number as an F&A/indirect/fringe rate
     if _RATE_KEYWORDS_RE.search(text):
         for pct in _PERCENT_RE.findall(text):
-            if _norm_for_match(pct) not in corpus:
+            norm = _norm_for_match(pct)
+            key = ("rate", norm)
+            if key in seen:
+                continue
+            seen.add(key)
+            if norm not in corpus:
                 unverified.append(f"rate '{pct.strip()}'")
     return unverified[:6]
 

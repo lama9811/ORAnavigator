@@ -297,3 +297,150 @@ def test_empty_first_pass_with_no_chunks_still_errors(monkeypatch):
     assert tail, "expected a done/error event"
     assert tail[-1]["type"] == "error"
     assert "couldn't generate" in tail[-1]["content"]
+
+
+# ===========================================================================
+# _check_identifier_faithfulness -- soft guardrail that flags specific
+# identifiers (SOP/FWA/EIN/UEI numbers, dates, dollar amounts, emails, phones,
+# and F&A rates) that the bot stated but that don't appear verbatim in the
+# retrieved KB chunks. The caller appends the _IDENTIFIER_DISCLAIMER footer;
+# this function never blocks delivery.
+# ===========================================================================
+
+from vertex_agent import _check_identifier_faithfulness
+
+# A long KB-context corpus used as the "grounded" backdrop for these tests.
+# Identifiers stated in the answer must appear in this string verbatim (after
+# whitespace/case normalization) or they get flagged.
+_FAKE_KB_CORPUS = (
+    "The Office of Research Administration handles proposal submissions. "
+    "SOP 12 covers IACUC training requirements. Morgan State's FWA is "
+    "FWA00003658. The federal F&A rate is 53.5% on modified total direct "
+    "costs. The next proposal deadline is March 15, 2026. Budget cap is "
+    "$500,000 across the project period. Contact rebecca.steiner@morgan.edu "
+    "for budget questions. Direct line: 443-885-3000."
+)
+
+
+def test_identifier_check_short_corpus_returns_empty():
+    """No KB corpus (or a too-short one) means we cannot verify anything --
+    return empty rather than flag everything as a false positive."""
+    assert _check_identifier_faithfulness("Anything goes.", "") == []
+    assert _check_identifier_faithfulness("Anything goes.", "short") == []
+
+
+def test_identifier_check_verified_date_passes():
+    """A date that appears verbatim in the corpus is NOT flagged."""
+    text = "The deadline is March 15, 2026 — submit by then."
+    assert _check_identifier_faithfulness(text, _FAKE_KB_CORPUS) == []
+
+
+def test_identifier_check_hallucinated_date_flagged():
+    """A date not in the corpus IS flagged."""
+    text = "The deadline is April 3, 2027."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("April 3, 2027" in r for r in result), result
+
+
+def test_identifier_check_verified_dollar_passes():
+    """A budget cap that matches the corpus exactly is NOT flagged."""
+    text = "The award budget cap is $500,000."
+    assert _check_identifier_faithfulness(text, _FAKE_KB_CORPUS) == []
+
+
+def test_identifier_check_hallucinated_dollar_flagged():
+    """A made-up budget cap IS flagged."""
+    text = "The award budget cap is $750,000."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("$750,000" in r for r in result), result
+
+
+def test_identifier_check_dollar_suffix_format():
+    """Dollar amounts with K/M/B suffixes are recognized and checked."""
+    text = "Budget cap is $2M for this program."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("$2M" in r.lower() or "$2m" in r.lower() for r in result), result
+
+
+def test_identifier_check_verified_email_passes():
+    """A KB-listed email is NOT flagged."""
+    text = "Email rebecca.steiner@morgan.edu for help."
+    assert _check_identifier_faithfulness(text, _FAKE_KB_CORPUS) == []
+
+
+def test_identifier_check_hallucinated_email_flagged():
+    """A made-up staff email IS flagged."""
+    text = "Email john.doe@morgan.edu for help."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("john.doe@morgan.edu" in r for r in result), result
+
+
+def test_identifier_check_whitelisted_ora_email_never_flagged():
+    """ask.ora@morgan.edu is baked into the bot's canned refusal/outage
+    messages -- it must never be flagged as a hallucination even when the
+    KB corpus doesn't mention it."""
+    text = "I don't have that info. Email ask.ora@morgan.edu for help."
+    # KB corpus deliberately doesn't contain the ORA general email.
+    corpus = "Some unrelated KB text that mentions other things but not the general inbox. " * 3
+    assert _check_identifier_faithfulness(text, corpus) == []
+
+
+def test_identifier_check_whitelisted_ora_phone_never_flagged():
+    """ORA's main phone (443-885-4044) is part of the canned refusal message
+    and must never trigger the disclaimer."""
+    text = "I don't have that info. Please contact ORA at 443-885-4044."
+    corpus = "Some unrelated KB text. " * 10
+    assert _check_identifier_faithfulness(text, corpus) == []
+
+
+def test_identifier_check_phone_alt_format_whitelisted():
+    """The parenthesized form (443) 885-4044 is also whitelisted."""
+    text = "Call (443) 885-4044 for assistance."
+    corpus = "Some unrelated KB text. " * 10
+    assert _check_identifier_faithfulness(text, corpus) == []
+
+
+def test_identifier_check_hallucinated_phone_flagged():
+    """A made-up phone number IS flagged."""
+    text = "Call 555-123-9999 for budget help."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("555-123-9999" in r for r in result), result
+
+
+def test_identifier_check_sop_existing_behavior_preserved():
+    """Regression guard: the original SOP / FWA / EIN / UEI checks still work
+    after the extension."""
+    # SOP 12 is in the corpus (ok), SOP 99 is not (flagged).
+    text = "See SOP 12 for training. See SOP 99 for biosecurity."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("SOP" in r and "99" in r for r in result), result
+    assert not any("SOP" in r and "12" in r for r in result), result
+
+
+def test_identifier_check_rate_existing_behavior_preserved():
+    """Regression guard: the F&A rate check still flags hallucinated rates."""
+    text = "Morgan State's F&A rate is 60% on direct costs."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("60%" in r for r in result), result
+
+
+def test_identifier_check_dedupe_within_one_answer():
+    """The same hallucinated identifier mentioned twice should appear in
+    the unverified list at most once -- otherwise the disclaimer fills with
+    repeats."""
+    text = ("The deadline is April 3, 2027. As noted, April 3, 2027 is firm. "
+            "The full window closes April 3, 2027.")
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    date_mentions = [r for r in result if "April 3, 2027" in r]
+    assert len(date_mentions) == 1, f"expected 1 date entry, got {date_mentions}"
+
+
+def test_identifier_check_capped_at_six():
+    """At most 6 unverified identifiers are reported so the disclaimer footer
+    stays scannable."""
+    # 8 distinct hallucinated dates
+    text = " ".join(f"Deadline {m} 1, 2027." for m in
+                    ["January", "February", "March", "April",
+                     "May", "June", "July", "August"])
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert len(result) <= 6, result
