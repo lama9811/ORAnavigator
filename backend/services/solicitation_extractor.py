@@ -79,29 +79,30 @@ _CONTRACT_KEYS = (
 )
 
 
-_PROMPT = """You are extracting structured metadata from a research grant solicitation PDF for a university grants office.
+_PROMPT = """You are extracting structured metadata from a research grant solicitation PDF for a university grants office. ACCURACY IS CRITICAL: a wrong deadline, a wrong budget cap, or a missed page limit can cost a faculty member an entire grant. Read the ENTIRE text provided before answering -- the load-bearing facts are often in the "Award Information", "Eligibility", and "Proposal Preparation" / "Content and Form of Application" / "Format / Page Limitations" sections that can appear well into the document, not just on the cover page.
 
-Read the solicitation text below and return ONLY a JSON object with EXACTLY these fields:
+Return ONLY a JSON object with EXACTLY these fields:
 
 {
-  "sponsor": "NSF" | "NIH" | "DoD" | "DoE" | "NASA" | "USDA" | "EPA" | "NOAA" | "Foundation" | "State of Maryland" | "Internal" | string,
-  "program_id": short program identifier as it appears in the PDF (e.g. "NSF 23-573", "PA-24-001") or null,
+  "sponsor": one of "NSF" | "NIH" | "DoD" | "DoE" | "NASA" | "USDA" | "EPA" | "NOAA" | "State of Maryland" | "Internal", OR for any other funder the FULL organization name exactly as written (e.g. "Alfred P. Sloan Foundation") -- never the bare word "Foundation",
+  "program_id": short program identifier as it appears in the PDF (e.g. "NSF 23-573", "PA-24-001", "DE-FOA-0002884") or null,
   "program_name": short human-readable name (e.g. "Faculty Early Career Development") or null,
   "deadline": ISO-8601 string with timezone if known (e.g. "2026-06-12T17:00:00-05:00") or just date "2026-06-12" or null,
-  "page_limits": object mapping section name -> integer page limit. Examples: {"project_description": 15, "data_management_plan": 2, "biosketch": 5}. Empty object {} if no limits stated.
-  "required_attachments": array of attachment names the solicitation lists as required (e.g. ["Biosketch", "Current & Pending Support", "Data Management Plan", "Project Description"]). Empty array if unclear.
-  "eligibility": one-sentence summary of who can apply or null,
-  "budget_cap": integer dollar maximum (e.g. 600000) or null. If the cap is per year, return the per-year value. No commas or currency symbols.
-  "submission_portal": "Research.gov" | "Grants.gov" | "ASSIST" | "eRA Commons" | other | null,
+  "page_limits": object mapping section name (snake_case) -> integer page limit. ALWAYS include the MAIN narrative cap when the PDF states one -- it is usually titled "Project Description", "Research Narrative", "Project Narrative", "Research Strategy", or "Proposal Narrative" -- plus any others you find (project_summary, data_management_plan, biosketch, budget_justification, etc.). Examples: {"project_description": 15, "data_management_plan": 2, "biosketch": 5}. Use {} ONLY if the PDF truly states no page limit anywhere. If a limit is conditional (e.g. 15 pages if the budget is <= $250k, else 20), return the SMALLER / most restrictive number and explain the condition in source_quotes.
+  "required_attachments": array of attachment / required-element names the solicitation lists as required (e.g. ["Biosketch", "Current & Pending Support", "Data Management Plan", "Project Description"]). Include conditionally-required items; exclude purely optional ones. [] only if none are listed.
+  "eligibility": a one or two sentence summary of who may apply, INCLUDING any alternate path the PDF stresses (e.g. "Full proposals by invitation only; others may submit a Letter of Inquiry"), or null,
+  "budget_cap": integer dollar maximum PER PROPOSAL/PER AWARD (e.g. 600000), or null. No commas or currency symbols. If the cap is stated PER YEAR, return the per-year value. If DIFFERENT maximums are given for different applicant types (e.g. single-institution vs multi-institution/collaborative), return the SMALLEST / MOST RESTRICTIVE one so a typical single-PI applicant is never told they have more room than they do, and record the full breakdown in source_quotes. NEVER return the total program budget / "anticipated funding amount".
+  "submission_portal": the system(s) used to submit. If MORE THAN ONE portal is accepted, list ALL of them comma-separated (e.g. "Research.gov, Grants.gov"). Typical values: "Research.gov" | "Grants.gov" | "ASSIST" | "eRA Commons" | other | null,
   "source_quotes": object mapping each filled field name to a short (<=200 char) verbatim quote from the PDF that supports the extracted value. Example: {"deadline": "Proposals are due no later than 5:00 p.m. on June 12, 2026."}
 }
 
 RULES:
 - Return ONLY the JSON object. No prose, no markdown fences, no explanation.
-- If a field is genuinely not stated in the PDF, return null (or {} / [] for object/array fields).
-- NEVER guess a deadline. If the PDF gives multiple deadlines or none, return null.
+- If a field is genuinely not stated in the PDF, return null (or {} / [] for object/array fields). Do not invent values.
+- NEVER guess a deadline. If the PDF gives multiple/recurring deadlines or none, return null.
 - Quotes in source_quotes must be VERBATIM substrings of the input text. Do not paraphrase.
-- budget_cap is the per-proposal maximum, not the total program budget.
+- budget_cap is the per-proposal/per-award maximum (the MOST RESTRICTIVE if several are given), NEVER the total program budget.
+- Do NOT return an empty page_limits {} if the document states any page limit -- scan the whole text for the main narrative / project-description cap.
 
 SOLICITATION TEXT:
 """
@@ -128,7 +129,7 @@ def _call_gemini(prompt_text: str) -> str:
             contents=_PROMPT + prompt_text,
             config={
                 "temperature": 0.0,
-                "max_output_tokens": 6000,
+                "max_output_tokens": 8192,
                 "response_mime_type": "application/json",
             },
         )
@@ -157,7 +158,10 @@ def _parse_response(raw: str) -> Optional[dict]:
             text = text.rstrip()[:-3]
         text = text.strip()
     try:
-        parsed = json.loads(text)
+        # strict=False tolerates literal control characters inside strings
+        # (pdfplumber sometimes emits e.g. \x1f from ligature glyphs, which
+        # Gemini echoes into source_quotes -> default json.loads rejects it).
+        parsed = json.loads(text, strict=False)
     except json.JSONDecodeError as e:
         # Diagnostic: dump the first 400 chars of the offending text so
         # we can see HOW Gemini broke the contract (preamble text? trailing
@@ -188,6 +192,47 @@ def _coerce_budget(raw) -> Optional[int]:
             except ValueError:
                 return None
     return None
+
+
+# Map a full sponsor name back to the canonical short token the rest of the
+# app keys on (get_template + draft_critic._sponsor_default_sections expect
+# exactly "NSF"/"NIH"/"DoD"/"DoE"/...). Gemini may return "National Science
+# Foundation" or "Department of Energy"; without this, sponsor-specific
+# templates/sections silently fall back to generic. Real foundations / unknown
+# funders keep their full name. Matches full names by substring (specific) or
+# the bare abbreviation by exact match (so it can't false-fire inside a
+# foundation name).
+_SPONSOR_FULLNAMES = (
+    ("national science foundation", "NSF"),
+    ("national institutes of health", "NIH"),
+    ("department of defense", "DoD"),
+    ("defense advanced research projects", "DoD"),
+    ("office of naval research", "DoD"),
+    ("department of energy", "DoE"),
+    ("national aeronautics and space", "NASA"),
+    ("department of agriculture", "USDA"),
+    ("environmental protection agency", "EPA"),
+    ("national oceanic and atmospheric", "NOAA"),
+    ("state of maryland", "State of Maryland"),
+)
+_SPONSOR_ABBREVS = {"nsf": "NSF", "nih": "NIH", "dod": "DoD", "doe": "DoE",
+                    "nasa": "NASA", "usda": "USDA", "epa": "EPA", "noaa": "NOAA"}
+
+
+def _canon_sponsor(s):
+    """Canonicalize a sponsor to the token downstream code expects; keep the
+    full name for foundations / unknown funders."""
+    if not isinstance(s, str) or not s.strip():
+        return s
+    low = s.strip().lower()
+    for name, canon in _SPONSOR_FULLNAMES:
+        if name in low:
+            return canon
+    if low in _SPONSOR_ABBREVS:        # exact bare abbreviation, e.g. "nsf"
+        return _SPONSOR_ABBREVS[low]
+    if low.startswith("de-foa"):       # DOE FOA number used as the sponsor
+        return "DoE"
+    return s.strip()
 
 
 def _coerce_extracted(raw: dict) -> dict:
@@ -238,6 +283,10 @@ def _coerce_extracted(raw: dict) -> dict:
         if isinstance(out[k], str) and not out[k].strip():
             out[k] = None
 
+    # Canonicalize the sponsor token so downstream template/section selection
+    # works whether Gemini returned "NSF" or "National Science Foundation".
+    out["sponsor"] = _canon_sponsor(out["sponsor"])
+
     return out
 
 
@@ -245,11 +294,13 @@ def _coerce_extracted(raw: dict) -> dict:
 # Public API
 # ============================================================================
 
-# Sponsor PDFs are long; we cap how much we send to keep latency and cost
-# reasonable. Most key metadata lives in the first ~30k chars (cover page
-# + summary + budget section). The full document goes through anyway via
-# the user-facing checklist; this is just the metadata-extraction window.
-_MAX_PROMPT_CHARS = 40_000
+# How much of the solicitation text we send to Gemini. The OLD 40k window
+# truncated long FOAs (NSF/DOE often state page limits + required elements in
+# a "Content and Form of Application" section past char 40k -> the model never
+# saw them and returned {}). Gemini 2.5 Flash has a ~1M-token context, so a
+# 250k-char window (~60k tokens) is cheap and captures the metadata sections
+# of essentially every real solicitation. Accuracy >> the few extra cents/secs.
+_MAX_PROMPT_CHARS = 250_000
 
 
 def extract_from_text(text: str) -> Optional[dict]:
@@ -285,7 +336,12 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     except Exception as e:
         print(f"   [SOLICITATION] PDF parse failed: {e}")
         return ""
-    return "\n\n".join(pages_text)
+    joined = "\n\n".join(pages_text)
+    # pdfplumber can emit control characters (e.g. a "fi"/"fl" ligature glyph
+    # as \x1f). Those are illegal inside JSON strings and made Gemini's echoed
+    # source_quotes unparseable -> the whole extraction returned None on an
+    # otherwise-fine PDF. Strip them (keep \t \n \r).
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", joined)
 
 
 def extract_from_pdf_bytes(pdf_bytes: bytes) -> Optional[dict]:

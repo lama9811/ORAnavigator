@@ -139,3 +139,42 @@ def test_extract_from_text_handles_empty_input():
     """Empty / blank input is a fast no-op -- don't burn a Gemini call."""
     assert sx.extract_from_text("") is None
     assert sx.extract_from_text("   \n  \n") is None
+
+
+# --- sponsor canonicalization + page_limits coercion (2026-05-29 accuracy work) ---
+
+import pytest as _pytest
+from services import solicitation_extractor as _se
+
+
+@_pytest.mark.parametrize("raw,expected", [
+    ("National Science Foundation", "NSF"),
+    ("NSF", "NSF"),
+    ("Department of Energy", "DoE"),
+    ("DoE", "DoE"),
+    ("Department of Defense", "DoD"),
+    ("National Aeronautics and Space Administration", "NASA"),
+    ("Alfred P. Sloan Foundation", "Alfred P. Sloan Foundation"),  # foundation keeps full name
+    ("Gordon and Betty Moore Foundation", "Gordon and Betty Moore Foundation"),
+])
+def test_canon_sponsor(raw, expected):
+    assert _se._canon_sponsor(raw) == expected
+
+
+def test_coerce_canonicalizes_sponsor_fullname():
+    out = _se._coerce_extracted({"sponsor": "National Science Foundation"})
+    assert out["sponsor"] == "NSF"
+
+
+def test_coerce_keeps_foundation_fullname():
+    out = _se._coerce_extracted({"sponsor": "Alfred P. Sloan Foundation"})
+    assert out["sponsor"] == "Alfred P. Sloan Foundation"
+
+
+def test_parse_response_tolerates_control_chars():
+    """A control char in a JSON string (pdfplumber ligature artifact) must not
+    crash the parse -- regression for the NSF MRI extraction returning None."""
+    raw = '{"sponsor": "NSF", "source_quotes": {"x": "all \x1fgures and charts"}}'
+    out = _se._parse_response(raw)
+    assert out is not None
+    assert out["sponsor"] == "NSF"

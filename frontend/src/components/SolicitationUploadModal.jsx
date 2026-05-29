@@ -232,6 +232,7 @@ function ReviewStep({
   onConfirm, creating, onCancel,
 }) {
   const sq = extracted.source_quotes || {};
+  const [verified, setVerified] = useState(false);
   return (
     <div className="solicitation-review">
       <p className="solicitation-review-intro">
@@ -258,7 +259,10 @@ function ReviewStep({
             value={extracted.sponsor || "Internal"}
             onChange={(e) => onChange("sponsor", e.target.value)}
           >
-            {SPONSORS.map((s) => <option key={s} value={s}>{s}</option>)}
+            {(extracted.sponsor && !SPONSORS.includes(extracted.sponsor)
+              ? [extracted.sponsor, ...SPONSORS]
+              : SPONSORS
+            ).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </Field>
         <Field label="Program ID" sourceQuote={sq.program_id}>
@@ -272,7 +276,7 @@ function ReviewStep({
       </FieldRow>
 
       <FieldRow>
-        <Field label="Deadline" sourceQuote={sq.deadline}>
+        <Field label="Deadline" critical sourceQuote={sq.deadline}>
           <input
             type="text"
             value={extracted.deadline || ""}
@@ -280,7 +284,7 @@ function ReviewStep({
             placeholder="YYYY-MM-DD or full ISO date"
           />
         </Field>
-        <Field label="Budget cap (USD)" sourceQuote={sq.budget_cap}>
+        <Field label="Budget cap (USD)" critical sourceQuote={sq.budget_cap}>
           <input
             type="number"
             value={extracted.budget_cap ?? ""}
@@ -335,6 +339,20 @@ function ReviewStep({
         </small>
       </Field>
 
+      <label className="solicitation-verify">
+        <input
+          type="checkbox"
+          checked={verified}
+          onChange={(e) => setVerified(e.target.checked)}
+          disabled={creating}
+        />
+        <span>
+          I've checked the <b>deadline</b> and <b>budget cap</b> against the
+          solicitation PDF. (These are AI-extracted — one wrong value can miss
+          or over-budget the proposal.)
+        </span>
+      </label>
+
       <div className="solicitation-actions">
         <button
           type="button"
@@ -348,7 +366,10 @@ function ReviewStep({
           type="button"
           className="btn-primary"
           onClick={onConfirm}
-          disabled={creating || !titleOverride.trim()}
+          disabled={creating || !titleOverride.trim() || !verified}
+          title={!verified
+            ? "Confirm you've checked the deadline and budget cap first"
+            : ""}
         >
           <FaCheck size={11} />{" "}
           {creating ? "Creating..." : "Create Proposal"}
@@ -358,11 +379,19 @@ function ReviewStep({
   );
 }
 
-function Field({ label, hint, sourceQuote, children }) {
+function Field({ label, hint, sourceQuote, critical, children }) {
   return (
-    <div className="solicitation-field">
-      <label>{label}</label>
+    <div className={`solicitation-field${critical ? " solicitation-field-critical" : ""}`}>
+      <label>
+        {label}
+        {critical && <span className="solicitation-critical-tag">verify</span>}
+      </label>
       {children}
+      {critical && (
+        <small className="solicitation-critical-note">
+          ⚠ A wrong value here can miss the deadline or blow the budget — confirm it against the PDF.
+        </small>
+      )}
       {hint && <small className="solicitation-hint">{hint}</small>}
       {sourceQuote && (
         <div className="solicitation-quote">

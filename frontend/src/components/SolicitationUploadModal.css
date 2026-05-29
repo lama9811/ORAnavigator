@@ -431,3 +431,49 @@ body.dark .solicitation-quote {
   .solicitation-modal { padding: 18px; }
   .solicitation-field-row { grid-template-columns: 1fr; }
 }
+
+/* --- Critical fields (deadline / budget) + verify guard (2026-05-29) --- */
+.solicitation-field-critical {
+  border-left: 3px solid #f59e0b;
+  padding-left: 11px;
+  margin-left: -14px;
+}
+.solicitation-critical-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+.solicitation-critical-note {
+  display: block;
+  color: #b45309;
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+.solicitation-verify {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 18px 0 4px;
+  padding: 11px 13px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.solicitation-verify input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
