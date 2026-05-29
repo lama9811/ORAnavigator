@@ -103,9 +103,31 @@ setup_artifact_registry() {
 # =============================================================================
 # Build and Push Images
 # =============================================================================
+
+# Stage a clean copy of a source dir OUTSIDE the git working tree, then build
+# from there. WORKAROUND: `gcloud builds submit` reliably crashes
+# ("ERROR: gcloud crashed (OSError): unexpected end of data" while "Creating
+# temporary archive") when the source dir is INSIDE this git repo -- observed
+# on both backend/ (1242 files) and the tiny frontend/ context (81 files), so
+# it is NOT a corrupted file. Building from a /tmp copy with no .git (and no
+# venv/node_modules/dist) avoids it. (2026-05-29)
+stage_clean() {
+    local src="$1" dest="$2"
+    rm -rf "$dest"
+    mkdir -p "$dest"
+    rsync -a \
+        --exclude='.venv' --exclude='venv' --exclude='node_modules' \
+        --exclude='dist' --exclude='build' --exclude='.git' \
+        --exclude='__pycache__' --exclude='*.pyc' \
+        --exclude='.env' --exclude='.env.*' --exclude='.pytest_cache' \
+        "${src}/" "${dest}/"
+}
+
 build_backend() {
     log "Building backend image via Cloud Build..."
-    gcloud builds submit "${SCRIPT_DIR}/backend" \
+    local stage="/tmp/oranav-stage-backend"
+    stage_clean "${SCRIPT_DIR}/backend" "$stage"
+    gcloud builds submit "$stage" \
         --tag ${BACKEND_IMAGE} \
         --project ${PROJECT_ID}
 }
@@ -123,8 +145,12 @@ build_frontend() {
         BACKEND_URL=""
     fi
 
-    # Generate a temporary cloudbuild.yaml so we can pass build-args to Cloud Build
-    cat > "${SCRIPT_DIR}/frontend/cloudbuild.yaml" <<EOF
+    local stage="/tmp/oranav-stage-frontend"
+    stage_clean "${SCRIPT_DIR}/frontend" "$stage"
+
+    # Generate the cloudbuild.yaml INSIDE the staged dir so it can pass
+    # build-args to Cloud Build (and so '.' = the clean staged context).
+    cat > "${stage}/cloudbuild.yaml" <<EOF
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -138,16 +164,16 @@ images:
   - '${FRONTEND_IMAGE}'
 EOF
 
-    gcloud builds submit "${SCRIPT_DIR}/frontend" \
-        --config "${SCRIPT_DIR}/frontend/cloudbuild.yaml" \
+    gcloud builds submit "$stage" \
+        --config "${stage}/cloudbuild.yaml" \
         --project ${PROJECT_ID}
-
-    rm -f "${SCRIPT_DIR}/frontend/cloudbuild.yaml"
 }
 
 build_adk() {
     log "Building ADK agent image via Cloud Build..."
-    gcloud builds submit "${SCRIPT_DIR}/adk_agent" \
+    local stage="/tmp/oranav-stage-adk"
+    stage_clean "${SCRIPT_DIR}/adk_agent" "$stage"
+    gcloud builds submit "$stage" \
         --tag ${ADK_IMAGE} \
         --project ${PROJECT_ID}
 }
