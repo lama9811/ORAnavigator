@@ -88,15 +88,20 @@ def test_page_count_prefers_project_description_over_other_limits():
     assert "15" in out["value"]
 
 
-def test_page_count_falls_back_to_smallest_limit_when_no_known_key():
-    """If neither Project Description nor Research Strategy is listed,
-    take the smallest stated limit (most binding)."""
+def test_page_count_skips_when_no_document_level_cap():
+    """When only non-document-wide caps are listed (appendix, letter of
+    support, etc.), there is NO document-wide limit to check, so the page
+    count is SKIPPED.
+
+    (Previously this fell back to min() and compared the whole-document
+    page count against the smallest per-section cap -- a false-fail bug
+    found in the 2026-05-29 audit. Per-section caps are checked by
+    check_per_section_page_limits, not here.)"""
     out = dc.check_page_count(
         actual_pages=12,
         page_limits={"appendix": 100, "letter_of_support": 5},
     )
-    # 12 > 5 -> fail
-    assert out["status"] == "fail"
+    assert out["status"] == "skipped"
 
 
 # ---------- check_required_attachments --------------------------------------

@@ -130,10 +130,29 @@ def create_submission_from_solicitation(
         notes_lines.append(f"Budget cap: ${extracted['budget_cap']:,}")
     if extracted.get("submission_portal"):
         notes_lines.append(f"Submission portal: {extracted['submission_portal']}")
+    # Sanitize keys (strip the ',;:' that would corrupt the comma-separated
+    # round-trip) and emit only positive-integer values, so reconstruct can
+    # parse every entry back cleanly.
     page_limits = extracted.get("page_limits") or {}
     if page_limits:
-        pl = ", ".join(f"{k}: {v}p" for k, v in page_limits.items())
-        notes_lines.append(f"Page limits: {pl}")
+        parts = []
+        for k, v in page_limits.items():
+            key = _re.sub(r"[,:;]+", " ", str(k))
+            key = _re.sub(r"\s+", " ", key).strip()
+            mv = _re.search(r"\d+", str(v))
+            if key and mv:
+                parts.append(f"{key}: {int(mv.group())}p")
+        if parts:
+            notes_lines.append(f"Page limits: {', '.join(parts)}")
+    # Persist the FULL required-attachments list verbatim. Draft Critic
+    # reads this as the authoritative set; the per-attachment tasks seeded
+    # below are deduped against the sponsor template and so are a lossy
+    # subset. ";"-separated because attachment names contain commas
+    # (e.g. "Facilities, Equipment and Other Resources").
+    req_atts = [str(a).strip() for a in (extracted.get("required_attachments") or [])
+                if str(a).strip()]
+    if req_atts:
+        notes_lines.append(f"Required attachments: {'; '.join(req_atts)}")
     notes = "\n".join(notes_lines) if notes_lines else None
 
     sub = Submission(
@@ -350,8 +369,12 @@ def delete_task(db: Session, submission_id: int, task_id: int,
 import re as _re
 
 
-_BUDGET_NOTE_RE = _re.compile(r"Budget cap:\s*\$?([\d,]+)")
-_PAGE_LIMITS_NOTE_RE = _re.compile(r"Page limits:\s*(.+)")
+# Anchored to line start (MULTILINE) so a decoy "Budget cap:" / "Page limits:"
+# phrase embedded mid-sentence in another notes field (e.g. Eligibility) can't
+# win over the real, line-leading entry.
+_BUDGET_NOTE_RE = _re.compile(r"^Budget cap:\s*\$?([\d,]+)", _re.MULTILINE)
+_PAGE_LIMITS_NOTE_RE = _re.compile(r"^Page limits:\s*(.+)", _re.MULTILINE)
+_REQUIRED_ATTACHMENTS_NOTE_RE = _re.compile(r"^Required attachments:\s*(.+)", _re.MULTILINE)
 _REQUIRED_ATTACHMENT_TASK_PREFIX = "Prepare required attachment:"
 
 
@@ -401,12 +424,30 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
                     continue
             out["page_limits"] = page_limits
 
-    # Required attachments live in the task list as "Prepare required attachment: X"
+    # Required attachments: the notes line carries the FULL extracted list
+    # (authoritative); the "Prepare required attachment: X" tasks are a lossy
+    # subset (deduped against the sponsor template at create-time) plus
+    # anything the user added by hand. Union them -- notes first, then any
+    # task-only extras -- with case-insensitive de-duplication so neither
+    # source is lost. Manually-created submissions (no notes line, no such
+    # tasks) still yield an empty list.
+    ordered: list[str] = []
+    seen_lc: set[str] = set()
+    if notes:
+        ra = _REQUIRED_ATTACHMENTS_NOTE_RE.search(notes)
+        if ra:
+            for part in ra.group(1).split(";"):
+                p = part.strip()
+                if p and p.lower() not in seen_lc:
+                    seen_lc.add(p.lower())
+                    ordered.append(p)
     for task in (sub.tasks or []):
         title = (task.title or "").strip()
         if title.startswith(_REQUIRED_ATTACHMENT_TASK_PREFIX):
             att = title[len(_REQUIRED_ATTACHMENT_TASK_PREFIX):].strip()
-            if att:
-                out["required_attachments"].append(att)
+            if att and att.lower() not in seen_lc:
+                seen_lc.add(att.lower())
+                ordered.append(att)
+    out["required_attachments"] = ordered
 
     return out

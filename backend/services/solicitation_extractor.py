@@ -197,9 +197,22 @@ def _coerce_extracted(raw: dict) -> dict:
     for k in _CONTRACT_KEYS:
         out[k] = raw.get(k)
 
-    # page_limits must be a dict
-    if not isinstance(out["page_limits"], dict):
-        out["page_limits"] = {}
+    # page_limits must be a dict of {clean_key: positive_int}. Gemini may
+    # return "15 pages" / "15-20" / 2.5 as a value, or a key containing
+    # commas/colons -- the downstream notes round-trip needs clean integer
+    # values and separator-free keys, otherwise a stated limit is silently
+    # lost or corrupts a neighboring key.
+    raw_pl = out["page_limits"] if isinstance(out["page_limits"], dict) else {}
+    clean_pl = {}
+    for k, v in raw_pl.items():
+        key = re.sub(r"[,:;]+", " ", str(k))
+        key = re.sub(r"\s+", " ", key).strip()
+        match = re.search(r"\d+", str(v))
+        if key and match:
+            iv = int(match.group())
+            if iv > 0:
+                clean_pl[key] = iv
+    out["page_limits"] = clean_pl
 
     # required_attachments must be a list of strings
     ra = out["required_attachments"]

@@ -292,3 +292,40 @@ def test_create_from_solicitation_respects_title_override(db):
         title_override="My cancer R01 — June '26",
     )
     assert sub.title == "My cancer R01 — June '26"
+
+
+def test_solicitation_required_attachments_survive_template_dedup(db):
+    """REGRESSION: a solicitation-MANDATED attachment that happens to
+    overlap the sponsor template (e.g. 'Data Management Plan' ⊂ the NSF
+    task 'Draft the Data Management Plan (2 pages max)', or 'Budget
+    Justification' ⊂ 'Write the budget justification') must STILL be
+    recoverable by reconstruct_solicitation_context().
+
+    Bug: create_submission_from_solicitation only seeds a
+    'Prepare required attachment: X' task for attachments NOT already in
+    the template, and reconstruct rebuilt the required list solely from
+    those tasks -- so template-overlapping attachments vanished. Draft
+    Critic then PASSED a draft that was missing a sponsor-mandated
+    attachment (the most standard ones are exactly the ones in the
+    template). The full extracted list must round-trip."""
+    extracted = {
+        "sponsor": "NSF",
+        "program_name": "AISL",
+        "required_attachments": [
+            "Project Summary",          # not in template -> seeds a task
+            "Budget Justification",     # overlaps template task -> deduped from tasks
+            "Data Management Plan",     # overlaps template task -> deduped from tasks
+        ],
+        "budget_cap": 500000,
+        "page_limits": {"project_description": 15},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    ctx = ps.reconstruct_solicitation_context(sub)
+    got = set(ctx["required_attachments"])
+    assert "Data Management Plan" in got, (
+        f"template-overlapping required attachment was dropped; got {sorted(got)}")
+    assert "Budget Justification" in got, (
+        f"template-overlapping required attachment was dropped; got {sorted(got)}")
+    assert "Project Summary" in got

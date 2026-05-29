@@ -30,6 +30,7 @@ the user can trust that string really is not in the document.
 
 from __future__ import annotations
 
+import math
 import re
 from io import BytesIO
 from typing import Optional
@@ -150,33 +151,66 @@ def _plural(n: int, singular: str, plural: Optional[str] = None) -> str:
 # a substring search and dramatically reduces false-positive matches
 # like "this proposal includes a biographical sketch" -> matched
 # "Biographical Sketch" inside body text.
-_HEADER_PREFIX_RE = re.compile(
-    r"^(?:\d+[\.\)]\s+|\(\d+\)\s+|[•\-\*]\s+|<b>\s*|\*\*\s*)?",
+# Leading list/numbering/label noise to strip off before comparing a line
+# to a header name: "1." "1)" "1:" "(1)" "A." "b)" roman "IV." bullets, bold
+# artifacts, and an optional "Section 3:" / "Part B." outline label.
+_LEADING_RE = re.compile(
+    r"^\s*(?:"
+    r"(?:section|part|appendix|attachment|item)\s+[\w\-]+\s*[:.\)]\s+"
+    r"|\d+[\.\):]\s+"
+    r"|\(\d+\)\s+"
+    r"|[a-z][\.\)]\s+"
+    r"|[ivxlcdm]+[\.\)]\s+"
+    r"|[•‣▪·\-\*]\s+"
+    r"|<b>\s*|\*\*\s*"
+    r")+",
     re.IGNORECASE,
 )
 
+# Minimal, SAFE name normalization so common synonyms still match without
+# re-loosening into substring matching: "&" -> "and", whitespace collapse,
+# and a tiny curated alias list.
+_WS_RE = re.compile(r"\s+")
+_NAME_ALIASES = (("biosketch", "biographical sketch"),)
+
+
+def _norm(s: Optional[str]) -> str:
+    s = (s or "").strip().lower().replace("&", " and ")
+    s = _WS_RE.sub(" ", s).strip()
+    for a, b in _NAME_ALIASES:
+        s = s.replace(a, b)
+    return s
+
+
+def _header_match(line: str, target_norm: str) -> bool:
+    """True only when `line` is a heading whose name is exactly
+    `target_norm` (after stripping leading numbering / outline labels).
+    The name must be the WHOLE header, not a prefix of a longer different
+    one: what follows the name must not be another word/number. So
+    "Budget" !~ "Budget Justification" and a TOC "... Plan 12" !~ "Plan",
+    but "Summary:", "Plan (2 pages)", and "Sketch ..." all still match.
+    No substring / anywhere-colon matching (that caused false passes)."""
+    cand = _norm(_LEADING_RE.sub("", line.strip()))
+    if cand == target_norm:
+        return True
+    if target_norm and cand.startswith(target_norm):
+        rest = cand[len(target_norm):].lstrip()
+        return rest == "" or not rest[0].isalnum()
+    return False
+
 
 def _section_present(text: str, name: str) -> bool:
-    """Header-aware: section name must appear at the start of a line
-    (after optional leading numbering / bullets), matched case-
-    insensitively. Falls back to substring match if the name doesn't
-    look like it would ever be a header (rare)."""
-    if not text or not name:
+    """Header-aware presence check. A section counts as present only when
+    its name appears as an actual heading (start of a line, after optional
+    numbering / outline labels), NOT as a substring of body prose, a
+    table-of-contents entry, or a longer different header."""
+    if not text:
         return False
-    name_lc = name.lower().strip()
-    for raw_line in text.splitlines():
-        line = raw_line.strip().lower()
-        if not line:
-            continue
-        stripped = _HEADER_PREFIX_RE.sub("", line)
-        if stripped.startswith(name_lc):
-            return True
-        # Also accept the name appearing right after a colon
-        # ("Section 1: Project Summary"), which is common in NIH-style
-        # outlines.
-        if f": {name_lc}" in line or f":{name_lc}" in line:
-            return True
-    return False
+    target = _norm(name)
+    if not target:
+        return False
+    return any(_header_match(line, target)
+               for line in text.splitlines() if line.strip())
 
 
 # ===========================================================================
@@ -208,22 +242,28 @@ def check_page_count(
             label = k
             break
     if limit is None:
+        # Broaden to other DOCUMENT-WIDE cap names (NIH "research strategy",
+        # generic "narrative" / "research plan"). Per-section caps (DMP,
+        # biosketch, project summary) are intentionally NOT eligible here --
+        # they are checked separately by check_per_section_page_limits.
+        _DOC_HINTS = ("description", "research", "narrative", "research plan",
+                      "project plan", "document", "overall", "total page")
         for k, v in page_limits.items():
-            kl = k.lower()
-            if "description" in kl or "research" in kl:
+            if any(h in k.lower() for h in _DOC_HINTS):
                 limit = v
                 label = k
                 break
     if limit is None:
-        try:
-            label, limit = min(page_limits.items(), key=lambda kv: int(kv[1]))
-        except (ValueError, TypeError):
-            return {
-                "name": "Page count",
-                "status": "skipped",
-                "value": _plural(actual_pages, "page"),
-                "detail": "Couldn't parse the page limit from the solicitation.",
-            }
+        # Only per-section limits were stated -> there is no document-wide
+        # cap to check here. Do NOT compare the whole-document page count
+        # against a single section's cap (that was a false-fail bug).
+        return {
+            "name": "Page count",
+            "status": "skipped",
+            "value": _plural(actual_pages, "page"),
+            "detail": ("The solicitation states only per-section page limits; "
+                       "those are checked separately."),
+        }
     try:
         limit_int = int(limit)
     except (ValueError, TypeError):
@@ -232,6 +272,13 @@ def check_page_count(
             "status": "skipped",
             "value": _plural(actual_pages, "page"),
             "detail": f"Page limit '{limit}' isn't a number.",
+        }
+    if limit_int <= 0:
+        return {
+            "name": "Page count",
+            "status": "skipped",
+            "value": _plural(actual_pages, "page"),
+            "detail": f"Ignoring a non-positive page limit ({limit_int}).",
         }
     status = "ok" if actual_pages <= limit_int else "fail"
     over_by = actual_pages - limit_int
@@ -331,16 +378,24 @@ def check_sponsor_default_sections(
 
 
 _DOLLAR_RE = re.compile(
-    r"\$\s*([\d,]+(?:\.\d+)?)\s*(K|M|k|m)?\b"
+    r"\$\s*([\d,]+(?:\.\d+)?)\s*(million|billion|thousand|mm|m|b|k)?\b",
+    re.IGNORECASE,
 )
+_MAGNITUDE = {
+    "K": 1_000, "THOUSAND": 1_000,
+    "M": 1_000_000, "MM": 1_000_000, "MILLION": 1_000_000,
+    "B": 1_000_000_000, "BILLION": 1_000_000_000,
+}
 
 
 def _largest_dollar_amount(text: str) -> Optional[int]:
-    """Largest $-prefixed amount in the PDF text. Used as a proxy for
-    "the proposal's total requested budget"."""
+    """Largest $-prefixed amount in the PDF text, used as a proxy for the
+    proposal's total requested budget. Understands K / M / MM / B and the
+    spelled-out 'thousand' / 'million' / 'billion' so an over-cap figure
+    written as '$2.5 million' is NOT silently read as $2."""
     if not text:
         return None
-    largest = 0
+    largest = 0.0
     found_any = False
     for m in _DOLLAR_RE.finditer(text):
         raw = m.group(1).replace(",", "")
@@ -349,10 +404,10 @@ def _largest_dollar_amount(text: str) -> Optional[int]:
             val = float(raw)
         except ValueError:
             continue
-        if suffix == "K":
-            val *= 1_000
-        elif suffix == "M":
-            val *= 1_000_000
+        val *= _MAGNITUDE.get(suffix, 1)
+        if not math.isfinite(val) or val > 1e15:
+            # implausible (digit run / id number); ignore rather than crash
+            continue
         found_any = True
         if val > largest:
             largest = val
@@ -369,6 +424,13 @@ def check_budget_cap(
             "status": "skipped",
             "value": "no cap set",
             "detail": "The solicitation didn't specify a budget cap.",
+        }
+    if not isinstance(budget_cap, (int, float)):
+        return {
+            "name": "Budget vs cap",
+            "status": "skipped",
+            "value": "no cap set",
+            "detail": "Budget cap isn't a number; skipping the budget check.",
         }
     largest = _largest_dollar_amount(text)
     if largest is None:
@@ -424,16 +486,13 @@ def _estimate_section_pages(pages_text: list[str], section_name: str) -> Optiona
     isn't found."""
     if not pages_text or not section_name:
         return None
-    name_lc = section_name.lower()
+    target = _norm(section_name)
+    name_lc = section_name.lower()  # used by the forward-walk heuristic below
     start_page = None
     for i, page_text in enumerate(pages_text):
-        for raw_line in page_text.splitlines():
-            line = raw_line.strip().lower()
-            stripped = _HEADER_PREFIX_RE.sub("", line)
-            if stripped.startswith(name_lc):
-                start_page = i
-                break
-        if start_page is not None:
+        if any(_header_match(line, target)
+               for line in page_text.splitlines() if line.strip()):
+            start_page = i
             break
     if start_page is None:
         return None
@@ -683,7 +742,11 @@ def critique_pdf(
         }
     """
     text, page_count, pages_text = _extract_pdf(pdf_bytes)
-    if not text and page_count == 0:
+    # No extractable text at all -> unreadable / scanned / image-only PDF
+    # (even if page_count > 0). Return None so the endpoint surfaces the
+    # friendly "couldn't read this PDF" message instead of a meaningless
+    # "everything is missing" critique.
+    if not text or not text.strip():
         return None
 
     sol = solicitation or {}
