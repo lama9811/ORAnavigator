@@ -8,7 +8,6 @@ import Chatbox        from "./components/Chatbox";
 import ProfilePage    from "./components/ProfilePage";
 import FormsCatalog   from "./components/FormsCatalog";
 import MyProposals    from "./components/MyProposals";
-import SponsorFits    from "./components/SponsorFits";
 import AdminDashboard from "./components/AdminDashboard";
 import Forbidden      from "./components/Forbidden";
 import LandingPage    from "./components/LandingPage";
@@ -532,32 +531,6 @@ export default function App() {
                 onCollapse={toggleSidebar}
               >
                 <MyProposals />
-              </SidebarLayout>
-            </RequireAuth>
-          }
-        />
-
-        {/* protected: sponsor fit-finder */}
-        <Route
-          path="/funding-matches"
-          element={
-            <RequireAuth>
-              <SidebarLayout
-                sessions={sessions}
-                activeId={activeId}
-                onNew={handleNew}
-                onSelect={handleSelect}
-                onDelete={handleDelete}
-                onLogout={handleLogout}
-                userEmail={userEmail}
-                onPin={handlePin}
-                onArchive={handleArchive}
-                onRename={handleRename}
-                darkMode={darkMode}
-                onToggleTheme={toggleTheme}
-                onCollapse={toggleSidebar}
-              >
-                <SponsorFits />
               </SidebarLayout>
             </RequireAuth>
           }

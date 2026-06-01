@@ -3188,43 +3188,6 @@ async def confirm_solicitation_submission(
 
 
 # ----------------------------------------------------------------------------
-# Sponsor Fit-Finder: rank funding opportunities against the user's profile.
-# Deterministic keyword + signal scoring backed by an optional Gemini-Flash
-# "Why this matches you" explanation. Tier-1 AI agent #3.
-
-@app.get("/api/me/sponsor-fits")
-async def list_sponsor_fits(
-    limit: int = 12,
-    explain: bool = True,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Return ranked funding sources for the current user.
-
-    Query params:
-      - limit (default 12, capped at 30 to keep payloads sane)
-      - explain (default true): when false, skips the per-match LLM
-        explanation -- useful for cheap "did anything change?" polling.
-
-    The matching is fully deterministic given the user's UserMemory +
-    Submission history; the LLM is only used for the one-sentence
-    rationale on each card and gracefully falls back to a template."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    capped = max(1, min(int(limit or 12), 30))
-
-    from services import sponsor_fit_finder as _sff
-    result = await asyncio.to_thread(
-        _sff.find_matches,
-        db,
-        user["user_id"],
-        capped,
-        bool(explain),
-    )
-    return result
-
-
-# ----------------------------------------------------------------------------
 # Draft Critic: upload a draft PDF, get a mechanical pre-submission check
 # against the solicitation already attached to this Submission. No LLM call,
 # so no hallucination risk -- every check is deterministic from the PDF text.

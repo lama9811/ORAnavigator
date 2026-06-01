@@ -4,7 +4,6 @@ import { FaBars } from "@react-icons/all-files/fa/FaBars";
 import { FaUser } from "@react-icons/all-files/fa/FaUser";
 import { FaFileAlt } from "@react-icons/all-files/fa/FaFileAlt";
 import { FaTasks } from "@react-icons/all-files/fa/FaTasks";
-import { FaSearchDollar } from "@react-icons/all-files/fa/FaSearchDollar";
 import "../index.css";
 import "./NavBar.css";
 
@@ -117,15 +116,6 @@ export default function NavBar({ role, onToggleSidebar }) {
         {/* Right side - Proposals + Forms + Profile icon when authenticated */}
         {isAuthed && (
           <div className="navbar-right">
-            <button
-              className="navbar-forms-btn"
-              onClick={() => navigate("/funding-matches")}
-              title="Funding sources ranked against your profile"
-              aria-label="Open Funding Matches"
-            >
-              <FaSearchDollar size={15} />
-              <span className="navbar-forms-label">Funding</span>
-            </button>
             <button
               className="navbar-forms-btn"
               onClick={() => navigate("/my-proposals")}
