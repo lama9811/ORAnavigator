@@ -1,0 +1,191 @@
+/* ============================================================
+   ORA NAVIGATOR — Design Tokens
+   Office of Research Administration · Morgan State University
+   ------------------------------------------------------------
+   Editorial, institutional, gov-grade. Deep navy + Morgan
+   orange on white & soft gray. One accent, used sparingly.
+   Swap exact brand hex here and it cascades everywhere.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ---- BRAND ------------------------------------------------ */
+  /* Primary — Morgan State deep navy */
+  --navy-900: #071A33;
+  --navy-800: #0B2545;   /* PRIMARY — sidebars, headings, key UI */
+  --navy-700: #123257;
+  --navy-600: #1B3A6B;
+  --navy-500: #2A4E86;
+  --navy-400: #4C6FA5;
+  --navy-300: #8AA0C2;
+  --navy-100: #E3E9F2;
+  --navy-050: #F0F4F9;
+
+  /* Accent — Morgan orange (sparingly: active, key CTA, urgency) */
+  --orange-700: #C25313;
+  --orange-600: #D85F12;
+  --orange-500: #F37021;   /* ACCENT */
+  --orange-400: #F78C4D;
+  --orange-100: #FDE7D7;
+  --orange-050: #FEF3EB;
+
+  /* ---- NEUTRALS (on white) --------------------------------- */
+  --white:      #FFFFFF;
+  --paper:      #F6F8FB;   /* app canvas / soft gray */
+  --paper-2:    #EEF2F7;   /* hover wells, table stripes */
+  --ink:        #0B2545;   /* primary text = navy */
+  --slate-700:  #334155;   /* body text */
+  --slate-500:  #64748B;   /* secondary text */
+  --slate-400:  #94A3B8;   /* tertiary / placeholder */
+  --line:       #E2E8F0;   /* default borders */
+  --line-soft:  #EDF1F6;   /* subtle dividers */
+
+  /* ---- SEMANTIC (deadline urgency, status) ----------------- */
+  --success-700: #15663E;
+  --success-500: #1F9254;
+  --success-050: #E7F4EC;
+  --warn-700:    #9A5B00;
+  --warn-500:    #E08600;
+  --warn-050:    #FCF1DE;
+  --danger-700:  #9B2C2C;
+  --danger-500:  #D64545;
+  --danger-050:  #FBE9E9;
+  --info-500:    #2A4E86;
+  --info-050:    #EAF0F8;
+
+  /* ---- TYPE -------------------------------------------------- */
+  --font-display: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+
+  /* Type scale (1.250 major-third-ish, tuned) */
+  --text-xs:   0.75rem;   /* 12 — micro labels, eyebrows */
+  --text-sm:   0.8125rem; /* 13 — meta, captions */
+  --text-base: 0.9375rem; /* 15 — body default */
+  --text-md:   1.0625rem; /* 17 — lead body */
+  --text-lg:   1.375rem;  /* 22 — h4 / card titles */
+  --text-xl:   1.75rem;   /* 28 — h3 */
+  --text-2xl:  2.25rem;   /* 36 — h2 */
+  --text-3xl:  3rem;      /* 48 — h1 / hero */
+
+  --leading-tight: 1.15;
+  --leading-snug:  1.35;
+  --leading-body:  1.65;
+
+  --tracking-eyebrow: 0.14em;
+  --tracking-tight:  -0.02em;
+
+  /* ---- SPACE (8px base) ------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ---- RADIUS ---------------------------------------------- */
+  --radius-xs:  4px;
+  --radius-sm:  8px;
+  --radius-md:  12px;   /* default card radius */
+  --radius-lg:  16px;
+  --radius-xl:  22px;
+  --radius-pill: 999px;
+
+  /* ---- ELEVATION (cool navy-tinted, restrained) ------------ */
+  --shadow-xs: 0 1px 2px rgba(11, 37, 69, 0.06);
+  --shadow-sm: 0 1px 3px rgba(11, 37, 69, 0.08), 0 1px 2px rgba(11, 37, 69, 0.04);
+  --shadow-md: 0 4px 12px rgba(11, 37, 69, 0.08), 0 2px 4px rgba(11, 37, 69, 0.04);
+  --shadow-lg: 0 12px 28px rgba(11, 37, 69, 0.12), 0 4px 8px rgba(11, 37, 69, 0.05);
+  --shadow-xl: 0 24px 48px rgba(11, 37, 69, 0.16);
+  --ring-focus: 0 0 0 3px rgba(243, 112, 33, 0.35);   /* orange focus ring */
+  --ring-navy:  0 0 0 3px rgba(43, 78, 134, 0.22);
+
+  /* ---- MOTION ---------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+}
+
+/* ============================================================
+   SEMANTIC TYPOGRAPHY ELEMENTS
+   Apply these classes or element selectors directly.
+   ============================================================ */
+
+.ora-eyebrow {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--orange-600);
+}
+
+.ora-h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+}
+
+.ora-h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+}
+
+.ora-h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: var(--leading-snug);
+  color: var(--ink);
+}
+
+.ora-h4 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: var(--leading-snug);
+  color: var(--ink);
+}
+
+.ora-lead {
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  font-weight: 400;
+  line-height: var(--leading-body);
+  color: var(--slate-700);
+}
+
+.ora-body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 400;
+  line-height: var(--leading-body);
+  color: var(--slate-700);
+}
+
+.ora-meta {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--slate-500);
+}
+
+.ora-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--ink);
+}
