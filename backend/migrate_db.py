@@ -188,6 +188,27 @@ def migrate():
             else:
                 print("⏭️  Table 'submission_tasks' already exists")
 
+            # Deadline Watcher idempotency log -- one row per (submission, threshold)
+            # email we've sent. The watcher consults this on every run to avoid
+            # double-sending the same "deadline in N days" reminder.
+            if not table_exists('deadline_reminder_log'):
+                conn.execute(text("""
+                    CREATE TABLE deadline_reminder_log (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        submission_id INT NOT NULL,
+                        threshold_days INT NOT NULL,
+                        sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        sent_to VARCHAR(255) NULL,
+                        INDEX ix_deadline_reminder_submission_id (submission_id),
+                        INDEX ix_deadline_reminder_threshold (submission_id, threshold_days),
+                        CONSTRAINT fk_deadline_reminder_submission FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE
+                    )
+                """))
+                conn.commit()
+                print("✅ Created table: deadline_reminder_log")
+            else:
+                print("⏭️  Table 'deadline_reminder_log' already exists")
+
             # =================================================================
             # Purge legacy student-data schema and rename the legacy role.
             # Drops the degreeworks/banner/canvas tables, removes dead `users`
@@ -212,6 +233,30 @@ def migrate():
             role_result = conn.execute(text("UPDATE users SET role='user' WHERE role='student'"))
             conn.commit()
             print(f"✅ Renamed role 'student' -> 'user' on {role_result.rowcount} row(s)")
+
+            # =================================================================
+            # Research-admin profile fields (department / title / primary_role)
+            # =================================================================
+            if not column_exists('users', 'department'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN department VARCHAR(128) NULL"))
+                conn.commit()
+                print("✅ Added column: users.department")
+            else:
+                print("⏭️  Column 'users.department' already exists")
+
+            if not column_exists('users', 'title'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN title VARCHAR(128) NULL"))
+                conn.commit()
+                print("✅ Added column: users.title")
+            else:
+                print("⏭️  Column 'users.title' already exists")
+
+            if not column_exists('users', 'primary_role'):
+                conn.execute(text("ALTER TABLE users ADD COLUMN primary_role VARCHAR(32) NULL"))
+                conn.commit()
+                print("✅ Added column: users.primary_role")
+            else:
+                print("⏭️  Column 'users.primary_role' already exists")
 
             print("\n✅ Database migration completed successfully!")
             

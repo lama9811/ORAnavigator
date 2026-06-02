@@ -82,6 +82,7 @@ export default function Signup({ onRegistered }) {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifyPending, setVerifyPending] = useState(null);
   const navigate = useNavigate();
 
   const API_BASE = getApiBase();
@@ -117,9 +118,12 @@ export default function Signup({ onRegistered }) {
 
       if (!res.ok) throw new Error(await parseResponseError(res));
 
-      // Success - redirect to login
-      navigate("/login", {
-        state: { message: "Account created successfully! Please log in." }
+      // Success — backend has sent a verification email. NO account exists yet;
+      // we tell the user to click the link in their email to finish.
+      const data = await res.json().catch(() => ({}));
+      setVerifyPending({
+        email: email.trim(),
+        message: data?.message || "Check your Morgan State email to verify and finish creating your account.",
       });
     } catch (err) {
       setError(err?.message || "Registration failed");
@@ -127,6 +131,57 @@ export default function Signup({ onRegistered }) {
       setSubmitting(false);
     }
   };
+
+  if (verifyPending) {
+    return (
+      <AuthLayout
+        title="Check your email"
+        subtitle="One more step before your account is created."
+        footer={
+          <>
+            Wrong email? <Link className="auth__link" to="/signup" onClick={() => setVerifyPending(null)}>Start over</Link>
+          </>
+        }
+      >
+        <div style={{
+          padding: "20px",
+          borderRadius: "12px",
+          background: "rgba(34, 197, 94, 0.08)",
+          border: "1px solid rgba(34, 197, 94, 0.25)",
+          marginBottom: "16px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+            <CheckIcon style={{ color: "#22c55e", width: 20, height: 20 }} />
+            <strong style={{ color: "#15803d" }}>Verification email sent</strong>
+          </div>
+          <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            We sent a link to <strong>{verifyPending.email}</strong>. Click it to
+            finish creating your account. Your account is <em>not</em> created
+            yet — it will be when you click the link in that email.
+          </p>
+        </div>
+
+        <div style={{ fontSize: "0.85rem", color: "var(--text-tertiary)", lineHeight: 1.6 }}>
+          <p style={{ margin: "12px 0 8px" }}><strong>What to do next:</strong></p>
+          <ol style={{ paddingLeft: "20px", margin: 0 }}>
+            <li>Open your Morgan State inbox.</li>
+            <li>Look for an email from <strong>ORA Navigator</strong>. Check your spam/junk folder if it's not in your inbox.</li>
+            <li>Click the <strong>Verify Email</strong> button. The link expires in 24 hours.</li>
+            <li>You'll land on the login page — sign in with the email + password you just used.</li>
+          </ol>
+        </div>
+
+        <button
+          className="btn-primary auth__submit"
+          type="button"
+          style={{ marginTop: "20px" }}
+          onClick={() => navigate("/login")}
+        >
+          Go to login
+        </button>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout

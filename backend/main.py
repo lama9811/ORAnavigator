@@ -80,6 +80,12 @@ except ImportError:
 # Local Imports (Auth & DB) - These must run AFTER load_dotenv
 from db import SessionLocal, engine, Base
 from models import User, SupportTicket, FailedQuery, KBSuggestion, UserMemory, ChatHistory, Feedback
+# Single source of truth for ProfileUpdateRequest -- main.py used to
+# redefine it locally (only `name`), which silently masked the extended
+# version in deps.py and broke profile saves once new fields were added.
+# Import from deps.py instead so the schema and validator are shared.
+from deps import ProfileUpdateRequest as _DepsProfileUpdateRequest
+ProfileUpdateRequest = _DepsProfileUpdateRequest
 from security import hash_password, verify_password, create_access_token
 from jose import JWTError, jwt
 
@@ -465,8 +471,10 @@ _forgot_pw_last_cleanup = time_module.time()
 FORGOT_PW_RATE_LIMIT = 5   # max requests per window
 FORGOT_PW_RATE_WINDOW = 900  # 15 minutes
 
-class ProfileUpdateRequest(BaseModel):
-    name: Optional[str] = None
+# ProfileUpdateRequest is imported from deps.py (see top-of-file note).
+# Local redefinition removed to fix the dead-import shadowing that
+# silently dropped department / title / primary_role / interests fields
+# on PUT /api/profile.
 
 class PasswordChangeRequest(BaseModel):
     currentPassword: str
@@ -673,21 +681,65 @@ async def get_profile(user: dict = Depends(get_current_user), db: Session = Depe
     if not profile_pic:
         profile_pic = getattr(db_user, 'profile_picture', None)
 
+    # Interests live in user_memories (multi-value). Read them here so the
+    # profile form can render the user's current list as a comma-separated
+    # string. Ordered by id ASC so a re-save preserves the user's typing order.
+    from models import UserMemory as _UserMemory
+    interest_rows = (
+        db.query(_UserMemory)
+        .filter(
+            _UserMemory.user_id == db_user.id,
+            _UserMemory.memory_type == "interest",
+        )
+        .order_by(_UserMemory.id.asc())
+        .all()
+    )
+    interests_str = ", ".join((r.content or "").strip() for r in interest_rows if (r.content or "").strip())
+
     return {
         "email": db_user.email,
         "name": getattr(db_user, 'name', None),
         "profilePicture": profile_pic,
-        "role": getattr(db_user, 'role', "user")
+        "role": getattr(db_user, 'role', "user"),
+        "department": getattr(db_user, 'department', None),
+        "title": getattr(db_user, 'title', None),
+        "primary_role": getattr(db_user, 'primary_role', None),
+        "interests": interests_str,
     }
 
 @app.put("/api/profile")
 async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.id == user["user_id"]).first()
     if not db_user: raise HTTPException(404, "User not found")
-    
+
     if req.name is not None and hasattr(db_user, 'name'): db_user.name = req.name
-    
+    if req.department is not None and hasattr(db_user, 'department'):
+        db_user.department = req.department or None
+    if req.title is not None and hasattr(db_user, 'title'):
+        db_user.title = req.title or None
+    if req.primary_role is not None and hasattr(db_user, 'primary_role'):
+        # request validator already constrained primary_role to the enum or None
+        db_user.primary_role = req.primary_role
+
     db.commit()
+
+    # Mirror the structured profile fields into user_memories so the agent's
+    # memory_context AND the Sponsor Fit Finder see them automatically.
+    # Best-effort: a mirror failure must not roll back the profile save.
+    try:
+        from services.memory_service import mirror_profile_to_memories
+        mirror_profile_to_memories(
+            db,
+            user_id=db_user.id,
+            department=req.department,
+            primary_role=req.primary_role,
+            interests=req.interests,
+        )
+        db.commit()
+    except Exception as e:
+        print(f"[PROFILE] memory mirror failed for user {db_user.id}: {e}")
+        db.rollback()
+
     return {"message": "Profile updated"}
 
 @app.post("/api/change-password")
@@ -1077,6 +1129,9 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     profile_parts = []
     if user.get("name"): profile_parts.append(f"Name: {user['name']}")
     if user.get("email"): profile_parts.append(f"Email: {user['email']}")
+    if user.get("department"): profile_parts.append(f"Department: {user['department']}")
+    if user.get("title"): profile_parts.append(f"Title: {user['title']}")
+    if user.get("primary_role"): profile_parts.append(f"Role: {user['primary_role']}")
     profile_ctx = ""
     if profile_parts:
         profile_ctx = "USER PROFILE (from account):\n" + "\n".join(profile_parts) + "\n"
@@ -1202,6 +1257,9 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     profile_parts = []
     if user.get("name"): profile_parts.append(f"Name: {user['name']}")
     if user.get("email"): profile_parts.append(f"Email: {user['email']}")
+    if user.get("department"): profile_parts.append(f"Department: {user['department']}")
+    if user.get("title"): profile_parts.append(f"Title: {user['title']}")
+    if user.get("primary_role"): profile_parts.append(f"Role: {user['primary_role']}")
     agent_context = ""
     if profile_parts:
         agent_context = "USER PROFILE (from account):\n" + "\n".join(profile_parts) + "\n"
@@ -2563,6 +2621,32 @@ async def internal_memory_idle_sweep(request: Request):
     return result
 
 
+@app.post("/api/internal/deadlines/check")
+async def internal_deadline_check(request: Request):
+    """Deadline Watcher cron — fires every morning.
+
+    Scans active Submissions, finds the ones sitting on a reminder
+    bucket (14 / 7 / 3 / 1 / 0 days from deadline), emails the owner
+    once per (submission, bucket) pair. Idempotent: a DeadlineReminderLog
+    row is written after each successful send so repeat runs (manual
+    retries, Cloud Scheduler retries) never double-email.
+
+    Auth via X-Research-Secret (same shared secret as the memory crons)."""
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+
+    from services import deadline_watcher as _dw
+
+    def _run():
+        with SessionLocal() as db:
+            return _dw.send_due_reminders(db)
+
+    result = await asyncio.to_thread(_run)
+    return result
+
+
 # ==============================================================================
 # Phase 5 — Per-User Memory Management API (Memory tab in ProfilePage)
 # ==============================================================================
@@ -3034,6 +3118,136 @@ async def list_proposal_templates(user: dict = Depends(get_current_user)):
     if not user:
         raise HTTPException(401, "Unauthorized")
     return {"templates": _available_templates()}
+
+
+# ----------------------------------------------------------------------------
+# Solicitation ingestion: PDF -> structured fields -> seeded Submission.
+# Two-step flow:
+#   1) POST /from-solicitation (file upload) -> returns extracted dict
+#   2) POST /from-solicitation/confirm (JSON body) -> creates Submission
+# This keeps "extract" cheap+idempotent and "commit" explicit so the user
+# always reviews the AI-extracted fields before they become a real proposal.
+
+_MAX_SOLICITATION_PDF_BYTES = 25 * 1024 * 1024  # 25 MB
+
+
+@app.post("/api/me/submissions/from-solicitation")
+async def extract_solicitation(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """Step 1: parse a sponsor PDF and return the extracted JSON. Does
+    NOT create a Submission -- the user reviews/edits, then calls the
+    confirm endpoint."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    filename = (file.filename or "").lower()
+    ctype = (file.content_type or "").lower()
+    if not (filename.endswith(".pdf") or "pdf" in ctype):
+        raise HTTPException(400, "Only PDF uploads are supported.")
+
+    pdf_bytes = await file.read()
+    if not pdf_bytes:
+        raise HTTPException(400, "Uploaded file is empty.")
+    if len(pdf_bytes) > _MAX_SOLICITATION_PDF_BYTES:
+        raise HTTPException(413, "PDF is larger than 25 MB.")
+
+    from services import solicitation_extractor as _sx
+    extracted = _sx.extract_from_pdf_bytes(pdf_bytes)
+    if extracted is None:
+        raise HTTPException(
+            422,
+            "Couldn't read this PDF -- the file may be scanned or "
+            "image-only. Try a text-based PDF, or create the proposal "
+            "manually.",
+        )
+    return {"extracted": extracted}
+
+
+@app.post("/api/me/submissions/from-solicitation/confirm")
+async def confirm_solicitation_submission(
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Step 2: commit a user-reviewed extracted dict as a real Submission.
+    Body shape:
+        { "extracted": {<contract dict>}, "title_override": "optional" }"""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    extracted = payload.get("extracted")
+    if not isinstance(extracted, dict):
+        raise HTTPException(400, "Missing 'extracted' dict in body.")
+    title_override = payload.get("title_override")
+
+    sub = _proposals_service.create_submission_from_solicitation(
+        db, user_id=user["user_id"], extracted=extracted,
+        title_override=title_override,
+    )
+    return _submission_to_dict(sub, include_tasks=True)
+
+
+# ----------------------------------------------------------------------------
+# Draft Critic: upload a draft PDF, get a mechanical pre-submission check
+# against the solicitation already attached to this Submission. No LLM call,
+# so no hallucination risk -- every check is deterministic from the PDF text.
+
+_MAX_DRAFT_PDF_BYTES = 25 * 1024 * 1024  # 25 MB, same as solicitation upload
+
+
+@app.post("/api/me/submissions/{submission_id}/critique")
+async def critique_draft(
+    submission_id: int,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Run Draft Critic on an uploaded draft PDF. The submission's
+    existing solicitation context (page limits, required attachments,
+    budget cap) is reconstructed from notes + tasks and passed in.
+    Submissions created manually still get a useful critique against
+    sponsor-default sections."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    sub = _proposals_service.get_submission(
+        db, submission_id=submission_id, user_id=user["user_id"],
+    )
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    filename = (file.filename or "").lower()
+    ctype = (file.content_type or "").lower()
+    if not (filename.endswith(".pdf") or "pdf" in ctype):
+        raise HTTPException(400, "Only PDF uploads are supported.")
+
+    pdf_bytes = await file.read()
+    if not pdf_bytes:
+        raise HTTPException(400, "Uploaded file is empty.")
+    if len(pdf_bytes) > _MAX_DRAFT_PDF_BYTES:
+        raise HTTPException(413, "PDF is larger than 25 MB.")
+
+    from services import draft_critic as _dc
+    solicitation = _proposals_service.reconstruct_solicitation_context(sub)
+    critique = _dc.critique_pdf(
+        pdf_bytes=pdf_bytes,
+        sponsor=sub.sponsor,
+        solicitation=solicitation,
+    )
+    if critique is None:
+        raise HTTPException(
+            422,
+            "Couldn't read this PDF -- the file may be scanned or "
+            "image-only. Try a text-based PDF.",
+        )
+
+    return {
+        "submission_id": submission_id,
+        "submission_title": sub.title,
+        "sponsor": sub.sponsor,
+        "solicitation_context": solicitation,
+        "critique": critique,
+    }
 
 
 # ----------------------------------------------------------------------------

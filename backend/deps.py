@@ -58,6 +58,11 @@ def get_current_user(
             "email": user.email,
             "role": user.role,
             "name": user.name,
+            # Research-admin profile fields -- exposed so chat endpoints can
+            # render them into profile_parts without a second DB query.
+            "department": getattr(user, "department", None),
+            "title": getattr(user, "title", None),
+            "primary_role": getattr(user, "primary_role", None),
         }
     except JWTError as e:
         print(f"JWT decode error: {e}")
@@ -132,8 +137,40 @@ class GuestQueryRequest(BaseModel):
     query: str
     guestProfile: Optional[dict] = None
 
+# Allowed values for User.primary_role. Validated at the API layer so the DB
+# column stays a plain VARCHAR (easy to evolve without a migration), but bad
+# inputs from the client are rejected with a 422 instead of being persisted.
+PROFILE_ROLE_ENUM = (
+    "PI",
+    "Co-PI",
+    "Research Staff",
+    "Department Admin",
+    "Faculty",
+    "Postdoc",
+    "Student",
+)
+
+
 class ProfileUpdateRequest(BaseModel):
     name: Optional[str] = None
+    department: Optional[str] = None
+    title: Optional[str] = None
+    primary_role: Optional[str] = None
+    # Comma-separated list of research interests. We split server-side and
+    # mirror each non-empty token to its own UserMemory(memory_type="interest")
+    # row -- those are what Sponsor Fit Finder + the chat agent read.
+    interests: Optional[str] = None
+
+    @field_validator("primary_role", mode="before")
+    @classmethod
+    def validate_primary_role(cls, v):
+        if v is None or v == "":
+            return None  # allow clearing the field
+        if v not in PROFILE_ROLE_ENUM:
+            raise ValueError(
+                f"primary_role must be one of {PROFILE_ROLE_ENUM}, got {v!r}"
+            )
+        return v
 
 class PasswordChangeRequest(BaseModel):
     currentPassword: str

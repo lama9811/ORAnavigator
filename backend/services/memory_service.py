@@ -238,7 +238,7 @@ Return a JSON array like: [{{"type": "role", "content": "PI on an NSF grant in e
 If nothing new worth remembering, return: []"""
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config={"temperature": 0.1, "max_output_tokens": 1000},
         )
@@ -264,6 +264,122 @@ If nothing new worth remembering, return: []"""
     except Exception as e:
         print(f"   [MEMORY] Extraction failed: {e}")
         return []
+
+
+def mirror_profile_to_memories(
+    db: Session,
+    user_id: int,
+    *,
+    department: Optional[str] = None,
+    primary_role: Optional[str] = None,
+    interests: Optional[str] = None,
+) -> dict:
+    """Mirror explicit profile fields into UserMemory rows so
+    build_memory_context() and Sponsor Fit Finder see them without code
+    changes there.
+
+    Mapping:
+      department    -> 1 UserMemory(memory_type="department", content=...)
+      primary_role  -> 1 UserMemory(memory_type="role",       content=...)
+      interests     -> N UserMemory(memory_type="interest",   content=<each token>)
+
+    Title has no matching memory_type, so it is intentionally not mirrored.
+
+    Behavior per single-value field (department, primary_role):
+      - value is a non-empty string -> upsert (overwrite content of any
+        existing row of that memory_type for this user; create otherwise).
+        The profile value WINS over previously auto-extracted facts.
+      - value is None              -> no-op (left untouched; clearing the
+        profile field does NOT delete past memories of that type).
+      - value is "" (empty string) -> delete any existing row of that type
+        (user explicitly cleared the field on the form).
+
+    Behavior for interests (multi-value, comma-separated):
+      - value is None                -> no-op (don't touch existing rows)
+      - value is "" or just commas   -> delete ALL existing interest rows
+      - value has tokens             -> replace-all: delete every existing
+                                        interest row for this user, then
+                                        insert one row per non-empty token
+
+    Returns a status dict for logging/tests, e.g.:
+      {"department": "updated", "role": "created", "interests": "replaced:3"}
+    """
+    from models import UserMemory
+
+    status: dict[str, str] = {}
+
+    def _upsert(memory_type: str, value: Optional[str]) -> str:
+        if value is None:
+            return "noop"
+        existing = (
+            db.query(UserMemory)
+            .filter(
+                UserMemory.user_id == user_id,
+                UserMemory.memory_type == memory_type,
+            )
+            .order_by(UserMemory.updated_at.desc(), UserMemory.id.desc())
+            .first()
+        )
+        clean = value.strip()
+        if clean == "":
+            if existing is not None:
+                db.delete(existing)
+                return "deleted"
+            return "noop"
+        if existing is None:
+            db.add(UserMemory(
+                user_id=user_id,
+                memory_type=memory_type,
+                content=clean,
+            ))
+            return "created"
+        existing.content = clean
+        existing.updated_at = datetime.utcnow()
+        # Profile-sourced facts are inherently fresh; clear stale embeddings
+        # so retrieve_relevant_memories re-embeds on next consolidation run.
+        existing.embedding = None
+        existing.embedding_model = None
+        return "updated"
+
+    def _replace_interests(value: Optional[str]) -> str:
+        if value is None:
+            return "noop"
+        # Tokenize the comma-separated input; strip whitespace, drop empties,
+        # dedup while preserving order so the user sees their typed order back.
+        tokens: list[str] = []
+        seen: set[str] = set()
+        for raw in value.split(","):
+            t = raw.strip()
+            if not t:
+                continue
+            key = t.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            tokens.append(t)
+
+        # Replace-all: blow away the existing interest rows for this user,
+        # then insert one row per token. Simpler + always correct vs trying
+        # to diff existing vs new. Cheap: profile typically has <10 interests.
+        existing_q = db.query(UserMemory).filter(
+            UserMemory.user_id == user_id,
+            UserMemory.memory_type == "interest",
+        )
+        deleted = existing_q.delete(synchronize_session=False)
+        if not tokens:
+            return f"cleared:{deleted}"
+        for t in tokens:
+            db.add(UserMemory(
+                user_id=user_id,
+                memory_type="interest",
+                content=t,
+            ))
+        return f"replaced:{len(tokens)}"
+
+    status["department"] = _upsert("department", department)
+    status["role"] = _upsert("role", primary_role)
+    status["interests"] = _replace_interests(interests)
+    return status
 
 
 def _merge_memories(db: Session, user_id: int, new_memories: list[dict], existing: list):
@@ -397,7 +513,7 @@ def summarize_older_turns(transcript: str) -> Optional[str]:
         )
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config={"temperature": 0.1, "max_output_tokens": 500},
         )

@@ -31,26 +31,47 @@ defaultTest:
       metric: faithfulness
       threshold: 0.7
       value: |
-        You are grading whether a chatbot answer is FAITHFUL to a knowledge base.
+        You are grading whether a chatbot answer HALLUCINATES — i.e. states a
+        specific fact that is FABRICATED or that CONTRADICTS the knowledge base.
+        This is a hallucination check ONLY. It is NOT a completeness check, a
+        retrieval-recall check, or a "did it cite the excerpt" check.
 
-        KB CONTEXT (the only ground truth the assistant should rely on):
+        KB CONTEXT (a RELEVANT EXCERPT of the knowledge base — NOT the complete
+        set of documents the assistant can see):
         {{kb_context}}
 
-        Score the assistant's response from 0.0 to 1.0:
-        - 1.0 — Every factual claim (numbers, dates, names, rates, policy/SOP
-          numbers, identifiers, contacts, procedures) is directly supported by the
-          KB CONTEXT above; OR, when the KB CONTEXT says no relevant document
-          exists, the response correctly abstains and routes the user to ORA
-          without inventing an answer.
-        - 0.5 — Mostly grounded but adds one or more minor unsupported details, or
-          is vague where the KB CONTEXT is specific.
-        - 0.0 — States a specific fact (a number, name, rate, identifier,
-          deadline, or policy/SOP) that is NOT supported by the KB CONTEXT, i.e.
-          it fabricates.
-        Generic safe routing language (e.g. "contact ORA at ask.ora@morgan.edu")
-        is always allowed and never counts against faithfulness. A greeting or a
-        clarifying question that makes no factual claim scores 1.0.
-        Return pass=true only if score >= 0.7.
+        Framing you MUST apply:
+        - The KB CONTEXT above is only a partial excerpt. The assistant searches a
+          much larger knowledge base (hundreds of ORA documents). Therefore a
+          specific, plausible, ORA-appropriate fact that is simply ABSENT from
+          this excerpt is NOT a hallucination. Do NOT penalize a fact merely
+          because it is not in the excerpt — penalize it only if it CONTRADICTS
+          the excerpt or is clearly invented.
+        - If the KB CONTEXT is empty, says no relevant document exists, or is a
+          sentinel (e.g. "none", "no_kb_context", "N/A"), then the CORRECT
+          behavior is to abstain and route the user to ORA. A correct abstention
+          or deflection (e.g. "I don't have that — contact ORA at
+          ask.ora@morgan.edu or 443-885-4044") scores 1.0. NEVER fail an answer
+          for correctly declining to invent something.
+
+        Score 0.0 to 1.0:
+        - 1.0 — No fabricated or contradictory facts. EITHER every specific claim
+          is consistent with the KB CONTEXT (or is a plausible ORA fact the
+          excerpt does not contradict), OR the answer correctly abstains / routes
+          to ORA. Greetings, clarifying questions, and generic safe-routing
+          language ("contact ORA…") always score 1.0.
+        - 0.5 — Mostly sound, but includes one specific detail that is doubtful or
+          partially inconsistent with the KB CONTEXT (not a clear fabrication).
+        - 0.0 — Contains a specific fact (a number, date, rate, name, identifier,
+          SOP/FWA/award number, contact, deadline, or policy) that DIRECTLY
+          CONTRADICTS the KB CONTEXT, or is clearly FABRICATED (an invented
+          SOP/FWA number, a made-up deadline or dollar amount, a fake person or
+          email with no basis). Inventing a non-existent identifier is the
+          canonical 0.0.
+
+        Do NOT lower the score for adding correct extra detail, for being more
+        specific than the excerpt, or for omitting something — only FABRICATION
+        and CONTRADICTION count. Return pass=true only if score >= 0.7.
 
 # Test cases are data files, one per category.
 tests:

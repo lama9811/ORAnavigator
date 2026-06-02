@@ -15,7 +15,7 @@ Pipeline (inside regenerate_for_user):
   4. Cold-start gate: <3 turns AND <2 facts -> write "default" row with a
      shuffled DEFAULT_QUESTION_POOL sample; return.
   5. Hybrid generation:
-       - 6 LLM questions via gemini-2.0-flash (temp 0.7), prompt sees only
+       - 6 LLM questions via gemini-2.5-flash (temp 0.7), prompt sees only
          user_query text + bulleted facts (NEVER bot_response — keeps the
          signal clean, blocks hallucination leakage).
        - 2-4 template questions filled deterministically from concrete facts
@@ -247,7 +247,7 @@ def _llm_questions(recent_queries: list[str], facts: list[dict]) -> list[str]:
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config={"temperature": 0.7, "max_output_tokens": 800},
         )

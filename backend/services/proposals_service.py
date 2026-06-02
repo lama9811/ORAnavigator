@@ -87,6 +87,132 @@ def create_submission(
     return sub
 
 
+def create_submission_from_solicitation(
+    db: Session,
+    user_id: int,
+    extracted: dict,
+    title_override: Optional[str] = None,
+) -> Submission:
+    """Build a Submission from an extractor dict (see services/
+    solicitation_extractor.py). Title defaults to extracted program_name
+    or program_id; user can override via title_override. Tasks are the
+    sponsor template PLUS solicitation-specific tasks for each
+    required_attachment that isn't already in the generic checklist.
+
+    The user has reviewed/edited the extracted dict in the UI before this
+    call -- we trust what's passed in. This function does not call out
+    to Gemini."""
+    sponsor = (extracted.get("sponsor") or "Internal").strip() or "Internal"
+    program_name = extracted.get("program_name") or extracted.get("program_id") or "Proposal"
+    title = (title_override or program_name).strip() or "Proposal"
+
+    # Parse deadline from contract: ISO datetime / plain date / None
+    deadline_raw = extracted.get("deadline")
+    deadline: Optional[datetime] = None
+    if isinstance(deadline_raw, str) and deadline_raw.strip():
+        try:
+            deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                deadline = datetime.strptime(deadline_raw[:10], "%Y-%m-%d")
+            except ValueError:
+                deadline = None
+
+    # Build a structured notes blob carrying the rest of the extracted
+    # metadata. This is human-readable AND machine-parseable for any
+    # future downstream feature (calendar export, draft critic, etc.).
+    notes_lines = []
+    if extracted.get("program_id"):
+        notes_lines.append(f"Program ID: {extracted['program_id']}")
+    if extracted.get("eligibility"):
+        notes_lines.append(f"Eligibility: {extracted['eligibility']}")
+    if extracted.get("budget_cap"):
+        notes_lines.append(f"Budget cap: ${extracted['budget_cap']:,}")
+    if extracted.get("submission_portal"):
+        notes_lines.append(f"Submission portal: {extracted['submission_portal']}")
+    # Sanitize keys (strip the ',;:' that would corrupt the comma-separated
+    # round-trip) and emit only positive-integer values, so reconstruct can
+    # parse every entry back cleanly.
+    page_limits = extracted.get("page_limits") or {}
+    if page_limits:
+        parts = []
+        for k, v in page_limits.items():
+            key = _re.sub(r"[,:;]+", " ", str(k))
+            key = _re.sub(r"\s+", " ", key).strip()
+            mv = _re.search(r"\d+", str(v))
+            if key and mv:
+                parts.append(f"{key}: {int(mv.group())}p")
+        if parts:
+            notes_lines.append(f"Page limits: {', '.join(parts)}")
+    # Persist the FULL required-attachments list verbatim. Draft Critic
+    # reads this as the authoritative set; the per-attachment tasks seeded
+    # below are deduped against the sponsor template and so are a lossy
+    # subset. ";"-separated because attachment names contain commas
+    # (e.g. "Facilities, Equipment and Other Resources").
+    req_atts = [str(a).strip() for a in (extracted.get("required_attachments") or [])
+                if str(a).strip()]
+    if req_atts:
+        notes_lines.append(f"Required attachments: {'; '.join(req_atts)}")
+    notes = "\n".join(notes_lines) if notes_lines else None
+
+    sub = Submission(
+        user_id=user_id,
+        title=title,
+        sponsor=sponsor,
+        deadline=deadline,
+        status="active",
+        notes=notes,
+    )
+    db.add(sub)
+    db.flush()
+
+    # Start with the sponsor's standard template
+    base_template = get_template(sub.sponsor)
+    seen_titles = {t["title"].lower() for t in base_template}
+    for order, t in enumerate(base_template):
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=t["title"],
+            description=t.get("description"),
+            kb_doc_id=t.get("kb_doc_id"),
+            due_offset_days=t.get("due_offset_days"),
+            status="pending",
+            sort_order=order,
+        ))
+
+    # Add a task per solicitation-listed attachment that isn't already
+    # covered by the base template. This is how the seeded checklist
+    # diverges from the generic NSF/NIH template -- THIS solicitation
+    # explicitly requires these.
+    next_order = len(base_template)
+    for attachment in extracted.get("required_attachments") or []:
+        att_text = str(attachment).strip()
+        if not att_text:
+            continue
+        if any(att_text.lower() in seen for seen in seen_titles):
+            continue
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=f"Prepare required attachment: {att_text}",
+            description=(
+                f"Required by the solicitation. Confirm the format and "
+                f"page limit before submission."
+            ),
+            kb_doc_id=None,
+            due_offset_days=14,
+            status="pending",
+            sort_order=next_order,
+        ))
+        next_order += 1
+
+    # Mirror into long-term memory so the chat agent picks it up
+    _record_active_grant_memory(db, user_id, sub.title, sub.sponsor)
+
+    db.commit()
+    db.refresh(sub)
+    return sub
+
+
 def list_submissions(db: Session, user_id: int) -> list[Submission]:
     """All of THIS user's submissions, newest first."""
     return (
@@ -234,3 +360,94 @@ def delete_task(db: Session, submission_id: int, task_id: int,
     db.delete(task)
     db.commit()
     return True
+
+
+# =====================================================================
+# Solicitation context reconstruction (for Draft Critic, etc.)
+# =====================================================================
+
+import re as _re
+
+
+# Anchored to line start (MULTILINE) so a decoy "Budget cap:" / "Page limits:"
+# phrase embedded mid-sentence in another notes field (e.g. Eligibility) can't
+# win over the real, line-leading entry.
+_BUDGET_NOTE_RE = _re.compile(r"^Budget cap:\s*\$?([\d,]+)", _re.MULTILINE)
+_PAGE_LIMITS_NOTE_RE = _re.compile(r"^Page limits:\s*(.+)", _re.MULTILINE)
+_REQUIRED_ATTACHMENTS_NOTE_RE = _re.compile(r"^Required attachments:\s*(.+)", _re.MULTILINE)
+_REQUIRED_ATTACHMENT_TASK_PREFIX = "Prepare required attachment:"
+
+
+def reconstruct_solicitation_context(sub: Submission) -> dict:
+    """Pull the structured solicitation context back out of a Submission
+    that was created via the from-solicitation flow. Required for Draft
+    Critic without a schema change.
+
+    Sources:
+      - budget_cap: parsed from notes line "Budget cap: $600,000"
+      - page_limits: parsed from notes line "Page limits: project_description: 15p, ..."
+      - required_attachments: read from tasks titled "Prepare required attachment: X"
+
+    Returns the shape Draft Critic expects:
+        {budget_cap: int|None, page_limits: dict, required_attachments: list[str]}
+
+    For submissions created MANUALLY (not from a solicitation), every
+    field is empty/None and Draft Critic falls back to sponsor defaults."""
+    out: dict = {
+        "budget_cap": None,
+        "page_limits": {},
+        "required_attachments": [],
+    }
+
+    notes = sub.notes or ""
+    if notes:
+        m = _BUDGET_NOTE_RE.search(notes)
+        if m:
+            try:
+                out["budget_cap"] = int(m.group(1).replace(",", ""))
+            except ValueError:
+                pass
+        pm = _PAGE_LIMITS_NOTE_RE.search(notes)
+        if pm:
+            # Format: "project_description: 15p, data_management_plan: 2p"
+            parts = pm.group(1).split(",")
+            page_limits: dict = {}
+            for part in parts:
+                if ":" not in part:
+                    continue
+                k, v = part.split(":", 1)
+                k = k.strip()
+                v = v.strip().rstrip("p").rstrip("P").strip()
+                try:
+                    page_limits[k] = int(v)
+                except ValueError:
+                    continue
+            out["page_limits"] = page_limits
+
+    # Required attachments: the notes line carries the FULL extracted list
+    # (authoritative); the "Prepare required attachment: X" tasks are a lossy
+    # subset (deduped against the sponsor template at create-time) plus
+    # anything the user added by hand. Union them -- notes first, then any
+    # task-only extras -- with case-insensitive de-duplication so neither
+    # source is lost. Manually-created submissions (no notes line, no such
+    # tasks) still yield an empty list.
+    ordered: list[str] = []
+    seen_lc: set[str] = set()
+    if notes:
+        ra = _REQUIRED_ATTACHMENTS_NOTE_RE.search(notes)
+        if ra:
+            for part in ra.group(1).split(";"):
+                p = part.strip()
+                if p and p.lower() not in seen_lc:
+                    seen_lc.add(p.lower())
+                    ordered.append(p)
+    for task in (sub.tasks or []):
+        title = (task.title or "").strip()
+        if title.startswith(_REQUIRED_ATTACHMENT_TASK_PREFIX):
+            att = title[len(_REQUIRED_ATTACHMENT_TASK_PREFIX):].strip()
+            if att and att.lower() not in seen_lc:
+                seen_lc.add(att.lower())
+                ordered.append(att)
+    out["required_attachments"] = ordered
+
+    return out

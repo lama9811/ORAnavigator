@@ -62,6 +62,17 @@ class User(Base):
     # semantic recall and per-turn extraction; per-row pause on UserMemory
     # still works independently.
     memory_paused = Column(Boolean, nullable=False, default=False)
+    # Research-admin profile fields. Optional; surfaced to the agent via
+    # profile_parts in /chat endpoints so it can tailor answers (a PI vs.
+    # research staff vs. dept admin needs different guidance). The mirror
+    # in services/memory_service.mirror_profile_to_memories() also writes
+    # department / primary_role into user_memories so Sponsor Fit Finder
+    # picks them up without code changes.
+    department = Column(String(128), nullable=True)
+    title = Column(String(128), nullable=True)
+    # Allowed values (validated at the API layer, see deps.PROFILE_ROLE_ENUM):
+    # PI, Co-PI, Research Staff, Department Admin, Faculty, Postdoc, Student.
+    primary_role = Column(String(32), nullable=True)
 
 
 class SupportTicket(Base):
@@ -210,6 +221,35 @@ class SubmissionTask(Base):
     sort_order = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class DeadlineReminderLog(Base):
+    """Idempotency log for the Deadline Watcher cron.
+
+    Every time the watcher sends a "deadline in N days" email for a
+    Submission, we insert one row here. On the next cron run we skip any
+    (submission_id, threshold_days) pair we've already sent, so a faculty
+    member never gets the same 14-days-out warning twice for the same
+    proposal.
+
+    Cascade-deletes when the parent submission is deleted; that way a
+    user who withdraws and recreates a proposal can legitimately get the
+    full reminder schedule again."""
+    __tablename__ = "deadline_reminder_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    submission_id = Column(
+        Integer,
+        ForeignKey("submissions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # The "days from deadline" bucket this reminder is for: 14, 7, 3, 1, or 0.
+    threshold_days = Column(Integer, nullable=False)
+    sent_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    # Captured for observability / audit -- which user email the SMTP send
+    # was directed at. Doesn't affect idempotency.
+    sent_to = Column(String(255), nullable=True)
 
 
 class KBSuggestion(Base):

@@ -12,7 +12,11 @@ import { FaRegCircle } from "@react-icons/all-files/fa/FaRegCircle";
 import { FaCheckCircle } from "@react-icons/all-files/fa/FaCheckCircle";
 import { FaCalendarAlt } from "@react-icons/all-files/fa/FaCalendarAlt";
 import { FaArrowLeft } from "@react-icons/all-files/fa/FaArrowLeft";
+import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
+import { FaClipboardCheck } from "@react-icons/all-files/fa/FaClipboardCheck";
 import { getApiBase } from "../lib/apiBase";
+import SolicitationUploadModal from "./SolicitationUploadModal";
+import DraftCritiqueModal from "./DraftCritiqueModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -54,6 +58,7 @@ export default function MyProposals() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const loadList = useCallback(async () => {
@@ -176,12 +181,21 @@ export default function MyProposals() {
             off as you finish them.
           </p>
         </div>
-        <button
-          className="proposals-new-btn"
-          onClick={() => setShowCreate(true)}
-        >
-          <FaPlus size={12} /> New Proposal
-        </button>
+        <div className="proposals-header-actions">
+          <button
+            className="proposals-upload-btn"
+            onClick={() => setShowUpload(true)}
+            title="Drop a sponsor PDF and let the app extract deadlines, page limits, and required attachments automatically."
+          >
+            <FaFilePdf size={13} /> Start from Solicitation
+          </button>
+          <button
+            className="proposals-new-btn"
+            onClick={() => setShowCreate(true)}
+          >
+            <FaPlus size={12} /> New Proposal
+          </button>
+        </div>
       </header>
 
       {error && <div className="proposals-error">{error}</div>}
@@ -193,9 +207,11 @@ export default function MyProposals() {
           <div className="proposals-empty-icon">📋</div>
           <h2>No proposals yet</h2>
           <p>
-            Click <b>New Proposal</b> to add your first one. You'll get a
-            sponsor-specific checklist with deadline countdowns and direct
-            links to every ORA form you'll need.
+            Two ways to start: <b>Start from Solicitation</b> if you have the
+            sponsor's PDF — ORA Navigator will read it and pre-fill your
+            proposal. Or <b>New Proposal</b> to enter the details by hand.
+            Either way you'll get a sponsor-specific checklist with deadline
+            countdowns.
           </p>
         </div>
       ) : (
@@ -211,6 +227,17 @@ export default function MyProposals() {
           onClose={() => setShowCreate(false)}
           onSubmit={handleCreate}
           busy={busy}
+        />
+      )}
+
+      {showUpload && (
+        <SolicitationUploadModal
+          onClose={() => setShowUpload(false)}
+          onCreated={(created) => {
+            setShowUpload(false);
+            setActive(created);  // jump straight into the new proposal
+            loadList();
+          }}
         />
       )}
     </div>
@@ -262,6 +289,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
   const total = tasks.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const dleft = daysUntil(submission.deadline);
+  const [showCritique, setShowCritique] = useState(false);
 
   return (
     <div className="proposals">
@@ -269,10 +297,26 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
         <button className="proposals-back-btn" onClick={onBack}>
           <FaArrowLeft size={12} /> All Proposals
         </button>
-        <button className="proposals-delete-btn" onClick={onDelete}>
-          <FaTrash size={12} /> Delete
-        </button>
+        <div className="proposals-header-actions">
+          <button
+            className="proposals-critique-btn"
+            onClick={() => setShowCritique(true)}
+            title="Upload a draft PDF and check it against this proposal's solicitation requirements."
+          >
+            <FaClipboardCheck size={13} /> Critique Draft
+          </button>
+          <button className="proposals-delete-btn" onClick={onDelete}>
+            <FaTrash size={12} /> Delete
+          </button>
+        </div>
       </header>
+
+      {showCritique && (
+        <DraftCritiqueModal
+          submission={submission}
+          onClose={() => setShowCritique(false)}
+        />
+      )}
 
       <section className="proposal-detail-summary">
         <div className="proposal-detail-title-row">

@@ -1,0 +1,479 @@
+/* SolicitationUploadModal -- 3-step inline modal (pick / extract / review)
+   that matches the MyProposals create-modal idiom. */
+
+.solicitation-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: solicitation-fade-in 0.15s;
+}
+
+@keyframes solicitation-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.solicitation-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.solicitation-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.solicitation-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.solicitation-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.solicitation-back-btn:hover {
+  border-color: var(--msu-blue);
+  color: var(--msu-blue);
+}
+
+.solicitation-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.solicitation-close-btn:hover {
+  background: var(--bg-card-hover, rgba(0, 0, 0, 0.05));
+}
+
+.solicitation-error {
+  background: rgba(217, 48, 37, 0.08);
+  border: 1px solid rgba(217, 48, 37, 0.28);
+  color: #c0392b;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+}
+
+/* ============================================================
+   PICK step
+   ============================================================ */
+
+.solicitation-pick {
+  padding-bottom: 4px;
+}
+
+.solicitation-intro {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+
+.solicitation-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 20px;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  background: rgba(66, 133, 244, 0.04);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+
+.solicitation-drop:hover,
+.solicitation-drop.drag-over {
+  border-color: var(--msu-blue);
+  background: rgba(66, 133, 244, 0.08);
+}
+
+.solicitation-drop-icon {
+  color: var(--msu-blue);
+  opacity: 0.85;
+}
+
+.solicitation-drop-text {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.solicitation-drop-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.solicitation-note {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin: 14px 0 0;
+  line-height: 1.45;
+}
+
+/* ============================================================
+   EXTRACTING step
+   ============================================================ */
+
+.solicitation-extracting {
+  text-align: center;
+  padding: 38px 20px;
+}
+
+.solicitation-extracting h3 {
+  margin: 16px 0 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.solicitation-extracting p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.solicitation-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(66, 133, 244, 0.18);
+  border-top-color: var(--msu-blue);
+  border-radius: 50%;
+  margin: 0 auto;
+  animation: solicitation-spin 0.8s linear infinite;
+}
+
+@keyframes solicitation-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   REVIEW step
+   ============================================================ */
+
+.solicitation-review-intro {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  background: rgba(66, 133, 244, 0.06);
+  border-left: 3px solid var(--msu-blue);
+  border-radius: 6px;
+}
+
+.solicitation-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.solicitation-field label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.solicitation-field input,
+.solicitation-field select,
+.solicitation-field textarea {
+  appearance: none;
+  background: var(--bg-input, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.solicitation-field input:focus,
+.solicitation-field select:focus,
+.solicitation-field textarea:focus {
+  border-color: var(--msu-blue);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.16);
+}
+
+.solicitation-field textarea {
+  resize: vertical;
+  min-height: 50px;
+}
+
+.solicitation-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 0;
+}
+
+.solicitation-field-row .solicitation-field {
+  margin-bottom: 14px;
+}
+
+.solicitation-hint {
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  font-weight: normal;
+}
+
+/* Source quote line under each AI-extracted field */
+.solicitation-quote {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 0.74rem;
+  color: var(--text-tertiary);
+  background: rgba(0, 0, 0, 0.03);
+  padding: 6px 9px;
+  border-radius: 6px;
+  border-left: 2px solid rgba(66, 133, 244, 0.3);
+  margin-top: 2px;
+}
+
+body.dark .solicitation-quote {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.solicitation-quote-icon {
+  margin-top: 2px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Attachment chip editor */
+.solicitation-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-input, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  min-height: 38px;
+  align-items: center;
+}
+
+.solicitation-attachment-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(66, 133, 244, 0.12);
+  color: var(--msu-blue);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.solicitation-attachment-remove {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.solicitation-attachment-remove:hover {
+  opacity: 1;
+}
+
+.solicitation-attachment-add {
+  display: flex;
+  flex: 1;
+  min-width: 160px;
+  gap: 4px;
+}
+
+.solicitation-attachment-add input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.solicitation-attachment-add button {
+  background: rgba(66, 133, 244, 0.12);
+  border: none;
+  color: var(--msu-blue);
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.solicitation-attachment-add button:hover {
+  background: rgba(66, 133, 244, 0.2);
+}
+
+.solicitation-pagelimits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.solicitation-pagelimit {
+  background: var(--bg-input, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border-color);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.solicitation-pagelimits-empty {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  padding: 6px 0;
+}
+
+.solicitation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.solicitation-actions .btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.solicitation-actions .btn-secondary:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.solicitation-actions .btn-secondary:disabled,
+.solicitation-actions .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.solicitation-actions .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--msu-blue);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.solicitation-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  .solicitation-modal { padding: 18px; }
+  .solicitation-field-row { grid-template-columns: 1fr; }
+}
+
+/* --- Critical fields (deadline / budget) + verify guard (2026-05-29) --- */
+.solicitation-field-critical {
+  border-left: 3px solid #f59e0b;
+  padding-left: 11px;
+  margin-left: -14px;
+}
+.solicitation-critical-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+.solicitation-critical-note {
+  display: block;
+  color: #b45309;
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+.solicitation-verify {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 18px 0 4px;
+  padding: 11px 13px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.solicitation-verify input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
