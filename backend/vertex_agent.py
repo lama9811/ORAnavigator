@@ -630,10 +630,15 @@ def _finalize_answer(text: str, grounded_corpus: str) -> str:
     if hallucinated and _FAITHFULNESS_DISCLAIMER not in text:
         print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
         text = text + _FAITHFULNESS_DISCLAIMER
+    # Identifier disclaimer DISABLED 2026-06-02 (user request). The footer
+    # produced false positives — e.g. it flagged a number the answer was
+    # explicitly REFUTING (a planted "99%" F&A rate the bot correctly rejected),
+    # because the checker matches tokens verbatim and can't tell refutation from
+    # assertion. We still log unverified identifiers for observability, but no
+    # longer append the user-facing disclaimer.
     unverified_ids = _check_identifier_faithfulness(text, grounded_corpus)
-    if unverified_ids and _IDENTIFIER_DISCLAIMER not in text:
-        print(f"   [FAITHFULNESS] Unverified identifiers: {unverified_ids}")
-        text = text + _IDENTIFIER_DISCLAIMER
+    if unverified_ids:
+        print(f"   [FAITHFULNESS] Unverified identifiers (footer disabled): {unverified_ids}")
     return _inject_procedure_links(text)
 
 
