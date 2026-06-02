@@ -27,6 +27,41 @@ const FEATURED_QUESTIONS = [
 import { getApiBase } from "../lib/apiBase";
 const API_BASE = getApiBase();
 
+// When the live SSE stream fails to deliver the final answer but the backend has
+// already SAVED it (it persists the turn to chat_history before/at the 'done'
+// event), recover the saved answer from /chat-history -- the same source a manual
+// page refresh uses -- so the user sees their real answer instead of a dead-end
+// "couldn't generate" error. Retries once because the server-side save may commit
+// a beat after the client's stream closed.
+async function recoverSavedAnswer(sessionId, userText, token, retries = 1) {
+  const sid = sessionId || "default";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}/chat-history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const turns = (data.history || []).filter(
+          (h) => (h.session_id || "default") === sid
+        );
+        const last = turns[turns.length - 1];
+        if (last && last.bot) {
+          // Prefer an exact match to the turn we just sent; on the final attempt
+          // accept the latest saved bot answer for this session as a fallback.
+          if (!userText || (last.user || "").trim() === userText.trim() || attempt === retries) {
+            return last.bot;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("recoverSavedAnswer failed:", e);
+    }
+    if (attempt < retries) await new Promise((r) => setTimeout(r, 1200));
+  }
+  return "";
+}
+
 // Helper for icons
 const getFileIcon = (filename) => {
   if (!filename) return <File className="file-icon generic" />;
@@ -945,15 +980,22 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
             }
         }
 
-        // Finalize if stream ended without explicit done
+        // Finalize if the stream ended without a usable answer. The backend
+        // SAVES the answer before/at the 'done' event, so an empty live result
+        // (e.g. the final frame never arrived during a slow Pass-2 gap) does NOT
+        // mean the answer was lost -- recover it from the server, the same way a
+        // manual page refresh does, instead of showing a dead-end error.
+        let finalText = (fullText || "").replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, "").trim();
+        if (!finalText) {
+            finalText = await recoverSavedAnswer(sessionId, finalMessage, token);
+        }
         setMessages((prev) => {
             const newMessages = [...prev];
             const lastMsg = newMessages[newMessages.length - 1];
             if (lastMsg.isStreaming) {
-                const cleanText = (lastMsg.text || "").replace(/[\x00-\x09\x0B-\x1F\x7F-\x9F]/g, "").trim();
                 newMessages[newMessages.length - 1] = {
                     ...lastMsg,
-                    text: cleanText || "I'm sorry, I couldn't generate a response. Please try rephrasing your question.",
+                    text: finalText || "I'm sorry, I couldn't generate a response. Please try rephrasing your question.",
                     isStreaming: false
                 };
             }
