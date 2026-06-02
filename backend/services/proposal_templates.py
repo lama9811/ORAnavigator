@@ -41,13 +41,13 @@ _GENERIC_CHECKLIST = [
         "title": "Build the proposal budget",
         "description": "Use the ORA budget template. Include direct costs (salary, fringe, supplies, travel, equipment, subawards) and apply Morgan State's federal F&A rate.",
         "due_offset_days": 14,
-        "kb_doc_id": "budget_justification_template",
+        "kb_doc_id": "form_budget_justification_template",
     },
     {
         "title": "Write the budget justification",
         "description": "Narrative explanation of every budget line. Sponsor reviewers expect this -- a budget without justification is incomplete.",
         "due_offset_days": 10,
-        "kb_doc_id": "budget_justification_template",
+        "kb_doc_id": "form_budget_justification_template",
     },
     {
         "title": "Collect biosketches for all senior personnel",
@@ -65,13 +65,13 @@ _GENERIC_CHECKLIST = [
         "title": "Complete & sign the Internal Routing Form",
         "description": "ORA requires the Internal Routing Form (DocuSign) signed by the PI and department chair BEFORE the proposal goes to the sponsor.",
         "due_offset_days": 5,
-        "kb_doc_id": "form_internal_routing_form",
+        "kb_doc_id": "form_internal_routing_form_docusign",
     },
     {
         "title": "Final review with ORA pre-award",
         "description": "Submit the full package to ORA pre-award for institutional review at least 5 business days before the sponsor deadline.",
         "due_offset_days": 5,
-        "kb_doc_id": None,
+        "kb_doc_id": "pre_award_proposal_submission_checklist",
     },
     {
         "title": "ORA submits to sponsor",
