@@ -376,3 +376,65 @@ def test_interests_only_touches_its_own_user(db):
     b_rows = _memory_rows(db, user_b.id, "interest")
     assert [r.content for r in a_rows] == ["cybersecurity"]
     assert [r.content for r in b_rows] == ["genomics"]
+
+
+# =====================================================================
+# Backfill (rebuild memory notebooks for users who saved before mirroring)
+# =====================================================================
+
+def test_backfill_rebuilds_missing_memory_rows(db):
+    """A user with department/role on their `users` row but NO memory rows
+    (saved before the mirror was wired) gets their notebook rebuilt."""
+    from services.memory_service import backfill_profile_memories
+
+    # seeded user has a profile saved directly on the row, but no memory rows
+    u = db.query(User).filter(User.id == db.user_id).first()
+    u.department = "Computer Science"
+    u.primary_role = "PI"
+    db.commit()
+    assert _memory_rows(db, db.user_id, "department") == []
+    assert _memory_rows(db, db.user_id, "role") == []
+
+    result = backfill_profile_memories(db)
+
+    assert result["users_backfilled"] == 1
+    dept = _memory_rows(db, db.user_id, "department")
+    role = _memory_rows(db, db.user_id, "role")
+    assert [r.content for r in dept] == ["Computer Science"]
+    assert [r.content for r in role] == ["PI"]
+
+
+def test_backfill_skips_users_with_no_profile(db):
+    """Users with neither department nor role are left alone (not processed)."""
+    from services.memory_service import backfill_profile_memories
+    # seeded user has no department/role set
+    result = backfill_profile_memories(db)
+    assert result["users_backfilled"] == 0
+
+
+def test_backfill_is_idempotent(db):
+    """Running the backfill twice does not duplicate rows (mirror upserts)."""
+    from services.memory_service import backfill_profile_memories
+    u = db.query(User).filter(User.id == db.user_id).first()
+    u.department = "Biology"
+    db.commit()
+
+    backfill_profile_memories(db)
+    backfill_profile_memories(db)
+
+    assert len(_memory_rows(db, db.user_id, "department")) == 1
+
+
+def test_backfill_leaves_interests_untouched(db):
+    """Backfill must not wipe a user's existing interest rows (interests=None)."""
+    from services.memory_service import backfill_profile_memories
+    u = db.query(User).filter(User.id == db.user_id).first()
+    u.primary_role = "PI"
+    db.commit()
+    db.add(UserMemory(user_id=db.user_id, memory_type="interest", content="AI"))
+    db.commit()
+
+    backfill_profile_memories(db)
+
+    interests = _memory_rows(db, db.user_id, "interest")
+    assert [r.content for r in interests] == ["AI"]

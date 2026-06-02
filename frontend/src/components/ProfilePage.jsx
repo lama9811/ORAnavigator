@@ -115,7 +115,14 @@ export default function ProfilePage({ userEmail, onLogout }) {
       });
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Profile updated successfully!" });
+        const data = await response.json().catch(() => ({}));
+        if (data.warning) {
+          // Profile saved, but the memory sync failed -- surface it instead of
+          // claiming full success, so a silent failure is visible.
+          setMessage({ type: "error", text: data.warning });
+        } else {
+          setMessage({ type: "success", text: "Profile updated successfully!" });
+        }
         setIsEditing(false);
         fetchProfile();
       } else {

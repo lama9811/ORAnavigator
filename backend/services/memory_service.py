@@ -382,6 +382,43 @@ def mirror_profile_to_memories(
     return status
 
 
+def backfill_profile_memories(db: Session) -> dict:
+    """One-time backfill: walk every user who has a saved department or
+    primary_role on their `users` row and mirror it into UserMemory rows.
+
+    Why: profile values saved BEFORE the mirror step was wired (or when the
+    mirror silently failed) leave the user with a populated profile but an empty
+    memory notebook, so the chatbot can't recall their role/department until they
+    happen to re-save. This rebuilds the notebook for all existing users so they
+    don't have to.
+
+    - Reuses mirror_profile_to_memories (identical behavior to a normal save).
+    - interests=None on purpose: interests live ONLY as UserMemory rows (there is
+      no users.interests column), so they cannot be reconstructed here and are
+      left untouched.
+    - Idempotent: the mirror upserts, so running this repeatedly is safe.
+    """
+    from models import User
+
+    users = (
+        db.query(User)
+        .filter((User.department.isnot(None)) | (User.primary_role.isnot(None)))
+        .all()
+    )
+    processed = 0
+    for u in users:
+        dept = getattr(u, "department", None)
+        role = getattr(u, "primary_role", None)
+        if not dept and not role:
+            continue
+        mirror_profile_to_memories(
+            db, user_id=u.id, department=dept, primary_role=role, interests=None,
+        )
+        processed += 1
+    db.commit()
+    return {"users_with_profile": len(users), "users_backfilled": processed}
+
+
 def _merge_memories(db: Session, user_id: int, new_memories: list[dict], existing: list):
     """Merge new memories with existing ones. Update if same type exists, else create."""
     from models import UserMemory

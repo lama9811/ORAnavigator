@@ -724,8 +724,13 @@ async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_cur
     db.commit()
 
     # Mirror the structured profile fields into user_memories so the agent's
-    # memory_context AND the Sponsor Fit Finder see them automatically.
-    # Best-effort: a mirror failure must not roll back the profile save.
+    # memory_context sees them automatically.
+    # Best-effort: a mirror failure must not roll back the profile save -- but it
+    # must NOT be hidden either. If it fails we still save the profile, and we
+    # tell the caller so the UI can warn the user instead of silently claiming
+    # full success (a silent mirror failure is exactly why the chatbot once knew
+    # nothing about a user whose profile was clearly filled in).
+    mirror_ok = True
     try:
         from services.memory_service import mirror_profile_to_memories
         mirror_profile_to_memories(
@@ -739,8 +744,16 @@ async def update_profile(req: ProfileUpdateRequest, user: dict = Depends(get_cur
     except Exception as e:
         print(f"[PROFILE] memory mirror failed for user {db_user.id}: {e}")
         db.rollback()
+        mirror_ok = False
 
-    return {"message": "Profile updated"}
+    resp = {"message": "Profile updated"}
+    if not mirror_ok:
+        resp["warning"] = (
+            "Your profile was saved, but syncing it to the assistant's memory "
+            "failed, so the chatbot may not recall these details yet. Please try "
+            "saving again, or contact support if it keeps happening."
+        )
+    return resp
 
 @app.post("/api/change-password")
 async def change_password(req: PasswordChangeRequest, user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -2601,6 +2614,21 @@ async def internal_memory_consolidate(request: Request):
         raise HTTPException(status_code=403, detail="Invalid research secret")
     from services.memory_service import consolidate_user_memories
     result = await asyncio.to_thread(consolidate_user_memories, 24)
+    return result
+
+
+@app.post("/api/internal/memory/backfill-profiles")
+async def internal_memory_backfill_profiles(request: Request, db: Session = Depends(get_db)):
+    """One-time backfill: mirror every existing user's saved profile
+    (department / role) into their UserMemory notebook so the chatbot can recall
+    it without each user re-saving. Idempotent (the mirror upserts). Same
+    X-Research-Secret auth as the other internal endpoints."""
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+    from services.memory_service import backfill_profile_memories
+    result = await asyncio.to_thread(backfill_profile_memories, db)
     return result
 
 
