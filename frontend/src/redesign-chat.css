@@ -1,0 +1,107 @@
+/* ============================================================
+   ORA Navigator — Sidebar + Chat redesign overrides
+   Applies the Claude Design system (deep navy + Morgan orange)
+   over the existing ChatSidebar.css / Chatbox.css. Loaded last;
+   !important keeps it winning regardless of import order.
+   ============================================================ */
+
+/* ---------------- NAVY SIDEBAR ---------------- */
+.chat-sidebar {
+  background: #0B2545 !important;
+  color: rgba(255, 255, 255, .82) !important;
+  border-right: 1px solid rgba(255, 255, 255, .07) !important;
+}
+/* default light text for the sidebar's own controls */
+.chat-sidebar .sidebar-action-btn,
+.chat-sidebar .section-header,
+.chat-sidebar .chat-history-section,
+.chat-sidebar .install-app-btn,
+.chat-sidebar .logout-icon-btn,
+.chat-sidebar .profile-name,
+.chat-sidebar .profile-email {
+  color: rgba(255, 255, 255, .8) !important;
+}
+.chat-sidebar .sidebar-action-btn:hover,
+.chat-sidebar .install-app-btn:hover,
+.chat-sidebar .logout-icon-btn:hover {
+  background: rgba(255, 255, 255, .07) !important;
+  color: #fff !important;
+}
+.new-chat {
+  background: #F37021 !important;
+  color: #fff !important;
+  border: none !important;
+  font-weight: 700 !important;
+}
+.new-chat:hover { background: #D85F12 !important; }
+.date-group-header { color: rgba(255, 255, 255, .42) !important; }
+.chat-history-item { color: rgba(255, 255, 255, .72) !important; }
+.chat-history-item:hover,
+.chat-history-item:not(.active):hover { background: rgba(255, 255, 255, .06) !important; color: #fff !important; }
+.chat-history-item.active { background: rgba(255, 255, 255, .1) !important; color: #fff !important; }
+.chat-history-item.active::before { background: #F37021 !important; }
+.chat-title { color: inherit !important; }
+.chat-time { color: rgba(255, 255, 255, .42) !important; }
+.empty-state { color: rgba(255, 255, 255, .55) !important; }
+.chat-sidebar .search-container input { background: rgba(255,255,255,.06) !important; color: #fff !important; border-color: rgba(255,255,255,.1) !important; }
+.chat-sidebar .search-container input::placeholder { color: rgba(255,255,255,.4) !important; }
+/* popovers/forms inside the sidebar render on white — keep them dark */
+.context-menu, .context-menu-item, .archived-list, .ticket-form, .category-options, .category-btn {
+  color: #0B2545 !important;
+}
+.context-menu, .ticket-form, .category-options { background: #fff !important; }
+
+/* ---------------- CHAT BUBBLES ---------------- */
+.message.user .message-bubble {
+  background: #0B2545 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 16px 16px 5px 16px !important;
+  box-shadow: 0 1px 6px rgba(11, 37, 69, .18) !important;
+}
+.message.bot .message-bubble {
+  background: #fff !important;
+  color: #334155 !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 16px 16px 16px 5px !important;
+  box-shadow: 0 1px 2px rgba(11, 37, 69, .06) !important;
+}
+.message.bot .message-bubble strong,
+.message.bot .message-bubble h1,
+.message.bot .message-bubble h2,
+.message.bot .message-bubble h3 { color: #0B2545 !important; }
+.message.bot .message-bubble a,
+.message.bot .message-bubble code { color: #1B3A6B !important; }
+
+/* sources block */
+.message-sources-label { color: #64748B !important; letter-spacing: .06em; text-transform: uppercase; font-weight: 700 !important; }
+.message-sources-list a,
+.message-link {
+  color: #1B3A6B !important;
+  background: #F0F4F9 !important;
+  border-color: #E2E8F0 !important;
+}
+.message-sources-list a:hover { background: #E3E9F2 !important; }
+
+/* ---------------- COMPOSER ---------------- */
+.chat-input-wrapper {
+  background: #fff !important;
+  border: 1.5px solid #E2E8F0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 1px 3px rgba(11, 37, 69, .08) !important;
+}
+.chat-input-wrapper:focus-within {
+  border-color: #4C6FA5 !important;
+  box-shadow: 0 4px 12px rgba(11, 37, 69, .1) !important;
+}
+.send-btn:not(:disabled) { background: #F37021 !important; color: #fff !important; }
+.send-btn:hover:not(:disabled) { background: #D85F12 !important; }
+
+/* ---------------- WELCOME + SUGGESTION CHIPS ---------------- */
+.welcome-title { color: #0B2545 !important; }
+.suggestion-btn { border-left-color: #F37021 !important; }
+.suggestion-btn:nth-child(4n+1),
+.suggestion-btn:nth-child(4n+2),
+.suggestion-btn:nth-child(4n+3),
+.suggestion-btn:nth-child(4n+4) { border-left-color: #F37021 !important; }
+.suggestion-btn:hover:not(:disabled) { border-color: #8AA0C2 !important; }
