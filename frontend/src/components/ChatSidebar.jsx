@@ -514,15 +514,6 @@ export default function ChatSidebar({
 
           <div className="sidebar-settings-row">
             <button
-              className="setting-btn"
-              onClick={onToggleTheme}
-              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {darkMode ? <FaSun size={18} /> : <FaMoon size={18} />}
-              <span>{darkMode ? "Light" : "Dark"} Mode</span>
-            </button>
-
-            <button
               className="setting-btn install-app-btn"
               onClick={handleInstallApp}
               title="Download desktop application"

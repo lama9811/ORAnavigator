@@ -25,9 +25,10 @@
 }
 
 .auth {
-  /* sits below the 70px app navbar that renders on auth routes */
-  height: calc(100vh - 70px);
+  /* sits below the app navbar on auth routes; dvh handles the mobile
+     address bar, and it can grow + scroll when the form is tall */
   min-height: calc(100vh - 70px);
+  min-height: calc(100dvh - 70px);
   display: flex;
   font-family: var(--au-body);
   color: var(--au-ink);
@@ -234,10 +235,13 @@
 
 /* ---------- mobile: collapse the brand panel ---------- */
 @media (max-width: 860px) {
+  .auth { min-height: calc(100dvh - 60px); }
   .auth__brand { display: none; }
-  .auth__main { padding: 22px; align-items: flex-start; }
-  .auth__card { margin-top: 24px; border-radius: 18px; padding: 26px 22px; }
-  .auth__mobileLogoWrap { display: flex; justify-content: center; margin-bottom: 16px; }
-  .auth__mobileLogo { height: 46px; width: auto; }
-  .auth__brandTitle { font-size: 38px; }
+  .auth__main { padding: 18px 16px; align-items: flex-start; }
+  .auth__card { margin: 12px auto; border-radius: 16px; padding: 24px 20px; max-width: 100%; }
+  .auth__mobileLogoWrap { display: flex; justify-content: center; margin-bottom: 14px; }
+  .auth__mobileLogo { height: 44px; width: auto; }
+  .auth__title { font-size: 22px; }
+  /* 16px inputs prevent iOS Safari from auto-zooming the page on focus */
+  .field__control input { font-size: 16px; }
 }

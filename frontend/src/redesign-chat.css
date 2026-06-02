@@ -105,3 +105,15 @@
 .suggestion-btn:nth-child(4n+3),
 .suggestion-btn:nth-child(4n+4) { border-left-color: #F37021 !important; }
 .suggestion-btn:hover:not(:disabled) { border-color: #8AA0C2 !important; }
+
+/* ---------------- MOBILE OPTIMIZATION ---------------- */
+@media (max-width: 768px) {
+  /* never let anything cause a horizontal scroll on phones */
+  html, body, #root { max-width: 100vw !important; overflow-x: hidden !important; }
+  /* 16px composer input stops iOS Safari from auto-zooming the page */
+  .chat-input-field { font-size: 16px !important; }
+  /* keep chat bubbles inside the viewport */
+  .message-bubble { max-width: 86vw !important; }
+  /* welcome suggestion chips stack to a single column */
+  .suggestions { grid-template-columns: 1fr !important; }
+}
