@@ -1,9 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaBars } from "@react-icons/all-files/fa/FaBars";
-import { FaUser } from "@react-icons/all-files/fa/FaUser";
-import { FaFileAlt } from "@react-icons/all-files/fa/FaFileAlt";
-import { FaTasks } from "@react-icons/all-files/fa/FaTasks";
+import { FileText, ListChecks, Menu, User } from "lucide-react";
 import "../index.css";
 import "./NavBar.css";
 
@@ -93,7 +90,7 @@ export default function NavBar({ role, onToggleSidebar }) {
                 className="nav-logo-image"
               />
               <div className="hamburger-overlay">
-                <FaBars size={24} />
+                <Menu size={24} />
               </div>
             </button>
           )}
@@ -122,7 +119,7 @@ export default function NavBar({ role, onToggleSidebar }) {
               title="Track your in-flight grant proposals"
               aria-label="Open My Proposals"
             >
-              <FaTasks size={15} />
+              <ListChecks size={15} />
               <span className="navbar-forms-label">Proposals</span>
             </button>
             <button
@@ -131,7 +128,7 @@ export default function NavBar({ role, onToggleSidebar }) {
               title="Browse ORA forms, templates, and checklists"
               aria-label="Open Forms catalog"
             >
-              <FaFileAlt size={16} />
+              <FileText size={16} />
               <span className="navbar-forms-label">Forms</span>
             </button>
             <button
@@ -152,7 +149,7 @@ export default function NavBar({ role, onToggleSidebar }) {
                 }}
               />
               <div className="profile-icon-fallback">
-                <FaUser size={18} />
+                <User size={18} />
               </div>
             </button>
           </div>

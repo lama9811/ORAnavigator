@@ -140,10 +140,8 @@ export default function App() {
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false); // disabled
 
-  // Dark mode state
-  const [darkMode, setDarkMode] = useState(
-    () => localStorage.getItem("theme") === "dark"
-  );
+  // Dark mode removed — the app is light-only.
+  const [darkMode] = useState(false);
 
   // sync token ↔ localStorage & extract role
   useEffect(() => {
@@ -157,11 +155,11 @@ export default function App() {
     }
   }, [token]);
 
-  // Manage dark mode
+  // Dark mode removed — force light and clear any saved dark preference.
   useEffect(() => {
-    document.body.classList.toggle("dark", darkMode);
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
+    document.body.classList.remove("dark");
+    localStorage.setItem("theme", "light");
+  }, []);
 
   // Toggle sidebar CSS class on body
   // IMPORTANT: Also collapse sidebar when not authenticated to prevent overlay on login page
@@ -358,10 +356,8 @@ export default function App() {
     setSidebarCollapsed(prev => !prev);
   };
 
-  // Theme toggle function
-  const toggleTheme = () => {
-    setDarkMode(prev => !prev);
-  };
+  // Dark mode removed — no-op kept so existing props don't break.
+  const toggleTheme = () => {};
 
   // logout
   const handleLogout = () => {

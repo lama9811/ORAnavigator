@@ -2,42 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { FaCog } from "@react-icons/all-files/fa/FaCog";
-import { FaTicketAlt } from "@react-icons/all-files/fa/FaTicketAlt";
-import { FaBug } from "@react-icons/all-files/fa/FaBug";
-import { FaLightbulb } from "@react-icons/all-files/fa/FaLightbulb";
-import { FaQuestionCircle } from "@react-icons/all-files/fa/FaQuestionCircle";
-import { FaEye } from "@react-icons/all-files/fa/FaEye";
-import { FaTimes } from "@react-icons/all-files/fa/FaTimes";
-import { FaCheck } from "@react-icons/all-files/fa/FaCheck";
-import { FaClock } from "@react-icons/all-files/fa/FaClock";
-import { FaInbox } from "@react-icons/all-files/fa/FaInbox";
-import { FaExclamationCircle } from "@react-icons/all-files/fa/FaExclamationCircle";
-import { FaSpinner } from "@react-icons/all-files/fa/FaSpinner";
-import { FaCheckCircle } from "@react-icons/all-files/fa/FaCheckCircle";
-import { FaUser } from "@react-icons/all-files/fa/FaUser";
-import { FaUsers } from "@react-icons/all-files/fa/FaUsers";
-import { FaDatabase } from "@react-icons/all-files/fa/FaDatabase";
-import { FaServer } from "@react-icons/all-files/fa/FaServer";
-import { FaChartBar } from "@react-icons/all-files/fa/FaChartBar";
-import { FaEdit } from "@react-icons/all-files/fa/FaEdit";
-import { FaSearch } from "@react-icons/all-files/fa/FaSearch";
-import { FaSync } from "@react-icons/all-files/fa/FaSync";
-import { FaTrash } from "@react-icons/all-files/fa/FaTrash";
-import { FaSave } from "@react-icons/all-files/fa/FaSave";
-import { FaUserShield } from "@react-icons/all-files/fa/FaUserShield";
-import { FaUserGraduate } from "@react-icons/all-files/fa/FaUserGraduate";
-import { FaCalendarPlus } from "@react-icons/all-files/fa/FaCalendarPlus";
-import { FaLink } from "@react-icons/all-files/fa/FaLink";
-import { FaMicrophone } from "@react-icons/all-files/fa/FaMicrophone";
-import { FaStop } from "@react-icons/all-files/fa/FaStop";
-import { FaRobot } from "@react-icons/all-files/fa/FaRobot";
-import { FaThumbsUp } from "@react-icons/all-files/fa/FaThumbsUp";
-import { FaThumbsDown } from "@react-icons/all-files/fa/FaThumbsDown";
-import { FaFlag } from "@react-icons/all-files/fa/FaFlag";
-import { FaSmile } from "@react-icons/all-files/fa/FaSmile";
-import { FaCloudUploadAlt } from "@react-icons/all-files/fa/FaCloudUploadAlt";
-import { FaTachometerAlt } from "@react-icons/all-files/fa/FaTachometerAlt";
+import { AlertCircle, BarChart3, Bot, Bug, CalendarPlus, Check, CheckCircle, CircleHelp, Clock, CloudUpload, Database, Eye, Flag, Gauge, GraduationCap, Inbox, Lightbulb, Link, Loader2, Mic, Pencil, RefreshCw, Save, Search, Server, Settings, ShieldUser, Smile, Square, ThumbsDown, ThumbsUp, Ticket, Trash2, User, Users, X } from "lucide-react";
 import "./AdminDashboard.css";
 
 import { getApiBase } from "../lib/apiBase";
@@ -1015,10 +980,10 @@ export default function AdminDashboard() {
 
   const getCategoryIcon = (category) => {
     switch (category) {
-      case "bug": return <FaBug size={14} />;
-      case "feature": return <FaLightbulb size={14} />;
-      case "question": return <FaQuestionCircle size={14} />;
-      default: return <FaTicketAlt size={14} />;
+      case "bug": return <Bug size={14} />;
+      case "feature": return <Lightbulb size={14} />;
+      case "question": return <CircleHelp size={14} />;
+      default: return <Ticket size={14} />;
     }
   };
 
@@ -1084,7 +1049,7 @@ export default function AdminDashboard() {
     <div className="card page-container AdminDashboard">
       <header className="page-header">
         <div className="header-left">
-          <FaCog className="page-icon" />
+          <Settings className="page-icon" />
           <h1 className="page-title">Admin Dashboard</h1>
         </div>
         <button className="back-home-btn" onClick={() => navigate("/chat")}>
@@ -1098,28 +1063,28 @@ export default function AdminDashboard() {
       {/* Tab Navigation */}
       <div className="admin-tabs">
         <button className={`admin-tab ${activeTab === "overview" ? "active" : ""}`} onClick={() => setActiveTab("overview")}>
-          <FaTachometerAlt size={14} /><span>Home</span>
+          <Gauge size={14} /><span>Home</span>
         </button>
         <button className={`admin-tab ${activeTab === "cloud-kb" ? "active" : ""}`} onClick={() => setActiveTab("cloud-kb")}>
-          <FaDatabase size={14} /><span>Database</span>
+          <Database size={14} /><span>Database</span>
         </button>
         <button className={`admin-tab ${activeTab === "users" ? "active" : ""}`} onClick={() => setActiveTab("users")}>
-          <FaUsers size={14} /><span>Users</span>
+          <Users size={14} /><span>Users</span>
         </button>
         <button className={`admin-tab ${activeTab === "tickets" ? "active" : ""}`} onClick={() => setActiveTab("tickets")}>
-          <FaTicketAlt size={14} /><span>Tickets</span>
+          <Ticket size={14} /><span>Tickets</span>
           {ticketStats.open > 0 && <span className="ticket-badge">{ticketStats.open}</span>}
         </button>
         <button className={`admin-tab ${activeTab === "feedback" ? "active" : ""}`} onClick={() => setActiveTab("feedback")}>
-          <FaSmile size={14} /><span>Reviews</span>
+          <Smile size={14} /><span>Reviews</span>
           {feedbackStats.reports > 0 && <span className="ticket-badge">{feedbackStats.reports}</span>}
         </button>
         <button className={`admin-tab ${activeTab === "research" ? "active" : ""}`} onClick={() => setActiveTab("research")}>
-          <FaSearch size={14} /><span>Research</span>
+          <Search size={14} /><span>Research</span>
           {researchStats.pending_suggestions > 0 && <span className="ticket-badge">{researchStats.pending_suggestions}</span>}
         </button>
         <button className={`admin-tab ${activeTab === "system" ? "active" : ""}`} onClick={() => setActiveTab("system")}>
-          <FaServer size={14} /><span>System</span>
+          <Server size={14} /><span>System</span>
         </button>
       </div>
 
@@ -1133,24 +1098,24 @@ export default function AdminDashboard() {
               {/* Quick Stats Row */}
               <div className="ticket-stats">
                 <div className="stat-card total" onClick={() => setActiveTab("users")} style={{ cursor: "pointer" }}>
-                  <FaUsers className="stat-icon" />
+                  <Users className="stat-icon" />
                   <span className="stat-number">{overviewData.users?.total || 0}</span>
                   <span className="stat-label">Total Users</span>
                 </div>
                 <div className="stat-card progress" onClick={() => setActiveTab("cloud-kb")} style={{ cursor: "pointer" }}>
-                  <FaDatabase className="stat-icon" />
+                  <Database className="stat-icon" />
                   <span className="stat-number">{overviewData.kbStats?.total_documents || 0}</span>
                   <span className="stat-label">KB Documents</span>
                 </div>
                 <div className="stat-card open">
-                  <FaRobot className="stat-icon" />
+                  <Bot className="stat-icon" />
                   <span className="stat-number">
                     {overviewData.cache?.cache_stats?.overall?.hit_rate || "0%"}
                   </span>
                   <span className="stat-label">Cache Hit Rate</span>
                 </div>
                 <div className="stat-card resolved">
-                  <FaCheckCircle className="stat-icon" />
+                  <CheckCircle className="stat-icon" />
                   <span className="stat-number">
                     {overviewData.health?.database?.status === "connected" &&
                      overviewData.health?.vertex_agent?.status === "connected"
@@ -1165,21 +1130,21 @@ export default function AdminDashboard() {
                 <h3>System Status</h3>
                 <div className="health-cards">
                   <div className={`health-card ${overviewData.health?.database?.status === "connected" ? "healthy" : "error"}`}>
-                    <FaDatabase className="health-icon" />
+                    <Database className="health-icon" />
                     <div className="health-info">
                       <h4>Database</h4>
                       <span className="health-status">{overviewData.health?.database?.status || "unknown"}</span>
                     </div>
                   </div>
                   <div className={`health-card ${overviewData.health?.vertex_agent?.status === "connected" ? "healthy" : "warning"}`}>
-                    <FaRobot className="health-icon" />
+                    <Bot className="health-icon" />
                     <div className="health-info">
                       <h4>AI Agent</h4>
                       <span className="health-status">{overviewData.health?.vertex_agent?.status || "unknown"}</span>
                     </div>
                   </div>
                   <div className={`health-card ${overviewData.cache?.cache_stats?.l2_redis?.connected ? "healthy" : "warning"}`}>
-                    <FaServer className="health-icon" />
+                    <Server className="health-icon" />
                     <div className="health-info">
                       <h4>Redis Cache</h4>
                       <span className="health-status">{overviewData.cache?.cache_stats?.l2_redis?.connected ? "connected" : "offline"}</span>
@@ -1193,13 +1158,13 @@ export default function AdminDashboard() {
                 <h3>Quick Actions</h3>
                 <div className="overview-actions">
                   <button className="action-btn" onClick={() => setActiveTab("cloud-kb")}>
-                    <FaDatabase size={14} /> Manage Datastore
+                    <Database size={14} /> Manage Datastore
                   </button>
                   <button className="action-btn secondary" onClick={() => { handleClearCache(); }}>
-                    <FaTrash size={14} /> Clear Cache
+                    <Trash2 size={14} /> Clear Cache
                   </button>
                   <button className="action-btn" onClick={() => { setActiveTab("cloud-kb"); setTimeout(() => handleCloudKbSync(), 100); }}>
-                    <FaSync size={14} /> Sync Datastore
+                    <RefreshCw size={14} /> Sync Datastore
                   </button>
                 </div>
               </div>
@@ -1257,22 +1222,22 @@ export default function AdminDashboard() {
         <div className="tab-content">
           <div className="ticket-stats">
             <div className="stat-card total">
-              <FaUsers className="stat-icon" />
+              <Users className="stat-icon" />
               <span className="stat-number">{userStats.total}</span>
               <span className="stat-label">Total Users</span>
             </div>
             <div className="stat-card open">
-              <FaUserGraduate className="stat-icon" />
+              <GraduationCap className="stat-icon" />
               <span className="stat-number">{userStats.users}</span>
               <span className="stat-label">Users</span>
             </div>
             <div className="stat-card progress">
-              <FaUserShield className="stat-icon" />
+              <ShieldUser className="stat-icon" />
               <span className="stat-number">{userStats.admins}</span>
               <span className="stat-label">Admins</span>
             </div>
             <div className="stat-card resolved">
-              <FaCalendarPlus className="stat-icon" />
+              <CalendarPlus className="stat-icon" />
               <span className="stat-number">{userStats.new_this_week}</span>
               <span className="stat-label">New This Week</span>
             </div>
@@ -1280,7 +1245,7 @@ export default function AdminDashboard() {
 
           <div className="search-filter-bar">
             <div className="search-box">
-              <FaSearch size={14} />
+              <Search size={14} />
               <input
                 type="text"
                 placeholder="Search by email or name..."
@@ -1498,10 +1463,10 @@ export default function AdminDashboard() {
       {activeTab === "tickets" && (
         <div className="tickets-section">
           <div className="ticket-stats">
-            <div className="stat-card total"><FaInbox className="stat-icon" /><span className="stat-number">{ticketStats.total}</span><span className="stat-label">Total</span></div>
-            <div className="stat-card open"><FaExclamationCircle className="stat-icon" /><span className="stat-number">{ticketStats.open}</span><span className="stat-label">Open</span></div>
-            <div className="stat-card progress"><FaSpinner className="stat-icon" /><span className="stat-number">{ticketStats.in_progress}</span><span className="stat-label">In Progress</span></div>
-            <div className="stat-card resolved"><FaCheckCircle className="stat-icon" /><span className="stat-number">{ticketStats.resolved}</span><span className="stat-label">Resolved</span></div>
+            <div className="stat-card total"><Inbox className="stat-icon" /><span className="stat-number">{ticketStats.total}</span><span className="stat-label">Total</span></div>
+            <div className="stat-card open"><AlertCircle className="stat-icon" /><span className="stat-number">{ticketStats.open}</span><span className="stat-label">Open</span></div>
+            <div className="stat-card progress"><Loader2 className="stat-icon" /><span className="stat-number">{ticketStats.in_progress}</span><span className="stat-label">In Progress</span></div>
+            <div className="stat-card resolved"><CheckCircle className="stat-icon" /><span className="stat-number">{ticketStats.resolved}</span><span className="stat-label">Resolved</span></div>
           </div>
 
           <div className="ticket-filters">
@@ -1525,13 +1490,13 @@ export default function AdminDashboard() {
                   <p className="ticket-preview">{ticket.description.length > 150 ? ticket.description.slice(0, 150) + "..." : ticket.description}</p>
                   <div className="ticket-footer">
                     <div className="ticket-meta">
-                      <span className="ticket-user"><FaUser size={11} />{ticket.user_email || "Unknown"}</span>
-                      <span className="ticket-date"><FaClock size={11} />{formatDateTime(ticket.created_at)}</span>
+                      <span className="ticket-user"><User size={11} />{ticket.user_email || "Unknown"}</span>
+                      <span className="ticket-date"><Clock size={11} />{formatDateTime(ticket.created_at)}</span>
                     </div>
                     <div className="ticket-actions">
-                      <button className="view-btn" onClick={() => setSelectedTicket(ticket)} title="View"><FaEye size={14} /></button>
-                      {ticket.status === "open" && <button className="progress-btn" onClick={() => updateTicketStatus(ticket.id, "in_progress")} title="In Progress"><FaClock size={14} /></button>}
-                      {ticket.status !== "resolved" && <button className="resolve-btn" onClick={() => updateTicketStatus(ticket.id, "resolved")} title="Resolve"><FaCheck size={14} /></button>}
+                      <button className="view-btn" onClick={() => setSelectedTicket(ticket)} title="View"><Eye size={14} /></button>
+                      {ticket.status === "open" && <button className="progress-btn" onClick={() => updateTicketStatus(ticket.id, "in_progress")} title="In Progress"><Clock size={14} /></button>}
+                      {ticket.status !== "resolved" && <button className="resolve-btn" onClick={() => updateTicketStatus(ticket.id, "resolved")} title="Resolve"><Check size={14} /></button>}
                     </div>
                   </div>
                 </div>
@@ -1549,22 +1514,22 @@ export default function AdminDashboard() {
           {/* Feedback Stats */}
           <div className="ticket-stats">
             <div className="stat-card total">
-              <FaSmile className="stat-icon" />
+              <Smile className="stat-icon" />
               <span className="stat-number">{feedbackStats.total}</span>
               <span className="stat-label">Total Feedback</span>
             </div>
             <div className="stat-card" style={{ background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)', color: '#166534' }}>
-              <FaThumbsUp className="stat-icon" style={{ color: '#22c55e' }} />
+              <ThumbsUp className="stat-icon" style={{ color: '#22c55e' }} />
               <span className="stat-number" style={{ color: '#166534' }}>{feedbackStats.helpful}</span>
               <span className="stat-label" style={{ color: '#166534' }}>Helpful</span>
             </div>
             <div className="stat-card" style={{ background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)', color: '#991b1b' }}>
-              <FaThumbsDown className="stat-icon" style={{ color: '#ef4444' }} />
+              <ThumbsDown className="stat-icon" style={{ color: '#ef4444' }} />
               <span className="stat-number" style={{ color: '#991b1b' }}>{feedbackStats.not_helpful}</span>
               <span className="stat-label" style={{ color: '#991b1b' }}>Not Helpful</span>
             </div>
             <div className="stat-card" style={{ background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', color: '#92400e' }}>
-              <FaFlag className="stat-icon" style={{ color: '#f59e0b' }} />
+              <Flag className="stat-icon" style={{ color: '#f59e0b' }} />
               <span className="stat-number" style={{ color: '#92400e' }}>{feedbackStats.reports}</span>
               <span className="stat-label" style={{ color: '#92400e' }}>Reports</span>
             </div>
@@ -1584,17 +1549,17 @@ export default function AdminDashboard() {
 
           {/* Recent Reports Section */}
           <div className="feedback-reports-section">
-            <h3><FaFlag size={16} /> Recent Reports ({feedbackStats.reports})</h3>
+            <h3><Flag size={16} /> Recent Reports ({feedbackStats.reports})</h3>
             {feedbackStats.recent_reports && feedbackStats.recent_reports.length > 0 ? (
               <div className="feedback-list">
                 {feedbackStats.recent_reports.map((report) => (
                   <div key={report.id} className="feedback-card report">
                     <div className="feedback-header">
                       <span className="feedback-type-badge report">
-                        <FaFlag size={12} /> Report
+                        <Flag size={12} /> Report
                       </span>
                       <span className="feedback-date">
-                        <FaClock size={11} /> {formatDateTime(report.timestamp)}
+                        <Clock size={11} /> {formatDateTime(report.timestamp)}
                       </span>
                     </div>
                     <div className="feedback-message">
@@ -1612,7 +1577,7 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <div className="empty-state">
-                <FaCheckCircle size={32} style={{ color: '#22c55e', marginBottom: 12 }} />
+                <CheckCircle size={32} style={{ color: '#22c55e', marginBottom: 12 }} />
                 <p>No reports yet! Users are happy with the responses.</p>
               </div>
             )}
@@ -1654,7 +1619,7 @@ export default function AdminDashboard() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <FaCloudUploadAlt size={24} />
+            <CloudUpload size={24} />
             <span>Drag & drop files here to upload to datastore</span>
             <span className="drop-hint">.txt, .pdf, .html, .csv, .json</span>
           </div>
@@ -1663,7 +1628,7 @@ export default function AdminDashboard() {
           <div className="kb-search-bar">
             <div className="search-box-with-voice">
               <div className="search-box">
-                <FaSearch size={14} />
+                <Search size={14} />
                 <input
                   type="text"
                   placeholder="Search across all cloud KB documents..."
@@ -1672,7 +1637,7 @@ export default function AdminDashboard() {
                 />
                 {kbSearch && (
                   <button className="clear-search" onClick={() => { setKbSearch(""); setFindText(""); setShowFindReplace(false); setCloudKbSearchResults(null); }}>
-                    <FaTimes size={12} />
+                    <X size={12} />
                   </button>
                 )}
               </div>
@@ -1703,10 +1668,10 @@ export default function AdminDashboard() {
                 }</h3>
                 <div style={{ display: "flex", gap: "4px" }}>
                   <button className="action-btn" onClick={loadCloudKbDocs} disabled={cloudKbLoading} title="Refresh" style={{ padding: "4px 8px" }}>
-                    <FaSync size={12} className={cloudKbLoading ? "spinning" : ""} />
+                    <RefreshCw size={12} className={cloudKbLoading ? "spinning" : ""} />
                   </button>
                   <label className="action-btn" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px" }} title="Upload new document">
-                    <FaCalendarPlus size={12} />
+                    <CalendarPlus size={12} />
                     <input type="file" ref={cloudKbFileRef} accept=".txt,.pdf,.html,.csv,.json" onChange={handleCloudKbUpload} style={{ display: "none" }} />
                   </label>
                 </div>
@@ -1787,27 +1752,27 @@ export default function AdminDashboard() {
                         onClick={() => setShowFindReplace(!showFindReplace)}
                         title="Find & Replace"
                       >
-                        <FaSearch size={13} />
+                        <Search size={13} />
                       </button>
                       {cloudKbEditing ? (
                         <>
                           <button className="kb-icon-btn save" onClick={handleCloudKbSave} title="Save to Cloud">
-                            <FaSave size={13} />
+                            <Save size={13} />
                           </button>
                           <button className="kb-icon-btn" onClick={() => { setCloudKbEditing(false); }} title="Cancel editing">
-                            <FaTimes size={13} />
+                            <X size={13} />
                           </button>
                         </>
                       ) : (
                         <button className="kb-icon-btn" onClick={() => { setCloudKbEditing(true); setCloudKbEditContent(cloudKbContent); }} title="Edit document">
-                          <FaEdit size={13} />
+                          <Pencil size={13} />
                         </button>
                       )}
                       <button className="kb-icon-btn" onClick={handleCloudKbSync} disabled={cloudKbSyncing} title="Re-sync datastore">
-                        <FaSync size={13} className={cloudKbSyncing ? "spinning" : ""} />
+                        <RefreshCw size={13} className={cloudKbSyncing ? "spinning" : ""} />
                       </button>
                       <button className="kb-icon-btn danger" onClick={() => handleCloudKbDelete(cloudKbSelected)} title="Delete document">
-                        <FaTrash size={13} />
+                        <Trash2 size={13} />
                       </button>
                     </div>
                   </div>
@@ -1853,7 +1818,7 @@ export default function AdminDashboard() {
                         </div>
                       )}
                       <button className="close-find-replace" onClick={() => setShowFindReplace(false)}>
-                        <FaTimes size={12} />
+                        <X size={12} />
                       </button>
                     </div>
                   )}
@@ -1921,7 +1886,7 @@ export default function AdminDashboard() {
         <div className="tab-content">
           <div className="system-header">
             <h2>System Health</h2>
-            <button className="action-btn" onClick={loadHealth}><FaSync size={14} /> Refresh</button>
+            <button className="action-btn" onClick={loadHealth}><RefreshCw size={14} /> Refresh</button>
           </div>
 
           {healthLoading ? (
@@ -1930,7 +1895,7 @@ export default function AdminDashboard() {
             <>
               <div className="health-cards">
                 <div className={`health-card ${healthStatus.database?.status === "connected" ? "healthy" : "error"}`}>
-                  <FaDatabase className="health-icon" />
+                  <Database className="health-icon" />
                   <div className="health-info">
                     <h4>Database (Cloud SQL MySQL)</h4>
                     <span className="health-status">{healthStatus.database?.status}</span>
@@ -1939,7 +1904,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className={`health-card ${healthStatus.vertex_agent?.status === "connected" ? "healthy" : healthStatus.vertex_agent?.status === "not_configured" ? "warning" : "error"}`}>
-                  <FaRobot className="health-icon" />
+                  <Bot className="health-icon" />
                   <div className="health-info">
                     <h4>Vertex AI Agent (ADK)</h4>
                     <span className="health-status">{healthStatus.vertex_agent?.status}</span>
@@ -1948,7 +1913,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className={`health-card ${healthStatus.openai_tts?.status === "configured" ? "healthy" : "warning"}`}>
-                  <FaMicrophone className="health-icon" />
+                  <Mic className="health-icon" />
                   <div className="health-info">
                     <h4>OpenAI TTS</h4>
                     <span className="health-status">{healthStatus.openai_tts?.status}</span>
@@ -1958,7 +1923,7 @@ export default function AdminDashboard() {
 
                 {healthStatus.mode && (
                   <div className="health-card healthy">
-                    <FaServer className="health-icon" />
+                    <Server className="health-icon" />
                     <div className="health-info">
                       <h4>AI Mode</h4>
                       <span className="health-status">{healthStatus.mode === "vertex_ai" ? "Google ADK" : "Legacy RAG"}</span>
@@ -1974,10 +1939,10 @@ export default function AdminDashboard() {
                   <h2>Cache Management</h2>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="action-btn" onClick={loadCacheStats} disabled={cacheLoading}>
-                      <FaSync size={14} className={cacheLoading ? "spinning" : ""} /> Refresh
+                      <RefreshCw size={14} className={cacheLoading ? "spinning" : ""} /> Refresh
                     </button>
                     <button className="action-btn danger" onClick={handleClearCache} disabled={cacheClearing}>
-                      <FaTrash size={14} /> {cacheClearing ? "Clearing..." : "Clear All Cache"}
+                      <Trash2 size={14} /> {cacheClearing ? "Clearing..." : "Clear All Cache"}
                     </button>
                   </div>
                 </div>
@@ -2071,7 +2036,7 @@ export default function AdminDashboard() {
           <div className="ticket-detail-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Edit Course: {editingCourse.course_code}</h2>
-              <button className="modal-close" onClick={() => setEditingCourse(null)}><FaTimes size={18} /></button>
+              <button className="modal-close" onClick={() => setEditingCourse(null)}><X size={18} /></button>
             </div>
             <div className="modal-body">
               <form onSubmit={handleEditCourse} className="edit-form">
@@ -2111,13 +2076,13 @@ export default function AdminDashboard() {
           <div className="ticket-detail-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-row">{getCategoryIcon(selectedTicket.category)}<h2>{selectedTicket.subject}</h2></div>
-              <button className="modal-close" onClick={() => setSelectedTicket(null)}><FaTimes size={18} /></button>
+              <button className="modal-close" onClick={() => setSelectedTicket(null)}><X size={18} /></button>
             </div>
             <div className="modal-body">
               <div className="modal-meta">
                 <span className={`ticket-status ${getStatusClass(selectedTicket.status)}`}>{selectedTicket.status.replace("_", " ")}</span>
-                <span className="ticket-user"><FaUser size={12} />{selectedTicket.user_email || "Unknown"}</span>
-                <span className="ticket-date"><FaClock size={12} />{formatDateTime(selectedTicket.created_at)}</span>
+                <span className="ticket-user"><User size={12} />{selectedTicket.user_email || "Unknown"}</span>
+                <span className="ticket-date"><Clock size={12} />{formatDateTime(selectedTicket.created_at)}</span>
               </div>
               <div className="modal-description"><h4>Description</h4><p>{selectedTicket.description}</p></div>
               {selectedTicket.attachment_name && (

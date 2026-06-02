@@ -25,7 +25,7 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak,
-    KeepTogether,
+    KeepTogether, Preformatted,
 )
 
 
@@ -63,6 +63,47 @@ FOOTER = ParagraphStyle(
     "Footer", parent=BODY, fontSize=8, alignment=1,
     textColor=colors.HexColor("#64748b"),
 )
+MONO = ParagraphStyle(
+    "Mono", parent=styles["Code"], fontName="Courier", fontSize=7.2,
+    leading=9, textColor=colors.HexColor("#0b2545"), spaceBefore=4, spaceAfter=8,
+)
+
+# Plain-words flow of the RAG / chat pipeline, rendered monospaced in Section 3.
+# ASCII-only on purpose (Courier won't render emoji), and no '<'/'&' chars
+# (reportlab Preformatted still interprets XML markup).
+PIPELINE_TREE = """\
+YOUR QUESTION
+   |
+   v
+QUICK CHECKS (no AI)
+  - "hi / thanks"   -> canned reply, done
+  - asked before?   -> cache returns it, done   (cache.py)
+  - "list X"        -> instant menu, done        (kb_browser.py)
+   |  (a real ORA question)
+   v
+LAYER 1  - head start
+  TF-IDF prefetch (kb_prefetch.py): keyword-grab the top-5 docs,
+  inject them into the AI's SYSTEM INSTRUCTION.  ~30ms, no AI.
+   |
+   v
+THE AI (Gemini)  - rule: "search the KB on EVERY ORA question"
+  |- ORA question -> [ Vertex AI Search tool ]  (semantic, by meaning)
+  |- "about me"   -> answer from chat history, do not search
+   |  -> writes a draft answer
+   v
+LAYER 2  - the receipt
+  grounding chunks -> morgan.edu URLs = the "Sources" block
+   |
+   v
+LAYER 3  - the fact-checker (the real guarantee)
+  grade ok / weak -> if weak: redo strictly "KB-only"
+                  -> still nothing: REFUSE ("contact ORA")
+  trust the clean redo (do NOT re-gate on Gemini's flaky chunk count)
+  flag any number / date / SOP# / email / phone not verbatim in docs
+   |
+   v
+SAVE to cache -> SEND the answer + Sources
+"""
 
 
 def bullet(text):
@@ -111,7 +152,7 @@ def build():
         "navigate the Office of Research Administration — its policies, forms, "
         "deadlines, and contacts. The app lives at <b>ora.inavigator.ai</b> and "
         "combines a Gemini-powered chatbot, a 382-document knowledge base, a "
-        "browseable forms catalog, a per-user proposal tracker, and four AI "
+        "browseable forms catalog, a per-user proposal tracker, and three AI "
         "agents that together cover the full grant-writing lifecycle.",
         BODY,
     ))
@@ -123,8 +164,8 @@ def build():
         ["Stack", "Vite + React 19  /  FastAPI + SQLAlchemy  /  Google ADK + Gemini 2.5 Flash"],
         ["Cloud", "Google Cloud Run (3 services) · Cloud SQL MySQL · Vertex AI Search · Redis Cloud"],
         ["KB size", "382 docs in a 9-section tree mirroring morgan.edu/ora"],
-        ["AI agents", "Solicitation Ingestion · Draft Critic · Deadline Watcher · Sponsor Fit-Finder"],
-        ["Tests", "<b>201 backend tests passing</b> (+43 today over yesterday's 158)"],
+        ["AI agents", "Solicitation Ingestion · Draft Critic · Deadline Watcher"],
+        ["Tests", "<b>240 backend tests passing</b>"],
         ["Repo", "github.com/lama9811/ORAnavigator"],
     ]))
 
@@ -137,6 +178,15 @@ def build():
         "longer silently disables itself after the first tool call in a "
         "session. Also: v3's Layer 1 description was wrong about where "
         "prefetch lives — corrected here in Section 3.",
+        BODY,
+    ))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "<b>Refreshed June 1, 2026:</b> the Sponsor Fit-Finder agent was removed "
+        "(now three AI agents — the funding knowledge base was kept, so the chatbot "
+        "still answers funding questions); the Deadline Watcher cron is now live on "
+        "Cloud Scheduler (daily 7am ET); backend tests are at 240 (was 259 before the "
+        "removal); and Section 3 gains a full plain-words flow diagram of the RAG pipeline.",
         BODY,
     ))
 
@@ -152,7 +202,7 @@ def build():
     story.append(Paragraph("Frontend (port 3001)", H3))
     story.append(bullet("Vite + React 19 SPA, served by nginx. Installable as a PWA."))
     story.append(bullet("Routes: <code>/</code> (chat), <code>/forms</code>, <code>/my-proposals</code>, "
-                        "<code>/funding-matches</code>, <code>/profile</code>, <code>/admin</code>."))
+                        "<code>/profile</code>, <code>/admin</code>."))
     story.append(bullet("Talks only to the backend — never directly to the ADK or Vertex AI."))
 
     story.append(Paragraph("Backend (port 5002)", H3))
@@ -189,11 +239,22 @@ def build():
     story.append(Paragraph("3. The chat pipeline — three layers", H2))
     story.append(Paragraph(
         "Every chat turn goes through three layers. Each one exists because the "
-        "layer above it has known failure modes.", BODY,
+        "layer above it has known failure modes. The whole flow at a glance:", BODY,
+    ))
+    story.append(Preformatted(PIPELINE_TREE, MONO))
+    story.append(Paragraph(
+        "Two retrievers feed the model: a fast keyword <b>prefetch</b> (Layer 1) and "
+        "<b>Vertex AI Search</b>, the real semantic retriever the model calls as a "
+        "tool. The model is told to search on every ORA question; only greetings and "
+        "\"about-me\" recall skip it. Layer 3 does not trust that decision — it checks "
+        "the result and forces a redo or a refusal.", BODY,
     ))
 
-    story.append(Paragraph("Pre-flight: cache lookup", H3))
+    story.append(Paragraph("Pre-flight: cache lookup &amp; fast paths (no AI)", H3))
+    story.append(bullet("Greetings / thanks / small-talk are answered by a hardcoded fast-path — no LLM call."))
     story.append(bullet("Query is hashed and checked in three tiers: L1 (memory) → L2 (Redis) → L3 (semantic similarity)."))
+    story.append(bullet("Enumeration questions (\"list all forms\", \"what's in your KB\") are answered "
+                        "deterministically by <code>kb_browser.py</code> from the doc tree — no LLM call."))
     story.append(bullet("Never cached: personal-recall questions (<i>am I</i>, <i>my X</i>, <i>remind me</i>) "
                         "and refusal responses."))
 
@@ -215,11 +276,14 @@ def build():
                         "cache of 382 docs, with an ORA-specific entity boost (IRB, IACUC, SOP #, F&amp;A, "
                         "FWA, etc.). ~30 ms, zero LLM cost."))
     story.append(bullet("The top-5 docs are appended to the system instruction via "
-                        "<code>llm_request.append_instructions(...)</code>. The model now sees them "
-                        "for every turn — even before deciding whether to call the Vertex AI Search tool."))
-    story.append(bullet("Gemini then gets question + chat history + profile + persistent memory + the "
-                        "prefetched docs, and decides whether to also call its <code>VertexAiSearchTool</code> "
-                        "for semantic search."))
+                        "<code>llm_request.append_instructions(...)</code>. The model sees them on every "
+                        "<i>fresh user turn</i> — the injection is skipped mid-tool-loop (when the last item "
+                        "is a <code>function_response</code>) so it never buries a tool result."))
+    story.append(bullet("Gemini gets question + chat history + profile + persistent memory + the prefetched "
+                        "docs. <b>Vertex AI Search is the real retriever</b> — the model calls it as a tool "
+                        "(<code>VertexAiSearchTool</code>, semantic / by-meaning). Grounding Rule 1 tells it "
+                        "to search on <i>every</i> ORA question; only greetings and \"about-me\" recall skip "
+                        "the search. The prefetch is a fast head-start and safety net, not a replacement."))
 
     story.append(Paragraph("Layer 2: grounding metadata + citations", H3))
     story.append(bullet("Backend extracts grounding chunks, resolves each title back to a morgan.edu URL — "
@@ -228,6 +292,11 @@ def build():
     story.append(Paragraph("Layer 3: regenerate-then-deliver", H3))
     story.append(bullet("<code>_evaluate_grounding()</code> classifies the Pass-1 answer as <code>ok</code> "
                         "or <code>weak</code>. <code>weak</code> → Pass 2 regenerates with a strict KB-only prefix."))
+    story.append(bullet("<b>Trust the clean redo, don't re-gate on the chunk count.</b> Gemini reports its "
+                        "own grounding (chunk count) unreliably — often 0 even for a correct answer — so after "
+                        "the strict redo the code trusts a non-empty result instead of re-checking that flaky "
+                        "number. If the redo still yields nothing usable, the bot <b>refuses</b> (\"I don't "
+                        "have reliable information... contact ORA at 443-885-4044\")."))
     story.append(bullet("Personal-recall short-circuit: <i>am I / did I / my X / remind me</i> forces "
                         "<code>verdict=ok</code> since the answer lives in chat history, not the KB."))
     story.append(bullet("Faithfulness footers append a \"verify with ORA\" disclaimer when the answer mentions "
@@ -255,8 +324,8 @@ def build():
     story.append(bullet("When a user creates a proposal, an <code>active_grant</code> memory is also written."))
     story.append(bullet("<b>New 2026-05-28.</b> When a user fills in Profile fields (Department / Role / "
                         "Interests), <code>mirror_profile_to_memories()</code> upserts matching "
-                        "<code>UserMemory</code> rows so the agent's <code>memory_context</code> and Sponsor "
-                        "Fit-Finder see them on the next request — no code change needed in those readers."))
+                        "<code>UserMemory</code> rows so the agent's <code>memory_context</code> picks "
+                        "them up on the next request — no code change needed in that reader."))
     story.append(Paragraph("Layer 4 — user_suggested_questions (personalized)", H3))
     story.append(bullet("Home screen's suggestions precomputed per user from <code>user_memories</code> + chat history."))
 
@@ -313,20 +382,19 @@ def build():
     story.append(Paragraph(
         "<b>The mirror is what makes it instant.</b> "
         "<code>services/memory_service.mirror_profile_to_memories()</code> upserts "
-        "matching <code>UserMemory</code> rows on every profile save. Sponsor "
-        "Fit-Finder and <code>build_memory_context()</code> already read those "
-        "rows — so the new values flow through both with zero code change in "
-        "those services. Profile values WIN over previously auto-extracted "
-        "memory.", BODY,
+        "matching <code>UserMemory</code> rows on every profile save. "
+        "<code>build_memory_context()</code> already reads those rows — so the new "
+        "values flow into the chatbot with zero code change in that service. "
+        "Profile values WIN over previously auto-extracted memory.", BODY,
     ))
 
     # ===== 9. AI AGENTS =====
     story.append(PageBreak())
-    story.append(Paragraph("9. The four AI agents — what they do, with examples", H2))
+    story.append(Paragraph("9. The three AI agents — what they do, with examples", H2))
     story.append(Paragraph(
-        "Together these four agents cover the entire grant-writing lifecycle. "
+        "Together these three agents cover the grant-writing lifecycle. "
         "They share data through the proposal record (Section 10 explains how), "
-        "so one upload lights up all four.", BODY,
+        "so one upload lights up all of them.", BODY,
     ))
 
     story.append(Paragraph("9.1 Solicitation Ingestion — read the sponsor PDF for you", H3))
@@ -369,39 +437,16 @@ def build():
         "your remaining checklist items.", BODY,
     ))
     story.append(Paragraph(
-        "<b>What makes it agentic.</b> Runs autonomously via Cloud Scheduler "
-        "(endpoint exists; scheduler not yet enabled on this GCP project — "
-        "one <code>gcloud</code> command turns it on). The "
-        "<code>deadline_reminder_log</code> table tracks every (proposal, "
-        "threshold) pair already sent so re-runs never double-email.", BODY,
-    ))
-
-    story.append(Paragraph("9.4 Sponsor Fit-Finder — funding you might've missed", H3))
-    story.append(Paragraph(
-        "<b>What it does.</b> Looks at your department, stated research "
-        "interests, and past sponsors. Ranks all 15 funding-source categories "
-        "in the KB against your profile. Each match has a one-sentence \"why "
-        "this fits you\" explanation generated by Gemini Flash, with a "
-        "deterministic template fallback when the LLM is unavailable.", BODY,
-    ))
-    story.append(Paragraph(
-        "<b>Five-signal deterministic scoring</b> (no embeddings — 15 docs is "
-        "small enough that keyword matching beats embeddings on latency and "
-        "interpretability): base 10 + HBCU/MSI +30 + discipline keyword "
-        "+6/match cap 30 + interest +8/match cap 24 + sponsor history "
-        "+15/match cap 30 + role bias ±. Max ~132.", BODY,
-    ))
-    story.append(Paragraph(
-        "<b>Example.</b> Dr. Garcia is in Computer Science. Her chat history "
-        "mentions \"cyber-physical systems\" and \"AI safety.\" She has one "
-        "prior NSF grant. Funding Matches now ranks: <b>NSF HBCU-UP Computer "
-        "Science Track</b> (94, Excellent) — \"Matches HBCU/MSI eligibility, "
-        "Computer Science discipline, and your NSF sponsor history.\"", BODY,
+        "<b>What makes it agentic.</b> Runs autonomously via Cloud Scheduler — "
+        "job <code>ora-deadline-watcher</code> (enabled 2026-06-01) POSTs the check "
+        "endpoint daily at 7am ET. The <code>deadline_reminder_log</code> table "
+        "tracks every (proposal, threshold) pair already sent so re-runs never "
+        "double-email.", BODY,
     ))
 
     # ===== 10. COLLABORATION =====
     story.append(PageBreak())
-    story.append(Paragraph("10. How the four agents collaborate", H2))
+    story.append(Paragraph("10. How the three agents collaborate", H2))
     story.append(Paragraph(
         "The agents don't talk to each other directly. They share data through "
         "one thing: the proposal record in the database. One source of truth, "
@@ -412,13 +457,10 @@ def build():
     story.append(bullet("<b>Draft Critic</b> reads the proposal's <code>notes</code> (page limits, budget cap) "
                         "+ task list (required attachments) when grading the draft."))
     story.append(bullet("<b>Deadline Watcher</b> reads the deadline + open task list for the email body."))
-    story.append(bullet("<b>Sponsor Fit-Finder</b> reads the proposal's sponsor (via the "
-                        "<code>active_grant</code> memory written at create-time) to weight future "
-                        "opportunities."))
     story.append(Paragraph("Why this matters architecturally", H3))
     story.append(bullet("No agent needs to know the others exist — they just read shared state."))
-    story.append(bullet("Adding a fifth agent (Compliance Sentinel, Budget Helper, ...) is additive: "
-                        "another reader, no changes to the existing four."))
+    story.append(bullet("Adding a fourth agent (Compliance Sentinel, Budget Helper, ...) is additive: "
+                        "another reader, no changes to the existing three."))
 
     # ===== 10.5 SHIPPED 2026-05-28 (NEW) =====
     story.append(Paragraph("10.5 Shipped 2026-05-28", H2))
@@ -433,8 +475,8 @@ def build():
                         "don't self-flag. 16 new tests."))
     story.append(bullet("<b>Profile fields</b> — Department, Title, Role, and research Interests. The mirror "
                         "(<code>services/memory_service.mirror_profile_to_memories</code>) writes matching "
-                        "<code>UserMemory</code> rows so Sponsor Fit-Finder and <code>build_memory_context()</code> "
-                        "see them automatically. 22 tests."))
+                        "<code>UserMemory</code> rows so <code>build_memory_context()</code> picks them up "
+                        "automatically. 22 tests."))
     story.append(bullet("<b>Multi-turn prefetch bug fix</b> — <code>_select_model</code> in the ADK agent "
                         "scanned ALL contents for any <code>function_response</code> and silently disabled "
                         "the TF-IDF prefetch for the rest of any session once the model called a tool. "
@@ -450,25 +492,28 @@ def build():
     story.append(Paragraph("11. Deploy &amp; tests", H2))
     story.append(Paragraph("Live revisions", H3))
     story.append(kv_table([
-        ["Backend",  "oranavigator-backend-00052-8zp"],
-        ["Frontend", "oranavigator-frontend-00023-f5z"],
+        ["Backend",  "oranavigator-backend-00057-2w6"],
+        ["Frontend", "oranavigator-frontend-00025-n4n"],
         ["ADK",      "oranavigator-adk-00014-9w4"],
     ]))
 
     story.append(Paragraph("Test status", H3))
-    story.append(bullet("<b>201 backend tests passing</b> (158 → 201, +43 today)."))
-    story.append(bullet("<code>test_grounding.py</code>: +16 identifier-check tests, +5 prefetch tests."))
+    story.append(bullet("<b>240 backend tests passing</b> (was 259; the Sponsor Fit-Finder removal on "
+                        "2026-06-01 dropped its 19 tests)."))
+    story.append(bullet("<code>test_grounding.py</code>: identifier-check + multi-turn prefetch regression tests."))
     story.append(bullet("<code>test_profile_fields.py</code>: 22 tests (validation, single-value upsert, "
                         "multi-value replace-all, cross-user isolation)."))
-    story.append(bullet("<code>test_draft_critic.py</code>: 43. <code>test_deadline_watcher.py</code>: 20. "
-                        "<code>test_sponsor_fit_finder.py</code>: 19."))
+    story.append(bullet("<code>test_draft_critic.py</code>: 43. <code>test_deadline_watcher.py</code>: 20."))
     story.append(bullet("Frontend builds clean (Vite + React 19, no errors)."))
 
     story.append(Paragraph("Operational notes", H3))
-    story.append(bullet("Cloud Scheduler not yet enabled in this GCP project. Deadline Watcher endpoint "
-                        "exists but isn't on a schedule — one <code>gcloud</code> command turns it on."))
-    story.append(bullet("Deploys wipe <code>SMTP_*</code> / <code>API_URL</code> / <code>RESEARCH_SECRET</code> "
-                        "env vars. Recovery: <code>bash /tmp/post_deploy_backend.sh</code> (~30 sec)."))
+    story.append(bullet("Cloud Scheduler is enabled (2026-06-01). Job <code>ora-deadline-watcher</code> POSTs "
+                        "<code>/api/internal/deadlines/check</code> daily at 7am ET. The 3am "
+                        "memory-consolidation cron is not yet created."))
+    story.append(bullet("The full <code>deploy-cloudrun.sh backend</code> wipes <code>SMTP_*</code> / "
+                        "<code>API_URL</code> / <code>RESEARCH_SECRET</code> env vars (restore with a post-deploy "
+                        "script). An <b>image-only redeploy</b> (<code>gcloud run deploy --image</code>, no "
+                        "<code>--set-env-vars</code>) preserves them — use it to avoid breaking the cron."))
 
     # ===== 12. AUTH =====
     story.append(PageBreak())
@@ -488,8 +533,8 @@ def build():
                         "v3 said id=2 — that was stale)."))
 
     story.append(Paragraph("Cross-user safety", H3))
-    story.append(bullet("Every read and write in <code>proposals_service.py</code> + "
-                        "<code>sponsor_fit_finder.py</code> filters by <code>user_id</code>."))
+    story.append(bullet("Every read and write in <code>proposals_service.py</code> filters by "
+                        "<code>user_id</code>."))
     story.append(bullet("Memory queries filter by <code>user_id</code> and respect pause flags."))
     story.append(bullet("Cache layer never stores personal-recall responses — closes the practical "
                         "user-to-user leak path."))

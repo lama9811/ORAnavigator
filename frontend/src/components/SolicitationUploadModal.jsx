@@ -13,11 +13,7 @@
 // reviews what the AI pulled out before it becomes a real proposal.
 
 import React, { useState, useRef } from "react";
-import { FaTimes } from "@react-icons/all-files/fa/FaTimes";
-import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
-import { FaCheck } from "@react-icons/all-files/fa/FaCheck";
-import { FaArrowLeft } from "@react-icons/all-files/fa/FaArrowLeft";
-import { FaQuoteLeft } from "@react-icons/all-files/fa/FaQuoteLeft";
+import { ArrowLeft, Check, FileText, Quote, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SolicitationUploadModal.css";
 
@@ -115,13 +111,13 @@ export default function SolicitationUploadModal({ onClose, onCreated }) {
               className="solicitation-back-btn"
               onClick={() => setStep("pick")}
             >
-              <FaArrowLeft size={11} /> Re-upload
+              <ArrowLeft size={11} /> Re-upload
             </button>
           ) : (
             <h2>Start from a Solicitation PDF</h2>
           )}
           <button className="solicitation-close-btn" onClick={onClose}>
-            <FaTimes />
+            <X />
           </button>
         </div>
 
@@ -183,7 +179,7 @@ function PickStep({ onFile, fileInputRef }) {
           if (e.dataTransfer.files?.[0]) onFile(e.dataTransfer.files[0]);
         }}
       >
-        <FaFilePdf size={36} className="solicitation-drop-icon" />
+        <FileText size={36} className="solicitation-drop-icon" />
         <div className="solicitation-drop-text">
           <b>Drop a PDF here</b> or click to browse
         </div>
@@ -371,7 +367,7 @@ function ReviewStep({
             ? "Confirm you've checked the deadline and budget cap first"
             : ""}
         >
-          <FaCheck size={11} />{" "}
+          <Check size={11} />{" "}
           {creating ? "Creating..." : "Create Proposal"}
         </button>
       </div>
@@ -395,7 +391,7 @@ function Field({ label, hint, sourceQuote, critical, children }) {
       {hint && <small className="solicitation-hint">{hint}</small>}
       {sourceQuote && (
         <div className="solicitation-quote">
-          <FaQuoteLeft size={9} className="solicitation-quote-icon" />
+          <Quote size={9} className="solicitation-quote-icon" />
           <span>{sourceQuote}</span>
         </div>
       )}
@@ -427,7 +423,7 @@ function AttachmentEditor({ value, onChange }) {
             onClick={() => remove(i)}
             aria-label="Remove"
           >
-            <FaTimes size={10} />
+            <X size={10} />
           </button>
         </span>
       ))}

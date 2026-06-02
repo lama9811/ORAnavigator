@@ -15,13 +15,7 @@
 // guess.
 
 import React, { useState, useRef } from "react";
-import { FaTimes } from "@react-icons/all-files/fa/FaTimes";
-import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
-import { FaCheck } from "@react-icons/all-files/fa/FaCheck";
-import { FaExclamationTriangle } from "@react-icons/all-files/fa/FaExclamationTriangle";
-import { FaTimesCircle } from "@react-icons/all-files/fa/FaTimesCircle";
-import { FaMinusCircle } from "@react-icons/all-files/fa/FaMinusCircle";
-import { FaArrowLeft } from "@react-icons/all-files/fa/FaArrowLeft";
+import { AlertTriangle, ArrowLeft, Check, FileText, MinusCircle, X, XCircle } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./DraftCritiqueModal.css";
 
@@ -33,10 +27,10 @@ function authHeaders() {
 }
 
 const STATUS_META = {
-  ok:      { label: "OK",       Icon: FaCheck,                cls: "status-ok" },
-  warn:    { label: "Warn",     Icon: FaExclamationTriangle,  cls: "status-warn" },
-  fail:    { label: "Fail",     Icon: FaTimesCircle,          cls: "status-fail" },
-  skipped: { label: "Skipped",  Icon: FaMinusCircle,          cls: "status-skip" },
+  ok:      { label: "OK",       Icon: Check,                cls: "status-ok" },
+  warn:    { label: "Warn",     Icon: AlertTriangle,  cls: "status-warn" },
+  fail:    { label: "Fail",     Icon: XCircle,          cls: "status-fail" },
+  skipped: { label: "Skipped",  Icon: MinusCircle,          cls: "status-skip" },
 };
 
 function StatusChip({ status }) {
@@ -111,7 +105,7 @@ export default function DraftCritiqueModal({ submission, onClose }) {
                 setStep("pick");
               }}
             >
-              <FaArrowLeft /> Back
+              <ArrowLeft /> Back
             </button>
           )}
           <h2>
@@ -120,7 +114,7 @@ export default function DraftCritiqueModal({ submission, onClose }) {
             {step === "results" && "Critique results"}
           </h2>
           <button className="critique-close-btn" onClick={onClose} aria-label="Close">
-            <FaTimes />
+            <X />
           </button>
         </div>
 
@@ -142,7 +136,7 @@ export default function DraftCritiqueModal({ submission, onClose }) {
               role="button"
               tabIndex={0}
             >
-              <FaFilePdf className="critique-dropzone-icon" />
+              <FileText className="critique-dropzone-icon" />
               <div>
                 <strong>Drag your draft PDF here</strong>
                 <span className="critique-dropzone-hint">
@@ -206,16 +200,16 @@ function ResultsView({ result }) {
 
       <div className="critique-summary">
         <span className="critique-summary-piece status-ok">
-          <FaCheck /> {counts.ok || 0} OK
+          <Check /> {counts.ok || 0} OK
         </span>
         <span className="critique-summary-piece status-warn">
-          <FaExclamationTriangle /> {counts.warn || 0} Warn
+          <AlertTriangle /> {counts.warn || 0} Warn
         </span>
         <span className="critique-summary-piece status-fail">
-          <FaTimesCircle /> {counts.fail || 0} Fail
+          <XCircle /> {counts.fail || 0} Fail
         </span>
         <span className="critique-summary-piece status-skip">
-          <FaMinusCircle /> {counts.skipped || 0} Skipped
+          <MinusCircle /> {counts.skipped || 0} Skipped
         </span>
       </div>
 

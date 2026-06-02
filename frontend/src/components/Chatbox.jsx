@@ -6,22 +6,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { FaMicrophone } from "@react-icons/all-files/fa/FaMicrophone";
-import { FaPaperclip } from "@react-icons/all-files/fa/FaPaperclip";
-import { FaVolumeUp } from "@react-icons/all-files/fa/FaVolumeUp";
-import { FaTimes } from "@react-icons/all-files/fa/FaTimes";
-import { FaStop } from "@react-icons/all-files/fa/FaStop";
-import { FaEllipsisV } from "@react-icons/all-files/fa/FaEllipsisV";
-import { FaThumbsUp } from "@react-icons/all-files/fa/FaThumbsUp";
-import { FaThumbsDown } from "@react-icons/all-files/fa/FaThumbsDown";
-import { FaFlag } from "@react-icons/all-files/fa/FaFlag";
-import { BsSoundwave, BsArrowUpCircleFill } from "react-icons/bs";
+import { ArrowUpCircle, AudioLines, EllipsisVertical, File, FileImage, FileText, Flag, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Volume2, X } from "lucide-react";
 
 // 🔥 Icons for File Cards
-import { FaFile } from "@react-icons/all-files/fa/FaFile";
-import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
-import { FaFileWord } from "@react-icons/all-files/fa/FaFileWord";
-import { FaFileImage } from "@react-icons/all-files/fa/FaFileImage";
 
 import "./Chatbox.css";
 
@@ -42,14 +29,14 @@ const API_BASE = getApiBase();
 
 // Helper for icons
 const getFileIcon = (filename) => {
-  if (!filename) return <FaFile className="file-icon generic" />;
+  if (!filename) return <File className="file-icon generic" />;
   const ext = filename.split('.').pop().toLowerCase();
   
-  if (ext === 'pdf') return <FaFilePdf className="file-icon pdf" />;
-  if (['doc', 'docx'].includes(ext)) return <FaFileWord className="file-icon word" />;
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return <FaFileImage className="file-icon image" />;
+  if (ext === 'pdf') return <FileText className="file-icon pdf" />;
+  if (['doc', 'docx'].includes(ext)) return <FileText className="file-icon word" />;
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return <FileImage className="file-icon image" />;
   
-  return <FaFile className="file-icon generic" />;
+  return <File className="file-icon generic" />;
 };
 
 export default function Chatbox({ initialMessages = [], onSessionChange, sessionId }) {
@@ -1130,7 +1117,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
       {isDragging && (
         <div className="drag-overlay">
           <div className="drag-overlay-content">
-            <FaPaperclip size={32} />
+            <Paperclip size={32} />
             <span>Drop file here</span>
           </div>
         </div>
@@ -1256,7 +1243,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                           onClick={() => speak(msg.text)}
                           title={isSpeaking ? "Stop speaking" : "Read response aloud"}
                         >
-                          {isSpeaking ? <FaStop size={14}/> : <FaVolumeUp size={14}/>}
+                          {isSpeaking ? <Square size={14}/> : <Volume2 size={14}/>}
                         </button>
                         {i === messages.length - 1 && !isLoading && (
                           <button
@@ -1277,9 +1264,9 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                       {/* Show feedback status if already given */}
                       {feedbackGiven[i] ? (
                         <div className={`feedback-status feedback-status--${feedbackGiven[i]}`}>
-                          {feedbackGiven[i] === 'helpful' && <FaThumbsUp size={12} />}
-                          {feedbackGiven[i] === 'not_helpful' && <FaThumbsDown size={12} />}
-                          {feedbackGiven[i] === 'report' && <FaFlag size={12} />}
+                          {feedbackGiven[i] === 'helpful' && <ThumbsUp size={12} />}
+                          {feedbackGiven[i] === 'not_helpful' && <ThumbsDown size={12} />}
+                          {feedbackGiven[i] === 'report' && <Flag size={12} />}
                         </div>
                       ) : (
                         <>
@@ -1292,7 +1279,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                             }}
                             title="Rate this response"
                           >
-                            <FaEllipsisV size={14} />
+                            <EllipsisVertical size={14} />
                           </button>
 
                           {/* Dropdown menu */}
@@ -1302,21 +1289,21 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                                 className="feedback-option feedback-option--helpful"
                                 onClick={() => handleFeedback(i, 'helpful', msg.text)}
                               >
-                                <FaThumbsUp size={14} />
+                                <ThumbsUp size={14} />
                                 <span>Helpful</span>
                               </button>
                               <button
                                 className="feedback-option feedback-option--not-helpful"
                                 onClick={() => handleFeedback(i, 'not_helpful', msg.text)}
                               >
-                                <FaThumbsDown size={14} />
+                                <ThumbsDown size={14} />
                                 <span>Not Helpful</span>
                               </button>
                               <button
                                 className="feedback-option feedback-option--report"
                                 onClick={() => openReportModal(i)}
                               >
-                                <FaFlag size={14} />
+                                <Flag size={14} />
                                 <span>Report Issue</span>
                               </button>
                             </div>
@@ -1374,10 +1361,10 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                 <div className="orb-ring ring-2"></div>
                 <div className="orb-ring ring-3"></div>
                 <div className="orb-core">
-                  {voiceStatus === "listening" && <FaMicrophone size={32} />}
+                  {voiceStatus === "listening" && <Mic size={32} />}
                   {voiceStatus === "processing" && <div className="orb-spinner" />}
-                  {voiceStatus === "speaking" && <FaVolumeUp size={32} />}
-                  {voiceStatus === "idle" && <FaMicrophone size={32} />}
+                  {voiceStatus === "speaking" && <Volume2 size={32} />}
+                  {voiceStatus === "idle" && <Mic size={32} />}
                 </div>
               </div>
               <p className="voice-label">
@@ -1400,7 +1387,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
               <div className="report-modal-header">
                 <h3>Report an Issue</h3>
                 <button className="report-modal-close" onClick={closeReportModal}>
-                  <FaTimes size={16} />
+                  <X size={16} />
                 </button>
               </div>
               <div className="report-modal-body">
@@ -1445,7 +1432,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                 onClick={clearFile}
                 title="Remove file"
               >
-                <FaTimes />
+                <X />
               </button>
             </div>
           )}
@@ -1458,7 +1445,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                 title="Attach a file"
                 disabled={isLoading || isVoiceMode}
             >
-                <FaPaperclip size={18} />
+                <Paperclip size={18} />
             </button>
 
             <input
@@ -1476,7 +1463,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                 title="Voice input"
                 disabled={isLoading || isSpeaking || isVoiceMode}
             >
-                <FaMicrophone size={18} />
+                <Mic size={18} />
             </button>
 
             <textarea
@@ -1502,7 +1489,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                 title="Send message"
                 disabled={isLoading || (!input.trim() && !pendingFile) || isVoiceMode}
             >
-                <BsArrowUpCircleFill size={24} />
+                <ArrowUpCircle size={24} />
             </button>
 
             {/* Model toggle removed - now in header dropdown */}
@@ -1515,7 +1502,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                 title={isVoiceMode ? "Exit Live Mode" : "Enter Live Mode"}
                 disabled={isLoading}
             >
-                <BsSoundwave size={18} />
+                <AudioLines size={18} />
             </button>
           </div>
         </form>
