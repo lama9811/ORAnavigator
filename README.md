@@ -112,7 +112,7 @@ flowchart TB
 ### GCP resources (project `infra-vertex-494621-v1`)
 
 - **Cloud SQL**: `oranavigator-db` (db-g1-small, us-central1, public IP `34.173.108.181`)
-- **Vertex AI Search datastore**: `oranavigator-kb-local` (location `us`, 382 docs)
+- **Vertex AI Search datastore**: `oranavigator-kb-v8` (location `us`, 382 docs)
 - **Service account**: `oranavigator-backend@infra-vertex-494621-v1.iam.gserviceaccount.com`
 - **Artifact Registry**: `oranavigator` Docker repo in us-central1
 - **Secret Manager**: `ora-database-url`, `ora-jwt-secret`, `ora-admin-email`, `ora-admin-password`
@@ -163,25 +163,22 @@ gcloud sql instances patch oranavigator-db \
 
 ## Knowledge Base
 
-The KB lives at `backend/kb_structured/` as 382 JSON files plus a master `_all_documents.jsonl` index. Files are organized by ORA function:
+The KB lives at `backend/kb_structured/` as 382 JSON files plus a master `_all_documents.jsonl` index. Files are organized as a **hierarchical tree** mirroring the live `morgan.edu/office-of-research-administration` left-sidebar nav:
 
 | Folder | Docs | Purpose |
 |---|---:|---|
-| `_generated_forms/` | 271 | PDFs, DocuSign, IACUC SOPs, RACC, D-RED, faculty seminars, templates |
-| `_generated_compliance/` | 23 | IRB (incl. meeting schedule + voting roster), IACUC, COI, RCR, Research Security |
-| `_generated_policies/` | 21 | PI Handbook Section 5 (overview + 20 numbered policies) |
-| `_generated_opportunities/` | 15 | Funding databases + sponsor categories |
-| `_generated_staff/` | 14 | Staff directory + roles |
-| `_generated_pre_award/` | 13 | F&A rates, fringe rates, UEI/EIN/IRB/FWA, proposal steps |
-| `_generated_trainings/` | 8 | eTraining, faculty seminars, monthly D-RED, workshops, RACC |
-| `_generated_post_award/` | 6 | Setup, NCE, subawards, reporting, forms index |
-| `_generated_about/` | 4 | Office overview |
-| `_generated_announcements/` | 3 | Compliance leadership transition, Common Forms |
-| `_generated_resources/` | 3 | PI handbooks, templates |
-| `_generated_service_areas/` | 1 | Function-to-staff routing |
-| **Total** | **382** | of which 249 are Playwright-verified |
+| `research_compliance/` | 146 | IRB (incl. meeting schedule + voting roster), IACUC (50 SOPs), COI, RCR, Research Security |
+| `trainings/` | 115 | eTraining modules, New Faculty Development Seminars, workshops, monthly D-RED |
+| `pre_award/` | 30 | F&A & fringe rates, UEI/EIN/FWA, proposal submission steps, budget development |
+| `policies_and_guidelines/` | 22 | PI Handbook 5 — overview + 20 numbered policies |
+| `about/` | 19 | Office overview, history, staff directory |
+| `resources/` | 17 | PI handbooks, letter & form templates |
+| `funding_sources/` | 15 | Federal/foundation funding databases + sponsor categories |
+| `post_award/` | 15 | Account setup, NCE, subawards, effort & financial reporting |
+| `ora_announcements/` | 3 | Listserv subscription, Common Forms, compliance leadership updates |
+| **Total** | **382** | indexed into Vertex AI Search datastore `oranavigator-kb-v8` |
 
-The 382 JSON files are uploaded to a Vertex AI Search datastore (`oranavigator-kb-local`). The ADK agent queries the datastore at runtime via `VertexAiSearchTool` — it does not read the local files.
+The 382 JSON files are uploaded to a Vertex AI Search datastore (`oranavigator-kb-v8`). The ADK agent queries the datastore at runtime via `VertexAiSearchTool` — it does not read the local files.
 
 ---
 
