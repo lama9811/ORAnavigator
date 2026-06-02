@@ -11,22 +11,38 @@
   color: rgba(255, 255, 255, .82) !important;
   border-right: 1px solid rgba(255, 255, 255, .07) !important;
 }
-/* default light text for the sidebar's own controls */
-.chat-sidebar .sidebar-action-btn,
-.chat-sidebar .section-header,
-.chat-sidebar .chat-history-section,
-.chat-sidebar .install-app-btn,
-.chat-sidebar .logout-icon-btn,
-.chat-sidebar .profile-name,
-.chat-sidebar .profile-email {
-  color: rgba(255, 255, 255, .8) !important;
+/* footer (settings + profile): make it navy too, with translucent buttons so
+   their text + icons stay visible (the buttons are white-filled by default,
+   which is why white-on-white made the Install App button vanish). */
+.chat-sidebar .sidebar-bottom,
+.chat-sidebar .sidebar-settings-wrapper,
+.chat-sidebar .sidebar-settings {
+  background: #0B2545 !important;
+  border-color: rgba(255, 255, 255, .08) !important;
 }
-.chat-sidebar .sidebar-action-btn:hover,
-.chat-sidebar .install-app-btn:hover,
-.chat-sidebar .logout-icon-btn:hover {
-  background: rgba(255, 255, 255, .07) !important;
+.chat-sidebar .setting-btn {
+  background: rgba(255, 255, 255, .05) !important;
+  border: 1px solid rgba(255, 255, 255, .12) !important;
+  color: rgba(255, 255, 255, .82) !important;
+}
+.chat-sidebar .setting-btn:hover {
+  background: rgba(255, 255, 255, .1) !important;
+  border-color: rgba(255, 255, 255, .2) !important;
   color: #fff !important;
 }
+.chat-sidebar .setting-btn.install-app-btn {
+  border-color: rgba(255, 255, 255, .22) !important;
+  color: rgba(255, 255, 255, .9) !important;
+}
+.chat-sidebar .setting-btn svg { color: inherit !important; }
+.chat-sidebar .section-header,
+.chat-sidebar .chat-history-section,
+.chat-sidebar .sidebar-action-btn { color: rgba(255, 255, 255, .8) !important; }
+.chat-sidebar .sidebar-action-btn:hover { background: rgba(255, 255, 255, .07) !important; color: #fff !important; }
+.chat-sidebar .profile-name { color: #fff !important; }
+.chat-sidebar .profile-email { color: rgba(255, 255, 255, .6) !important; }
+.chat-sidebar .logout-icon-btn { color: rgba(255, 255, 255, .6) !important; }
+.chat-sidebar .logout-icon-btn:hover { background: rgba(255, 255, 255, .1) !important; color: #fff !important; }
 .new-chat {
   background: #F37021 !important;
   color: #fff !important;
