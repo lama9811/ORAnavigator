@@ -237,7 +237,10 @@ TOPIC_ALIASES: dict[str, str] = {
 # response.
 # ---------------------------------------------------------------------------
 _STRONG_TRIGGERS = re.compile(
-    r"\blist\b"
+    # \blist\b but NOT the "list" inside "list-serv" -- asking how to subscribe
+    # to the ORA Announcements list-serv is a content question, not a request to
+    # list documents.
+    r"\blist\b(?!-serv)"
     r"|\benumerate\b"
     r"|\bbrowse\b"
     r"|\bshow me\b"
@@ -248,14 +251,21 @@ _STRONG_TRIGGERS = re.compile(
     re.IGNORECASE,
 )
 
+# NOTE: the noun lists below are deliberately DOCUMENT-CLASS words only
+# (forms, templates, policies, sops, ...). Content-describing words --
+# topics / types / kinds / categories -- were intentionally REMOVED: a question
+# like "what topics does SOP 41.2 cover?" or "what types of items are reviewed?"
+# is asking for the CONTENT of one doc, not a directory listing. Treating those
+# as enumeration made the bot dump a list of links instead of answering (~50
+# coverage failures, concentrated in trainings + IACUC SOPs).
 _WEAK_TRIGGERS = re.compile(
     r"\bgive me\b"
     r"|\btell me about\b"
     r"|\bhow many\b"
-    r"|\bwhat (?:topics|docs|documents|files|materials|forms|templates|"
+    r"|\bwhat (?:docs|documents|files|materials|forms|templates|"
               r"policies|guidelines|sops|seminars|workshops|trainings|"
-              r"resources|opportunities|sources|categories|kinds?|types?)\b"
-    r"|\bwhat \S+ (?:topics|docs|documents|forms|templates|policies|materials|"
+              r"resources|opportunities|sources)\b"
+    r"|\bwhat \S+ (?:docs|documents|forms|templates|policies|materials|"
                     r"guidelines|sops|seminars|workshops|trainings|resources)\b",
     re.IGNORECASE,
 )

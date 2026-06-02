@@ -75,3 +75,43 @@ def test_detect_classifies_strong_and_weak():
     assert _detect_enumeration("give me the forms") == (True, False)
     assert _detect_enumeration("what forms do you have") == (True, True)
     assert _detect_enumeration("how do I apply") == (False, False)
+
+
+# --- Content questions must NOT be mistaken for enumeration ------------------
+# Regression for the coverage finding: "what topics/types does X cover" is a
+# content question about one doc, not a directory request. It used to dump a
+# list of links (~50 failures in trainings + IACUC SOPs).
+
+@pytest.mark.parametrize("query", [
+    "What topics does SOP 41.2 cover regarding access to animal housing rooms?",
+    "What topics are covered in the 'It Takes a Village' eTraining module?",
+    "What types of items are covered in the annual review for the Animal Care program?",
+    "What kinds of expenses are allowable on a sponsored project?",
+])
+def test_content_question_not_intercepted(query):
+    """A 'what topics/types/kinds does X cover' content question must reach the
+    agent (return None), not the deterministic directory dump -- on a fresh turn
+    AND mid-conversation."""
+    assert try_browse(query, has_history=False) is None
+    assert try_browse(query, has_history=True) is None
+    # and it is no longer classified as enumeration at all
+    assert _detect_enumeration(query) == (False, False)
+
+
+def test_genuine_list_requests_still_browse():
+    """The real document-listing phrasings must still trigger enumeration."""
+    assert _detect_enumeration("what forms do you have") == (True, True)
+    assert _detect_enumeration("list IACUC SOPs") == (True, True)
+    assert _detect_enumeration("show me the templates") == (True, True)
+    assert _detect_enumeration("what templates does ORA provide") == (True, False)
+    assert try_browse("list IACUC SOPs", has_history=True) is not None
+
+
+def test_listserv_not_treated_as_list_command():
+    """'list-serv' contains 'list' but is a content question, not enumeration."""
+    q = "How can I subscribe to the ORA Announcements list-serv?"
+    assert _detect_enumeration(q) == (False, False)
+    assert try_browse(q, has_history=False) is None
+    assert try_browse(q, has_history=True) is None
+    # the bare verb 'list' must still work
+    assert _detect_enumeration("list the IACUC SOPs") == (True, True)
