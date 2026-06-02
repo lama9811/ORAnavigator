@@ -1,0 +1,122 @@
+/* ============================================================
+   ORA Navigator — My Proposals + Forms catalog redesign
+   Applies the Claude Design system (navy + Morgan orange) over
+   MyProposals.css / FormsCatalog.css. Loaded last; !important wins.
+   ============================================================ */
+
+/* ======================= MY PROPOSALS ======================= */
+.proposals-subtitle { color: #64748B !important; }
+.proposals-header h1, .proposals-header-detail h1 { color: #0B2545 !important; }
+
+/* primary = orange, secondary = white/navy */
+.proposals-new-btn,
+.proposals-upload-btn.primary {
+  background: #F37021 !important;
+  color: #fff !important;
+  border: none !important;
+}
+.proposals-new-btn:hover { background: #D85F12 !important; }
+.proposals-upload-btn,
+.proposals-back-btn {
+  background: #fff !important;
+  color: #0B2545 !important;
+  border: 1px solid #E2E8F0 !important;
+}
+.proposals-upload-btn:hover,
+.proposals-back-btn:hover { border-color: #8AA0C2 !important; background: #F0F4F9 !important; }
+.proposals-critique-btn { background: #0B2545 !important; color: #fff !important; border: none !important; }
+.proposals-critique-btn:hover { background: #123257 !important; }
+
+/* cards */
+.proposal-card {
+  background: #fff !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(11, 37, 69, .08) !important;
+  transition: box-shadow .2s, transform .2s !important;
+}
+.proposal-card:hover { box-shadow: 0 4px 12px rgba(11, 37, 69, .1) !important; transform: translateY(-2px) !important; }
+.proposal-card-sponsor,
+.proposal-detail-sponsor {
+  color: #1B3A6B !important;
+  font-weight: 800 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+.proposal-card-title,
+.proposal-detail-title-row h1 { color: #0B2545 !important; }
+
+/* deadline urgency pill: green (far) / amber (<=7d) / red (overdue) */
+.proposal-card-countdown {
+  padding: 3px 10px !important;
+  border-radius: 999px !important;
+  font-weight: 700 !important;
+  font-size: 11.5px !important;
+}
+.proposal-card-countdown:not(.overdue):not(.urgent) { background: #E7F4EC !important; color: #15663E !important; }
+.proposal-card-countdown.urgent { background: #FCF1DE !important; color: #9A5B00 !important; }
+.proposal-card-countdown.overdue { background: #FBE9E9 !important; color: #9B2C2C !important; }
+
+/* progress bar -> orange fill */
+.proposal-progress-bar { background: #EEF2F7 !important; }
+.proposal-progress-fill { background: #F37021 !important; }
+
+/* status pills + checklist */
+.status-pill.status-active { background: #EAF0F8 !important; color: #1B3A6B !important; }
+.status-pill.status-submitted { background: #E7F4EC !important; color: #15663E !important; }
+.status-pill.status-withdrawn { background: #EEF2F7 !important; color: #64748B !important; }
+.task-check-icon-done { color: #1F9254 !important; }
+.task-check-icon-pending { color: #8AA0C2 !important; }
+
+/* New Proposal modal */
+.proposals-modal .btn-primary { background: #0B2545 !important; color: #fff !important; }
+.proposals-modal .btn-primary:hover { background: #123257 !important; }
+.proposals-modal-header h2 { color: #0B2545 !important; }
+
+/* ======================= FORMS CATALOG ======================= */
+.forms-subtitle { color: #64748B !important; }
+.forms-header h1 { color: #0B2545 !important; }
+.forms-search-input {
+  border: 1.5px solid #E2E8F0 !important;
+  border-radius: 8px !important;
+}
+.forms-search-input:focus {
+  outline: none !important;
+  border-color: #1B3A6B !important;
+  box-shadow: 0 0 0 3px rgba(43, 78, 134, .22) !important;
+}
+.forms-result-meta { color: #64748B !important; }
+
+.form-card {
+  background: #fff !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(11, 37, 69, .08) !important;
+  transition: box-shadow .2s, transform .2s !important;
+}
+.form-card:hover { box-shadow: 0 4px 12px rgba(11, 37, 69, .1) !important; transform: translateY(-2px) !important; }
+.form-card-title { color: #0B2545 !important; }
+.form-card-summary { color: #64748B !important; }
+
+/* file-type icon tints */
+.form-card-icon-wrap.pdf, .form-card-icon.pdf { background: #FBE9E9 !important; color: #9B2C2C !important; }
+.form-card-icon-wrap.excel, .form-card-icon.excel { background: #E7F4EC !important; color: #15663E !important; }
+.form-card-icon-wrap.word, .form-card-icon.word,
+.form-card-icon-wrap.docusign, .form-card-icon.docusign { background: #EAF0F8 !important; color: #1B3A6B !important; }
+.form-card-icon-wrap.generic, .form-card-icon.generic { background: #EEF2F7 !important; color: #64748B !important; }
+
+/* tags */
+.form-tag-category { background: #E3E9F2 !important; color: #1B3A6B !important; }
+.form-tag-sponsor { background: #FEF3EB !important; color: #C25313 !important; }
+.form-tag-role { background: #EEF2F7 !important; color: #64748B !important; }
+
+/* open-link chevron + source row */
+.form-card-open { color: #8AA0C2 !important; }
+.form-card:hover .form-card-open { color: #F37021 !important; }
+.form-card-source { background: #F6F8FB !important; border-top: 1px solid #EDF1F6 !important; }
+.form-card-source-label { color: #94A3B8 !important; }
+.form-card-source-link { color: #1B3A6B !important; }
+
+/* active filter chips (if buttons) */
+.forms-filter-group .active,
+.forms-filter-group button.active { background: #0B2545 !important; color: #fff !important; border-color: #0B2545 !important; }
