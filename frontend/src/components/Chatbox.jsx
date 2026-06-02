@@ -906,6 +906,45 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
             }
         }
 
+        // Flush the leftover buffer: the SSE stream can close with the final
+        // `data: {...}` line not yet newline-terminated, leaving it stranded in
+        // `buffer` (the loop above only processes lines BEFORE the last "\n").
+        // Dropping that final `done` event is what made fully-generated answers
+        // show the "couldn't generate a response" fallback with Sources already
+        // visible. Re-parse the remainder so the terminal event is not lost.
+        buffer += decoder.decode();
+        for (const line of buffer.split("\n")) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+                const event = JSON.parse(line.slice(6));
+                if (event.type === "done") {
+                    fullText = event.content || fullText;
+                    setMessages((prev) => {
+                        const newMessages = [...prev];
+                        newMessages[newMessages.length - 1] = {
+                            ...newMessages[newMessages.length - 1],
+                            text: fullText,
+                            isStreaming: false
+                        };
+                        return newMessages;
+                    });
+                } else if (event.type === "chunk") {
+                    fullText += event.content;
+                } else if (event.type === "citations") {
+                    setMessages((prev) => {
+                        const newMessages = [...prev];
+                        newMessages[newMessages.length - 1] = {
+                            ...newMessages[newMessages.length - 1],
+                            citations: event.content || []
+                        };
+                        return newMessages;
+                    });
+                }
+            } catch (parseErr) {
+                console.warn("SSE flush parse error:", parseErr);
+            }
+        }
+
         // Finalize if stream ended without explicit done
         setMessages((prev) => {
             const newMessages = [...prev];
