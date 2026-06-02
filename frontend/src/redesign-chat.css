@@ -39,6 +39,8 @@
 .chat-sidebar .chat-history-section,
 .chat-sidebar .sidebar-action-btn { color: rgba(255, 255, 255, .8) !important; }
 .chat-sidebar .sidebar-action-btn:hover { background: rgba(255, 255, 255, .07) !important; color: #fff !important; }
+.chat-sidebar .user-info .user-email { color: #fff !important; }
+.chat-sidebar .user-info .user-status { color: rgba(255, 255, 255, .72) !important; }
 .chat-sidebar .profile-name { color: #fff !important; }
 .chat-sidebar .profile-email { color: rgba(255, 255, 255, .6) !important; }
 .chat-sidebar .logout-icon-btn { color: rgba(255, 255, 255, .6) !important; }
