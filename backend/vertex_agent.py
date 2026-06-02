@@ -332,7 +332,40 @@ _IDENTIFIER_PATTERNS = [
     ("email", re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b')),
     # Phone numbers (US-style, 10 digits with optional formatting)
     ("phone", re.compile(r'(?<!\d)\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}(?!\d)')),
+    # Page / section numbers -- a common hallucination ("the details are on
+    # page 36") when the KB entry only says "see PI Handbook 5".
+    ("page/section number", re.compile(r'\b(?:page|section|pg\.?|p\.)\s?#?\s?\d{1,4}\b', re.IGNORECASE)),
+    # File names -- the model sometimes invents an official-looking filename
+    # ("FringeRate-2018.pdf") that does not exist in the KB.
+    ("file name", re.compile(r'\b[\w-]{2,}\.(?:pdf|docx?|xlsx?|pptx?|csv)\b', re.IGNORECASE)),
 ]
+
+# A bare 4-digit year ("approved in 2017") is too common to flag unconditionally,
+# so -- like the rate check -- we only scan for years when the answer frames one
+# as a policy date (approved / adopted / effective / established / ...).
+_DATE_CONTEXT_RE = re.compile(
+    r'\b(?:approv|adopt|effective|establish|enacted|issued|dated|revised|ratified|in effect)',
+    re.IGNORECASE,
+)
+_YEAR_RE = re.compile(r'\b(?:19|20)\d{2}\b')
+
+# Negation cues: if one of these sits just before a flagged value, the bot is
+# REFUTING/denying that value (e.g. "the rate is not 99%", "there is no SOP 37"),
+# which is faithful behavior -- not a hallucination. This is the fix for the
+# false positive that got the old disclaimer disabled.
+_NEGATION_RE = re.compile(
+    r"\b(?:not|isn'?t|aren'?t|wasn'?t|weren'?t|no longer|never|rather than|"
+    r"instead of|incorrect|false|there\s+(?:is|are|was|were)\s+no|"
+    r"do(?:es)?n'?t|don'?t|no\s+such)\b",
+    re.IGNORECASE,
+)
+
+
+def _in_negation_context(text: str, start: int) -> bool:
+    """True if a negation cue appears in the ~60 chars before position `start`,
+    i.e. the answer is denying/refuting the value rather than asserting it."""
+    window = text[max(0, start - 60):start]
+    return bool(_NEGATION_RE.search(window))
 
 # Identifiers that appear in the bot's canned routing / refusal messages and
 # must never be flagged as hallucinations -- the bot is allowed to give the
@@ -351,9 +384,9 @@ _RATE_KEYWORDS_RE = re.compile(r'F&A|facilities and administrative|indirect cost
 _PERCENT_RE = re.compile(r'\b\d{1,3}(?:\.\d+)?\s?%')
 
 _IDENTIFIER_DISCLAIMER = (
-    "\n\n---\n*Some figures or identifiers above could not be verified against "
-    "ORA's knowledge base. Please confirm them with ORA at 443-885-4044 or "
-    "ask.ora@morgan.edu before relying on them.*"
+    "\n\n*I couldn't verify the specific date/number/file referenced above against "
+    "ORA's records — please confirm it with ORA (443-885-4044 / ask.ora@morgan.edu) "
+    "before relying on it.*"
 )
 
 
@@ -389,29 +422,34 @@ def _check_identifier_faithfulness(text: str, grounded_corpus: str) -> list:
     corpus = _norm_for_match(grounded_corpus)
     unverified = []
     seen: set[tuple[str, str]] = set()
+
+    def _consider(label: str, token: str, start: int) -> None:
+        norm = _norm_for_match(token)
+        if not norm or norm in _IDENTIFIER_WHITELIST_NORM:
+            return
+        key = (label, norm)
+        if key in seen:
+            return
+        seen.add(key)
+        if norm in corpus:
+            return
+        # The bot is refuting/denying this value (e.g. "the rate is NOT 99%") --
+        # faithful behavior, not a fabrication. Don't flag it.
+        if _in_negation_context(text, start):
+            return
+        unverified.append(f"{label} '{token.strip()}'")
+
     for label, pat in _IDENTIFIER_PATTERNS:
-        for token in pat.findall(text):
-            norm = _norm_for_match(token)
-            if not norm:
-                continue
-            if norm in _IDENTIFIER_WHITELIST_NORM:
-                continue
-            key = (label, norm)
-            if key in seen:
-                continue
-            seen.add(key)
-            if norm not in corpus:
-                unverified.append(f"{label} '{token.strip()}'")
+        for m in pat.finditer(text):
+            _consider(label, m.group(0), m.start())
     # Rates: only when the answer frames a number as an F&A/indirect/fringe rate
     if _RATE_KEYWORDS_RE.search(text):
-        for pct in _PERCENT_RE.findall(text):
-            norm = _norm_for_match(pct)
-            key = ("rate", norm)
-            if key in seen:
-                continue
-            seen.add(key)
-            if norm not in corpus:
-                unverified.append(f"rate '{pct.strip()}'")
+        for m in _PERCENT_RE.finditer(text):
+            _consider("rate", m.group(0), m.start())
+    # Years: only when the answer frames one as a policy date (approved/effective)
+    if _DATE_CONTEXT_RE.search(text):
+        for m in _YEAR_RE.finditer(text):
+            _consider("year", m.group(0), m.start())
     return unverified[:6]
 
 
@@ -630,15 +668,18 @@ def _finalize_answer(text: str, grounded_corpus: str) -> str:
     if hallucinated and _FAITHFULNESS_DISCLAIMER not in text:
         print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
         text = text + _FAITHFULNESS_DISCLAIMER
-    # Identifier disclaimer DISABLED 2026-06-02 (user request). The footer
-    # produced false positives — e.g. it flagged a number the answer was
-    # explicitly REFUTING (a planted "99%" F&A rate the bot correctly rejected),
-    # because the checker matches tokens verbatim and can't tell refutation from
-    # assertion. We still log unverified identifiers for observability, but no
-    # longer append the user-facing disclaimer.
+    # Identifier disclaimer RE-ENABLED 2026-06-02 with a SMARTER check. It was
+    # disabled because it false-positived on refutations (a planted "99%" F&A
+    # rate the bot correctly rejected). _check_identifier_faithfulness is now
+    # negation-aware (_in_negation_context skips values the answer is denying),
+    # so the footer only fires on genuine unverified specifics. It also now
+    # catches the fabrication classes that previously slipped through: invented
+    # years ("approved in 2017"), page/section numbers ("page 36"), and file
+    # names ("FringeRate-2018.pdf").
     unverified_ids = _check_identifier_faithfulness(text, grounded_corpus)
-    if unverified_ids:
-        print(f"   [FAITHFULNESS] Unverified identifiers (footer disabled): {unverified_ids}")
+    if unverified_ids and _IDENTIFIER_DISCLAIMER not in text:
+        print(f"   [FAITHFULNESS] Unverified identifiers: {unverified_ids}")
+        text = text + _IDENTIFIER_DISCLAIMER
     return _inject_procedure_links(text)
 
 

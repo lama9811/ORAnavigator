@@ -447,3 +447,50 @@ def test_identifier_check_capped_at_six():
                      "May", "June", "July", "August"])
     result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
     assert len(result) <= 6, result
+
+
+# --- Smarter check (2026-06-02): years, pages, filenames + negation-awareness --
+# Regression for the 3 confirmed fabrications (COI "2017", Cost Sharing "page 36",
+# Fringe "FringeRate-2018.pdf") and the false positive that disabled the footer
+# (a refuted "99%" rate the bot correctly rejected).
+
+def test_identifier_check_hallucinated_year_flagged():
+    """A year framed as a policy date but absent from the KB IS flagged."""
+    text = "The Conflicts of Interest policy was approved by the Board in 2017."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("2017" in r for r in result), result
+
+
+def test_identifier_check_year_without_date_context_not_flagged():
+    """A bare year with NO approval/effective framing is not scanned (precision)."""
+    text = "We received 2017 proposals across the division last cycle."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert not any("2017" in r for r in result), result
+
+
+def test_identifier_check_page_number_flagged():
+    """An invented page number not in the KB IS flagged."""
+    text = "The full Cost Sharing policy details are on page 36 of the handbook."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("page 36" in r.lower() for r in result), result
+
+
+def test_identifier_check_filename_flagged():
+    """An invented filename not in the KB IS flagged."""
+    text = "Refer to FringeRate-2018.pdf for the official rate breakdown."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert any("fringerate-2018.pdf" in r.lower() for r in result), result
+
+
+def test_identifier_check_negation_skips_refuted_rate():
+    """THE false-positive fix: a value the answer is REFUTING is not flagged."""
+    text = "The F&A rate is not 99%; the correct federal rate is 53.5%."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert result == [], result  # 99% refuted, 53.5% is in corpus
+
+
+def test_identifier_check_negation_skips_refuted_year():
+    """A refuted year ('was not approved in 2017') is not flagged."""
+    text = "The policy was not approved in 2017."
+    result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert not any("2017" in r for r in result), result
