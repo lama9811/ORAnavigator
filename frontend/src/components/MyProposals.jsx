@@ -4,16 +4,7 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { FaPlus } from "@react-icons/all-files/fa/FaPlus";
-import { FaTimes } from "@react-icons/all-files/fa/FaTimes";
-import { FaTrash } from "@react-icons/all-files/fa/FaTrash";
-import { FaCheck } from "@react-icons/all-files/fa/FaCheck";
-import { FaRegCircle } from "@react-icons/all-files/fa/FaRegCircle";
-import { FaCheckCircle } from "@react-icons/all-files/fa/FaCheckCircle";
-import { FaCalendarAlt } from "@react-icons/all-files/fa/FaCalendarAlt";
-import { FaArrowLeft } from "@react-icons/all-files/fa/FaArrowLeft";
-import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
-import { FaClipboardCheck } from "@react-icons/all-files/fa/FaClipboardCheck";
+import { ArrowLeft, Calendar, Check, CheckCircle, Circle, ClipboardCheck, FileText, Plus, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
@@ -187,13 +178,13 @@ export default function MyProposals() {
             onClick={() => setShowUpload(true)}
             title="Drop a sponsor PDF and let the app extract deadlines, page limits, and required attachments automatically."
           >
-            <FaFilePdf size={13} /> Start from Solicitation
+            <FileText size={13} /> Start from Solicitation
           </button>
           <button
             className="proposals-new-btn"
             onClick={() => setShowCreate(true)}
           >
-            <FaPlus size={12} /> New Proposal
+            <Plus size={12} /> New Proposal
           </button>
         </div>
       </header>
@@ -263,7 +254,7 @@ function ProposalCard({ sub, onOpen }) {
       </div>
       <div className="proposal-card-title">{sub.title}</div>
       <div className="proposal-card-meta">
-        <FaCalendarAlt size={11} />
+        <Calendar size={11} />
         <span>{formatDeadline(sub.deadline)}</span>
         {dleft !== null && sub.status === "active" && (
           <span className={`proposal-card-countdown ${overdue ? "overdue" : urgent ? "urgent" : ""}`}>
@@ -295,7 +286,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
     <div className="proposals">
       <header className="proposals-header proposals-header-detail">
         <button className="proposals-back-btn" onClick={onBack}>
-          <FaArrowLeft size={12} /> All Proposals
+          <ArrowLeft size={12} /> All Proposals
         </button>
         <div className="proposals-header-actions">
           <button
@@ -303,10 +294,10 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
             onClick={() => setShowCritique(true)}
             title="Upload a draft PDF and check it against this proposal's solicitation requirements."
           >
-            <FaClipboardCheck size={13} /> Critique Draft
+            <ClipboardCheck size={13} /> Critique Draft
           </button>
           <button className="proposals-delete-btn" onClick={onDelete}>
-            <FaTrash size={12} /> Delete
+            <Trash2 size={12} /> Delete
           </button>
         </div>
       </header>
@@ -381,9 +372,9 @@ function TaskRow({ task, onToggle }) {
         aria-label={isDone ? "Mark as pending" : "Mark as done"}
       >
         {isDone ? (
-          <FaCheckCircle size={20} className="task-check-icon-done" />
+          <CheckCircle size={20} className="task-check-icon-done" />
         ) : (
-          <FaRegCircle size={20} className="task-check-icon-pending" />
+          <Circle size={20} className="task-check-icon-pending" />
         )}
       </button>
       <div className="task-body">
@@ -393,7 +384,7 @@ function TaskRow({ task, onToggle }) {
         )}
         {task.due_offset_days != null && (
           <div className="task-meta">
-            <FaCalendarAlt size={9} />
+            <Calendar size={9} />
             <span>{task.due_offset_days} days before deadline</span>
           </div>
         )}
@@ -431,7 +422,7 @@ function CreateModal({ onClose, onSubmit, busy }) {
         <div className="proposals-modal-header">
           <h2>New Proposal</h2>
           <button className="proposals-modal-close" onClick={onClose}>
-            <FaTimes />
+            <X />
           </button>
         </div>
         <form onSubmit={submit}>
@@ -491,7 +482,7 @@ function CreateModal({ onClose, onSubmit, busy }) {
               className="btn-primary"
               disabled={busy || !title.trim()}
             >
-              <FaCheck size={11} /> {busy ? "Creating..." : "Create Proposal"}
+              <Check size={11} /> {busy ? "Creating..." : "Create Proposal"}
             </button>
           </div>
         </form>

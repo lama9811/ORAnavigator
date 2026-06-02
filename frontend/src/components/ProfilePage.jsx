@@ -1,17 +1,7 @@
 // src/components/ProfilePage.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft } from "@react-icons/all-files/fa/FaArrowLeft";
-import { FaUser } from "@react-icons/all-files/fa/FaUser";
-import { FaEnvelope } from "@react-icons/all-files/fa/FaEnvelope";
-import { FaLock } from "@react-icons/all-files/fa/FaLock";
-import { FaCamera } from "@react-icons/all-files/fa/FaCamera";
-import { FaCog } from "@react-icons/all-files/fa/FaCog";
-import { FaShieldAlt } from "@react-icons/all-files/fa/FaShieldAlt";
-import { FaUniversity } from "@react-icons/all-files/fa/FaUniversity";
-import { FaIdBadge } from "@react-icons/all-files/fa/FaIdBadge";
-import { FaUserTag } from "@react-icons/all-files/fa/FaUserTag";
-import { FaLightbulb } from "@react-icons/all-files/fa/FaLightbulb";
+import { ArrowLeft, Camera, IdCard, Lightbulb, Lock, Mail, School, Settings, ShieldCheck, User, UserCog } from "lucide-react";
 import "./ProfilePage.css";
 
 // Must match backend/deps.py PROFILE_ROLE_ENUM. Server-side validation will
@@ -226,7 +216,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
     <div className="profile-page">
       <div className="profile-header">
         <button className="back-button" onClick={() => navigate("/")}>
-          <FaArrowLeft /> Back to Chat
+          <ArrowLeft /> Back to Chat
         </button>
         <h1>Profile Settings</h1>
       </div>
@@ -248,7 +238,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
               onError={(e) => e.target.src = "/user_icon.webp"}
             />
             <label className="upload-overlay">
-              <FaCamera size={24} />
+              <Camera size={24} />
               <input 
                 type="file" 
                 accept="image/*" 
@@ -275,7 +265,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
           <form onSubmit={handleUpdateProfile}>
             <div className="form-group">
               <label>
-                <FaUser /> Full Name
+                <User /> Full Name
               </label>
               <input
                 type="text"
@@ -288,7 +278,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
             <div className="form-group">
               <label>
-                <FaEnvelope /> Email
+                <Mail /> Email
               </label>
               <input
                 type="email"
@@ -300,7 +290,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
             <div className="form-group">
               <label>
-                <FaUniversity /> Department
+                <School /> Department
               </label>
               <input
                 type="text"
@@ -313,7 +303,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
             <div className="form-group">
               <label>
-                <FaIdBadge /> Title
+                <IdCard /> Title
               </label>
               <input
                 type="text"
@@ -326,7 +316,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
             <div className="form-group">
               <label>
-                <FaUserTag /> Role
+                <UserCog /> Role
               </label>
               <select
                 value={profile.primary_role || ""}
@@ -342,7 +332,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
             <div className="form-group">
               <label>
-                <FaLightbulb /> Research Interests
+                <Lightbulb /> Research Interests
               </label>
               <input
                 type="text"
@@ -391,7 +381,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
             <form onSubmit={handleChangePassword}>
               <div className="form-group">
                 <label>
-                  <FaLock /> Current Password
+                  <Lock /> Current Password
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -410,7 +400,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
               <div className="form-group">
                 <label>
-                  <FaLock /> New Password
+                  <Lock /> New Password
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -429,7 +419,7 @@ export default function ProfilePage({ userEmail, onLogout }) {
 
               <div className="form-group">
                 <label>
-                  <FaLock /> Confirm New Password
+                  <Lock /> Confirm New Password
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -469,13 +459,13 @@ export default function ProfilePage({ userEmail, onLogout }) {
         {profile.role === "admin" && (
           <div className="profile-section admin-section">
             <div className="section-header">
-              <h3><FaShieldAlt /> Admin Access</h3>
+              <h3><ShieldCheck /> Admin Access</h3>
             </div>
             <div className="admin-access-content">
               <p>You have administrator privileges. Access the admin dashboard to manage support tickets and the knowledge base.</p>
               <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
                 <button className="admin-access-btn" onClick={() => navigate("/admin")}>
-                  <FaCog /> Open Admin Dashboard
+                  <Settings /> Open Admin Dashboard
                 </button>
                 {pendingResearch > 0 && (
                   <span style={{

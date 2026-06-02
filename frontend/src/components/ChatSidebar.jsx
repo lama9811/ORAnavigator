@@ -1,27 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'sonner';
-import { FaPlus } from "@react-icons/all-files/fa/FaPlus";
-import { FaSearch } from "@react-icons/all-files/fa/FaSearch";
-import { FaTrash } from "@react-icons/all-files/fa/FaTrash";
-import { FaUser } from "@react-icons/all-files/fa/FaUser";
-import { FaSignOutAlt } from "@react-icons/all-files/fa/FaSignOutAlt";
-import { FaEllipsisV } from "@react-icons/all-files/fa/FaEllipsisV";
-import { FaThumbtack } from "@react-icons/all-files/fa/FaThumbtack";
-import { FaArchive } from "@react-icons/all-files/fa/FaArchive";
-import { FaPencilAlt } from "@react-icons/all-files/fa/FaPencilAlt";
-import { FaMoon } from "@react-icons/all-files/fa/FaMoon";
-import { FaSun } from "@react-icons/all-files/fa/FaSun";
-import { FaDownload } from "@react-icons/all-files/fa/FaDownload";
-import { FaChevronRight } from "@react-icons/all-files/fa/FaChevronRight";
-import { FaHeadset } from "@react-icons/all-files/fa/FaHeadset";
-import { FaTimes } from "@react-icons/all-files/fa/FaTimes";
-import { FaBug } from "@react-icons/all-files/fa/FaBug";
-import { FaLightbulb } from "@react-icons/all-files/fa/FaLightbulb";
-import { FaQuestionCircle } from "@react-icons/all-files/fa/FaQuestionCircle";
-import { FaPaperclip } from "@react-icons/all-files/fa/FaPaperclip";
-import { FaCheckCircle } from "@react-icons/all-files/fa/FaCheckCircle";
-import { FaGithub } from "@react-icons/all-files/fa/FaGithub";
+import { Archive, Bug, CheckCircle, ChevronRight, CircleHelp, Download, EllipsisVertical, LifeBuoy, Lightbulb, LogOut, Moon, Paperclip, Pencil, Pin, Plus, Search, Sun, Trash2, User, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./ChatSidebar.css";
 
@@ -372,7 +352,7 @@ export default function ChatSidebar({
         onContextMenu={(e) => handleContextMenu(e, s.id)}
         title={`Select conversation: ${s.title}`}
       >
-        {s.pinned && <FaThumbtack className="pin-icon" size={10} />}
+        {s.pinned && <Pin className="pin-icon" size={10} />}
         <span className="chat-title">{s.title}</span>
         <span className="chat-time" aria-label="Last activity">
           {formatChatTime(s.id)}
@@ -386,7 +366,7 @@ export default function ChatSidebar({
           title="Chat options"
           aria-label="More options"
         >
-          <FaEllipsisV size={12} />
+          <EllipsisVertical size={12} />
         </button>
       </div>
     );
@@ -402,7 +382,7 @@ export default function ChatSidebar({
             title="Start a new chat session"
             style={{ flex: 1 }}
           >
-            <FaPlus size={16} />
+            <Plus size={16} />
             <span>New Chat</span>
           </button>
           {onCollapse && (
@@ -416,7 +396,7 @@ export default function ChatSidebar({
         </div>
 
         <div className="search-container" title="Search through your conversations"> {/* 🔥 NEW: Hover Text */}
-          <FaSearch className="search-icon" size={14} />
+          <Search className="search-icon" size={14} />
           <input
             type="text"
             className="search-input"
@@ -460,9 +440,9 @@ export default function ChatSidebar({
               onClick={() => setShowArchived(!showArchived)}
               title="Toggle archived conversations" // 🔥 NEW: Hover Text
             >
-              <FaArchive size={14} />
+              <Archive size={14} />
               <span>Archived ({archivedSessions.length})</span>
-              <FaChevronRight 
+              <ChevronRight 
                 size={12} 
                 className={`chevron-icon ${showArchived ? 'rotated' : ''}`}
               />
@@ -479,23 +459,23 @@ export default function ChatSidebar({
       {contextMenu.visible && (
         <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={(e) => e.stopPropagation()}>
           <button className="context-menu-item" onClick={() => { onPin(contextMenu.sessionId); closeContextMenu(); }}>
-            <FaThumbtack size={14} />
+            <Pin size={14} />
             <span>{sessions.find(s => s.id === contextMenu.sessionId)?.pinned ? 'Unpin' : 'Pin'} chat</span>
           </button>
           <button className="context-menu-item" onClick={() => {
               const session = sessions.find(s => s.id === contextMenu.sessionId);
               handleRename(contextMenu.sessionId, session?.title || '');
           }}>
-            <FaPencilAlt size={14} />
+            <Pencil size={14} />
             <span>Rename</span>
           </button>
           <button className="context-menu-item" onClick={() => { onArchive(contextMenu.sessionId); closeContextMenu(); }}>
-            <FaArchive size={14} />
+            <Archive size={14} />
             <span>{sessions.find(s => s.id === contextMenu.sessionId)?.archived ? 'Unarchive' : 'Archive'}</span>
           </button>
           <div className="context-menu-divider" />
           <button className="context-menu-item danger" onClick={() => { onDelete(contextMenu.sessionId); closeContextMenu(); }}>
-            <FaTrash size={14} />
+            <Trash2 size={14} />
             <span>Delete</span>
           </button>
         </div>
@@ -508,7 +488,7 @@ export default function ChatSidebar({
             onClick={() => setShowTicketModal(true)}
             title="Report a bug or request a feature"
           >
-            <FaHeadset size={18} />
+            <LifeBuoy size={18} />
             <span>Contact Support</span>
           </button>
 
@@ -518,7 +498,7 @@ export default function ChatSidebar({
               onClick={handleInstallApp}
               title="Download desktop application"
             >
-              <FaDownload size={18} />
+              <Download size={18} />
               <span>Install App</span>
             </button>
           </div>
@@ -542,10 +522,10 @@ export default function ChatSidebar({
                     if (fallback) fallback.style.display = 'flex';
                   }}
                 />
-                <div className="fallback-user-icon" style={{ display: 'none' }}><FaUser size={18} /></div>
+                <div className="fallback-user-icon" style={{ display: 'none' }}><User size={18} /></div>
               </>
             ) : (
-              <div className="fallback-user-icon"><FaUser size={18} /></div>
+              <div className="fallback-user-icon"><User size={18} /></div>
             )}
           </div>
           <div className="user-info">
@@ -560,7 +540,7 @@ export default function ChatSidebar({
             }}
             title="Sign out of ORA Navigator"
           >
-            <FaSignOutAlt size={16} />
+            <LogOut size={16} />
           </button>
         </div>
       </div>
@@ -571,7 +551,7 @@ export default function ChatSidebar({
           <div className="ticket-modal" onClick={(e) => e.stopPropagation()}>
             {ticketSuccess ? (
               <div className="ticket-success">
-                <FaCheckCircle size={48} className="success-icon" />
+                <CheckCircle size={48} className="success-icon" />
                 <h3>Ticket Submitted!</h3>
                 <p>We'll review your feedback and get back to you soon.</p>
               </div>
@@ -580,7 +560,7 @@ export default function ChatSidebar({
                 <div className="ticket-header">
                   <h2>Contact Support</h2>
                   <button className="ticket-close-btn" onClick={closeTicketModal}>
-                    <FaTimes size={18} />
+                    <X size={18} />
                   </button>
                 </div>
 
@@ -593,7 +573,7 @@ export default function ChatSidebar({
                         className={`category-btn ${ticketForm.category === 'bug' ? 'active' : ''}`}
                         onClick={() => setTicketForm(prev => ({ ...prev, category: 'bug' }))}
                       >
-                        <FaBug size={16} />
+                        <Bug size={16} />
                         <span>Bug Report</span>
                       </button>
                       <button
@@ -601,7 +581,7 @@ export default function ChatSidebar({
                         className={`category-btn ${ticketForm.category === 'feature' ? 'active' : ''}`}
                         onClick={() => setTicketForm(prev => ({ ...prev, category: 'feature' }))}
                       >
-                        <FaLightbulb size={16} />
+                        <Lightbulb size={16} />
                         <span>Feature Request</span>
                       </button>
                       <button
@@ -609,7 +589,7 @@ export default function ChatSidebar({
                         className={`category-btn ${ticketForm.category === 'question' ? 'active' : ''}`}
                         onClick={() => setTicketForm(prev => ({ ...prev, category: 'question' }))}
                       >
-                        <FaQuestionCircle size={16} />
+                        <CircleHelp size={16} />
                         <span>Question</span>
                       </button>
                     </div>
@@ -650,7 +630,7 @@ export default function ChatSidebar({
                         style={{ display: 'none' }}
                       />
                       <label htmlFor="ticket-attachment" className="attachment-btn">
-                        <FaPaperclip size={16} />
+                        <Paperclip size={16} />
                         <span>{ticketForm.attachmentName || "Attach file (max 5MB)"}</span>
                       </label>
                       {ticketForm.attachmentName && (
@@ -659,7 +639,7 @@ export default function ChatSidebar({
                           className="remove-attachment"
                           onClick={() => setTicketForm(prev => ({ ...prev, attachment: null, attachmentName: "" }))}
                         >
-                          <FaTimes size={12} />
+                          <X size={12} />
                         </button>
                       )}
                     </div>

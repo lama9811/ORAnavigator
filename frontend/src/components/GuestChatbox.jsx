@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useNavigate } from "react-router-dom";
-import { BsArrowUpCircleFill, BsClock, BsCheckCircle, BsX } from "react-icons/bs";
+import { ArrowUpCircle, CheckCircle, Clock, X } from "lucide-react";
 import "./GuestChatbox.css";
 
 // Default suggestions — ORA faculty/PI/admin audience
@@ -207,7 +207,7 @@ export default function GuestChatbox() {
           ) : hasSessionStarted ? (
             <>
               <div className="timer-display">
-                <BsClock className="timer-icon" />
+                <Clock className="timer-icon" />
                 <span className="timer-countdown">{formatTimeRemaining(timeRemaining)}</span>
                 <span className="timer-label">remaining</span>
               </div>
@@ -332,7 +332,7 @@ export default function GuestChatbox() {
             title="Send message"
             disabled={isLoading || !input.trim() || isSessionExpired}
           >
-            <BsArrowUpCircleFill size={24} />
+            <ArrowUpCircle size={24} />
           </button>
         </form>
         {input.length > MAX_INPUT_LENGTH - 50 && (
@@ -351,12 +351,12 @@ export default function GuestChatbox() {
         <div className="signup-modal-overlay" onClick={() => setShowSignUpModal(false)}>
           <div className="signup-modal" onClick={(e) => e.stopPropagation()}>
             <button className="signup-modal-close" onClick={() => setShowSignUpModal(false)}>
-              <BsX size={24} />
+              <X size={24} />
             </button>
 
             <div className="signup-modal-header">
               <div className="signup-modal-icon">
-                <BsClock size={32} />
+                <Clock size={32} />
               </div>
               <h2 className="signup-modal-title">Your Free Trial Has Ended</h2>
               <p className="signup-modal-subtitle">
@@ -368,19 +368,19 @@ export default function GuestChatbox() {
               <h3 className="benefits-title">With a free account, you get:</h3>
               <ul className="benefits-list">
                 <li>
-                  <BsCheckCircle className="benefit-icon" />
+                  <CheckCircle className="benefit-icon" />
                   <span>Unlimited research-administration questions</span>
                 </li>
                 <li>
-                  <BsCheckCircle className="benefit-icon" />
+                  <CheckCircle className="benefit-icon" />
                   <span>Saved chat history across grants and projects</span>
                 </li>
                 <li>
-                  <BsCheckCircle className="benefit-icon" />
+                  <CheckCircle className="benefit-icon" />
                   <span>Direct links to ORA forms, policies, and PI Handbooks</span>
                 </li>
                 <li>
-                  <BsCheckCircle className="benefit-icon" />
+                  <CheckCircle className="benefit-icon" />
                   <span>Routing to the right ORA staff member for your question</span>
                 </li>
               </ul>

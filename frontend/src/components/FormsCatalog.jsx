@@ -4,12 +4,7 @@
 // read of the bundled KB on the backend.
 
 import React, { useState, useEffect, useMemo } from "react";
-import { FaFilePdf } from "@react-icons/all-files/fa/FaFilePdf";
-import { FaFileWord } from "@react-icons/all-files/fa/FaFileWord";
-import { FaFileExcel } from "@react-icons/all-files/fa/FaFileExcel";
-import { FaFileAlt } from "@react-icons/all-files/fa/FaFileAlt";
-import { FaExternalLinkAlt } from "@react-icons/all-files/fa/FaExternalLinkAlt";
-import { FaSearch } from "@react-icons/all-files/fa/FaSearch";
+import { ExternalLink, FileSpreadsheet, FileText, Search } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./FormsCatalog.css";
 
@@ -46,11 +41,11 @@ const ROLES = [
 // PDF links are the most common; everything else falls back to generic.
 function fileIconFor(url) {
   const u = (url || "").toLowerCase();
-  if (u.includes("docusign")) return <FaFileAlt className="form-card-icon docusign" />;
-  if (u.endsWith(".pdf")) return <FaFilePdf className="form-card-icon pdf" />;
-  if (u.endsWith(".doc") || u.endsWith(".docx")) return <FaFileWord className="form-card-icon word" />;
-  if (u.endsWith(".xls") || u.endsWith(".xlsx")) return <FaFileExcel className="form-card-icon excel" />;
-  return <FaFileAlt className="form-card-icon generic" />;
+  if (u.includes("docusign")) return <FileText className="form-card-icon docusign" />;
+  if (u.endsWith(".pdf")) return <FileText className="form-card-icon pdf" />;
+  if (u.endsWith(".doc") || u.endsWith(".docx")) return <FileText className="form-card-icon word" />;
+  if (u.endsWith(".xls") || u.endsWith(".xlsx")) return <FileSpreadsheet className="form-card-icon excel" />;
+  return <FileText className="form-card-icon generic" />;
 }
 
 const CATEGORY_LABELS = {
@@ -162,7 +157,7 @@ export default function FormsCatalog() {
         <div className="forms-filter-group forms-search-group">
           <label htmlFor="filter-search">Search</label>
           <div className="forms-search-input">
-            <FaSearch className="forms-search-icon" />
+            <Search className="forms-search-icon" />
             <input
               id="filter-search"
               type="text"
@@ -215,7 +210,7 @@ export default function FormsCatalog() {
                   ))}
                 </div>
               </div>
-              <FaExternalLinkAlt className="form-card-open" />
+              <ExternalLink className="form-card-open" />
             </a>
             {/* Source attribution: the morgan.edu/ora page that lists this
                 form. Lives outside the main click target so users can verify
