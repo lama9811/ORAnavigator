@@ -832,8 +832,11 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
         # context that's already in hand. Zero chunks is a real model
         # failure -- surface the error.
         if result["chunks"] == 0:
-            yield {"type": "error",
-                   "content": "I'm sorry, I couldn't generate a response. Please try rephrasing your question."}
+            # The model produced no text AND found no KB chunks. Rather than a
+            # dead-end "try rephrasing" error (which is what a user asking to
+            # confirm a non-existent SOP/identifier used to hit), degrade to the
+            # honest refusal so the reply is always useful and routes to ORA.
+            yield {"type": "done", "content": _REFUSAL_MSG}
             return
         # Force a Pass-2 regeneration by marking the verdict as weak.
         has_data = bool(context)

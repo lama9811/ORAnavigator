@@ -281,10 +281,12 @@ def test_empty_first_pass_with_chunks_triggers_regeneration(monkeypatch):
     assert "couldn't generate" not in final
 
 
-def test_empty_first_pass_with_no_chunks_still_errors(monkeypatch):
-    """Regression guard: empty text AND zero KB chunks is a genuine model
-    failure -- it must still surface the 'couldn't generate' error, not
-    burn a Pass 2 call on a hopeless case."""
+def test_empty_first_pass_with_no_chunks_refuses_gracefully(monkeypatch):
+    """Regression guard: empty text AND zero KB chunks (e.g. asking to confirm a
+    non-existent SOP 37) must NOT surface the dead-end 'couldn't generate /
+    rephrase' error. It degrades to the honest refusal (_REFUSAL_MSG) so the
+    reply is always useful and routes to ORA -- without burning a Pass 2 call on
+    a hopeless case."""
     monkeypatch.setattr(
         vertex_agent, "_do_agent_pass",
         _fake_passes(_result("", chunks=0, coverage=0.0)),
@@ -295,8 +297,9 @@ def test_empty_first_pass_with_no_chunks_still_errors(monkeypatch):
         "garbled query", "user-1", "sess-1"))
     tail = [e for e in events if e["type"] in ("done", "error")]
     assert tail, "expected a done/error event"
-    assert tail[-1]["type"] == "error"
-    assert "couldn't generate" in tail[-1]["content"]
+    assert tail[-1]["type"] == "done"
+    assert tail[-1]["content"] == vertex_agent._REFUSAL_MSG
+    assert "couldn't generate" not in tail[-1]["content"]
 
 
 # ===========================================================================
