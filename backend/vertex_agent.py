@@ -276,14 +276,38 @@ def _get_kb_url_map() -> dict:
     return _kb_url_map
 
 
-def _extract_citations(chunks: list) -> list:
+def _extract_citations(chunks: list, supports: Optional[list] = None) -> list:
     """Turn Gemini groundingChunks into a deduped list of {title, url} citations.
     Only chunks that resolve to a real URL are kept, so every source is clickable.
-    Capped at 5."""
+    Capped at 5.
+
+    When `supports` (groundingSupports) is provided, the Sources list is limited
+    to the chunks the answer ACTUALLY cited -- each support's
+    groundingChunkIndices point at the chunks that back a given answer segment.
+    This drops tangential docs the retriever pulled but the answer never used
+    (e.g. a staff page that surfaced as a near-match for a training question).
+    If no support data is present, we fall back to retrieval order so Sources is
+    never empty."""
     url_map = _get_kb_url_map()
+
+    # Restrict to the chunks the answer actually cited, in citation order.
+    ordered = chunks
+    if supports:
+        used: list = []
+        seen_idx: set = set()
+        for s in supports:
+            if not isinstance(s, dict):
+                continue
+            for idx in (s.get("groundingChunkIndices") or []):
+                if isinstance(idx, int) and idx not in seen_idx and 0 <= idx < len(chunks):
+                    seen_idx.add(idx)
+                    used.append(chunks[idx])
+        if used:
+            ordered = used
+
     citations: list = []
     seen: set = set()
-    for c in chunks:
+    for c in ordered:
         if not isinstance(c, dict):
             continue
         rc = c.get("retrievedContext") or c.get("web") or {}
@@ -762,7 +786,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                 supports = gm.get("groundingSupports", [])
                 result["chunks"] = len(chunks)
                 if chunks:
-                    result["citations"] = _extract_citations(chunks)
+                    result["citations"] = _extract_citations(chunks, supports)
                     result["grounded_corpus"] = _join_chunk_texts(chunks)
                 if supports and final_text:
                     total_chars = len(final_text)

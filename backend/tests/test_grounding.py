@@ -494,3 +494,57 @@ def test_identifier_check_negation_skips_refuted_year():
     text = "The policy was not approved in 2017."
     result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
     assert not any("2017" in r for r in result), result
+
+
+# ===========================================================================
+# _extract_citations -- Sources list should reflect what the answer CITED, not
+# every doc the retriever touched (the "why is Deshun Li a source?" fix).
+# ===========================================================================
+from vertex_agent import _extract_citations
+
+
+def _chunk(title, uri="https://www.morgan.edu/x"):
+    return {"retrievedContext": {"title": title, "uri": uri}}
+
+
+def test_citations_filtered_to_cited_chunks():
+    """With groundingSupports, only the chunks the answer cited are returned."""
+    chunks = [_chunk("Training Overview"), _chunk("Staff: Deshun Li"),
+              _chunk("Main Contact"), _chunk("Staff: Matthew Lee")]
+    supports = [{"segment": {}, "groundingChunkIndices": [0, 2]}]
+    titles = [c["title"] for c in _extract_citations(chunks, supports)]
+    assert titles == ["Training Overview", "Main Contact"], titles
+    assert "Staff: Deshun Li" not in titles
+    assert "Staff: Matthew Lee" not in titles
+
+
+def test_citations_fallback_when_no_supports():
+    """No support data -> keep retrieval order (Sources never goes empty)."""
+    chunks = [_chunk("Training Overview"), _chunk("Staff: Deshun Li")]
+    titles = [c["title"] for c in _extract_citations(chunks, None)]
+    assert titles == ["Training Overview", "Staff: Deshun Li"], titles
+
+
+def test_citations_fallback_when_supports_have_no_indices():
+    """Supports present but citing nothing usable -> fall back, not empty."""
+    chunks = [_chunk("Training Overview"), _chunk("Main Contact")]
+    supports = [{"segment": {}, "groundingChunkIndices": []}]
+    titles = [c["title"] for c in _extract_citations(chunks, supports)]
+    assert titles == ["Training Overview", "Main Contact"], titles
+
+
+def test_citations_ignores_out_of_range_indices():
+    """A citation index past the end of the chunk list is skipped safely."""
+    chunks = [_chunk("Training Overview"), _chunk("Main Contact")]
+    supports = [{"segment": {}, "groundingChunkIndices": [0, 99]}]
+    titles = [c["title"] for c in _extract_citations(chunks, supports)]
+    assert titles == ["Training Overview"], titles
+
+
+def test_citations_dedupes_by_title():
+    """The same doc cited by two segments appears once."""
+    chunks = [_chunk("Training Overview"), _chunk("Main Contact")]
+    supports = [{"segment": {}, "groundingChunkIndices": [0]},
+                {"segment": {}, "groundingChunkIndices": [0, 1]}]
+    titles = [c["title"] for c in _extract_citations(chunks, supports)]
+    assert titles == ["Training Overview", "Main Contact"], titles
