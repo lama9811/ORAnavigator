@@ -158,8 +158,10 @@
 .admin-tabs button.active, .admin-tabs .active { background: #0B2545 !important; color: #fff !important; border-color: #0B2545 !important; }
 .AdminDashboard .btn-primary { background: #F37021 !important; color: #fff !important; border: none !important; }
 .AdminDashboard .btn-primary:hover { background: #D85F12 !important; }
-.action-btn { color: #1B3A6B !important; }
-.action-btn.danger { color: #9B2C2C !important; }
+.action-btn { color: #fff !important; }                /* navy-filled -> white text */
+.action-btn.secondary { color: #0B2545 !important; }   /* white/outline -> dark text */
+.action-btn.danger { color: #fff !important; }         /* red-filled -> white text */
+.action-btn svg { color: inherit !important; }         /* icon follows text color */
 .admin-table thead, .admin-table th { background: #0B2545 !important; color: #fff !important; }
 .admin-table td { border-color: #EDF1F6 !important; }
 .chart-bar { background: #F37021 !important; }
