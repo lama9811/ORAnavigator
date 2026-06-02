@@ -115,3 +115,27 @@ def test_listserv_not_treated_as_list_command():
     assert try_browse(q, has_history=True) is None
     # the bare verb 'list' must still work
     assert _detect_enumeration("list the IACUC SOPs") == (True, True)
+
+
+# --- Filtered questions ("what templates SUPPORT AI") defer to the agent ------
+# Regression for the directory dump answering "what forms or templates support
+# AI?" with the entire templates list instead of honoring the "support AI" filter.
+
+@pytest.mark.parametrize("query", [
+    "What forms or templates support AI?",
+    "Which templates support artificial intelligence research?",
+    "Show me the templates related to animal research.",
+    "What forms are used for IRB submissions that support clinical trials?",
+])
+def test_filtered_enumeration_defers_to_agent(query):
+    """A filter cue (support / related to / used for) means the user wants a
+    SUBSET the directory dump can't produce -> defer to the agent."""
+    assert try_browse(query, has_history=False) is None
+    assert try_browse(query, has_history=True) is None
+
+
+def test_plain_enumeration_without_filter_still_browses():
+    """No filter cue -> the genuine 'list the section' behavior is unchanged."""
+    assert try_browse("what templates does ORA provide", has_history=False) is not None
+    assert try_browse("list IACUC SOPs", has_history=False) is not None
+    assert try_browse("tell me about post-award forms", has_history=False) is not None

@@ -271,6 +271,19 @@ _WEAK_TRIGGERS = re.compile(
 )
 
 
+# A FILTER cue means the user wants a SUBSET that meets a condition ("templates
+# that SUPPORT AI", "forms RELATED TO animal research"), not the whole section.
+# The directory dump can't honor a filter -- it would list everything and ignore
+# the condition -- so these defer to the agent, which can actually search. Kept
+# to clear filter phrases so plain "list/what's in X" enumeration is untouched.
+_FILTER_CUE_RE = re.compile(
+    r"\b(?:support|supports|supporting|related to|relating to|specific to|"
+    r"geared (?:to|toward)|used (?:for|to)|that (?:support|help|cover|address|use|apply|deal)|"
+    r"help(?:s|ful)? (?:with|for)|to (?:support|help|conduct|enable))\b",
+    re.IGNORECASE,
+)
+
+
 def _detect_enumeration(query: str) -> tuple[bool, bool]:
     """Return (matched_any, matched_strong).
 
@@ -384,6 +397,13 @@ def try_browse(query: str, has_history: bool = False) -> Optional[str]:
 
     matched_any, matched_strong = _detect_enumeration(query)
     if not matched_any:
+        return None
+
+    # Filtered/content question ("what templates SUPPORT AI") -> the directory
+    # dump can't honor the filter, so defer to the agent which can search and,
+    # e.g., correctly say no AI-specific template exists. Applies even to STRONG
+    # triggers ("list templates that support AI" still wants a filtered answer).
+    if _FILTER_CUE_RE.search(query):
         return None
 
     # Mid-conversation + only weak/ambiguous triggers -> let the agent answer
