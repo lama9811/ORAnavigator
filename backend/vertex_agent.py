@@ -290,10 +290,34 @@ def _extract_citations(chunks: list, supports: Optional[list] = None) -> list:
     never empty."""
     url_map = _get_kb_url_map()
 
-    # Restrict to the chunks the answer actually cited, in citation order.
-    ordered = chunks
+    def _build(chunk_list: list) -> list:
+        out: list = []
+        seen: set = set()
+        for c in chunk_list:
+            if not isinstance(c, dict):
+                continue
+            rc = c.get("retrievedContext") or c.get("web") or {}
+            title = (rc.get("title") or "").strip()
+            if not title:
+                continue
+            key = _norm_title(title)
+            if key in seen:
+                continue
+            seen.add(key)
+            url = url_map.get(key)
+            if not url:
+                uri = rc.get("uri", "") or ""
+                if uri.startswith("http"):
+                    url = uri
+            if url:
+                out.append({"title": title, "url": url})
+            if len(out) >= 5:
+                break
+        return out
+
+    # The chunks the answer actually cited (groundingSupports -> chunk indices).
+    used: list = []
     if supports:
-        used: list = []
         seen_idx: set = set()
         for s in supports:
             if not isinstance(s, dict):
@@ -302,31 +326,13 @@ def _extract_citations(chunks: list, supports: Optional[list] = None) -> list:
                 if isinstance(idx, int) and idx not in seen_idx and 0 <= idx < len(chunks):
                     seen_idx.add(idx)
                     used.append(chunks[idx])
-        if used:
-            ordered = used
 
-    citations: list = []
-    seen: set = set()
-    for c in ordered:
-        if not isinstance(c, dict):
-            continue
-        rc = c.get("retrievedContext") or c.get("web") or {}
-        title = (rc.get("title") or "").strip()
-        if not title:
-            continue
-        key = _norm_title(title)
-        if key in seen:
-            continue
-        seen.add(key)
-        url = url_map.get(key)
-        if not url:
-            uri = rc.get("uri", "") or ""
-            if uri.startswith("http"):
-                url = uri
-        if url:
-            citations.append({"title": title, "url": url})
-        if len(citations) >= 5:
-            break
+    # Prefer the cited subset; but if it yields no resolvable (clickable) source,
+    # fall back to retrieval order so the Sources list is never blanked when the
+    # retriever DID return usable docs.
+    citations = _build(used) if used else []
+    if not citations:
+        citations = _build(chunks)
     return citations
 
 

@@ -548,3 +548,13 @@ def test_citations_dedupes_by_title():
                 {"segment": {}, "groundingChunkIndices": [0, 1]}]
     titles = [c["title"] for c in _extract_citations(chunks, supports)]
     assert titles == ["Training Overview", "Main Contact"], titles
+
+
+def test_citations_never_blank_when_cited_chunk_unresolvable():
+    """REGRESSION: if the cited chunk can't resolve to a clickable URL, fall back
+    to retrieval order rather than returning ZERO sources."""
+    chunks = [{"retrievedContext": {"title": "", "uri": ""}},   # idx0: unresolvable
+              _chunk("Main Contact")]                             # idx1: resolves
+    supports = [{"segment": {}, "groundingChunkIndices": [0]}]
+    titles = [c["title"] for c in _extract_citations(chunks, supports)]
+    assert titles == ["Main Contact"], titles  # fell back; not empty
