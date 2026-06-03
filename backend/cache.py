@@ -625,6 +625,41 @@ class MultiTierCache:
         logger.info(f"[CACHE] Stored in L1+L2+SEM: {query[:50]}...")
         return True
 
+    # ------------------------------------------------------------------
+    # Parallel citation store -- keeps the answer's Sources list ({title,
+    # url}) alongside the cached text so a cache HIT can re-emit Sources.
+    # Stored under a "cit:"-prefixed key so it never collides with the text
+    # entry. L1 + L2 only (no Semantic tier: citation lists are doc-specific,
+    # so a meaning-based text hit must not borrow another answer's sources).
+    # These are only ever called right after a successful text set()/get(),
+    # so they inherit the same _should_cache gating implicitly.
+    # ------------------------------------------------------------------
+    def set_citations(self, query: str, citations: list, context_hash: str = "") -> bool:
+        """Store the {title, url} citation list for a cached answer."""
+        if not citations:
+            return False
+        key = "cit:" + self._generate_key(query, context_hash)
+        self.l1.set(key, citations)
+        self.l2.set(key, json.dumps(citations))
+        return True
+
+    def get_citations(self, query: str, context_hash: str = "") -> list:
+        """Return the stored citation list for a cached answer, or []."""
+        key = "cit:" + self._generate_key(query, context_hash)
+        cached = self.l1.get(key)
+        if isinstance(cached, list):
+            return cached
+        raw = self.l2.get(key)
+        if raw:
+            try:
+                citations = json.loads(raw)
+                if isinstance(citations, list):
+                    self.l1.set(key, citations)
+                    return citations
+            except (ValueError, TypeError):
+                pass
+        return []
+
     def invalidate(self, query: str, context_hash: str = "") -> bool:
         """Remove query from all cache tiers."""
         key = self._generate_key(query, context_hash)

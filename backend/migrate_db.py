@@ -106,6 +106,16 @@ def migrate():
                 print("⏭️  Column 'chat_history.topic_label' already exists")
 
             # =================================================================
+            # Citations persistence — Sources block survives cache/refresh/history
+            # =================================================================
+            if not column_exists('chat_history', 'citations'):
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN citations MEDIUMTEXT NULL"))
+                conn.commit()
+                print("✅ Added column: chat_history.citations")
+            else:
+                print("⏭️  Column 'chat_history.citations' already exists")
+
+            # =================================================================
             # Persistent Memory — Phase 3 (idle sweep) + Phase 5 (pause toggle)
             # =================================================================
             if not column_exists('users', 'last_chat_at'):

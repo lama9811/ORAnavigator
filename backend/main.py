@@ -61,7 +61,7 @@ from vertex_agent import query_agent, query_agent_stream, check_agent_health, re
 
 # Query caching for faster responses
 from cache import query_cache, get_context_hash, log_cache_stats
-from kb_browser import try_browse
+from kb_browser import try_browse, browse_citations
 
 
 # Legacy imports kept for /ingest endpoint and file analysis fallback
@@ -181,6 +181,20 @@ def init_db():
                     print(f"[OK] Added '{col}' column to users")
                 except Exception:
                     pass
+
+        # 5. Add chat_history.citations column if missing (Sources persistence).
+        #    Self-heals the prod schema on startup so saving an answer's Sources
+        #    never hits "Unknown column 'citations'".
+        try:
+            conn.execute(text("SELECT citations FROM chat_history LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'citations' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE chat_history ADD COLUMN citations MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'citations' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add citations column: {e}")
 
         # 6. Check if support_tickets table exists
         try:
@@ -1192,11 +1206,13 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
 
     # Persist user-specific chat record
     try:
+        _chat_citations = get_last_grounding().get("citations", [])
         new_chat = ChatHistory(
             user_id=user["user_id"],
             session_id=session_id,
             user_query=original_q,
-            bot_response=answer
+            bot_response=answer,
+            citations=json.dumps(_chat_citations) if _chat_citations else None,
         )
         db.add(new_chat)
         db.commit()
@@ -1283,9 +1299,12 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     browse_response = try_browse(user_q, has_history=bool(history_dicts))
     if browse_response and not req.skip_cache:
         print(f"[KB_BROWSE] for query: {user_q[:50]}...")
+        browse_citations_list = browse_citations(user_q, has_history=bool(history_dicts))
 
         async def generate_browse_sse():
             yield f"data: {json.dumps({'type': 'status', 'content': 'Browsing knowledge base...'})}\n\n"
+            if browse_citations_list:
+                yield f"data: {json.dumps({'type': 'citations', 'content': browse_citations_list})}\n\n"
             yield f"data: {json.dumps({'type': 'done', 'content': browse_response})}\n\n"
             try:
                 with SessionLocal() as save_db:
@@ -1294,6 +1313,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                         session_id=session_id,
                         user_query=original_q,
                         bot_response=browse_response,
+                        citations=json.dumps(browse_citations_list) if browse_citations_list else None,
                     )
                     save_db.add(new_chat)
                     save_db.commit()
@@ -1320,9 +1340,12 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
 
     if cached_response:
         print(f"[CACHE] HIT for query: {user_q[:50]}...")
+        cached_citations = query_cache.get_citations(user_q, context_hash)
 
         async def generate_cached_sse():
             yield f"data: {json.dumps({'type': 'status', 'content': 'Retrieved from cache'})}\n\n"
+            if cached_citations:
+                yield f"data: {json.dumps({'type': 'citations', 'content': cached_citations})}\n\n"
             yield f"data: {json.dumps({'type': 'done', 'content': cached_response})}\n\n"
 
             try:
@@ -1331,7 +1354,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                         user_id=user_id,
                         session_id=session_id,
                         user_query=original_q,
-                        bot_response=cached_response
+                        bot_response=cached_response,
+                        citations=json.dumps(cached_citations) if cached_citations else None,
                     )
                     save_db.add(new_chat)
                     save_db.commit()
@@ -1359,6 +1383,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     async def generate_sse():
         nonlocal stream_had_error
         full_response = ""
+        full_citations = []
         try:
             for event in query_agent_stream(
                 query=user_q,
@@ -1376,6 +1401,7 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     full_response += content
                     yield f"data: {json.dumps({'type': 'chunk', 'content': content})}\n\n"
                 elif event_type == "citations":
+                    full_citations = content or []
                     yield f"data: {json.dumps({'type': 'citations', 'content': content})}\n\n"
                 elif event_type == "done":
                     full_response = content or full_response
@@ -1394,10 +1420,17 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
             if not full_response:
                 full_response = "An error occurred during streaming."
 
+        # Fallback: if the citations event wasn't captured in the loop (e.g.
+        # it arrived fused with done), recover the just-completed answer's
+        # Sources from the grounding state so they still get persisted/cached.
+        if not full_citations:
+            full_citations = get_last_grounding().get("citations", []) or []
+
         # Cache the successful response
         if full_response and "error" not in full_response.lower()[:50] and "I may not have complete information" not in full_response and "don't have reliable information" not in full_response:
             if query_cache.set(user_q, full_response, context_hash):
                 print(f"[CACHE] Stored response for: {user_q[:50]}...")
+                query_cache.set_citations(user_q, full_citations, context_hash)
 
         # Save to chat history after stream completes (save original query)
         try:
@@ -1406,7 +1439,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     user_id=user_id,
                     session_id=session_id,
                     user_query=original_q,
-                    bot_response=full_response
+                    bot_response=full_response,
+                    citations=json.dumps(full_citations) if full_citations else None,
                 )
                 save_db.add(new_chat)
                 save_db.commit()
@@ -1561,10 +1595,15 @@ async def get_chat_history(user=Depends(get_current_user), db: Session = Depends
               .all()
     history = []
     for c in chats:
+        try:
+            cites = json.loads(c.citations) if c.citations else []
+        except (ValueError, TypeError):
+            cites = []
         history.append({
             "session_id": c.session_id or "default",
             "user": c.user_query,
             "bot": c.bot_response,
+            "citations": cites,
             "time": c.timestamp.isoformat()
         })
     return {"history": history}

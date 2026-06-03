@@ -14,6 +14,10 @@ class ChatHistory(Base):
     session_id = Column(String(255), default="default")
     user_query = Column(Text)
     bot_response = Column(Text)
+    # Sources/citations for this answer: JSON-encoded list[{title, url}].
+    # TEXT + json.dumps/loads (house style), so the Sources block survives
+    # cache hits, page refreshes, and history reloads. NULL on legacy rows.
+    citations = Column(Text, nullable=True)
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     # Phase 1: rolling session summary. Populated on the row whose post-commit
     # task fired the summarization. On read, latest non-null wins.

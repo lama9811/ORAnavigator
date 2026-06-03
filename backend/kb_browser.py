@@ -425,3 +425,43 @@ def try_browse(query: str, has_history: bool = False) -> Optional[str]:
         return None if has_history else _format_root()
 
     return _format_node(node)
+
+
+def browse_citations(query: str, has_history: bool = False) -> list:
+    """Return the {title, url} Sources for a browse answer that `try_browse`
+    would produce for the same query, so the enumeration path can show a
+    Sources block like the grounded agent does.
+
+    Mirrors try_browse's gating exactly so the returned list always matches
+    what was rendered. Returns [] when try_browse would defer to the agent or
+    show the section-overview root index (which lists sections, not docs).
+    Capped at 5 to match the Sources UI.
+    """
+    if not query or len(query) > 500:
+        return []
+
+    matched_any, matched_strong = _detect_enumeration(query)
+    if not matched_any:
+        return []
+    if _FILTER_CUE_RE.search(query):
+        return []
+    if has_history and not matched_strong:
+        return []
+
+    _load_manifest()
+    path = _match_topic(query)
+    if path is None:
+        return []
+    node = _INDEX.get(path)
+    if not node:
+        return []
+
+    out: list = []
+    for d in node.get("docs", []):
+        title = d.get("title") or d.get("doc_id", "")
+        url = d.get("source_url", "")
+        if title and url:
+            out.append({"title": title, "url": url})
+        if len(out) >= 5:
+            break
+    return out

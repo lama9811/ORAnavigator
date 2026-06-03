@@ -228,10 +228,12 @@ export default function App() {
                     time: new Date(item.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
                   });
 
-                  // Add Bot Message
+                  // Add Bot Message (with its saved Sources, so the Sources
+                  // block reappears on refresh / history reload)
                   grouped[sid].push({
                     text: item.bot,
                     sender: "bot",
+                    citations: item.citations || [],
                     time: new Date(item.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
                   });
               });
