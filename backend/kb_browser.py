@@ -415,14 +415,17 @@ def try_browse(query: str, has_history: bool = False) -> Optional[str]:
     path = _match_topic(query)
 
     if path is None:
-        # Enumeration phrasing but no topic match. A fresh turn shows the root
-        # index; mid-conversation, dumping the 9-section tree is almost always
-        # wrong -> defer to the agent.
-        return None if has_history else _format_root()
+        # Enumeration phrasing but no topic match. Only an explicit STRONG
+        # request ("list", "show me", "what's in the KB") on a fresh turn
+        # justifies dumping the whole 9-section index. WEAK-only phrasing
+        # ("what forms do I need to add a co-investigator?") reads as enumeration
+        # in isolation but is almost always a real content question -> defer to
+        # the agent so it can actually answer instead of dumping the directory.
+        return _format_root() if (matched_strong and not has_history) else None
 
     node = _INDEX.get(path)
     if not node:
-        return None if has_history else _format_root()
+        return _format_root() if (matched_strong and not has_history) else None
 
     return _format_node(node)
 

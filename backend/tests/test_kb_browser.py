@@ -23,12 +23,21 @@ def test_followup_weak_trigger_defers_to_agent():
     assert try_browse(q, has_history=True) is None
 
 
-def test_same_query_first_turn_still_browses():
-    """Historyless first turn keeps the original deterministic behavior."""
-    q = "can you give me what forms do I need to fill?"
-    result = try_browse(q, has_history=False)
-    assert result is not None
-    assert "ORA Knowledge Base" in result
+def test_weak_topicless_first_turn_defers_to_agent():
+    """A weak-only, topicless content question must reach the agent -- NOT dump
+    the whole KB index -- even on a fresh first turn.
+
+    Updated 2026-06-03: this previously asserted a root-index dump ("original
+    deterministic behavior"), but that WAS the bug -- a real question like
+    "What forms do I need to add a co-investigator after an award?" trips the
+    weak 'what forms' trigger, matches no topic, and used to dump all 9 sections
+    instead of being answered. Now only an explicit STRONG browse request
+    ('what do you have', 'list ...') gets the root index
+    (see test_strong_trigger_no_topic_first_turn_shows_root)."""
+    assert try_browse("can you give me what forms do I need to fill?", has_history=False) is None
+    # the exact user-reported query that surfaced the bug
+    assert try_browse("What forms do I need to add a co-investigator after an award?",
+                      has_history=False) is None
 
 
 # --- Strong vs weak x has_history matrix ------------------------------------
