@@ -115,7 +115,7 @@ def test_extract_from_text_returns_full_contract(monkeypatch):
         },
     }
     monkeypatch.setattr(sx, "_call_gemini",
-                        lambda text: json.dumps(fake_json))
+                        lambda text, **kw: json.dumps(fake_json))
 
     out = sx.extract_from_text("any pdf text would go here")
     assert out is not None
@@ -131,7 +131,7 @@ def test_extract_from_text_returns_none_on_gemini_failure(monkeypatch):
     (the API endpoint then surfaces a friendly error to the frontend
     instead of crashing)."""
     monkeypatch.setattr(sx, "_call_gemini",
-                        lambda text: "Sorry, I cannot do that.")
+                        lambda text, **kw: "Sorry, I cannot do that.")
     assert sx.extract_from_text("any pdf text") is None
 
 
@@ -178,3 +178,106 @@ def test_parse_response_tolerates_control_chars():
     out = _se._parse_response(raw)
     assert out is not None
     assert out["sponsor"] == "NSF"
+
+
+# ---------- evidence verification: flag fields not backed by a real quote ----
+
+_PDF_TEXT = (
+    "Program Solicitation NSF 26-512. Full proposals are due no later than "
+    "5:00 p.m. submitter's local time on March 15, 2026. The maximum budget "
+    "per proposal is $500,000 total for up to three years. Project Description "
+    "is limited to 15 pages."
+)
+
+
+def test_verify_flags_field_with_no_quote():
+    extracted = {
+        "deadline": "2026-03-15", "budget_cap": 500000,
+        "source_quotes": {"deadline": "due no later than 5:00 p.m. submitter's local time on March 15, 2026"},
+    }
+    unv = sx._verify_source_quotes(extracted, _PDF_TEXT)
+    assert "budget_cap" in unv          # value but no source quote
+    assert "deadline" not in unv        # value + real quote present in text
+
+
+def test_verify_flags_fabricated_quote():
+    extracted = {
+        "budget_cap": 999999,
+        "source_quotes": {"budget_cap": "awards of up to $999,999 are available"},  # not in text
+    }
+    assert "budget_cap" in sx._verify_source_quotes(extracted, _PDF_TEXT)
+
+
+def test_verify_keeps_real_quote_whitespace_insensitive():
+    extracted = {
+        "budget_cap": 500000,
+        "source_quotes": {"budget_cap": "maximum   BUDGET per proposal is $500,000"},
+    }
+    assert "budget_cap" not in sx._verify_source_quotes(extracted, _PDF_TEXT)
+
+
+def test_verify_ignores_null_and_empty_values():
+    extracted = {
+        "deadline": None, "eligibility": "", "page_limits": {},
+        "required_attachments": [], "source_quotes": {},
+    }
+    assert sx._verify_source_quotes(extracted, _PDF_TEXT) == []
+
+
+def test_verify_does_not_flag_sponsor():
+    # sponsor is canonicalized (e.g. "NSF") and intentionally not verified
+    extracted = {"sponsor": "NSF", "source_quotes": {}}
+    assert "sponsor" not in sx._verify_source_quotes(extracted, _PDF_TEXT)
+
+
+def test_extract_from_text_flags_fabricated_value_keeps_it(monkeypatch):
+    """Integration: a real deadline quote + a fabricated budget quote ->
+    budget_cap is FLAGGED but its value is preserved (flag, never drop)."""
+    fake = {
+        "sponsor": "NSF",
+        "deadline": "2026-03-15",
+        "budget_cap": 8000000,  # the program-total trap
+        "page_limits": {}, "required_attachments": [],
+        "source_quotes": {
+            "deadline": "due no later than 5:00 p.m. submitter's local time on March 15, 2026",
+            "budget_cap": "total program budget is approximately $8,000,000",  # NOT in _PDF_TEXT
+        },
+    }
+    monkeypatch.setattr(sx, "_call_gemini", lambda text, **kw: json.dumps(fake))
+    out = sx.extract_from_text(_PDF_TEXT)
+    assert out["budget_cap"] == 8000000          # value preserved (flag, not drop)
+    assert "budget_cap" in out["unverified_fields"]
+    assert "deadline" not in out["unverified_fields"]
+
+
+def test_lenient_list_field_accepts_leading_chunk():
+    """A long required_attachments quote whose tail diverges from the PDF's
+    bullet layout is accepted when its LEADING chunk is present (lenient)."""
+    text = "Each full proposal MUST include the following required components: Project Summary, Project Description, Biographical Sketch."
+    extracted = {
+        "required_attachments": ["Project Summary", "Project Description"],
+        "source_quotes": {"required_attachments":
+            "Each full proposal MUST include the following required components: A; B; C; D; E; F"},
+    }
+    assert "required_attachments" not in sx._verify_source_quotes(extracted, text)
+
+
+def test_strict_scalar_field_rejects_leading_only_match():
+    """A budget_cap quote whose opening is real but whose AMOUNT is fabricated
+    is still flagged -- scalar fields get strict full-quote matching."""
+    text = "The maximum budget per proposal is $500,000 total for up to three years."
+    extracted = {
+        "budget_cap": 900000,
+        "source_quotes": {"budget_cap": "The maximum budget per proposal is $900,000 total"},
+    }
+    assert "budget_cap" in sx._verify_source_quotes(extracted, text)
+
+
+def test_list_noise_glyphs_ignored_in_match():
+    """Bullet glyphs / (cid:NN) artifacts between items don't block a match."""
+    text = "Required: (cid:127) Biosketch (cid:127) Data Management Plan"
+    extracted = {
+        "required_attachments": ["Biosketch", "Data Management Plan"],
+        "source_quotes": {"required_attachments": "Required: Biosketch Data Management Plan"},
+    }
+    assert "required_attachments" not in sx._verify_source_quotes(extracted, text)

@@ -228,6 +228,7 @@ function ReviewStep({
   onConfirm, creating, onCancel,
 }) {
   const sq = extracted.source_quotes || {};
+  const unv = new Set(extracted.unverified_fields || []);
   const [verified, setVerified] = useState(false);
   return (
     <div className="solicitation-review">
@@ -261,7 +262,7 @@ function ReviewStep({
             ).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </Field>
-        <Field label="Program ID" sourceQuote={sq.program_id}>
+        <Field label="Program ID" sourceQuote={sq.program_id} unverified={unv.has("program_id")}>
           <input
             type="text"
             value={extracted.program_id || ""}
@@ -272,7 +273,7 @@ function ReviewStep({
       </FieldRow>
 
       <FieldRow>
-        <Field label="Deadline" critical sourceQuote={sq.deadline}>
+        <Field label="Deadline" critical sourceQuote={sq.deadline} unverified={unv.has("deadline")}>
           <input
             type="text"
             value={extracted.deadline || ""}
@@ -280,7 +281,7 @@ function ReviewStep({
             placeholder="YYYY-MM-DD or full ISO date"
           />
         </Field>
-        <Field label="Budget cap (USD)" critical sourceQuote={sq.budget_cap}>
+        <Field label="Budget cap (USD)" critical sourceQuote={sq.budget_cap} unverified={unv.has("budget_cap")}>
           <input
             type="number"
             value={extracted.budget_cap ?? ""}
@@ -296,6 +297,7 @@ function ReviewStep({
       <Field
         label="Eligibility"
         sourceQuote={sq.eligibility}
+        unverified={unv.has("eligibility")}
       >
         <textarea
           value={extracted.eligibility || ""}
@@ -308,6 +310,7 @@ function ReviewStep({
       <Field
         label="Submission portal"
         sourceQuote={sq.submission_portal}
+        unverified={unv.has("submission_portal")}
       >
         <input
           type="text"
@@ -317,7 +320,7 @@ function ReviewStep({
         />
       </Field>
 
-      <Field label="Required attachments">
+      <Field label="Required attachments" unverified={unv.has("required_attachments")}>
         <AttachmentEditor
           value={extracted.required_attachments || []}
           onChange={(v) => onChange("required_attachments", v)}
@@ -328,7 +331,7 @@ function ReviewStep({
         </small>
       </Field>
 
-      <Field label="Page limits">
+      <Field label="Page limits" unverified={unv.has("page_limits")}>
         <PageLimitsDisplay value={extracted.page_limits || {}} />
         <small className="solicitation-hint">
           Carried into your proposal notes for reference.
@@ -375,14 +378,23 @@ function ReviewStep({
   );
 }
 
-function Field({ label, hint, sourceQuote, critical, children }) {
+function Field({ label, hint, sourceQuote, critical, unverified, children }) {
+  const cls = "solicitation-field"
+    + (critical ? " solicitation-field-critical" : "")
+    + (unverified ? " solicitation-field-unverified" : "");
   return (
-    <div className={`solicitation-field${critical ? " solicitation-field-critical" : ""}`}>
+    <div className={cls}>
       <label>
         {label}
         {critical && <span className="solicitation-critical-tag">verify</span>}
+        {unverified && <span className="solicitation-unverified-tag">unverified</span>}
       </label>
       {children}
+      {unverified && (
+        <small className="solicitation-unverified-note">
+          ⚠ The AI couldn’t back this with a quote from the PDF — double-check it before saving.
+        </small>
+      )}
       {critical && (
         <small className="solicitation-critical-note">
           ⚠ A wrong value here can miss the deadline or blow the budget — confirm it against the PDF.

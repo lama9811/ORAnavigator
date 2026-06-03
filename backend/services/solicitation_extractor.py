@@ -79,39 +79,45 @@ _CONTRACT_KEYS = (
 )
 
 
-_PROMPT = """You are extracting structured metadata from a research grant solicitation PDF for a university grants office. ACCURACY IS CRITICAL: a wrong deadline, a wrong budget cap, or a missed page limit can cost a faculty member an entire grant. Read the ENTIRE text provided before answering -- the load-bearing facts are often in the "Award Information", "Eligibility", and "Proposal Preparation" / "Content and Form of Application" / "Format / Page Limitations" sections that can appear well into the document, not just on the cover page.
+# Strict rules passed as the model's SYSTEM INSTRUCTION; the solicitation text is
+# sent separately as the user content. Every filled field must carry a verbatim
+# source_quotes entry, which a deterministic check (_verify_source_quotes) then
+# confirms is actually present in the PDF -- so a fabricated value is flagged.
+_EXTRACT_SYSTEM = """You extract structured metadata from a research grant funding announcement (solicitation / FOA) PDF for a university grants office. ACCURACY IS CRITICAL: a wrong deadline, budget cap, or page limit can cost a faculty member an entire grant. Read the ENTIRE text -- the load-bearing facts often appear well into the document ("Award Information", "Eligibility", "Proposal Preparation" / "Content and Form of Application" / "Format / Page Limitations"), not just on the cover page. You output DATA ONLY from the text provided.
 
-Return ONLY a JSON object with EXACTLY these fields:
+ABSOLUTE RULES:
+1. EXTRACT ONLY FROM THE PROVIDED TEXT. Use only what the SOLICITATION TEXT actually states. Never use outside knowledge, memory of other NSF/NIH programs, or assumptions about "typical" or "usual" values. You know nothing about this program beyond the text given.
+2. QUOTE EVERY VALUE. For EVERY field you fill (non-null), source_quotes MUST contain a VERBATIM, character-for-character quote (<=200 chars) copied from the SOLICITATION TEXT that states that value. If you cannot find a real supporting quote in the text, you MUST return null for that field. No quote, no value.
+3. NEVER GUESS OR INVENT. If a value is not explicitly stated, return null (or {} / [] for object/array fields). Do not fill a "reasonable" default. NEVER guess a deadline -- if the PDF gives multiple/recurring deadlines or none, return null.
+4. QUOTES ARE VERBATIM. Every source_quotes value must be an exact substring of the SOLICITATION TEXT -- do not paraphrase, summarize, normalize, or fix typos. Fabricated quotes are automatically detected and the field is flagged for human review.
+5. MOST RESTRICTIVE WINS. If different values are given for different applicant types or conditions, return the SMALLEST / most restrictive (smallest budget cap, smallest page limit) so an applicant is never told they have more room than they do; record the full breakdown in source_quotes.
+6. budget_cap = the maximum PER PROPOSAL / PER AWARD, NEVER the total program budget or "anticipated funding amount". If stated per year, return the per-year value.
+7. page_limits: ALWAYS include the main narrative cap (Project Description / Research Narrative / Research Strategy / Proposal Narrative) when stated; {} only if the PDF truly states no page limit anywhere.
 
+Return ONLY a JSON object with EXACTLY these fields (unknown -> null, or {} / []):
 {
   "sponsor": one of "NSF" | "NIH" | "DoD" | "DoE" | "NASA" | "USDA" | "EPA" | "NOAA" | "State of Maryland" | "Internal", OR for any other funder the FULL organization name exactly as written (e.g. "Alfred P. Sloan Foundation") -- never the bare word "Foundation",
-  "program_id": short program identifier as it appears in the PDF (e.g. "NSF 23-573", "PA-24-001", "DE-FOA-0002884") or null,
+  "program_id": short program identifier as it appears (e.g. "NSF 23-573", "PA-24-001", "DE-FOA-0002884") or null,
   "program_name": short human-readable name (e.g. "Faculty Early Career Development") or null,
-  "deadline": ISO-8601 string with timezone if known (e.g. "2026-06-12T17:00:00-05:00") or just date "2026-06-12" or null,
-  "page_limits": object mapping section name (snake_case) -> integer page limit. ALWAYS include the MAIN narrative cap when the PDF states one -- it is usually titled "Project Description", "Research Narrative", "Project Narrative", "Research Strategy", or "Proposal Narrative" -- plus any others you find (project_summary, data_management_plan, biosketch, budget_justification, etc.). Examples: {"project_description": 15, "data_management_plan": 2, "biosketch": 5}. Use {} ONLY if the PDF truly states no page limit anywhere. If a limit is conditional (e.g. 15 pages if the budget is <= $250k, else 20), return the SMALLER / most restrictive number and explain the condition in source_quotes.
-  "required_attachments": array of attachment / required-element names the solicitation lists as required (e.g. ["Biosketch", "Current & Pending Support", "Data Management Plan", "Project Description"]). Include conditionally-required items; exclude purely optional ones. [] only if none are listed.
-  "eligibility": a one or two sentence summary of who may apply, INCLUDING any alternate path the PDF stresses (e.g. "Full proposals by invitation only; others may submit a Letter of Inquiry"), or null,
-  "budget_cap": integer dollar maximum PER PROPOSAL/PER AWARD (e.g. 600000), or null. No commas or currency symbols. If the cap is stated PER YEAR, return the per-year value. If DIFFERENT maximums are given for different applicant types (e.g. single-institution vs multi-institution/collaborative), return the SMALLEST / MOST RESTRICTIVE one so a typical single-PI applicant is never told they have more room than they do, and record the full breakdown in source_quotes. NEVER return the total program budget / "anticipated funding amount".
-  "submission_portal": the system(s) used to submit. If MORE THAN ONE portal is accepted, list ALL of them comma-separated (e.g. "Research.gov, Grants.gov"). Typical values: "Research.gov" | "Grants.gov" | "ASSIST" | "eRA Commons" | other | null,
-  "source_quotes": object mapping each filled field name to a short (<=200 char) verbatim quote from the PDF that supports the extracted value. Example: {"deadline": "Proposals are due no later than 5:00 p.m. on June 12, 2026."}
+  "deadline": ISO-8601 with timezone if known (e.g. "2026-06-12T17:00:00-05:00") or date "2026-06-12" or null,
+  "page_limits": object mapping section name (snake_case) -> integer page limit. Examples: {"project_description": 15, "data_management_plan": 2, "biosketch": 5},
+  "required_attachments": array of required attachment / element names (e.g. ["Biosketch", "Current & Pending Support", "Data Management Plan"]); include conditionally-required, exclude purely optional; [] if none,
+  "eligibility": one or two sentence summary of who may apply, including any alternate path stressed, or null,
+  "budget_cap": integer dollar maximum per proposal/award (e.g. 600000), no commas/symbols, or null,
+  "submission_portal": the submission system(s); if more than one is accepted list ALL comma-separated (e.g. "Research.gov, Grants.gov"), or null,
+  "source_quotes": object mapping each FILLED field name -> a <=200-char VERBATIM quote from the text supporting it. Example: {"deadline": "Proposals are due no later than 5:00 p.m. on June 12, 2026."}
 }
-
-RULES:
-- Return ONLY the JSON object. No prose, no markdown fences, no explanation.
-- If a field is genuinely not stated in the PDF, return null (or {} / [] for object/array fields). Do not invent values.
-- NEVER guess a deadline. If the PDF gives multiple/recurring deadlines or none, return null.
-- Quotes in source_quotes must be VERBATIM substrings of the input text. Do not paraphrase.
-- budget_cap is the per-proposal/per-award maximum (the MOST RESTRICTIVE if several are given), NEVER the total program budget.
-- Do NOT return an empty page_limits {} if the document states any page limit -- scan the whole text for the main narrative / project-description cap.
-
-SOLICITATION TEXT:
-"""
+Return ONLY the JSON object. No prose, no markdown fences."""
 
 
-def _call_gemini(prompt_text: str) -> str:
+def _call_gemini(prompt_text: str, system_instruction: Optional[str] = None) -> str:
     """Single Gemini round-trip. Returns the raw response text (may
     contain markdown fences; _parse_response handles that). Returns
-    empty string on error so callers can fail gracefully."""
+    empty string on error so callers can fail gracefully.
+
+    When `system_instruction` is given, the rules are sent as the model's
+    system prompt and `prompt_text` carries only the data -- stronger
+    rule-adherence than inlining the rules into the content."""
     client = _get_client()
     if client is None:
         print("   [SOLICITATION] Gemini client is None (init failed)")
@@ -124,14 +130,17 @@ def _call_gemini(prompt_text: str) -> str:
         # response_mime_type=application/json forces clean JSON output (no
         # markdown fences, no preamble text) so _parse_response doesn't
         # have to guess.
+        config = {
+            "temperature": 0.0,
+            "max_output_tokens": 8192,
+            "response_mime_type": "application/json",
+        }
+        if system_instruction:
+            config["system_instruction"] = system_instruction
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=_PROMPT + prompt_text,
-            config={
-                "temperature": 0.0,
-                "max_output_tokens": 8192,
-                "response_mime_type": "application/json",
-            },
+            contents=prompt_text,
+            config=config,
         )
         raw = (response.text or "").strip()
         # Log a short preview so we can diagnose downstream parse failures.
@@ -303,17 +312,92 @@ def _coerce_extracted(raw: dict) -> dict:
 _MAX_PROMPT_CHARS = 250_000
 
 
+# Fields whose extracted value we cross-check against a verbatim source quote.
+# sponsor is excluded -- it's canonicalized to a token (e.g. "NSF") that won't
+# be a verbatim substring of the PDF.
+_VERIFIABLE_FIELDS = (
+    "deadline", "budget_cap", "page_limits", "required_attachments",
+    "eligibility", "submission_portal", "program_id", "program_name",
+)
+
+
+# Bullet glyphs + pdfplumber's undecoded-glyph artifacts ("(cid:127)"). These
+# sit between items in bulleted lists (page limits, required attachments), so a
+# clean multi-line quote isn't a literal substring unless we drop them first.
+_LIST_NOISE_RE = re.compile(r"\(cid:\d+\)|[•‣▪●·∙◦⁃*]")
+
+
+def _norm_for_match(s) -> str:
+    """Lowercase, drop bullet/list noise, collapse whitespace -- a forgiving
+    substring match of a source quote against the PDF text (pdfplumber
+    re-spaces text and sprinkles bullet glyphs through lists)."""
+    cleaned = _LIST_NOISE_RE.sub(" ", str(s or "").lower())
+    return " ".join(cleaned.split())
+
+
+def _has_value(v) -> bool:
+    if v is None:
+        return False
+    if isinstance(v, (dict, list, str)):
+        return len(v) > 0
+    return True
+
+
+# Structured multi-item fields: their quote spans a bulleted list whose tail
+# legitimately diverges from the literal PDF layout, so match leniently (leading
+# chunk). Scalar high-stakes fields (deadline, budget_cap, ...) stay STRICT so a
+# wrong date / amount inside the quote is still caught.
+_LENIENT_QUOTE_FIELDS = {"page_limits", "required_attachments"}
+
+
+def _quote_grounded(quote: str, text_norm: str, lenient: bool) -> bool:
+    """True if the quote is genuinely from the PDF. Strict = full normalized
+    substring. Lenient (list fields only) also accepts a present LEADING chunk.
+    A wholesale fabricated quote matches neither, so it's still caught."""
+    qn = _norm_for_match(quote)
+    if not qn:
+        return False
+    if qn in text_norm:
+        return True
+    return lenient and qn[:60] in text_norm
+
+
+def _verify_source_quotes(extracted: dict, text: str) -> list:
+    """Deterministic anti-hallucination check. Returns the list of FILLED
+    fields whose extracted value is NOT backed by a quote actually present in
+    the PDF text -- either no source_quotes entry, or a fabricated quote.
+    Values are NOT changed; the caller surfaces these as 'double-check this'
+    flags in the UI."""
+    text_norm = _norm_for_match(text)
+    quotes = extracted.get("source_quotes") or {}
+    unverified = []
+    for field in _VERIFIABLE_FIELDS:
+        if not _has_value(extracted.get(field)):
+            continue
+        q = quotes.get(field)
+        if not isinstance(q, str) or not q.strip():
+            unverified.append(field)          # value with no supporting quote
+            continue
+        if not _quote_grounded(q, text_norm, lenient=(field in _LENIENT_QUOTE_FIELDS)):
+            unverified.append(field)          # quote not actually in the PDF
+    return unverified
+
+
 def extract_from_text(text: str) -> Optional[dict]:
     """Send text to Gemini and return the parsed, coerced contract dict.
-    Returns None on empty input or malformed Gemini response."""
+    Returns None on empty input or malformed Gemini response. Adds an
+    `unverified_fields` list flagging values not backed by a real PDF quote."""
     if not text or not text.strip():
         return None
     snippet = text[:_MAX_PROMPT_CHARS]
-    raw = _call_gemini(snippet)
+    raw = _call_gemini("SOLICITATION TEXT:\n" + snippet,
+                       system_instruction=_EXTRACT_SYSTEM)
     parsed = _parse_response(raw)
     if parsed is None:
         return None
-    return _coerce_extracted(parsed)
+    out = _coerce_extracted(parsed)
+    out["unverified_fields"] = _verify_source_quotes(out, snippet)
+    return out
 
 
 def extract_text_from_pdf(pdf_bytes: bytes) -> str:
