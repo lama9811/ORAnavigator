@@ -331,3 +331,101 @@ def test_send_email_exception_is_swallowed(db):
     assert result["sent"] == 1
     # Only the successful one got logged.
     assert db.query(DeadlineReminderLog).count() == 1
+
+
+# ---------- AI personalization layer (advisory, with hard fallback) --------
+
+def test_ai_body_used_when_available_subject_stays_deterministic(db, monkeypatch):
+    """When the AI composer returns a (subject, html), the email body is the
+    AI one but the SUBJECT must equal the deterministic subject; the send +
+    idempotency log still happen."""
+    sub = _make_submission(db, days_to_deadline=7, title="Coral Proposal",
+                           sponsor="NSF", tasks=["Draft budget", "Write DMP"])
+    user = db.query(User).first()
+    det_subject, _ = dw.compose_reminder_email(sub, user, days_left=7)
+
+    monkeypatch.setattr(dw, "compose_reminder_email_ai",
+                        lambda *a, **k: (det_subject, "<p>AI-PERSONALIZED BODY</p>"))
+
+    captured = {}
+    def fake_send(to_email, subject, html):
+        captured["subject"] = subject
+        captured["html"] = html
+        return True
+
+    result = dw.send_due_reminders(db, send_email_fn=fake_send, use_ai=True)
+    assert result["sent"] == 1
+    assert captured["html"] == "<p>AI-PERSONALIZED BODY</p>"
+    assert captured["subject"] == det_subject          # subject is deterministic
+    assert db.query(DeadlineReminderLog).count() == 1   # idempotency log written
+
+
+def test_falls_back_to_template_when_ai_returns_none(db, monkeypatch):
+    """AI unavailable/failed -> the deterministic template body is sent; the
+    email still goes out and is logged."""
+    sub = _make_submission(db, days_to_deadline=7, title="Coral Proposal",
+                           sponsor="NSF", tasks=["Draft budget"])
+    user = db.query(User).first()
+    expected_subject, expected_html = dw.compose_reminder_email(sub, user, days_left=7)
+
+    monkeypatch.setattr(dw, "compose_reminder_email_ai", lambda *a, **k: None)
+
+    captured = {}
+    def fake_send(to_email, subject, html):
+        captured["subject"] = subject
+        captured["html"] = html
+        return True
+
+    result = dw.send_due_reminders(db, send_email_fn=fake_send, use_ai=True)
+    assert result["sent"] == 1
+    assert captured["html"] == expected_html   # template fallback
+    assert captured["subject"] == expected_subject
+    assert db.query(DeadlineReminderLog).count() == 1
+
+
+def test_use_ai_false_never_calls_ai_composer(db, monkeypatch):
+    sub = _make_submission(db, days_to_deadline=7)
+    called = {"n": 0}
+    def spy(*a, **k):
+        called["n"] += 1
+        return ("S", "<p>x</p>")
+    monkeypatch.setattr(dw, "compose_reminder_email_ai", spy)
+
+    dw.send_due_reminders(db, send_email_fn=lambda *a: True, use_ai=False)
+    assert called["n"] == 0
+
+
+def test_no_credentials_falls_back_naturally(db):
+    """With no ADC (the conftest autouse pins get_client -> None), the REAL
+    compose_reminder_email_ai returns None and the template is used. The
+    email still sends + logs -- proving the offline path needs no mocking."""
+    sub = _make_submission(db, days_to_deadline=7, title="X", sponsor="NSF",
+                           tasks=["Draft budget"])
+    user = db.query(User).first()
+    # Real AI composer, but get_client() is None -> returns None.
+    assert dw.compose_reminder_email_ai(sub, user, 7, "https://x", list(sub.tasks)) is None
+
+    result = dw.send_due_reminders(db, send_email_fn=lambda *a: True, use_ai=True)
+    assert result["sent"] == 1
+    assert db.query(DeadlineReminderLog).count() == 1
+
+
+def test_ai_drops_hallucinated_task_order(db, monkeypatch):
+    """If the AI's prioritized_tasks isn't a clean permutation of the real
+    open tasks, compose_reminder_email_ai keeps the original order (never
+    renders an invented task title)."""
+    sub = _make_submission(db, days_to_deadline=3, title="X", sponsor="NSF",
+                           tasks=["Draft budget", "Write DMP"])
+    user = db.query(User).first()
+
+    # AI returns a body + a hallucinated extra task.
+    from services import gemini_client
+    monkeypatch.setattr(gemini_client, "generate_json", lambda *a, **k: {
+        "body_paragraph": "Time is short; please prioritize.",
+        "prioritized_tasks": ["Write DMP", "Draft budget", "INVENTED TASK"],
+    })
+    res = dw.compose_reminder_email_ai(sub, user, 3, "https://x", list(sub.tasks))
+    assert res is not None
+    _, html = res
+    assert "INVENTED TASK" not in html
+    assert "Draft budget" in html and "Write DMP" in html

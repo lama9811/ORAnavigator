@@ -24,6 +24,7 @@ What this service does NOT do:
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone, date
 from typing import Iterable, Optional
@@ -157,6 +158,133 @@ def compose_reminder_email(
 
 
 # ===========================================================================
+# ADVISORY AI email composer (Gemini) -- personalized prose + task ordering.
+# Falls back to compose_reminder_email() whenever it returns None, so a
+# reminder ALWAYS sends even when the model is slow/down/unavailable. The
+# SUBJECT stays deterministic (inbox consistency); AI writes the body only.
+# ===========================================================================
+
+# Strict rules passed as the model's SYSTEM INSTRUCTION; the data (title,
+# sponsor, days-left, tasks) is passed separately as the user content.
+_REMINDER_SYSTEM = """You write the BODY of a deadline-reminder email to a university faculty member about their in-flight grant proposal. Be warm, concise, and professional. Scale urgency to DAYS_LEFT: 14 = calm heads-up; 7/3 = encouraging nudge; 1/0 = urgent but supportive.
+
+ABSOLUTE RULES:
+1. USE ONLY THE FACTS PROVIDED. The only facts you may state are PROPOSAL_TITLE, SPONSOR, DAYS_LEFT, and the OPEN_TASKS titles given to you. Invent or guess nothing else.
+2. NO FABRICATED SPECIFICS. Never state a deadline date, a dollar amount, a program/award number, a person's name, or any requirement -- none of these are provided, so mentioning them would be a hallucination.
+3. TASKS ARE FIXED. "prioritized_tasks" MUST be a reordering of EXACTLY the provided OPEN_TASKS titles, copied verbatim. Never invent, rename, merge, split, or drop a task. If OPEN_TASKS is empty, return [].
+4. NO greeting, sign-off, links, or date -- the email template adds the greeting/button/footer. Start with the first real sentence.
+
+Output ONLY a JSON object with EXACTLY:
+{
+  "body_paragraph": "2-4 sentences naming the proposal title and sponsor and reflecting the urgency.",
+  "prioritized_tasks": ["<the OPEN_TASKS titles, reordered by what to do FIRST given the time left>"]
+}
+No markdown, no fences."""
+
+
+def _ai_tasks_html(ordered_titles: list[str], limit: int = 6) -> str:
+    """Render an AI-ordered task list with the same styling as
+    _open_tasks_html (which takes SubmissionTask objects)."""
+    if not ordered_titles:
+        return '<p style="color:#5f6368;font-size:14px;margin:8px 0;">'\
+               'Every checklist item is checked off. Just submit.</p>'
+    shown = ordered_titles[:limit]
+    items = "".join(
+        f'<li style="margin:4px 0;color:#202124;">{t}</li>' for t in shown
+    )
+    more = ""
+    if len(ordered_titles) > limit:
+        more = (f'<li style="margin:4px 0;color:#5f6368;font-style:italic;">'
+                f'... and {len(ordered_titles) - limit} more</li>')
+    return f'<ul style="padding-left:18px;margin:8px 0;">{items}{more}</ul>'
+
+
+def compose_reminder_email_ai(
+    submission: Submission,
+    user: User,
+    days_left: int,
+    app_url: str,
+    open_tasks: list,
+) -> Optional[tuple[str, str]]:
+    """AI-personalized reminder. Returns (subject, html) or None on ANY
+    failure / unavailability so the caller falls back to the template.
+    Subject is deterministic; only the body prose + task order are AI."""
+    try:
+        from services import gemini_client
+
+        open_titles = [t.title for t in (open_tasks or []) if getattr(t, "title", None)]
+        first_name = (user.name.split()[0] if user.name and user.name.strip() else "there")
+        # Data only; the strict rules are the system instruction.
+        prompt = (
+            f"PI_FIRST_NAME: {first_name}"
+            + f"\nPROPOSAL_TITLE: {submission.title}"
+            + f"\nSPONSOR: {submission.sponsor}"
+            + f"\nDAYS_LEFT: {days_left}"
+            + "\nOPEN_TASKS (JSON array of titles): " + json.dumps(open_titles, ensure_ascii=False)
+        )
+        data = gemini_client.generate_json(
+            prompt, temperature=0.3, max_output_tokens=1024, timeout_s=12,
+            system_instruction=_REMINDER_SYSTEM,
+        )
+        if not isinstance(data, dict):
+            return None
+
+        body = data.get("body_paragraph")
+        if not isinstance(body, str) or not body.strip():
+            return None
+        body = body.strip()
+
+        # Use the AI ordering ONLY if it's a valid permutation/subset of the
+        # real open tasks; otherwise keep the original order (never show a
+        # hallucinated task title).
+        raw_order = data.get("prioritized_tasks")
+        ordered = open_titles
+        if isinstance(raw_order, list):
+            valid = [t for t in raw_order if isinstance(t, str) and t in open_titles]
+            if valid and set(valid) == set(open_titles):
+                ordered = valid
+
+        phrase = _phrase_days_left(days_left)
+        subject = f"{submission.sponsor} {submission.title}: {phrase}"
+        greeting = f"Hi {first_name}," if first_name != "there" else "Hi,"
+        tasks_html = _ai_tasks_html(ordered)
+        deadline_str = (submission.deadline.strftime("%b %d, %Y")
+                        if submission.deadline else "no date set")
+
+        html = f"""
+    <div style="font-family: 'Google Sans', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #4285F4; font-size: 24px; margin: 0;">ORA Navigator</h1>
+            <p style="color: #5f6368; font-size: 13px; margin: 4px 0 0;">Morgan State University &middot; Office of Research Administration</p>
+        </div>
+        <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; border: 1px solid #dadce0;">
+            <h2 style="color: #202124; font-size: 18px; margin: 0 0 12px;">
+                Your proposal is {phrase}.
+            </h2>
+            <p style="color: #5f6368; font-size: 14px; line-height: 1.6; margin: 0 0 16px;">
+                {greeting} {body}
+            </p>
+            <h3 style="color: #202124; font-size: 14px; margin: 16px 0 4px;">What to tackle next</h3>
+            {tasks_html}
+            <div style="text-align: center; margin: 24px 0 4px;">
+                <a href="{app_url}/my-proposals" style="display: inline-block; padding: 11px 28px; background: #4285F4; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                    Open My Proposals
+                </a>
+            </div>
+        </div>
+        <p style="color: #9aa0a6; font-size: 11px; text-align: center; margin-top: 16px; line-height: 1.5;">
+            You're getting this because you have an active proposal in ORA Navigator.<br>
+            Mark the proposal submitted or withdrawn to stop further reminders.
+        </p>
+    </div>
+    """
+        return subject, html
+    except Exception as e:
+        log.warning(f"[DEADLINE] AI compose failed, will fall back to template: {e}")
+        return None
+
+
+# ===========================================================================
 # Query: which submissions are due for a reminder right now?
 # ===========================================================================
 
@@ -211,6 +339,7 @@ def send_due_reminders(
     today: Optional[date] = None,
     send_email_fn=None,
     app_url: str = "https://ora.inavigator.ai",
+    use_ai: bool = True,
 ) -> dict:
     """Run one pass of the watcher: find due reminders, send each one,
     log a row on success. Returns a summary the cron endpoint can return
@@ -219,7 +348,12 @@ def send_due_reminders(
     `send_email_fn` is injectable for tests -- defaults to the project's
     SMTP layer. Signature: fn(to_email: str, subject: str, html: str) -> bool.
     On failure (non-True return) we do NOT write the log row, so the
-    next run will retry."""
+    next run will retry.
+
+    `use_ai` (default True) tries an AI-personalized body first and falls
+    back to the deterministic template when the model is unavailable / fails.
+    The email ALWAYS sends regardless; pass use_ai=False for deterministic
+    tests."""
     if send_email_fn is None:
         from email_service import _send_email as send_email_fn  # type: ignore
 
@@ -228,10 +362,24 @@ def send_due_reminders(
     failed = 0
     for sub, user, threshold in due:
         days_left = days_until(sub.deadline, today)
-        subject, html = compose_reminder_email(
-            sub, user, days_left if days_left is not None else threshold,
-            app_url=app_url,
-        )
+        effective_days = days_left if days_left is not None else threshold
+
+        # Try the AI-personalized body first; HARD fallback to the template
+        # so a reminder always sends even if Gemini is slow/down/unavailable.
+        subject = html = None
+        if use_ai:
+            open_tasks = [t for t in (sub.tasks or []) if t.status != "done"]
+            try:
+                res = compose_reminder_email_ai(sub, user, effective_days, app_url, open_tasks)
+                if res is not None:
+                    subject, html = res
+            except Exception as e:
+                log.warning(f"[DEADLINE] AI compose raised, falling back: {e}")
+                subject = html = None
+        if subject is None:
+            subject, html = compose_reminder_email(
+                sub, user, effective_days, app_url=app_url,
+            )
         ok = False
         try:
             ok = bool(send_email_fn(user.email, subject, html))

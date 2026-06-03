@@ -22,14 +22,21 @@ Version 2 (2026-05-27) upgrades:
     the Required-Attachments row is shown (since that one is sponsor-
     mandated, not just convention).
 
-No LLM is called. Every result is derived deterministically from the PDF
-text + the solicitation context the user already gave us, so there's no
-hallucination risk -- if Draft Critic says "Biographical Sketch: MISSING",
-the user can trust that string really is not in the document.
+The deterministic checks (verdict/checks/counts) are LLM-free and AUTHORITATIVE:
+every one is derived deterministically from the PDF text + the solicitation
+context, so there's no hallucination risk -- if Draft Critic says "Biographical
+Sketch: MISSING", the user can trust that string really is not in the document.
+
+As of 2026-06-03 an ADVISORY Gemini layer (`_ai_review`) is appended as a separate
+`ai_review` key: a plain-English review, semantic compliance judgments the rules
+can't make, and rewrite suggestions. It is advisory ONLY -- it never alters the
+deterministic verdict/checks/counts, and on any failure (or when the model is
+unavailable) `ai_review` is simply None and the deterministic output is unchanged.
 """
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from io import BytesIO
@@ -725,10 +732,150 @@ def _overall_verdict(counts: dict) -> dict:
 # Public API
 # ===========================================================================
 
+# ===========================================================================
+# ADVISORY AI review layer (Gemini) -- additive, never authoritative.
+# ===========================================================================
+
+# Strict "rules of the road" passed as the model's SYSTEM INSTRUCTION (carries
+# more weight than inline prompt text). The actual data (draft, solicitation,
+# checks) is passed separately as the user content.
+_AI_REVIEW_SYSTEM = """You are a senior research-program officer giving an ADVISORY second read of a draft grant proposal. You are NOT the compliance gate; your review appears in a separate "advisory" box beneath an authoritative rules engine.
+
+ABSOLUTE RULES:
+1. GROUND EVERYTHING IN THE DRAFT. Every statement you make about the proposal must be supported by the actual DRAFT_TEXT provided. Do not use outside knowledge, prior proposals, or assumptions about what is "usually" present.
+2. QUOTE YOUR EVIDENCE. For any finding with status "addressed" or "partial" you MUST include an "evidence" field: a VERBATIM, word-for-word quote copied from DRAFT_TEXT (<=200 chars) that proves it. If you cannot find a real supporting quote, you are NOT allowed to make that claim -- drop it.
+3. NEVER FABRICATE. Do not invent quotes, section names, numbers, or requirements. A quote you put in "evidence" MUST appear character-for-character in DRAFT_TEXT. Fabricated quotes are automatically detected and the entire finding is discarded.
+4. RESPECT GROUND TRUTH. The DETERMINISTIC_CHECKS are verified facts. Never contradict them; never say a section passes that they marked missing/fail. Do not re-check page counts or mere section presence -- the rules already did that.
+5. COMPARE TO THE SOLICITATION, ONLY WHAT'S GIVEN. You may judge the draft against SOLICITATION_CONTEXT (stated priorities, required attachments, budget cap). Never invent a solicitation requirement that isn't in SOLICITATION_CONTEXT.
+6. WHEN IN DOUBT, SAY SO. If the draft text is too thin or ambiguous to judge something, use status "unclear" rather than guessing. "I can't tell from the draft" is a correct, valued answer -- never guess to fill space.
+7. ABSENCE NEEDS NO QUOTE. For "missing" findings (something the draft lacks), evidence may be empty -- you cannot quote what isn't there -- but only claim "missing" after genuinely scanning for it.
+8. The summary must only restate what your findings support -- introduce no new claims there.
+
+Output ONLY a JSON object (no markdown, no prose) with EXACTLY:
+{
+  "summary": "2-4 sentence plain-English review a PI can act on.",
+  "compliance_findings": [
+    {"area": "<short label>", "status": "addressed|partial|missing|unclear", "detail": "<one sentence>", "evidence": "<verbatim DRAFT_TEXT quote, or empty string for missing/unclear>"}
+  ],
+  "suggestions": [
+    {"section": "<section name>", "suggestion": "<one concrete, actionable rewrite/stub action>"}
+  ]
+}
+At most 6 compliance_findings and at most 6 suggestions. status MUST be one of addressed|partial|missing|unclear."""
+
+_AI_STATUSES = {"addressed", "partial", "missing", "unclear"}
+_AI_DRAFT_CHAR_CAP = 120_000
+
+
+def _norm_for_match(s: str) -> str:
+    """Lowercase + collapse all whitespace runs, for substring matching an
+    evidence quote against the draft (Gemini often re-spaces PDF text)."""
+    return " ".join((s or "").lower().split())
+
+
+def _verify_evidence(findings: list[dict], draft_text: str) -> list[dict]:
+    """Deterministic anti-hallucination gate. Drops any finding whose claim
+    isn't actually backed by the draft:
+      - evidence quote present but NOT a substring of the draft  -> DROP (fabricated quote)
+      - status addressed/partial with empty/missing evidence     -> DROP (claim without proof)
+      - status missing/unclear with empty evidence               -> KEEP (can't quote an absence)
+    This is what makes "only insights from the draft" a hard guarantee, not a
+    polite request."""
+    draft_norm = _norm_for_match(draft_text)
+    kept: list[dict] = []
+    for f in findings:
+        status = f.get("status", "unclear")
+        evidence = (f.get("evidence") or "").strip()
+        if evidence:
+            if _norm_for_match(evidence) not in draft_norm:
+                continue  # fabricated quote -> drop the whole finding
+        elif status in ("addressed", "partial"):
+            continue  # asserted the draft does something but gave no proof -> drop
+        kept.append(f)
+    return kept
+
+
+def _ai_review(
+    draft_text: str,
+    solicitation: dict,
+    deterministic_checks: list[dict],
+    sponsor: Optional[str],
+) -> Optional[dict]:
+    """Advisory Gemini review. Returns {summary, compliance_findings,
+    suggestions} or None on ANY failure / unavailability. Never raises."""
+    try:
+        from services import gemini_client
+
+        # Compact the checks so the model sees the verdicts without huge detail blobs.
+        slim_checks = [
+            {k: c.get(k) for k in ("name", "status", "value", "detail", "missing") if c.get(k) is not None}
+            for c in (deterministic_checks or [])
+        ]
+        sol_ctx = {
+            "sponsor": sponsor,
+            "budget_cap": solicitation.get("budget_cap"),
+            "page_limits": solicitation.get("page_limits"),
+            "required_attachments": solicitation.get("required_attachments"),
+        }
+        # Data goes in the user content; the strict rules are the system prompt.
+        draft = (draft_text or "")[:_AI_DRAFT_CHAR_CAP]
+        prompt = (
+            f"SPONSOR: {sponsor or 'Unknown'}"
+            + "\n\nSOLICITATION_CONTEXT (JSON):\n" + json.dumps(sol_ctx, ensure_ascii=False)
+            + "\n\nDETERMINISTIC_CHECKS (JSON, authoritative):\n" + json.dumps(slim_checks, ensure_ascii=False)
+            + "\n\nDRAFT_TEXT:\n" + draft
+        )
+        data = gemini_client.generate_json(
+            prompt, temperature=0.0, max_output_tokens=4096, timeout_s=20,
+            system_instruction=_AI_REVIEW_SYSTEM,
+        )
+        if not isinstance(data, dict):
+            return None
+
+        # Defensive normalization -- never trust the model's shape verbatim.
+        summary = data.get("summary")
+        summary = summary.strip() if isinstance(summary, str) else ""
+
+        findings = []
+        for f in (data.get("compliance_findings") or [])[:6]:
+            if not isinstance(f, dict):
+                continue
+            status = str(f.get("status", "unclear")).strip().lower()
+            if status not in _AI_STATUSES:
+                status = "unclear"
+            findings.append({
+                "area": str(f.get("area", "")).strip(),
+                "status": status,
+                "detail": str(f.get("detail", "")).strip(),
+                "evidence": str(f.get("evidence", "")).strip(),
+            })
+
+        # HARD anti-hallucination gate: drop any finding the draft doesn't back.
+        findings = _verify_evidence(findings, draft)
+
+        suggestions = []
+        for s in (data.get("suggestions") or [])[:6]:
+            if not isinstance(s, dict):
+                continue
+            suggestions.append({
+                "section": str(s.get("section", "")).strip(),
+                "suggestion": str(s.get("suggestion", "")).strip(),
+            })
+
+        # If the model returned nothing usable, treat as no review.
+        if not summary and not findings and not suggestions:
+            return None
+        return {"summary": summary, "compliance_findings": findings, "suggestions": suggestions}
+    except Exception as e:
+        print(f"   [DRAFT_CRITIC] AI review failed: {e}")
+        return None
+
+
 def critique_pdf(
     pdf_bytes: bytes,
     sponsor: Optional[str],
     solicitation: Optional[dict] = None,
+    include_ai: bool = True,
 ) -> Optional[dict]:
     """One-shot: PDF bytes + sponsor + (optional) solicitation context
     dict -> structured critique. Returns None when the PDF can't be
@@ -790,6 +937,16 @@ def critique_pdf(
 
     verdict = _overall_verdict(counts)
 
+    # ADVISORY AI review -- computed AFTER and independently of the deterministic
+    # result above, added as a sibling key. Guarded so it can never affect the
+    # verdict/checks/counts; None when disabled, unavailable, or on failure.
+    ai_review = None
+    if include_ai:
+        try:
+            ai_review = _ai_review(text, sol, checks, sponsor)
+        except Exception:
+            ai_review = None
+
     return {
         "pages": page_count,
         "sponsor": sponsor,
@@ -797,4 +954,5 @@ def critique_pdf(
         "checks": checks,
         "counts": counts,
         "issues": issues,
+        "ai_review": ai_review,
     }
