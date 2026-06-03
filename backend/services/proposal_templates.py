@@ -15,6 +15,9 @@ frontend can render an "Open form" inline link on each task row -- the
 catalog already exposes the form URL.
 """
 
+import re
+from typing import Optional
+
 # Generic checklist used when sponsor isn't NSF/NIH (DoD, USDA, foundation,
 # internal MSU funds, etc.). Mirrors the Basic Proposal Preparation
 # Checklist linked from kb_structured/pre_award/proposal_submission_checklist/.
@@ -100,13 +103,19 @@ _NSF_EXTRA = [
         "due_offset_days": 14,
         "kb_doc_id": None,
     },
-    {
-        "title": "Walk through the NSF EIR Proposal Preparation Checklist",
-        "description": "NSF Education-related solicitations (e.g., EIR) have their own additional checklist. Confirm every item.",
-        "due_offset_days": 7,
-        "kb_doc_id": "form_nsf_eir_proposal_preparation_checklist",
-    },
 ]
+
+# NSF EDUCATION-program-only add-on. NOT part of the always-on NSF template --
+# it applies only when the specific solicitation is an Education/EIR program
+# (e.g. EIR, IUSE, ITEST, DRK-12, Noyce, AISL). Appended by get_template() only
+# when program_name/program_id indicate an education program, so a plain NSF
+# science proposal no longer gets this irrelevant task.
+_NSF_EIR_TASK = {
+    "title": "Walk through the NSF EIR Proposal Preparation Checklist",
+    "description": "NSF Education-related solicitations (e.g., EIR) have their own additional checklist. Confirm every item.",
+    "due_offset_days": 7,
+    "kb_doc_id": "form_nsf_eir_proposal_preparation_checklist",
+}
 
 _NIH_EXTRA = [
     {
@@ -143,15 +152,42 @@ TEMPLATES = {
 }
 
 
-def get_template(sponsor: str) -> list[dict]:
+# NSF Education-directorate program signals. Word-boundary acronyms (so "eir"
+# won't match inside "their") plus the plain word "education".
+_EDU_PROGRAM_RE = re.compile(
+    r"\b(eir|ehr|edu|iuse|itest|noyce|aisl|drk[- ]?12|cadre)\b|education",
+    re.IGNORECASE,
+)
+
+
+def _is_education_program(program_name: Optional[str], program_id: Optional[str]) -> bool:
+    """True when the solicitation's program text indicates an NSF Education
+    program, so the EIR checklist task is relevant. Conservative: matches a
+    short list of EDU acronyms + the word 'education', not arbitrary text."""
+    text = f"{program_name or ''} {program_id or ''}"
+    return bool(_EDU_PROGRAM_RE.search(text))
+
+
+def get_template(
+    sponsor: str,
+    program_name: Optional[str] = None,
+    program_id: Optional[str] = None,
+) -> list[dict]:
     """Return the seed checklist for a given sponsor. Unknown sponsors get
     the generic template. Returned list is a fresh copy -- callers can
     mutate it (e.g., add absolute due_date fields) without poisoning the
-    module-level constant."""
+    module-level constant.
+
+    The NSF EIR checklist task is appended ONLY when sponsor is NSF AND the
+    program (name/id) indicates an Education/EIR program -- so a plain NSF
+    science proposal, or a manually-created NSF submission with no program
+    info, does not get that irrelevant task."""
     key = (sponsor or "").upper()
-    if key in TEMPLATES:
-        return [dict(t) for t in TEMPLATES[key]]
-    return [dict(t) for t in TEMPLATES["generic"]]
+    base = TEMPLATES.get(key, TEMPLATES["generic"])
+    tasks = [dict(t) for t in base]
+    if key == "NSF" and _is_education_program(program_name, program_id):
+        tasks.append(dict(_NSF_EIR_TASK))
+    return tasks
 
 
 def available_templates() -> list[str]:

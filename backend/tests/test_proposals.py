@@ -55,7 +55,8 @@ def test_create_submission_seeds_tasks_from_template(db):
     assert sub.title == "NSF CAREER award"
     assert sub.sponsor == "NSF"
     assert sub.status == "active"
-    # The NSF template adds 4 sponsor-specific tasks on top of the generic 10.
+    # The NSF template adds 3 always-on sponsor-specific tasks on top of the
+    # generic 10 (the EIR checklist is education-program-only, not seeded here).
     assert len(sub.tasks) >= 13
     # The DMP task is NSF-only -- it must be present.
     titles = [t.title for t in sub.tasks]
@@ -329,3 +330,50 @@ def test_solicitation_required_attachments_survive_template_dedup(db):
     assert "Budget Justification" in got, (
         f"template-overlapping required attachment was dropped; got {sorted(got)}")
     assert "Project Summary" in got
+
+
+# ---------- NSF EIR checklist is education-program-only (not every NSF) ------
+
+from services import proposal_templates as pt
+
+
+def _titles(tasks):
+    return [t["title"] for t in tasks]
+
+
+def test_plain_nsf_template_has_no_eir_task():
+    """A plain NSF proposal (no program info) must NOT get the EIR checklist."""
+    titles = _titles(pt.get_template("NSF"))
+    assert not any("EIR" in t for t in titles)
+    # but the real NSF extras are still there
+    assert any("Data Management Plan" in t for t in titles)
+
+
+def test_nsf_education_program_gets_eir_task():
+    titles = _titles(pt.get_template("NSF", program_name="Education Innovation and Research (EIR)"))
+    assert any("EIR" in t for t in titles)
+
+
+def test_nsf_non_education_program_no_eir_task():
+    titles = _titles(pt.get_template("NSF", program_name="Coastal Sensing for Reef Restoration",
+                                     program_id="NSF 26-512"))
+    assert not any("EIR" in t for t in titles)
+
+
+def test_eir_detector_avoids_false_positives():
+    # "their" must not trip the \beir\b acronym match
+    assert pt._is_education_program("Studying their reef networks", None) is False
+    assert pt._is_education_program("STEM Education Pathways", None) is True
+    assert pt._is_education_program(None, "IUSE-2026") is True
+
+
+def test_non_nsf_sponsor_never_gets_eir_even_if_education():
+    # NIH education-ish program should not pick up the NSF-specific EIR task
+    titles = _titles(pt.get_template("NIH", program_name="Science Education R25"))
+    assert not any("EIR" in t for t in titles)
+
+
+def test_manual_nsf_submission_seeds_no_eir_task(db):
+    sub = ps.create_submission(db, user_id=db.user_id, title="Reef sensors",
+                               sponsor="NSF", deadline=None)
+    assert not any("EIR" in t.title for t in sub.tasks)

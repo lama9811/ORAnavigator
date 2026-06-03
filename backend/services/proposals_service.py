@@ -166,8 +166,13 @@ def create_submission_from_solicitation(
     db.add(sub)
     db.flush()
 
-    # Start with the sponsor's standard template
-    base_template = get_template(sub.sponsor)
+    # Start with the sponsor's standard template. Pass the extracted program
+    # so the NSF EIR checklist is added ONLY for actual Education/EIR programs.
+    base_template = get_template(
+        sub.sponsor,
+        program_name=extracted.get("program_name"),
+        program_id=extracted.get("program_id"),
+    )
     seen_titles = {t["title"].lower() for t in base_template}
     for order, t in enumerate(base_template):
         db.add(SubmissionTask(
