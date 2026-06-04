@@ -1,0 +1,200 @@
+<h2 id="kb">8. The Knowledge Base &amp; Faithfulness Eval</h2>
+
+<p>This section explains two things. First, the <strong>Knowledge Base</strong> (KB) &mdash; the pile of approved facts the ORA Navigator chatbot is allowed to use. Second, the <strong>Faithfulness Eval Harness</strong> &mdash; an automatic exam that checks whether the chatbot sticks to those facts instead of making things up. Both are core to why the bot can be trusted.</p>
+
+<h3>8.1 What the Knowledge Base is</h3>
+
+<p>The <strong>Knowledge Base</strong> (often shortened to <strong>KB</strong>) is the chatbot's "approved textbook." It is a collection of <strong>382 documents</strong> saved as files on disk inside the folder <code>backend/kb_structured/</code>. These documents are the <strong>only</strong> facts the chatbot is allowed to use when answering. If a fact is not in the KB, a well-behaved answer should not state it as truth.</p>
+
+<p>Each document is a small <code>.json</code> file. (<strong>JSON</strong> means "JavaScript Object Notation" &mdash; just a plain-text way of writing down labeled information, like a form with named boxes.) For example, one real document is <code>about/ora_about.json</code>. Opening it, you see labeled fields like a title, a source URL pointing back to the live Morgan State website, a <code>key_facts</code> box (e.g. <code>msu_founded: 1867</code>, <code>msu_annual_research_funding: "$50 million+"</code>), and a long <code>content</code> field with the actual paragraph text (verified at <code>backend/kb_structured/about/ora_about.json</code>). So a "document" is not a PDF &mdash; it is a structured note holding the real text plus where it came from.</p>
+
+<div class="callout"><strong>Note:</strong> The KB folder mirrors the <strong>navigation menu of the live ORA website</strong> (<code>morgan.edu/office-of-research-administration</code>). The folders match the website's left-sidebar sections one-for-one. So "where a fact lives on the website" and "which folder its document lives in" are the same shape. This is why the bot's enumeration menus feel like browsing the real site.</p>
+
+<p>There are also two special "index" files that sit alongside the 382 documents, both confirmed present in <code>backend/kb_structured/</code>:</p>
+<ul>
+  <li><code>_all_documents.jsonl</code> &mdash; a flat list, one line per document, recording each document's <code>doc_id</code>, <code>title</code>, <code>category</code>, <code>source_url</code>, and <code>file_path</code>. (A <strong>.jsonl</strong> file is "JSON Lines" &mdash; one JSON record per line.) Think of it as the card-catalog of every doc.</li>
+  <li><code>_manifest.json</code> &mdash; the same documents arranged as a <strong>tree</strong> (sections, sub-pages, and the docs under each), with a <code>doc_count</code> on every node and a top-level <code>total_docs: 382</code>. This is the file the menu code reads to build its lists.</li>
+</ul>
+
+<h3>8.2 How the KB files become searchable (indexing)</h3>
+
+<p>Having 382 files on disk is not enough &mdash; the chatbot needs to <em>find</em> the right one fast, by <strong>meaning</strong>, not just by exact words. To do that, all the documents are loaded into a Google cloud service called a <strong>Vertex AI Search datastore</strong> named <code>oranavigator-kb-v8</code> (location <code>"us"</code>), as described in the project's <code>CLAUDE.md</code> "Knowledge base" section.</p>
+
+<p><strong>Indexing</strong> means: the search service reads every document once, ahead of time, and builds a fast lookup structure (like the index at the back of a book, but smarter). After indexing, when a user asks "how do I add a co-investigator?", the service can instantly return the handful of documents whose <em>meaning</em> matches &mdash; even if the user used different words than the document did. This semantic (by-meaning) search is the real retriever the AI calls as a tool while answering. The on-disk files are the source of truth; the datastore is the searchable copy built from them.</p>
+
+<div class="callout"><strong>Note:</strong> Because indexing happens ahead of time, a brand-new or freshly re-uploaded datastore can take 10&ndash;30 minutes before searches work &mdash; the project's debugging notes call out a <code>404 NOT_FOUND</code> on the datastore as "indexing still in progress, wait."</div>
+
+<h3>8.3 The nine sections of the KB</h3>
+
+<p>The KB tree has <strong>9 top-level sections</strong>, each a folder under <code>backend/kb_structured/</code>. The table below lists every section, its real document count and number of sub-pages (read from <code>_manifest.json</code>), and what kind of documents it holds in plain words.</p>
+
+<table>
+  <thead>
+    <tr><th>Folder</th><th>Docs</th><th>Sub-pages</th><th>What it holds (plain words)</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>about</code></td><td>19</td><td>3</td>
+      <td>Who ORA is: the office overview, its mission &amp; vision, its history, and the <strong>staff directory</strong> (each staff member is one document, e.g. <code>about/staff_directory/staff_matthew_lee.json</code>), plus the main office contact info.</td>
+    </tr>
+    <tr>
+      <td><code>funding_sources</code></td><td>15</td><td>4</td>
+      <td>Where to find grant money: external funding databases, federal funding by topic, private foundations, and State of Maryland funding.</td>
+    </tr>
+    <tr>
+      <td><code>ora_announcements</code></td><td>3</td><td>0</td>
+      <td>News and announcements from ORA, including how to join the announcements list-serv (email list).</td>
+    </tr>
+    <tr>
+      <td><code>policies_and_guidelines</code></td><td>22</td><td>2</td>
+      <td>The official rules: numbered ORA policies, plus the compliance chapter of the PI (Principal Investigator) Handbook.</td>
+    </tr>
+    <tr>
+      <td><code>post_award</code></td><td>15</td><td>5</td>
+      <td>What happens <em>after</em> you win a grant: award setup/notification, changes to an award (like a no-cost extension or change of PI), sub-awards, reporting, and post-award forms (DocuSign).</td>
+    </tr>
+    <tr>
+      <td><code>pre_award</code></td><td>30</td><td>12</td>
+      <td>Everything <em>before</em> you win a grant: budget development, F&amp;A (indirect cost) rates, fringe benefit rate, the internal routing form, limited submissions, pre-award spending, proposal components, the proposal submission checklist, and the PI's role.</td>
+    </tr>
+    <tr>
+      <td><code>research_compliance</code></td><td>146</td><td>10</td>
+      <td>The biggest section &mdash; the rules that keep research legal and ethical: Animal Research (IACUC), Human Subjects (IRB), Conflict of Interest (COI), Responsible Conduct of Research (RCR), Research Security, research misconduct, Maryland ethics, EEO, and compliance news. The IACUC SOP library alone is dozens of documents.</td>
+    </tr>
+    <tr>
+      <td><code>resources</code></td><td>17</td><td>2</td>
+      <td>Helpful extras: PI Handbooks and reusable letter/document templates.</td>
+    </tr>
+    <tr>
+      <td><code>trainings</code></td><td>115</td><td>6</td>
+      <td>Learning materials (the second-biggest section): e-Training, monthly D-RED seminars, new-faculty development seminars, special workshops, RACC test prep, and MSU trainings offered outside ORA. Many are recorded sessions.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Those counts add up to the headline <strong>382 documents</strong>. Notice <code>research_compliance</code> (146) and <code>trainings</code> (115) together hold most of the KB &mdash; that matches the real ORA website, where compliance and training have by far the most pages.</p>
+
+<h3>8.4 <code>kb_browser.py</code> &mdash; instant menus with no AI</h3>
+
+<p>Some questions are not really questions &mdash; they are requests to <em>see a list</em>. For example, "list the IACUC SOPs" or "what's in pre-award?" For these, calling the AI is wasteful and risky (the AI could miscount or invent an item). So the backend answers them <strong>deterministically</strong> &mdash; meaning the answer is computed by plain code from the manifest tree, the same every time, with no AI and no guessing. This logic lives in <code>backend/kb_browser.py</code>, and it reads the bundled tree from <code>backend/kb_structured/_manifest.json</code> (<code>kb_browser.py:28</code>). It runs in roughly 5&ndash;10 milliseconds with zero AI cost (<code>kb_browser.py:393</code>).</p>
+
+<h4>How it decides a message is a "list" request</h4>
+
+<p>The code looks for trigger words and splits them into two strength levels (<code>kb_browser.py:239-271</code>):</p>
+<ul>
+  <li><strong>STRONG triggers</strong> &mdash; phrases that <em>clearly</em> mean "browse the KB": <code>list</code>, <code>enumerate</code>, <code>browse</code>, <code>show me</code>, <code>do you have</code>, <code>what do you have</code>, <code>what's in</code> (<code>kb_browser.py:239-252</code>). One clever detail: the <code>list</code> trigger deliberately ignores the word inside "list-serv," because "how do I join the list-serv?" is a content question, not a request to dump a list.</li>
+  <li><strong>WEAK triggers</strong> &mdash; phrases that <em>look</em> like a list request in isolation but are usually real follow-up questions: <code>give me</code>, <code>tell me about</code>, <code>how many</code>, or "what <em>(forms / templates / policies / sops / seminars / &hellip;)</em>" (<code>kb_browser.py:261-271</code>).</li>
+</ul>
+
+<div class="callout"><strong>Note:</strong> Content-describing words like "topics," "types," "kinds," and "categories" were intentionally <strong>removed</strong> from the trigger lists (<code>kb_browser.py:254-260</code>). A question like "what topics does SOP 41.2 cover?" is asking about the <em>content of one document</em>, not for a directory listing. Treating those as list requests used to make the bot dump links instead of answering &mdash; the comment notes this caused roughly 50 failures.</div>
+
+<h4>History-aware behavior (STRONG vs WEAK)</h4>
+
+<p>The key public function is <code>try_browse(query, has_history)</code> (<code>kb_browser.py:379</code>). The <code>has_history</code> flag is <code>True</code> when the conversation already has earlier turns. The rules:</p>
+<ul>
+  <li>No trigger at all &rarr; return <code>None</code> (let the normal AI flow handle it) (<code>kb_browser.py:398-400</code>).</li>
+  <li>A "filter" phrase is present &mdash; e.g. "templates <em>that support AI</em>" or "forms <em>related to</em> animal research" &mdash; &rarr; return <code>None</code>. A plain directory dump cannot honor a filter (it would list everything and ignore the condition), so the question is handed to the AI, which can actually search (<code>kb_browser.py:279-284</code>, <code>406-407</code>).</li>
+  <li>Mid-conversation <strong>and</strong> only a WEAK trigger fired &rarr; return <code>None</code>, so the AI answers the follow-up in context (e.g. "can you give me what forms I need?") (<code>kb_browser.py:409-412</code>).</li>
+  <li>Otherwise it matches a topic and returns the formatted menu.</li>
+</ul>
+
+<h4>Matching the topic and formatting</h4>
+
+<p>A big dictionary called <code>TOPIC_ALIASES</code> (<code>kb_browser.py:52-221</code>) maps natural-language phrases to manifest paths &mdash; e.g. "iacuc sops" &rarr; <code>research_compliance/animal_research/iacuc_sops</code>, "f&amp;a rate" &rarr; <code>pre_award/fanda_cost_rates</code>, "no-cost extension" &rarr; <code>post_award/changes_to_an_award</code>. The matcher prefers the <strong>longest</strong> (most specific) phrase, so "budget development" wins over plain "budget" (<code>kb_browser.py:298-309</code>). Once a path is found, <code>_format_node</code> renders a tidy menu: the section title, its sub-pages with counts, and its documents as clickable links (<code>kb_browser.py:318-358</code>).</p>
+
+<h4>The topicless root-index fallback rule</h4>
+
+<p>What if the message clearly wants a list but names no specific topic (e.g. just "list everything")? The rule is precise (<code>kb_browser.py:417-428</code>): the whole 9-section overview (built by <code>_format_root</code>, <code>kb_browser.py:361-373</code>) is returned <strong>only for a STRONG request on a fresh turn</strong> &mdash; in code, <code>matched_strong and not has_history</code>. A WEAK-only, topicless phrasing returns <code>None</code> and defers to the AI. This fixed a real bug: a genuine question like "what forms do I need to add a co-investigator?" used to dump the entire 9-section tree instead of answering.</p>
+
+<h4>Sources for menu answers (<code>browse_citations</code>)</h4>
+
+<p>Even though a menu is built without AI, the user should still see a <strong>Sources</strong> block (the trustworthy "here's where this came from" links). <code>browse_citations(query, has_history)</code> (<code>kb_browser.py:433</code>) re-runs the exact same gating as <code>try_browse</code> and returns the listed documents' <code>{title, url}</code> pairs (capped at 5 to match the UI). Because it mirrors <code>try_browse</code> exactly, the Sources always match what was shown.</p>
+
+<div class="callout"><strong>Note:</strong> Only the chat endpoints <code>/chat/stream</code> and <code>/chat/guest</code> call this browser, and they pass the <code>has_history</code> flag &mdash; that is how the history-aware behavior above is actually triggered (per <code>CLAUDE.md</code>).</div>
+
+<h4>The same tree, also handed to the AI agent</h4>
+
+<p>The exact same manifest tree is also exposed <em>to the AI agent</em> as a callable tool named <code>list_kb_topics</code>, defined in <code>adk_agent/ora_navigator_unified/list_kb_tool.py</code>. The agent can call <code>list_kb_topics()</code> for the top-level sections, or pass a <code>path</code> to drill down &mdash; e.g. <code>list_kb_topics(path="research_compliance/animal_research/iacuc_sops")</code> to get all the SOPs (<code>list_kb_tool.py:12-16, 87-190</code>). The file's header explains a real constraint: Gemini will not let an agent mix the Vertex Search tool with an ordinary function tool in the same agent ("Multiple tools are supported only when they are all search tools"), which is precisely <em>why</em> the deterministic browser had to be duplicated in the backend instead of being a single shared agent tool (<code>kb_browser.py:1-16</code>, <code>list_kb_tool.py:1-20</code>).</p>
+
+<h3>8.5 KB "gotchas" &mdash; the tricky cases the bot must get right</h3>
+
+<p>The live ORA website has some quirks that, if ignored, would make the bot wrong. These are documented in <code>CLAUDE.md</code> ("KB gotchas") and several are tested directly by the eval. Here they are in plain words:</p>
+
+<table>
+  <thead><tr><th>Gotcha</th><th>What it means &amp; why it matters</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Silent URL redirects</strong></td>
+      <td>The Morgan content system (CMS) quietly sends a dead/typo URL to a <em>nearby</em> page instead of showing an error. When scraping, you must check the browser's actual final URL (<code>window.location.href</code>), or you'll save the wrong page's content under the wrong document.</td>
+    </tr>
+    <tr>
+      <td><strong>Hidden IRB accordions</strong></td>
+      <td>On the IRB (human subjects) page, the meeting schedule and the voting-member roster are tucked inside collapsible "accordion" panels that only appear after a click. Plain scraping misses them &mdash; you need <strong>Playwright</strong> (a browser-automation tool that can click) to reveal and capture them.</td>
+    </tr>
+    <tr>
+      <td><strong>IACUC SOP 37 is missing</strong></td>
+      <td>The IACUC SOP list jumps from SOP 36 straight to SOP 38 &mdash; <strong>there is no SOP 37</strong>. (Verified: the SOP index document exists and SOP 37 is not in it.) The bot must say "SOP 37 isn't published" and must <strong>never invent</strong> a SOP 37. This is a classic hallucination trap and is tested in the eval's "documented traps."</td>
+    </tr>
+    <tr>
+      <td><strong>Stub pages</strong></td>
+      <td>A few pages exist but aren't filled in yet (flagged <code>page_status: stub_*</code>) &mdash; e.g. the Research Security TCP, the Program Committee roster, and Compliance News. For these the bot should say the page is "not yet populated" rather than guess at content.</td>
+    </tr>
+    <tr>
+      <td><strong>Exact list-serv subject line</strong></td>
+      <td>To subscribe to ORA Announcements, the email subject must be exactly <code>Sign me up for ORA Announcements group list-serv</code> &mdash; with no "the." The bot must quote it verbatim, because an almost-right subject line silently fails to subscribe the user.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>8.6 The Faithfulness Eval Harness</h3>
+
+<p>Anti-hallucination rules in the prompts are good, but how do you <em>prove</em> they work and that a future change didn't quietly break them? You build an automatic exam. The <strong>Faithfulness Eval Harness</strong> lives at <code>adk_agent/ora_navigator_unified/eval/</code> and is documented in <code>eval/EVAL.md</code>.</p>
+
+<h4>What "faithfulness" means here</h4>
+
+<p><strong>Faithfulness</strong> = the answer only states things the knowledge base actually supports. A faithful answer never invents a number, date, name, rate, SOP/award number, email, or deadline. Crucially, this is a <strong>hallucination check only</strong> &mdash; it is <em>not</em> a completeness or "did it cite the excerpt" check. Per the rubric in <code>promptfooconfig.yaml</code>, leaving out a detail is fine; <strong>only fabrication or contradiction is penalized</strong> (<code>promptfooconfig.yaml</code>, <code>defaultTest.assert</code>).</p>
+
+<h4>The mechanics</h4>
+
+<ul>
+  <li>It is built on <strong>promptfoo</strong> (an open-source tool for testing LLM prompts), version 0.121.12, fetched via <code>npx</code> so nothing needs a global install (<code>EVAL.md:53-55</code>).</li>
+  <li>It runs <strong>108 test cases</strong>, organized into 8 category files under <code>eval/cases/</code> (<code>EVAL.md:14-26</code>): factual accuracy (16), abstention/refusal (14), fabrication guardrails (14), documented traps like SOP 37 and stub pages (14), broad KB-grounded coverage (25), scope/security adversarial prompts (14), edge cases like greetings (8), and mined real failures (3).</li>
+  <li>Each case carries a <code>kb_context</code> &mdash; the ground-truth excerpt the answer should be consistent with &mdash; or an <strong>abstention sentinel</strong> meaning "no document covers this; the only faithful reply is to decline and route the user to ORA" (<code>EVAL.md:141-146</code>).</li>
+  <li>Every answer is <strong>graded by an AI judge</strong>, Vertex <code>gemini-2.5-flash</code> (project <code>infra-vertex-494621-v1</code>, region <code>us-central1</code>), using the inlined <code>faithfulness</code> rubric (<code>promptfooconfig.yaml</code>). The judge scores each answer <strong>1.0 / 0.5 / 0.0</strong>: 1.0 = no fabricated or contradictory facts (a correct abstention also scores 1.0); 0.5 = one doubtful detail; 0.0 = a specific fabricated or contradicting fact (an invented SOP/award number is the canonical 0.0).</li>
+</ul>
+
+<div class="callout"><strong>Note:</strong> The judge is explicitly told the <code>kb_context</code> is only a <em>partial excerpt</em> &mdash; the real bot searches hundreds of documents. So a plausible ORA fact that is simply <em>absent</em> from the excerpt is <strong>not</strong> counted as a hallucination; only a fact that <em>contradicts</em> the excerpt or is clearly invented is. This keeps the exam from punishing the bot for being correctly thorough.</div>
+
+<h4>Running it and the pre-deploy gate</h4>
+
+<p>The runner is <code>eval/run_eval.sh</code>. It runs promptfoo, writes raw output to <code>results.json</code>, then calls <code>score.py</code> to compute metrics and enforce the gate (<code>run_eval.sh:47-60</code>). There are three modes:</p>
+<ul>
+  <li><code>./run_eval.sh</code> &mdash; the default: tests the <strong>full backend pipeline</strong> (the <code>/chat/guest</code> endpoint, Layers 1&ndash;3 including the fact-checker).</li>
+  <li><code>./run_eval.sh --adk</code> &mdash; tests the ADK agent directly (Layers 1&ndash;2 only, skipping the backend's verification layer).</li>
+  <li><code>./run_eval.sh --update-baseline</code> &mdash; records the current scores as the new baseline (only after intentionally accepting a change).</li>
+</ul>
+
+<p><code>score.py</code> computes two numbers: the <strong>headline faithfulness %</strong> (the mean score across all 108 cases &mdash; the primary metric) and the <strong>pass rate</strong> (the fraction of cases scoring at or above the 0.7 threshold). It then acts as a <strong>regression gate</strong>: it exits non-zero if either number drops more than <strong>2 points</strong> (<code>TOLERANCE = 0.02</code>) below the saved baseline (<code>EVAL.md:104-115</code>). The gate is meant to be run before every deploy, but is deliberately <em>not</em> wired into <code>deploy-cloudrun.sh</code>, so urgent hotfixes aren't blocked.</p>
+
+<h4>Where the baseline lives, and what it says</h4>
+
+<p>The accepted baseline is saved in <code>eval/baseline.json</code>. Its recorded values are:</p>
+<ul>
+  <li><code>pass_rate: 0.6018518518518519</code> (about <strong>60%</strong> of cases at or above the 0.7 bar)</li>
+  <li><code>faithfulness: 0.7083333333333334</code> (headline faithfulness about <strong>70.8%</strong>)</li>
+  <li><code>total: 108</code></li>
+</ul>
+
+<div class="callout"><strong>Note:</strong> Per <code>CLAUDE.md</code>, the team treats this headline as a <strong>conservative floor, not a quality ceiling</strong>. Several cases marked "FAIL" are actually <em>correct</em> faithful answers the rubric still over-penalizes &mdash; for instance, rejecting a planted fake F&amp;A rate and then citing the real rate from the wider KB, or returning the <code>kb_browser</code> menu for "what forms do I need?". So the true behavior is somewhat better than 70.8% suggests.</div>
+
+<h4>Known limitation: no NIH coverage</h4>
+
+<p>The accuracy benchmark has <strong>no NIH coverage</strong>. The reason is practical: NIH funding announcements (FOAs) are HTML-only, and the eval needs clean PDF source material to build a grounded test case from. The note in <code>CLAUDE.md</code> says to add an NIH case "if a clean PDF turns up."</p>
+
+<h4>Supporting files in the eval folder</h4>
+
+<p>Alongside the harness sits a <strong>question bank</strong>, <code>eval/question_bank.json</code> &mdash; a larger set of Q&amp;A pairs (organized by difficulty: easy, hard, very_hard, behavioural, kb_grounding), each with a <code>question</code>, the ground-truth <code>answer</code>, and the exact <code>source</code> KB file it came from (e.g. "ORA's main phone number is 443-885-4044" sourced from <code>about/staff_directory/ora_office_contact.json</code>). There is also <code>mine_failed_queries.py</code>, which reads the live <code>failed_queries</code> database table (real questions the bot failed to answer) so genuine misses can be curated into new test cases over time (<code>EVAL.md:164-177</code>).</p>
+
+<h3>8.7 How it all fits together</h3>
+
+<p>In one breath: the <strong>382 documents</strong> in <code>backend/kb_structured/</code> are the only approved facts; they're <strong>indexed</strong> into the Vertex AI Search datastore so the bot can find them by meaning; the <code>kb_browser.py</code> menus answer "list X" questions instantly and safely with no AI; the documented <strong>gotchas</strong> (especially the missing SOP 37) are the traps the bot must not fall into; and the <strong>Faithfulness Eval Harness</strong> is the automatic 108-case exam, graded by Gemini, that measures whether the bot stays faithful to the KB and blocks any deploy that would make it worse by more than 2 points.</p>

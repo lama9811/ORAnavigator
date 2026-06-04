@@ -31,6 +31,23 @@ function daysUntil(iso) {
   return Math.round((target - today) / (1000 * 60 * 60 * 24));
 }
 
+// True when a proposal carries solicitation rules (budget cap / page limits /
+// required attachments) for Draft Critic to check a draft against. Manual
+// proposals have none, so the "Critique Draft" button is hidden for them.
+// Mirrors the backend SOURCE OF TRUTH in
+// backend/services/proposals_service.reconstruct_solicitation_context — if the
+// line-anchored notes formats (^Budget cap: / ^Page limits: / ^Required
+// attachments:) or the "Prepare required attachment:" task prefix change there,
+// update this helper too or the button will silently desync.
+const SOLICITATION_NOTE_RES = [/^Budget cap:/m, /^Page limits:/m, /^Required attachments:/m];
+function hasSolicitation(submission) {
+  const notes = submission?.notes || "";
+  if (SOLICITATION_NOTE_RES.some((re) => re.test(notes))) return true;
+  return (submission?.tasks || []).some((t) =>
+    (t.title || "").trim().startsWith("Prepare required attachment:")
+  );
+}
+
 function formatDeadline(iso) {
   if (!iso) return "No deadline set";
   const d = new Date(iso);
@@ -289,13 +306,15 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
           <ArrowLeft size={12} /> All Proposals
         </button>
         <div className="proposals-header-actions">
-          <button
-            className="proposals-critique-btn"
-            onClick={() => setShowCritique(true)}
-            title="Upload a draft PDF and check it against this proposal's solicitation requirements."
-          >
-            <ClipboardCheck size={13} /> Critique Draft
-          </button>
+          {hasSolicitation(submission) && (
+            <button
+              className="proposals-critique-btn"
+              onClick={() => setShowCritique(true)}
+              title="Upload a draft PDF and check it against this proposal's solicitation requirements."
+            >
+              <ClipboardCheck size={13} /> Critique Draft
+            </button>
+          )}
           <button className="proposals-delete-btn" onClick={onDelete}>
             <Trash2 size={12} /> Delete
           </button>

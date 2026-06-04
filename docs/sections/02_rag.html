@@ -1,0 +1,167 @@
+<h2 id="rag">2. How an Answer Is Made — the Chat &amp; RAG Pipeline</h2>
+
+<p>This section explains, step by step, how one typed question turns into a trustworthy answer inside ORA Navigator. "Trustworthy" here has a specific meaning: the answer must come from ORA's own knowledge base (the collection of documents copied from the real ORA website), not from the AI's general memory of the internet. The whole pipeline exists to enforce that one promise.</p>
+
+<p>First, two terms you will see constantly:</p>
+<ul>
+<li><strong>KB</strong> = "knowledge base." This is the set of 382 ORA documents (forms, policies, staff pages, compliance procedures) stored and searchable. The files live at <code>backend/kb_structured/</code> and are indexed into a Google search index called a "datastore" named <code>oranavigator-kb-v8</code>.</li>
+<li><strong>RAG</strong> = "Retrieval-Augmented Generation." It means: before the AI writes anything, the system <em>retrieves</em> (looks up) the most relevant real documents, and the AI is told to <em>generate</em> (write) its answer using only those documents. "Augmented" = the AI's answer is backed up by real fetched text instead of its own memory.</li>
+</ul>
+
+<p>The pipeline has three running pieces. The <strong>frontend</strong> (the web page, port 3001) sends your question. The <strong>backend</strong> (FastAPI, port 5002, file <code>backend/vertex_agent.py</code>) runs the safety checks. The <strong>ADK agent</strong> (port 8081, file <code>adk_agent/ora_navigator_unified/agent.py</code>) is the actual AI (Google's Gemini model) that does the searching and writing. The backend never fully trusts the AI — it checks the AI's work and can force a redo or a refusal.</p>
+
+<pre>
+YOUR QUESTION
+   |
+   v
+QUICK CHECKS (no AI, instant)
+  - "hi" / "thanks" / "who made this"  -> canned reply, done   (agent.py greeting fast-path)
+  - asked before?                      -> cache returns it, done   (cache.py)
+  - "list X" / "what's in X"           -> instant menu from the KB tree, done   (kb_browser.py)
+   |  (a real ORA question that none of the above caught)
+   v
+LAYER 1 - head start (no AI, ~30ms)
+  TF-IDF keyword prefetch: grab the top-5 matching docs and paste them
+  into the AI's instructions   (kb_prefetch.py, injected by agent.py)
+   |
+   v
+THE AI (Gemini)  rule: "search the KB on EVERY ORA question"
+  |- ORA question -> calls Vertex AI Search tool (semantic = by meaning)
+  |- "about me"   -> answer from chat history, do NOT search
+  '-> writes a draft answer
+   |
+   v
+LAYER 2 - the receipt
+  grounding chunks -> morgan.edu URLs -> the "Sources" block
+  (saved to chat_history.citations so Sources survive refresh)
+   |
+   v
+LAYER 3 - the fact-checker  (vertex_agent.py _run_verified)
+  grade ok / weak
+    weak -> redo once, strictly "KB-only" (_STRICT_PREFIX)
+    still nothing -> REFUSE ("contact ORA")
+  trust the clean redo (don't re-gate on Gemini's flaky chunk count)
+  flag any number/date/SOP#/email/phone not found word-for-word in the docs
+   |
+   v
+SAVE to cache  ->  SEND the answer + Sources
+</pre>
+
+<h3>2.1 The Quick Checks (no AI runs yet)</h3>
+<p>Before any AI is involved, three cheap checks try to answer instantly. Each one exists to avoid a slow, expensive AI call when the answer is obvious.</p>
+
+<h4>Check 1 — Greetings, thanks, and "who made this" (canned replies)</h4>
+<p>If you type something like "hi", "hello", "thanks", or "who made this app", a pattern-matcher catches it and returns a fixed, pre-written reply with <em>zero</em> AI calls. This lives in <code>adk_agent/ora_navigator_unified/agent.py</code> in the <code>_greeting_fast_path</code> function (<code>agent.py:182</code>), which is wired in as <code>before_agent_callback</code>.</p>
+<p><strong>Why:</strong> a greeting needs no facts, so paying for an AI call and a KB search would be wasteful and slow. It also avoids "context bleed" — for example after a chat about withdrawing a proposal, "who made this?" could otherwise confuse the AI into talking about forms.</p>
+<div class="callout"><strong>Note:</strong> The "who made this app" answer is hard-coded so the bot never says "I don't have an app" — it always points to <code>ora.inavigator.ai</code>.</div>
+
+<h4>Check 2 — Was this exact (or very similar) question asked before? (the cache)</h4>
+<p>A <strong>cache</strong> is a memory of past answers. If the same question was already answered, replaying the stored answer is instant and free. ORA Navigator's cache has three tiers, all in <code>backend/cache.py</code> (class <code>MultiTierCache</code>):</p>
+<ul>
+<li><strong>L1 (in-memory):</strong> a small dictionary held inside the running server, about 0.001 ms to read. Holds up to 500 entries for 24 hours.</li>
+<li><strong>L2 (Redis):</strong> a separate shared database (Redis) so that all server copies share answers and they survive a restart, about 1–2 ms. In local development this is usually off, so only L1 runs.</li>
+<li><strong>Semantic cache:</strong> "semantic" means "by meaning." This tier turns each question into a list of numbers (an <em>embedding</em>) that represents its meaning, then matches questions that <em>mean</em> the same thing even if worded differently — e.g. "what is the F&amp;A rate" matches "what indirect cost rate does Morgan charge." It only counts as a match above 0.95 cosine similarity so near-identical only — this avoids serving the wrong topic's answer.</li>
+</ul>
+<p>The lookup order is L1 → L2 → Semantic → (miss = go ask the AI).</p>
+<div class="callout"><strong>Note (load-bearing):</strong> Some questions must <strong>never</strong> be cached, because the answer depends on <em>who</em> is asking. The cache key is built from the question text plus the model name only — it has no user ID — so a personalized answer cached for one person would be wrongly served to everyone. The <code>_should_cache</code> gate blocks any question containing personal words like "my grant", "my deadline", "am i", "remind me", "about me", and it also defers to the same personal-recall detector the AI layer uses (<code>_is_personal_recall</code>) so the two layers agree on what "personal" means. Refusals and "I don't have that" answers are also never stored so a temporary refusal can't get stuck poisoning the cache.</div>
+
+<h4>Check 3 — "List X" / "What's in X" (instant menu from the KB tree)</h4>
+<p>If you ask to <em>browse</em> the knowledge base — "list the IACUC SOPs", "what's in pre-award", "show me your forms" — the system answers from a pre-built map of the KB instead of asking the AI. This is in <code>backend/kb_browser.py</code>, function <code>try_browse</code>. It reads a bundled file <code>_manifest.json</code> that mirrors the ORA website's left-side navigation (9 sections) and returns a formatted list in about 5–10 ms, with no AI and no search call.</p>
+<p>To decide whether a question is really a "browse" request, it splits trigger phrases into two strengths:</p>
+<ul>
+<li><strong>STRONG triggers</strong> — unambiguous browse intent like "list", "enumerate", "browse", "show me", "what's in". Always eligible.</li>
+<li><strong>WEAK triggers</strong> — phrases that only <em>look</em> like browsing in isolation, like "give me", "tell me about", "what forms". On a follow-up turn (when there is already conversation history) a weak-only match is deferred to the AI instead, because mid-conversation "what forms do I need?" is usually a real question, not a request for a directory dump.</li>
+</ul>
+<p>There is also a "topicless" safety rule: if the phrasing is browse-y but no specific topic matched, it only dumps the whole 9-section index for a STRONG request on a fresh turn — otherwise it defers to the AI. This fix stopped a real question like "what forms do I need to add a co-investigator?" from dumping the entire KB tree. A sibling function <code>browse_citations</code> returns the listed docs' titles and URLs so even these instant menus get a "Sources" block.</p>
+<div class="callout"><strong>Why this lives in the backend, not the AI:</strong> Google's tool API will not let the AI use the KB-search tool and a custom "list the tree" tool at the same time. So the backend detects browse phrasing first and answers it deterministically — which also means these answers are impossible to hallucinate.</div>
+
+<h3>2.2 Layer 1 — the TF-IDF keyword prefetch (a head start, still no AI judgment)</h3>
+<p>If none of the quick checks fired, this is a real ORA question and the AI will be called. But first, Layer 1 gives the AI a "head start" by stuffing some likely-relevant documents into the AI's instructions in advance.</p>
+<p><strong>TF-IDF</strong> (Term Frequency–Inverse Document Frequency) is a simple, no-AI scoring method that ranks documents by how often your search words appear in them, while down-weighting words that are common everywhere — so a rare, on-topic word like "IACUC" counts much more than a common word like "the." In one sentence: TF-IDF picks the documents whose wording best overlaps your question.</p>
+<p>The code is <code>adk_agent/ora_navigator_unified/kb_prefetch.py</code>, function <code>prefetch_kb_context</code>. It keeps all 382 KB docs in memory (refreshed every 5 minutes), tokenizes your question into keywords (dropping filler "stopwords"), scores every doc, and returns the top 5. It also boosts ORA-specific terms: acronyms like IRB / IACUC / COI / F&amp;A / FWA and SOP numbers get a big score bump so "SOP 12" finds the SOP page, not some unrelated text. This runs in under ~30 ms and costs nothing (no AI call).</p>
+<p>That top-5 text is pasted into the AI's system instruction as "[PRE-FETCHED KB CONTEXT]" by the <code>_select_model</code> function in <code>agent.py</code>, which runs as <code>before_model_callback</code>. It is called "belt-and-suspenders" grounding: even if the AI forgets to run its real search tool, some real KB text is already sitting in front of it.</p>
+<div class="callout"><strong>Note (gating — load-bearing bug fix):</strong> The prefetch is only injected on a <em>fresh user turn</em>, not in the middle of a tool call. The code checks <code>in_tool_loop</code> by looking only at the <strong>last</strong> item in the conversation: if it is a tool result (a <code>function_response</code>), the AI is mid-search and re-injecting prefetch would just push the real search results out of view. An earlier version scanned <em>all</em> past messages, so once any tool had been called, turn 1's leftover tool-result permanently disabled prefetch on every later turn — which left follow-ups like "give me a different training video" with no KB context and produced empty answers. Looking only at the last item fixes that.</div>
+
+<h3>2.3 The AI (Gemini) — search on every ORA question</h3>
+<p>Now the actual AI runs. It is Google's Gemini model (<code>gemini-2.5-flash</code>) driven through Google's "ADK" agent framework. Its full instruction sheet is <code>BASE_INSTRUCTION</code> in <code>agent.py</code>. The most important parts are the seven Grounding Rules.</p>
+
+<h4>The real retriever: Vertex AI Search (semantic = by meaning)</h4>
+<p>The AI is given one tool: <strong>Vertex AI Search</strong> (<code>VertexAiSearchTool</code>). This is the <em>real</em> retriever. Unlike the Layer-1 keyword prefetch, Vertex AI Search is <strong>semantic</strong> — it matches by <em>meaning</em>, not exact words. So if you ask "how long can I extend my grant past the end date", it can find the "no-cost extension" document even though your question never used the words "no-cost extension." Grounding Rule 1 orders the AI to call this search on <strong>every</strong> ORA-content question — rates, policies, staff, forms, deadlines, IDs — with no exceptions.</p>
+
+<h4>When the AI skips the search</h4>
+<p>The AI skips searching in two cases: (1) greetings and small talk (already caught earlier by the fast-path), and (2) <strong>"about me" recall</strong>. Grounding Rule 6 says facts the user stated about themselves (their department, role, active grant, deadlines) are <em>not</em> KB questions — those answers come from the chat history, not from a document search. Searching the KB for "what department am I in?" would find nothing and wrongly make the bot say "I don't have that information."</p>
+
+<h4>The seven Grounding Rules in plain English</h4>
+<ul>
+<li><strong>Rule 1 — always search.</strong> Every ORA fact question triggers a KB search.</li>
+<li><strong>Rule 2 — never trust training data for Morgan facts.</strong> The AI's general internet memory is treated as outdated; only KB results count.</li>
+<li><strong>Rule 3 — never fabricate specifics.</strong> No making up names, emails, phone numbers, rates, dates, or IDs. If it's not in the KB results, "it does not exist as far as you know."</li>
+<li><strong>Rule 4 — honest deflection wording.</strong> When the KB has nothing or only partial info, the AI must say "Based on the information I have access to, …" and route the user to ORA at (443) 885-4044 / ask.ora@morgan.edu.</li>
+<li><strong>Rule 5 — enumeration uses the inventory tool first.</strong> For "list all X" type questions inside the AI path, it calls the deterministic topic list first.</li>
+<li><strong>Rule 6 — conversational recall.</strong> Facts about the user come from chat history, not the KB.</li>
+<li><strong>Rule 7 — NEVER return a blank answer.</strong> If asked to <em>confirm</em> a specific SOP / number / date that the KB doesn't contain, the AI must not go silent — it must explicitly say the item isn't in ORA's published records and route to ORA. A concrete example: "confirm IACUC SOP 37 covers cage sanitation." SOP 37 genuinely doesn't exist (the published list jumps 36 → 38). The AI must say so, never invent its contents. Before Rule 7, that question went silent and the user saw a useless error.</li>
+</ul>
+<p>The instruction sheet also repeats a hard "NEVER FABRICATE IDENTIFIERS" section that explicitly counts dates, page numbers, section numbers, and file names as identifiers too — so the AI can't paper over a gap by inventing "approved in 2017" or "see page 36" or "FringeRate-2018.pdf."</p>
+
+<h3>2.4 Layer 2 — the "receipt" (Sources)</h3>
+<p>When Gemini answers using its search tool, it returns <strong>grounding metadata</strong> alongside the text. Think of this as a receipt that says "these specific documents backed my answer." Each backing document is a <strong>grounding chunk</strong> (a chunk = one retrieved passage of KB text, with its title).</p>
+<p>The backend reads this receipt in <code>_do_agent_pass</code>: it counts the chunks, and turns them into a clean, clickable "Sources" list via <code>_extract_citations</code>. Because the live search index stores the doc <em>title</em> but not its web address, the backend rebuilds a title→URL map from the local KB files (<code>_get_kb_url_map</code>) so each source resolves to a real <code>morgan.edu</code> link. It keeps only sources the answer actually cited, deduplicates them, and caps the list at 5.</p>
+<div class="callout"><strong>Note (Sources must survive a refresh):</strong> The Sources block is stored so it doesn't vanish when the page reloads or the answer is replayed from cache. There are two storage spots: (1) a <code>citations</code> column on the <code>chat_history</code> table — a JSON list of <code>{title, url}</code> — so reloading old chat history still shows Sources; and (2) a parallel cache entry under a <code>cit:</code> key so a cache hit can re-emit its Sources. This was the fix for Sources disappearing on cache/refresh/history reloads.</div>
+
+<h3>2.5 Layer 3 — the fact-checker (the real guarantee)</h3>
+<p>This is the part that makes the answer trustworthy. The backend does <strong>not</strong> simply trust the AI's draft. The orchestrator is <code>_run_verified</code> in <code>vertex_agent.py</code>. Here is what it does, in order.</p>
+
+<h4>Step A — run the AI (Pass 1) and grade the answer "ok" or "weak"</h4>
+<p>After Pass 1, the answer is graded by <code>_evaluate_grounding</code>. It is graded <strong>"ok"</strong> (deliver it) if any of these are true: it's a greeting/security/outage reply (no KB needed); it's already an honest "I don't have this" deflection; it was answered from an uploaded file or profile the user attached; it cited at least 2 KB documents; or at least 30% of the answer text is backed by KB passages. Otherwise it is graded <strong>"weak"</strong> and must be redone.</p>
+<p>One special case: <strong>personal-recall questions bypass the grade.</strong> If the question is "what's my deadline?" / "what department am I in?", detected by <code>_is_personal_recall</code>, a weak grade is flipped to "ok" — because that answer correctly came from chat history, not the KB, and forcing a KB-only redo would wrongly erase it.</p>
+
+<h4>Step B — if "weak", redo once under a strict KB-only prompt (Pass 2)</h4>
+<p>If the answer is weak, the backend wipes the AI's session (so the weak draft isn't in the AI's view) and asks again, this time prepending a strict instruction called <code>_STRICT_PREFIX</code>. In plain words, that prefix tells the AI: answer <em>only</em> from the knowledge base; you may still use facts the user told you about themselves; never guess or approximate; and if the KB genuinely doesn't have it, say so and point the user to ORA. This is the "double-checking sources" step the user sees in the progress indicator.</p>
+
+<h4>Step C — trust the clean redo (don't re-gate on the flaky chunk count)</h4>
+<p>This is a subtle but load-bearing decision. The strict redo already forced the AI to either ground its answer or honestly deflect. So if the redo produces <em>any</em> non-empty text, the backend <strong>trusts it</strong> and delivers it — it deliberately does NOT re-check the grounding-chunk count again. Why: Gemini reports that chunk-count metadata unreliably (it's often empty even for a perfectly correct, grounded answer), and re-gating on it is exactly what used to make Layer 3 throw away good answers.</p>
+
+<h4>Step D — if the redo also produces nothing, REFUSE</h4>
+<p>If even the strict redo comes back empty or errored, the backend refuses rather than guess. It returns <code>_REFUSAL_MSG</code>: "I don't have reliable information on this in my knowledge base, so I'd rather not guess. Please contact ORA at 443-885-4044 or ask.ora@morgan.edu …" A related edge case: if Pass 1 returns empty text <em>and</em> zero chunks (the dead-end that used to fire a useless "try rephrasing" error), it now degrades to this same honest refusal.</p>
+
+<h4>Step E — the identifier faithfulness check (verify the specifics word-for-word)</h4>
+<p>For an answer that passed, <code>_finalize_answer</code> runs one more guardrail: <code>_check_identifier_faithfulness</code>. It scans the answer for high-risk specifics — SOP numbers, FWA / EIN / UEI numbers, F&amp;A and fringe percentages, dates, dollar amounts, emails, phone numbers, page / section numbers, and file names — and checks each one appears <strong>verbatim</strong> (exact, word-for-word) in the retrieved KB text. If a number was invented (not found in the docs), it's logged. Two safeguards prevent false alarms: ORA's own main phone and email are whitelisted so canned messages don't flag themselves, and it is <strong>negation-aware</strong> — it skips a value the answer is <em>refuting</em> ("the rate is NOT 99%"), since refuting a wrong number is faithful behavior, not a fabrication.</p>
+<div class="callout"><strong>Note (the removed "could not be verified" footer):</strong> There used to be a user-facing footer that appended "I couldn't verify this number against ORA's records…" whenever a specific value wasn't found verbatim. It was <strong>removed on 2026-06-02</strong> because it produced false positives: the check is purely token-based and couldn't tell <em>asserting</em> a number from <em>refuting</em> one — so when the bot correctly rejected a planted fake "99%" F&amp;A rate, the footer still fired and flagged the very number the bot was denying. The separate <strong>staff-name</strong> faithfulness disclaimer stays active — it appends a "verify at the staff directory" note when the answer mentions a "Dr. X" whose surname isn't in the ORA roster.</div>
+
+<h3>2.6 The load-bearing bug fixes that keep this reliable</h3>
+<p>Each one quietly keeps the pipeline correct; removing any of them re-introduces a real, already-seen bug.</p>
+<table>
+<thead><tr><th>Fix</th><th>What it does, in plain English</th></tr></thead>
+<tbody>
+<tr>
+<td><strong>/run_sse Bearer token</strong></td>
+<td>When the backend calls the AI service on Google Cloud, that service is private and requires a login token. <code>_get_auth_headers()</code> attaches a "Bearer" ID token to the <code>/run_sse</code> call. Without it, Cloud Run rejects the request with a 403 "forbidden" error and no answer is produced.</td>
+</tr>
+<tr>
+<td><strong>GOOGLE_GENAI_USE_VERTEXAI=TRUE</strong></td>
+<td>This environment variable tells Google's AI library to use the company's Vertex AI service (which the project is set up for). Without it, the library falls back to the public consumer Gemini API and demands a separate <code>GOOGLE_API_KEY</code> that the project doesn't use — so the AI call fails.</td>
+</tr>
+<tr>
+<td><strong>Single-worker server + thread-local grounding state</strong></td>
+<td>The grounding "receipt" for the current request (chunks, citations) is kept in a per-thread slot. This is safe only because the server runs as a single worker process. If someone scaled the server to multiple workers without rethinking this, one user's Sources could leak onto another user's answer.</td>
+</tr>
+<tr>
+<td><strong>Cache keys include the user, and refusals/personal questions aren't cached</strong></td>
+<td>Personal-recall answers and refusals are never written to the cache, using the same <code>_is_personal_recall</code> detector the AI uses. This stops one person's private answer (or a temporary refusal) from being replayed to everyone else who asks a similar question.</td>
+</tr>
+<tr>
+<td><strong>Prefetch gating</strong></td>
+<td>The Layer-1 prefetch only fires when the <em>last</em> message is a real user turn, not mid-tool-loop. Scanning all past messages instead of just the last one once permanently disabled prefetch after the first tool call — leaving follow-up questions with no KB context.</td>
+</tr>
+<tr>
+<td><strong>Model name is gemini-2.5-flash everywhere</strong></td>
+<td>The model IDs must be <code>gemini-2.5-flash</code>. The older <code>gemini-2.0-flash</code> name returns a 404 "not found" in this Vertex project, so using it breaks every answer.</td>
+</tr>
+<tr>
+<td><strong>Frontend SSE buffer flush</strong></td>
+<td>The answer streams to the browser line-by-line. The browser's reader splits on newlines and keeps the last unfinished line in a buffer; it must <strong>flush that buffer after the stream ends</strong>. The final <code>data: {done}</code> frame can arrive without a trailing newline as the connection closes; if the buffer isn't flushed, that frame is dropped and the message stays "still streaming," firing the misleading frontend-only fallback "I couldn't generate a response." That string is a <strong>frontend</strong> fallback — the backend always produced and saved a real answer. Don't remove the flush.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout"><strong>Big-picture takeaway:</strong> The system answers cheaply when it can (canned replies, cache, instant KB menus), gives the AI a real head start (Layer 1 prefetch), forces the AI to search real documents on every fact question (Gemini + Vertex AI Search), shows its receipts (Layer 2 Sources, saved to <code>chat_history.citations</code>), and — most importantly — never blindly trusts the AI: Layer 3 grades the answer, redoes it strictly once if it's weak, refuses rather than guess if it still can't ground it, and flags specific numbers that don't appear word-for-word in the source documents.</div>

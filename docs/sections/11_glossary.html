@@ -1,0 +1,106 @@
+<h2 id="glossary">11. Glossary — Every Term in One Sentence</h2>
+
+<p>A plain-English dictionary of every technical term used in this guide. If a word confused you anywhere above, find it here.</p>
+
+<h3>The system &amp; its parts</h3>
+<table>
+  <tbody>
+    <tr><td><strong>ORA</strong></td><td>Office of Research Administration — the Morgan State office that helps researchers win and manage grants.</td></tr>
+    <tr><td><strong>Frontend</strong></td><td>The web pages you see and click, running in your browser (built with React + Vite).</td></tr>
+    <tr><td><strong>Backend</strong></td><td>The server program in the middle that handles logins, saves data, and forwards questions to the AI (FastAPI).</td></tr>
+    <tr><td><strong>ADK Agent</strong></td><td>The separate AI service that talks to Gemini and searches the knowledge base (Google's Agent Development Kit).</td></tr>
+    <tr><td><strong>Service</strong></td><td>One independently-running program with its own job (ORA Navigator has three).</td></tr>
+    <tr><td><strong>Port</strong></td><td>A numbered "door" on a computer that a program uses to receive network requests.</td></tr>
+    <tr><td><strong>Endpoint</strong></td><td>One specific web address on the backend that does one job (e.g. <code>/chat/stream</code>).</td></tr>
+    <tr><td><strong>API</strong></td><td>Application Programming Interface — the set of endpoints one program offers so another can ask it for data or actions.</td></tr>
+  </tbody>
+</table>
+
+<h3>The AI &amp; how it answers</h3>
+<table>
+  <tbody>
+    <tr><td><strong>Gemini</strong></td><td>Google's large language model — the AI that actually writes the answer sentences (here, <code>gemini-2.5-flash</code>).</td></tr>
+    <tr><td><strong>LLM</strong></td><td>Large Language Model — an AI trained to read and write human language.</td></tr>
+    <tr><td><strong>Knowledge Base (KB)</strong></td><td>The 382 approved ORA documents — the only facts the bot is allowed to use.</td></tr>
+    <tr><td><strong>RAG</strong></td><td>Retrieval-Augmented Generation — look up real documents first, then write the answer using only those.</td></tr>
+    <tr><td><strong>Grounding</strong></td><td>Backing an answer with real retrieved documents instead of the AI's own memory.</td></tr>
+    <tr><td><strong>Grounding chunk</strong></td><td>One retrieved passage of KB text that backed part of the answer; chunks become the "Sources."</td></tr>
+    <tr><td><strong>Hallucination</strong></td><td>When an AI confidently states something that isn't true / isn't in its sources.</td></tr>
+    <tr><td><strong>Faithfulness</strong></td><td>An answer that only states things the KB actually supports — no invented facts.</td></tr>
+    <tr><td><strong>Semantic search</strong></td><td>Searching by <em>meaning</em>, not exact keywords (so "extend my grant" finds "no-cost extension").</td></tr>
+    <tr><td><strong>Vertex AI Search</strong></td><td>Google's service that does that semantic search over the 382 documents.</td></tr>
+    <tr><td><strong>Datastore</strong></td><td>Google's indexed, searchable store of documents (<code>oranavigator-kb-v8</code>).</td></tr>
+    <tr><td><strong>Indexing</strong></td><td>Reading every document once, ahead of time, to build a fast lookup structure.</td></tr>
+    <tr><td><strong>TF-IDF</strong></td><td>A simple no-AI scoring method that ranks documents by rare, on-topic word overlap with your question.</td></tr>
+    <tr><td><strong>Prefetch</strong></td><td>Pasting a few likely-relevant docs into the AI's instructions in advance, as a head start.</td></tr>
+    <tr><td><strong>Refusal / deflection</strong></td><td>When the bot honestly says it doesn't have the info and points you to ORA, instead of guessing.</td></tr>
+    <tr><td><strong>SSE (Server-Sent Events)</strong></td><td>A way to stream an answer to the browser piece-by-piece so you see it appear gradually.</td></tr>
+  </tbody>
+</table>
+
+<h3>Memory &amp; personalization</h3>
+<table>
+  <tbody>
+    <tr><td><strong>Embedding</strong></td><td>A list of numbers that captures the <em>meaning</em> of a piece of text; similar texts get similar numbers.</td></tr>
+    <tr><td><strong>Cosine similarity</strong></td><td>A 0-to-1 score for how alike two embeddings are (1 = same meaning).</td></tr>
+    <tr><td><strong>Session</strong></td><td>One continuous conversation (one chat window).</td></tr>
+    <tr><td><strong>Turn</strong></td><td>One question-and-answer pair.</td></tr>
+    <tr><td><strong>Consolidation</strong></td><td>Distilling recent chats into a few durable one-line facts (and capping them), <em>without</em> deleting the chats.</td></tr>
+    <tr><td><strong>Profile mirroring</strong></td><td>Copying your profile fields (dept/role/interests) into the memory the AI reads.</td></tr>
+    <tr><td><strong>Prompt injection</strong></td><td>A hidden instruction smuggled into text to trick the AI into disobeying its rules; the memory "NOT instructions" label defends against it.</td></tr>
+  </tbody>
+</table>
+
+<h3>Data, storage &amp; security</h3>
+<table>
+  <tbody>
+    <tr><td><strong>Database / table / column / row</strong></td><td>An organized store of information; a table is one "spreadsheet" with named columns and one record per row.</td></tr>
+    <tr><td><strong>Cloud SQL</strong></td><td>Google's managed MySQL database service (instance <code>oranavigator-db</code>).</td></tr>
+    <tr><td><strong>MySQL</strong></td><td>A popular relational database program.</td></tr>
+    <tr><td><strong>SQLAlchemy / ORM</strong></td><td>A Python tool that lets the backend describe and use database tables as Python classes.</td></tr>
+    <tr><td><strong>JSON</strong></td><td>A plain-text way of writing labeled information (like a form with named boxes).</td></tr>
+    <tr><td><strong>Cache</strong></td><td>A short-term memory of recent results so the app doesn't redo expensive work.</td></tr>
+    <tr><td><strong>Redis</strong></td><td>A separate fast in-memory database used here purely for caching (the "L2" layer).</td></tr>
+    <tr><td><strong>TTL</strong></td><td>Time To Live — how long a cached entry stays before it expires.</td></tr>
+    <tr><td><strong>SSL / TLS</strong></td><td>Encryption that scrambles network traffic so nobody can read it in transit.</td></tr>
+    <tr><td><strong>JWT</strong></td><td>JSON Web Token — the signed "wristband" that proves you're logged in.</td></tr>
+    <tr><td><strong>bcrypt</strong></td><td>A deliberately slow one-way scrambler for passwords, so the real password is never stored.</td></tr>
+    <tr><td><strong>Authentication / Authorization</strong></td><td>Proving who you are / deciding what you're allowed to do.</td></tr>
+    <tr><td><strong>Secret Manager</strong></td><td>Google's locked vault for passwords and keys, kept out of the code.</td></tr>
+    <tr><td><strong>Idempotency</strong></td><td>A guarantee that doing something twice has the same effect as doing it once (e.g. no duplicate reminder emails).</td></tr>
+  </tbody>
+</table>
+
+<h3>Cloud &amp; operations</h3>
+<table>
+  <tbody>
+    <tr><td><strong>GCP</strong></td><td>Google Cloud Platform — Google's rented-computing service where the live app runs.</td></tr>
+    <tr><td><strong>Cloud Run</strong></td><td>Google's service for running a containerized program without managing servers.</td></tr>
+    <tr><td><strong>Container / image</strong></td><td>A self-contained package of a program plus everything it needs to run.</td></tr>
+    <tr><td><strong>Artifact Registry</strong></td><td>The private shelf where built container images are stored.</td></tr>
+    <tr><td><strong>Service account</strong></td><td>A robot identity a program logs in as, so it can be granted permissions.</td></tr>
+    <tr><td><strong>IAM / role</strong></td><td>Identity and Access Management — Google's permission system; a "role" is a bundle of permissions.</td></tr>
+    <tr><td><strong>Cron job</strong></td><td>A task that runs automatically on a fixed schedule.</td></tr>
+    <tr><td><strong>Cloud Scheduler</strong></td><td>Google's "alarm clock" that triggers cron jobs at set times.</td></tr>
+    <tr><td><strong>Deploy</strong></td><td>Publishing the latest code from a laptop to the live Cloud Run services.</td></tr>
+    <tr><td><strong>PWA</strong></td><td>Progressive Web App — a website that installs like an app and caches itself with a "service worker."</td></tr>
+    <tr><td><strong>Service worker</strong></td><td>The background script that caches the app's files (why you check changes in incognito).</td></tr>
+  </tbody>
+</table>
+
+<h3>Grants &amp; compliance (the subject matter)</h3>
+<table>
+  <tbody>
+    <tr><td><strong>PI</strong></td><td>Principal Investigator — the lead researcher responsible for a grant.</td></tr>
+    <tr><td><strong>Pre-award / Post-award</strong></td><td>Everything before winning a grant (writing/submitting) / after winning it (spending/reporting).</td></tr>
+    <tr><td><strong>Solicitation / FOA</strong></td><td>The sponsor's announcement PDF describing a funding opportunity and its rules.</td></tr>
+    <tr><td><strong>F&amp;A rate</strong></td><td>Facilities &amp; Administrative (indirect cost) rate — the overhead percentage a university charges on a grant.</td></tr>
+    <tr><td><strong>IRB</strong></td><td>Institutional Review Board — approves research involving human subjects.</td></tr>
+    <tr><td><strong>IACUC</strong></td><td>Institutional Animal Care and Use Committee — approves research involving animals.</td></tr>
+    <tr><td><strong>SOP</strong></td><td>Standard Operating Procedure — a numbered procedure document (note: IACUC SOP 37 doesn't exist).</td></tr>
+    <tr><td><strong>COI</strong></td><td>Conflict of Interest — rules about disclosing money/relationships that could bias research.</td></tr>
+    <tr><td><strong>RCR</strong></td><td>Responsible Conduct of Research — required research-ethics training.</td></tr>
+    <tr><td><strong>No-cost extension (NCE)</strong></td><td>Extra time to finish a grant past its end date, with no extra money.</td></tr>
+    <tr><td><strong>Biosketch / DMP</strong></td><td>A short researcher CV / a Data Management Plan — common required proposal attachments.</td></tr>
+  </tbody>
+</table>

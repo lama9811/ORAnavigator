@@ -1,0 +1,36 @@
+<h2 id="where-saved">10. "Where Is It Saved?" — Master Reference Table</h2>
+
+<p>This is a quick-lookup table for one of the most common questions: when something happens in ORA Navigator, <em>where does that piece of data physically end up?</em> Each row names one artifact (a thing the system produces or stores), exactly where it lives, and how long it stays there. "Cloud SQL" is the MySQL database; "Vertex AI Search datastore" is the searchable knowledge-base index; "in memory only" means it exists just for the few seconds of one web request and is then gone.</p>
+
+<table>
+  <thead>
+    <tr><th>Artifact (the thing)</th><th>Where it is saved</th><th>Lifetime / notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>A user account</td><td>Cloud SQL → <code>users</code> table (one row)</td><td>Permanent until deleted. Created only after email verification.</td></tr>
+    <tr><td>A chat question + answer (one turn)</td><td>Cloud SQL → <code>chat_history</code> table (one row)</td><td>Permanent. Raw transcript is never auto-deleted (the 3am job only reads it).</td></tr>
+    <tr><td>The "Sources" links under an answer</td><td>Cloud SQL → <code>chat_history.citations</code> column (JSON), <em>and</em> a parallel cache entry under a <code>cit:</code> key</td><td>Permanent in the DB; the cache copy expires with the cached answer. This is why Sources survive refresh/cache/history.</td></tr>
+    <tr><td>A cached answer (to skip re-asking the AI)</td><td>L1 in-memory (24h) → L2 Redis (7 days) → Semantic cache</td><td>Temporary. Refusals and personal-recall answers are never cached.</td></tr>
+    <tr><td>A durable fact about a user (role, dept, grant…)</td><td>Cloud SQL → <code>user_memories</code> table (one row per fact)</td><td>Permanent, but capped at 5 per type — a 6th overwrites the oldest. User can pause or delete.</td></tr>
+    <tr><td>A rolling session summary</td><td>Cloud SQL → <code>chat_history.session_summary</code> column on the newest turn</td><td>Permanent; rebuilt and extended as the conversation grows.</td></tr>
+    <tr><td>A turn's meaning-vector (for cross-session recall)</td><td>Cloud SQL → <code>chat_history.embedding</code> column</td><td>Permanent; computed in the background after the turn is saved.</td></tr>
+    <tr><td>Your personalized "suggested questions"</td><td>Cloud SQL → <code>user_suggested_questions</code> table (one row per user)</td><td>Permanent; regenerated in the background after chats (throttled to ~10 min).</td></tr>
+    <tr><td>A question the bot failed to answer</td><td>Cloud SQL → <code>failed_queries</code> table (one row)</td><td>Permanent; moves through statuses new → clustered → researched.</td></tr>
+    <tr><td>A drafted KB fix (from the research agent)</td><td>Cloud SQL → <code>kb_suggestions</code> table (one row)</td><td>Permanent; pending → approved/rejected → pushed.</td></tr>
+    <tr><td>A <strong>published</strong> KB answer (after admin "Push")</td><td>Vertex AI Search datastore <code>oranavigator-kb-v8</code> (appended to or created as a document)</td><td>Permanent and live — the chatbot can now find it. Caches are cleared on push.</td></tr>
+    <tr><td>The 382 source KB documents</td><td>On disk → <code>backend/kb_structured/</code> (one <code>.json</code> file each)</td><td>Permanent; the source of truth that is indexed into the datastore.</td></tr>
+    <tr><td>An uploaded <strong>solicitation PDF</strong></td><td><strong>In memory only</strong> — read, parsed, then discarded</td><td>Never saved to disk or any table. Only the confirmed extracted facts persist.</td></tr>
+    <tr><td>The extracted solicitation fields (before you confirm)</td><td><strong>Nowhere</strong> — returned in the HTTP response, held in the browser</td><td>Gone unless you click Confirm.</td></tr>
+    <tr><td>A confirmed proposal</td><td>Cloud SQL → <code>submissions</code> table (one row); rules live in <code>submissions.notes</code></td><td>Permanent until the user deletes it.</td></tr>
+    <tr><td>A proposal checklist item</td><td>Cloud SQL → <code>submission_tasks</code> table (one row)</td><td>Permanent; cascade-deletes with its proposal.</td></tr>
+    <tr><td>An uploaded <strong>draft proposal PDF</strong> (for critique)</td><td><strong>In memory only</strong> — checked, then discarded</td><td>Never stored. Only the critique result is returned to the browser.</td></tr>
+    <tr><td>A sent deadline reminder</td><td>Cloud SQL → <code>deadline_reminder_log</code> table (one row per email)</td><td>Permanent; this is the record that prevents double-sending.</td></tr>
+    <tr><td>A support ticket (+ its optional attachment)</td><td>Cloud SQL → <code>support_tickets</code> table (attachment as base64 in the row)</td><td>Permanent until closed/deleted.</td></tr>
+    <tr><td>Thumbs-up/down/report feedback</td><td>Cloud SQL → <code>feedback</code> table (one row); a "report" also writes a <code>failed_queries</code> row</td><td>Permanent.</td></tr>
+    <tr><td>A user's profile (Department/Title/Role/Interests)</td><td>Cloud SQL → <code>users</code> columns, <em>and</em> mirrored into <code>user_memories</code></td><td>Permanent; profile values overwrite auto-learned facts.</td></tr>
+    <tr><td>Secrets (DB password, JWT key, admin login, Redis URL)</td><td>Google <strong>Secret Manager</strong> (read into env vars at startup)</td><td>Permanent; never written in code or the repo. Rotatable.</td></tr>
+    <tr><td>The built application (the running programs)</td><td>Artifact Registry (container images) → run on Cloud Run</td><td>Each deploy pushes a new image.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout"><strong>The one thing to remember:</strong> almost everything durable lives in <strong>Cloud SQL</strong> (the MySQL database). The two big exceptions are the <strong>knowledge base</strong> (source files on disk + the searchable Vertex datastore) and <strong>uploaded PDFs</strong> (never stored at all — read in memory, used, discarded). Secrets live in Secret Manager; temporary speed-ups live in the cache.</div>

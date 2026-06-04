@@ -1,0 +1,178 @@
+<h2 id="research">4. The Self-Healing Research Pipeline &amp; Ticket System</h2>
+
+<p>This section explains two connected systems inside ORA Navigator. The first is the <strong>Self-Healing Research Pipeline</strong> (the code calls it the "Auto-Research Agent"). The second is the <strong>Ticket / Feedback / Support system</strong>. They are connected because when a user "reports" a bad answer, that report is fed back into the research pipeline.</p>
+
+<h3>4.1 The Problem It Solves</h3>
+<p>First, two plain-English definitions:</p>
+<ul>
+  <li><strong>Knowledge Base (KB):</strong> the collection of documents the chatbot is allowed to read when it answers. ORA Navigator's KB has 382 documents scraped from the official Morgan State research-administration website. The bot is <em>only</em> supposed to answer from these documents (this is called "grounding") so it does not make things up.</li>
+  <li><strong>KB miss:</strong> a question the bot could <em>not</em> answer because the KB simply does not contain that information. Example: a user asks "What time does the IRB committee meet in July?" but no document mentions that meeting time.</li>
+</ul>
+<p>Before this pipeline existed, a KB miss just vanished. The user got "I don't have information about that," and nobody ever found out the bot had a gap. The knowledge base never got better.</p>
+<p>The Self-Healing Research Pipeline fixes that. The word <strong>self-healing</strong> means the system notices its own gaps and repairs them. Every time the bot fails to answer, the question is recorded. Similar failures are grouped together. A research robot goes and finds the real answer on the official Morgan State website. Then a human admin reviews that answer and, if it is correct, publishes it into the live knowledge base. The next person who asks the same question gets a real answer. The "wound" (the gap) heals.</p>
+<div class="callout"><strong>Note:</strong> There is always a <em>human gate</em>. The robot never publishes anything to the live KB on its own. An admin must click "Approve" and then "Push." This prevents a wrong AI-researched fact from ever reaching real users automatically.</div>
+
+<h3>4.2 The Five Stages</h3>
+<p>The pipeline moves a failed question through five stages. Each stage changes a <code>status</code> value in the database and saves the work in a specific place. The two database tables involved are <code>failed_queries</code> (the <code>FailedQuery</code> class) and <code>kb_suggestions</code> (the <code>KBSuggestion</code> class).</p>
+
+<pre>
+USER ASKS A QUESTION
+        |
+        v
+ [1] DETECT   --> failed_queries table   status = "new"
+        |
+        v
+ [2] CLUSTER  --> failed_queries table   status = "clustered"  (+ cluster_id)
+        |
+        v
+ [3] RESEARCH --> kb_suggestions table   status = "pending"
+        |          failed_queries        status = "researched"
+        v
+ [4] REVIEW   --> kb_suggestions         status = "approved"  OR  "rejected"
+        |          (human admin clicks the button)
+        v
+ [5] PUSH     --> Vertex AI Search datastore (the LIVE knowledge base)
+                   kb_suggestions         status = "pushed"
+</pre>
+
+<h4>Stage 1 — Detect (saved to <code>failed_queries</code>, status <code>"new"</code>)</h4>
+<p>The detector is the function <code>detect_and_log_failed_query</code>. It runs automatically after the bot answers a chat message. It is called from three places: the <code>/chat</code> endpoint, the streaming chat endpoint, and the guest chat endpoint.</p>
+<p>The detector decides "was this a KB miss?" using two detection layers:</p>
+<ul>
+  <li><strong>Layer 1 — Grounding count (the main signal):</strong> The bot reports how many KB document chunks it actually used to write its answer. This count comes from <code>get_last_grounding()</code>. If that number is <strong>zero</strong> — meaning the bot found nothing in the KB to stand on — it is treated as a miss. A "chunk" is just a small slice of a KB document. Zero chunks = the bot was answering from nothing.</li>
+  <li><strong>Layer 2 — Failure language (the backup signal):</strong> Sometimes the KB returns some documents but none are actually relevant, so the bot writes a sentence like "I don't have information about that." Layer 2 checks whether the <em>first line</em> of the answer starts with that kind of giving-up language. It only matches when the failure language is the <em>first thing</em> said, so a good answer that merely hedges one small detail is not wrongly flagged.</li>
+</ul>
+<p>Before either layer runs, the detector <strong>skips</strong> several kinds of messages so the failed-query list does not fill up with junk:</p>
+<ul>
+  <li><strong>Greetings and tiny messages</strong> — "hi", "hello", "thanks", "ok", etc., and anything shorter than 15 characters.</li>
+  <li><strong>Security refusals</strong> — if the answer starts with "I can only help with Morgan State…" the user asked something off-topic or tried a prompt injection. That is not a knowledge gap.</li>
+  <li><strong>File uploads</strong> — if the message contains a markdown file link, it was a PDF the user uploaded for analysis, not a KB question.</li>
+  <li><strong>Short conversational follow-ups</strong> — a message of 6 words or fewer that has no real question word ("what", "where", "who", "when", "how", "why", "which", etc.).</li>
+</ul>
+<p>If it survives all the skips and is judged a miss, the detector writes one row into the <code>failed_queries</code> table with the user's question in <code>user_query</code>, the bot's reply in <code>bot_response</code> (capped at 1000 characters), the user's id, and <code>status = "new"</code>. It first checks for an identical existing question so the same query is not logged twice.</p>
+
+<h4>Stage 2 — Cluster (saved to <code>failed_queries</code>, status <code>"clustered"</code>)</h4>
+<p>Many people ask the same thing in different words: "What is the F&amp;A rate?", "What's Morgan's indirect cost rate?", "How much overhead does Morgan charge?" — three questions, one answer needed. <strong>Clustering</strong> means grouping these near-identical questions together so the robot only has to research the topic once. The function is <code>cluster_failed_queries</code>.</p>
+<p>How it groups them, in plain words:</p>
+<ul>
+  <li>It takes all the <code>"new"</code> failed queries that have not been clustered yet.</li>
+  <li>It turns each question into an <strong>embedding</strong> — a list of 256 numbers that represents the <em>meaning</em> of the sentence. It uses the <code>text-embedding-004</code> model. Two sentences that mean the same thing produce two very similar number-lists.</li>
+  <li>It compares every pair of questions using <strong>cosine similarity</strong> — a score from 0 (totally different meaning) to 1 (identical meaning). If two questions score <strong>0.82 or higher</strong>, they are put in the same group.</li>
+</ul>
+<p>Each group gets a shared <code>cluster_id</code> number, and every query in the group is updated to <code>status = "clustered"</code>. Both values are saved back onto the same rows in the <code>failed_queries</code> table.</p>
+
+<h4>Stage 3 — Research (saved to <code>kb_suggestions</code>, status <code>"pending"</code>)</h4>
+<p>Now the robot actually goes and finds the answer. The function is <code>research_topic</code>. It uses <strong>Gemini</strong> (Google's AI model, <code>gemini-2.5-flash</code>) with the <strong>Google Search</strong> tool turned on. "Grounding" here means the AI is told to base its answer on real web search results, not its own memory.</p>
+<p>The prompt tells Gemini to search the official Morgan State website (<code>morgan.edu</code>) and especially the Office of Research Administration pages, to find specific facts (names, dates, phone numbers, URLs, deadlines, SOP numbers, form IDs), and to return a strict JSON object containing: a short <code>topic</code> label, the <code>answer</code>, a list of <code>sources</code> (URLs), a <code>confidence</code> level ("high", "medium", or "low"), a <code>suggested_doc_id</code> (which KB document to add to), and the <code>suggested_content</code> (the text ready to drop into the KB).</p>
+<p>The batch orchestrator <code>run_research_batch</code> loops over the clusters, calls <code>research_topic</code> for each one, and saves the result as a new row in the <code>kb_suggestions</code> table with <code>status = "pending"</code>. It also flips every failed query in that cluster from <code>"clustered"</code> to <code>status = "researched"</code> so it is not researched again. It skips any cluster that already has a suggestion.</p>
+
+<table>
+  <thead>
+    <tr><th>Column in <code>kb_suggestions</code></th><th>What it holds</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>cluster_id</code></td><td>Which group of failed queries this came from</td></tr>
+    <tr><td><code>topic</code></td><td>Short label, e.g. "IRB Meeting Schedule"</td></tr>
+    <tr><td><code>representative_query</code></td><td>One example question from the group</td></tr>
+    <tr><td><code>query_count</code></td><td>How many users asked this (shows demand)</td></tr>
+    <tr><td><code>researched_answer</code></td><td>The full answer Gemini found</td></tr>
+    <tr><td><code>sources</code></td><td>JSON list of the morgan.edu URLs used</td></tr>
+    <tr><td><code>confidence</code></td><td>"high", "medium", or "low"</td></tr>
+    <tr><td><code>suggested_doc_id</code></td><td>Which KB doc to add this to (or a new name)</td></tr>
+    <tr><td><code>suggested_content</code></td><td>The exact text to push into the KB</td></tr>
+    <tr><td><code>status</code></td><td>"pending" &rarr; "approved"/"rejected" &rarr; "pushed"</td></tr>
+    <tr><td><code>admin_notes</code>, <code>reviewed_by</code>, <code>reviewed_at</code></td><td>Set when an admin reviews it</td></tr>
+  </tbody>
+</table>
+
+<h4>Stage 4 — Review (the human gate; status becomes <code>"approved"</code> or <code>"rejected"</code>)</h4>
+<p>A human admin opens the <strong>Research tab</strong> in the Admin Dashboard and sees every pending suggestion as a card showing the topic, confidence, how many users asked, the researched answer, its sources, and an <em>editable</em> text box with the content that will be pushed. The admin can fix the text before approving.</p>
+<p>The admin clicks <strong>Approve</strong> or <strong>Reject</strong>. The browser sends a <code>PUT</code> request to <code>/api/admin/research/suggestions/{id}</code> handled by <code>review_suggestion</code>:</p>
+<ul>
+  <li><strong>Approve</strong> &rarr; <code>status = "approved"</code>, and it records <code>reviewed_by</code> and <code>reviewed_at</code>.</li>
+  <li><strong>Reject</strong> &rarr; <code>status = "rejected"</code>, saving the admin's reason in <code>admin_notes</code>.</li>
+  <li><strong>Edit</strong> &rarr; saves the admin's changed <code>suggested_content</code> / <code>suggested_doc_id</code> / notes without changing the status. The "Approve" button actually sends an edit first (to capture the admin's textbox changes) and then the approve.</li>
+</ul>
+<div class="callout"><strong>Note:</strong> Nothing has touched the live knowledge base yet. An "approved" suggestion is just a green light. The actual publishing happens in Stage 5, behind a second button and a confirmation dialog.</div>
+
+<h4>Stage 5 — Push (written into the live Vertex AI Search datastore; status <code>"pushed"</code>)</h4>
+<p><strong>Vertex AI Search datastore</strong> is Google's hosted search index that holds the live 382-document knowledge base the chatbot actually searches. Pushing means writing the new content <em>into that live index</em> so the chatbot can immediately find it.</p>
+<p>On an approved card the admin sees a <strong>"Push to KB"</strong> button. Clicking it shows a confirmation pop-up ("Push this suggestion to the live knowledge base?") and then sends a <code>POST</code> to <code>/api/admin/research/suggestions/{id}/push</code>, handled by <code>push_suggestion</code>. That function:</p>
+<ul>
+  <li>Loads the suggestion, but <strong>only if it is already <code>approved</code></strong> — you cannot push something that was never reviewed.</li>
+  <li>Checks whether the target document already exists. <strong>If it exists, it appends</strong> the new content to the end of the existing document; <strong>if not, it creates a brand-new document</strong>.</li>
+  <li>On success, sets <code>status = "pushed"</code> and <strong>clears the caches</strong> — the query cache and the agent's session cache — so the chatbot does not keep serving a stale "I don't know" from memory. The next identical question is answered fresh from the freshly updated KB.</li>
+</ul>
+<p>After this, <code>kb_suggestions.status = "pushed"</code> and the gap is healed.</p>
+
+<table>
+<thead><tr><th>Artifact</th><th>Where it is saved</th></tr></thead>
+<tbody>
+<tr><td>The user's failed question</td><td>One row in the <code>failed_queries</code> table</td></tr>
+<tr><td>The grouping of similar failures</td><td>The <code>cluster_id</code> column on those rows</td></tr>
+<tr><td>The drafted answer (before approval)</td><td>One row in the <code>kb_suggestions</code> table</td></tr>
+<tr><td>The published answer (after push)</td><td>A document in the live <strong>Vertex AI Search datastore</strong> (<code>oranavigator-kb-v8</code>)</td></tr>
+</tbody>
+</table>
+
+<h3>4.3 What the "Run Research Now" Button Actually Does</h3>
+<p>In the Research tab there is a <strong>"Run Research Now"</strong> button. Its handler is <code>handleRunResearch</code>, which sends a <code>POST</code> to <code>/api/admin/research/run</code>. That endpoint is <code>trigger_research</code> (admin-only), and it calls <code>run_research_batch()</code>.</p>
+<p>In plain words: this button runs <strong>Stage 2 (Cluster) and Stage 3 (Research) only</strong>. It groups all the new failed queries and has Gemini research each group, which <strong>fills the review queue</strong> with new pending suggestions. When it finishes, it shows a toast like "Clustered 8 queries, researched 3 topics".</p>
+<div class="callout"><strong>Note:</strong> "Run Research Now" <strong>pushes nothing to the live KB.</strong> It stops at "pending." A human still has to approve and push each suggestion. The button only prepares work for the admin to review.</div>
+<p><strong>The automatic trigger:</strong> the same research batch also runs on a schedule with no human present. <strong>Cloud Scheduler</strong> (Google's cron service) sends a <code>POST</code> to <code>/api/internal/research/run</code>, handled by <code>internal_research_trigger</code>. Because no admin login is attached, this endpoint is protected by a shared secret: the caller must send an <code>X-Research-Secret</code> header that matches the server's <code>RESEARCH_SECRET</code> environment variable, otherwise it is rejected with a 403 error. It then runs the exact same <code>run_research_batch()</code> — so the queue keeps filling even overnight. Approval and pushing always remain manual.</p>
+
+<h3>4.4 The Stats Dashboard</h3>
+<p>The Research tab shows counters at the top, fed by the <code>GET /api/admin/research/stats</code> endpoint, which calls <code>get_research_stats</code>. Each number is a live count from the database:</p>
+<table>
+  <thead><tr><th>Stat</th><th>What it counts</th></tr></thead>
+  <tbody>
+    <tr><td><code>total_failed</code></td><td>Every failed query ever logged</td></tr>
+    <tr><td><code>new_queries</code></td><td>Failed queries not yet clustered</td></tr>
+    <tr><td><code>clustered</code></td><td>Grouped but not yet researched</td></tr>
+    <tr><td><code>researched</code></td><td>Failed queries that became a suggestion</td></tr>
+    <tr><td><code>pending_suggestions</code></td><td>Suggestions waiting for admin review</td></tr>
+    <tr><td><code>approved</code></td><td>Reviewed and OK'd, not yet pushed</td></tr>
+    <tr><td><code>pushed</code></td><td>Published to the live KB</td></tr>
+    <tr><td><code>rejected</code></td><td>Reviewed and thrown away</td></tr>
+  </tbody>
+</table>
+<p>The four big cards on screen show Failed Queries, Pending Review, Approved, and Pushed to KB. A <strong>"Show Failed Queries"</strong> toggle lists the raw questions for transparency, served by <code>GET /api/admin/research/failed-queries</code>.</p>
+
+<h3>4.5 The Ticket / Feedback / Support System</h3>
+<p>This is the second system. It is how users tell the team about problems, and it is also the bridge that feeds bad answers back into the research pipeline above.</p>
+
+<h4>Support Tickets</h4>
+<p>A <strong>support ticket</strong> is a formal help request — a bug report, a feature idea, or a question — that a user files and an admin works through to resolution. Tickets are stored in the <code>support_tickets</code> table (the <code>SupportTicket</code> class). Its columns:</p>
+<ul>
+  <li><code>user_id</code> — who filed it.</li>
+  <li><code>subject</code> — the short title.</li>
+  <li><code>category</code> — "bug", "feature", "question", or "other".</li>
+  <li><code>description</code> — the full text of the problem.</li>
+  <li><code>attachment_data</code> / <code>attachment_name</code> — an optional file (e.g. a screenshot), stored as Base64 text up to ~12&nbsp;MB.</li>
+  <li><code>status</code> — "open", "in_progress", "resolved", or "closed" (default "open").</li>
+  <li><code>priority</code> — "low", "normal", "high", or "urgent" (default "normal").</li>
+  <li><code>admin_notes</code>, <code>resolved_by</code>, <code>resolved_at</code> — the admin's reply and who closed it.</li>
+  <li><code>created_at</code> / <code>updated_at</code> — timestamps.</li>
+</ul>
+<p><strong>How a user files one:</strong> the app sends a <code>POST</code> to <code>/api/tickets</code>, handled by <code>create_ticket</code>. It trims the subject/description, caps the attachment at ~7.5&nbsp;MB, inserts a new <code>SupportTicket</code> row, and returns the new ticket id. <strong>Where it is stored:</strong> the <code>support_tickets</code> table in Cloud SQL.</p>
+<p><strong>How admins see and handle tickets:</strong> the Admin Dashboard has a <strong>Tickets tab</strong> that loads them from <code>GET /api/tickets</code> (admins see all tickets; a normal user sees only their own). Admins change a ticket's status or add notes with <code>PUT /api/tickets/{ticket_id}</code> &rarr; <code>update_ticket</code>, which is admin-only and, when the status is set to "resolved," records <code>resolved_by</code> and <code>resolved_at</code>.</p>
+
+<h4>Feedback (thumbs up / thumbs down / report)</h4>
+<p><strong>Feedback</strong> is the lightweight one-click reaction on a single chatbot answer. It is stored in the <code>feedback</code> table (the <code>Feedback</code> class). Its columns:</p>
+<ul>
+  <li><code>user_id</code>, <code>session_id</code> — who reacted and in which chat session.</li>
+  <li><code>message_text</code> — the text of the bot answer being rated.</li>
+  <li><code>feedback_type</code> — one of <strong>"helpful"</strong> (thumbs up), <strong>"not_helpful"</strong> (thumbs down), or <strong>"report"</strong> (an explicit "this answer is wrong / missing info" report).</li>
+  <li><code>report_details</code> — optional extra text the user types when reporting.</li>
+  <li><code>timestamp</code>.</li>
+</ul>
+<p><strong>How a user leaves feedback:</strong> the app sends a <code>POST</code> to <code>/api/feedback</code>, handled by <code>submit_feedback</code>. It validates that the type is one of the three allowed values and inserts a <code>Feedback</code> row into the <code>feedback</code> table. <strong>How admins see it:</strong> the Admin Dashboard's <strong>Feedback tab</strong> reads <code>/api/feedback/stats</code> and <code>/api/feedback/all</code>, which return totals (helpful / not_helpful / reports, a satisfaction rate) and the recent reports. A red badge on the tab shows the number of open reports.</p>
+
+<h4>The bridge: "Report a bad answer" feeds the research pipeline</h4>
+<p>This is the important connection between the two systems. When a user clicks <strong>Report</strong> on an answer (feedback_type = "report"), it means "this answer is factually wrong or missing information" — which is exactly a knowledge-base gap. So <code>submit_feedback</code> does an extra step:</p>
+<ul>
+  <li>It looks up the original chat turn in <code>chat_history</code> by matching the reported answer text.</li>
+  <li>If found and not already recorded, it inserts a new row directly into the <code>failed_queries</code> table with <code>status = "new"</code> — the very same table Stage 1 of the research pipeline writes to.</li>
+</ul>
+<p>So a user-reported bad answer enters the self-healing loop at Stage 1 and will be clustered, researched, reviewed, and pushed just like an automatically detected miss.</p>
+<div class="callout"><strong>Note:</strong> A plain thumbs-down ("not_helpful") is <strong>not</strong> turned into a failed query. The reason: people thumb-down for many reasons — too long, wrong tone, didn't like the format — that do not mean the knowledge base is missing a fact. Only an explicit <strong>"report"</strong> is treated as a real KB gap and pushed into the research pipeline.</div>

@@ -1,0 +1,243 @@
+<h2 id="overview">1. What ORA Navigator Is — Overview, Architecture &amp; Cloud</h2>
+
+<h3>1.1 What the system is, in one paragraph</h3>
+<p>
+ORA Navigator is an <strong>AI chat assistant</strong> built for the <strong>Office of Research Administration (ORA)</strong> at Morgan State University. "Office of Research Administration" is the campus office that helps researchers apply for and manage grants. The assistant lets a person type a question in plain English and get an answer drawn from ORA's own documents, instead of digging through the ORA website by hand.
+</p>
+
+<h3>1.2 Who uses it and what they ask</h3>
+<p>The intended users are people connected to research at the university:</p>
+<ul>
+  <li><strong>Faculty</strong> — professors who do research.</li>
+  <li><strong>PIs (Principal Investigators)</strong> — the lead person responsible for a specific grant or research project.</li>
+  <li><strong>Research staff</strong> — employees who help run research projects.</li>
+  <li><strong>Department admins</strong> — administrative staff in a department who handle paperwork.</li>
+</ul>
+<p>They ask about topics such as:</p>
+<ul>
+  <li><strong>Grants</strong> — money awarded to fund research.</li>
+  <li><strong>Compliance</strong> — the rules a researcher must follow. This includes:
+    <ul>
+      <li><strong>IRB (Institutional Review Board)</strong> — the committee that approves research involving human beings.</li>
+      <li><strong>IACUC (Institutional Animal Care and Use Committee)</strong> — the committee that approves research involving animals.</li>
+      <li><strong>COI (Conflict of Interest)</strong> — rules about disclosing money or relationships that could bias research.</li>
+      <li><strong>RCR (Responsible Conduct of Research)</strong> — required ethics training.</li>
+      <li><strong>Research Security</strong> — rules protecting research from foreign interference or theft.</li>
+    </ul>
+  </li>
+  <li><strong>Pre-award</strong> — everything before a grant is won (writing and submitting the proposal).</li>
+  <li><strong>Post-award</strong> — everything after a grant is won (spending and reporting on the money).</li>
+  <li><strong>Forms</strong> — the official documents people must fill out.</li>
+  <li><strong>Staff contacts</strong> — who in the ORA office to email or call.</li>
+</ul>
+
+<h3>1.3 The three services and how they talk to each other</h3>
+<p>
+The system is split into three separate programs, called <strong>services</strong>. A "service" here just means an independently running program with its own job. Each one listens on its own <strong>port</strong> when run on a developer's laptop. (A "port" is a numbered door on a computer that a program uses to receive network requests.)
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>Local port</th>
+      <th>Built with</th>
+      <th>Its job</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Frontend</strong></td>
+      <td>3001</td>
+      <td>Vite + React 19</td>
+      <td>The user interface — the web pages and chat box you see and click.</td>
+    </tr>
+    <tr>
+      <td><strong>Backend</strong></td>
+      <td>5002</td>
+      <td>FastAPI + SQLAlchemy</td>
+      <td>The "brain" in the middle — handles logins, saves data, enforces business rules, and forwards questions to the AI.</td>
+    </tr>
+    <tr>
+      <td><strong>ADK Agent</strong></td>
+      <td>8081</td>
+      <td>Google ADK + Gemini 2.5 Flash</td>
+      <td>The AI worker — talks to the Gemini language model and searches the knowledge base.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>What the technical names mean</h4>
+<ul>
+  <li><strong>Frontend</strong> = the part that runs in your web browser. <strong>React 19</strong> is a popular tool for building web page interfaces out of reusable pieces. <strong>Vite</strong> is the build tool that packages the React code so a browser can run it fast. (Confirmed in <code>frontend/package.json</code>: <code>"react": "^19.0.0"</code> and <code>"vite": "^6.2.0"</code>.)</li>
+  <li><strong>Backend</strong> = the server program users never see directly. <strong>FastAPI</strong> is a Python framework for building a <strong>REST API</strong> (a set of web addresses the frontend can call to ask for data or actions). <strong>SQLAlchemy</strong> is a Python tool that lets the backend talk to the database using Python objects instead of raw database commands.</li>
+  <li><strong>ADK Agent</strong> = the AI piece. <strong>ADK</strong> stands for Google's "Agent Development Kit," a toolkit for building AI agents. <strong>Gemini 2.5 Flash</strong> is the specific Google AI language model that actually writes the answers. (Confirmed in <code>deploy-cloudrun.sh:200</code> which sets <code>AGENT_MODEL=gemini-2.5-flash</code>.)</li>
+</ul>
+
+<h4>The request flow, step by step</h4>
+<p>Here is what happens when a user types a question, described in plain order:</p>
+<ol>
+  <li>The user types a question in the <strong>browser</strong>.</li>
+  <li>The browser sends it to the <strong>Frontend</strong> service (the React app).</li>
+  <li>The Frontend forwards the question to the <strong>Backend</strong> service over the REST API.</li>
+  <li>The Backend does its checks first (Is this user logged in? Have we already answered this exact question and cached it? Is it just "hi/thanks"?), and if it is a real question it forwards it to the <strong>ADK Agent</strong>.</li>
+  <li>The ADK Agent calls two Google cloud services: <strong>Gemini</strong> (to write the answer in natural language) and <strong>Vertex AI Search</strong> (to find the relevant ORA documents). "Vertex AI Search" is Google's tool that searches a pile of documents by meaning, not just by keyword.</li>
+  <li>The answer plus its document sources travel back the same way: ADK Agent → Backend → Frontend → browser, and the user sees the reply.</li>
+</ol>
+
+<div class="callout"><strong>Note:</strong> The three services never run as one big program. The Frontend only ever talks to the Backend; only the Backend is allowed to talk to the ADK Agent. On the live site the ADK Agent is <strong>private</strong> — the public internet cannot reach it directly, only the backend can.</div>
+
+<h3>1.4 The cloud infrastructure (where everything actually runs)</h3>
+<p>
+When the app is live for real users, it does not run on a laptop — it runs on <strong>Google Cloud Platform (GCP)</strong>, Google's rented-computing service. Everything lives inside one GCP <strong>project</strong> (a project is a labeled container that holds all of an app's cloud resources and billing) named <code>infra-vertex-494621-v1</code>, in the <strong>region</strong> <code>us-central1</code>. A "region" is the physical part of the world where the servers sit; <code>us-central1</code> is in the central United States.
+</p>
+
+<h4>The cloud resources, one by one</h4>
+<table>
+  <thead>
+    <tr>
+      <th>Resource</th>
+      <th>Name(s)</th>
+      <th>What it is and what it's for, in plain words</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Cloud Run services (×3)</strong></td>
+      <td><code>oranavigator-adk</code>, <code>oranavigator-backend</code>, <code>oranavigator-frontend</code></td>
+      <td>Cloud Run is Google's service for running a program inside a <strong>container</strong> (a self-contained package of the program plus everything it needs) without managing servers. Each of the three services gets its own Cloud Run service.</td>
+    </tr>
+    <tr>
+      <td><strong>Cloud SQL instance</strong></td>
+      <td><code>oranavigator-db</code></td>
+      <td>A managed <strong>MySQL</strong> database server (MySQL is a popular database). "Managed" means Google runs and patches it. It is the <code>db-g1-small</code> size, in <code>us-central1</code>, with public IP <code>34.173.108.181</code>. An "IP" is the database's address on the internet.</td>
+    </tr>
+    <tr>
+      <td><strong>Database &amp; user</strong></td>
+      <td>database <code>oranavigator</code>, user <code>oranavapp</code></td>
+      <td>Inside that MySQL server, the actual database (the named bucket of tables) is <code>oranavigator</code>, and the login the app uses is <code>oranavapp</code>. The password is kept in Secret Manager and copied locally to <code>/tmp/ora_db_pass</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Vertex AI Search datastore</strong></td>
+      <td><code>oranavigator-kb-v8</code></td>
+      <td>The searchable copy of ORA's knowledge base. A "datastore" here is Google's indexed store of documents you can search by meaning. It lives in location <code>us</code> and holds <strong>382 documents</strong>. This is what the ADK Agent searches to find answers.</td>
+    </tr>
+    <tr>
+      <td><strong>Service account</strong></td>
+      <td><code>oranavigator-backend@infra-vertex-494621-v1.iam.gserviceaccount.com</code></td>
+      <td>A <strong>service account</strong> is a robot identity — a non-human "user" that a program logs in as so it can be granted permissions. The backend and ADK both run as this identity.</td>
+    </tr>
+    <tr>
+      <td><strong>Artifact Registry</strong></td>
+      <td><code>oranavigator</code> Docker repo (in <code>us-central1</code>)</td>
+      <td>A private storage shelf for the built <strong>container images</strong> (the packaged programs). Each deploy builds an image and pushes it here, then Cloud Run pulls it.</td>
+    </tr>
+    <tr>
+      <td><strong>Secret Manager</strong></td>
+      <td>see list below</td>
+      <td>A locked vault for sensitive values (passwords, keys) so they are never written in plain code. The app reads them at startup.</td>
+    </tr>
+    <tr>
+      <td><strong>Domain mapping</strong></td>
+      <td><code>ora.inavigator.ai</code> → <code>oranavigator-frontend</code></td>
+      <td>A friendly web address that points at the frontend Cloud Run service, with an HTTPS security certificate already set up ("cert provisioned").</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>The secrets stored in Secret Manager, and what each holds</h4>
+<ul>
+  <li><code>ora-database-url</code> — the full connection string the app uses to reach the MySQL database (includes the password).</li>
+  <li><code>ora-jwt-secret</code> — the secret key used to sign login tokens. A "JWT" (JSON Web Token) is the digital wristband that proves a user is logged in; this key stops anyone from forging one.</li>
+  <li><code>ora-admin-email</code> — the email address of the built-in administrator account.</li>
+  <li><code>ora-admin-password</code> — the password for that administrator account.</li>
+  <li><code>ora-redis-url</code> — the connection string for Redis, an optional fast in-memory cache used to remember recent answers.</li>
+</ul>
+
+<h4>The live web addresses</h4>
+<ul>
+  <li>Frontend: <code>https://ora.inavigator.ai</code> (which points to <code>https://oranavigator-frontend-ollhkgeova-uc.a.run.app</code>).</li>
+  <li>Backend: <code>https://oranavigator-backend-ollhkgeova-uc.a.run.app</code>.</li>
+  <li>ADK Agent: <code>https://oranavigator-adk-ollhkgeova-uc.a.run.app</code> — private, reachable only by the backend.</li>
+</ul>
+
+<h4>How the app connects to the database — two different ways</h4>
+<p>
+The database can be reached in two ways depending on where the app is running, and the code in <code>backend/db.py</code> picks the right one automatically:
+</p>
+<ul>
+  <li><strong>On a developer's laptop (local <code>.env</code>):</strong> it connects over <strong>TCP + SSL</strong> straight to the database's public IP address. "TCP" is the normal way computers talk over a network; "SSL" is the encryption that scrambles the traffic so nobody can read the password in transit. MySQL 8.4 refuses unencrypted logins, so <code>backend/db.py</code> attaches an SSL context automatically.</li>
+  <li><strong>On Cloud Run (the live site):</strong> it connects through a <strong>Unix socket</strong> using the Cloud SQL Auth Proxy. A "Unix socket" is a private internal pipe between two programs on the same machine — safer than going over the open internet. The code detects the <code>unix_socket=</code> setting and switches methods.</li>
+</ul>
+<div class="callout"><strong>Note:</strong> If your laptop suddenly cannot reach the database (a timeout), it is usually because your current internet IP address is not on the database's allow-list. The fix is to add your IP with <code>gcloud sql instances patch oranavigator-db --authorized-networks=&lt;your-ip&gt;/32</code> — but be careful: that flag <strong>replaces</strong> the whole list, so include any other IPs you still need.</div>
+
+<h3>1.5 The permissions the backend needs (IAM roles)</h3>
+<p>
+<strong>IAM</strong> stands for "Identity and Access Management" — Google's system of permissions. Each permission bundle is called a <strong>role</strong>. The backend's service account (its robot identity) is granted exactly six roles, each unlocking one thing it must do. If any role is missing, that feature breaks. (The same six are granted in <code>deploy-cloudrun.sh:366-373</code>.)
+</p>
+<table>
+  <thead>
+    <tr><th>Role</th><th>Why the backend needs it</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>roles/aiplatform.user</code></td><td>To call <strong>Gemini</strong>, the AI model. Without it, the AI answers fail.</td></tr>
+    <tr><td><code>roles/discoveryengine.viewer</code></td><td>To read and search the <strong>Vertex AI Search</strong> datastore (the 382 documents). "Discovery Engine" is the internal Google name for Vertex AI Search.</td></tr>
+    <tr><td><code>roles/storage.objectViewer</code></td><td>To read files stored in Google Cloud Storage (Google's file-bucket service).</td></tr>
+    <tr><td><code>roles/secretmanager.secretAccessor</code></td><td>To read the secrets (database URL, JWT key, etc.) out of Secret Manager at startup.</td></tr>
+    <tr><td><code>roles/run.invoker</code></td><td>To call the private ADK Cloud Run service. Since the ADK is locked to authenticated callers only, the backend needs "invoker" permission to be allowed in.</td></tr>
+    <tr><td><code>roles/cloudsql.client</code></td><td>To connect to the Cloud SQL (MySQL) database. Without it the live backend returns a 503 error about <code>cloudsql.instances.get</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3>1.6 How deployment works, and the traps to avoid</h3>
+<p>
+"Deployment" means taking the code on the developer's machine and publishing it to the live Cloud Run services. This is done with one script, <code>deploy-cloudrun.sh</code>. In plain terms, for each service the script: (1) packages the code into a container image, (2) pushes that image to Artifact Registry, and (3) tells Cloud Run to run the new image.
+</p>
+
+<h4>Trap 1 — the env-var wipe</h4>
+<p>
+Cloud Run services hold <strong>environment variables</strong> (named settings the program reads at startup, like the SMTP email password). When the script runs, it sets a fixed list of these settings and <strong>overwrites everything else</strong>, accidentally erasing important ones such as <code>SMTP_*</code> (email settings), <code>API_URL</code>, <code>RESEARCH_SECRET</code> (the password the scheduled jobs use), and <code>ALLOW_TEST_EMAILS</code>. The fix is to run a recovery script, <code>/tmp/post_deploy_backend.sh</code>, after <strong>every</strong> backend deploy to put those settings back.
+</p>
+<div class="callout"><strong>Note:</strong> Always run <code>bash /tmp/post_deploy_backend.sh</code> right after a backend deploy. Skipping it silently breaks outgoing email and the scheduled background jobs.</div>
+
+<h4>Trap 2 — one target per run</h4>
+<p>
+The script accepts only <strong>one service per invocation</strong>. Writing <code>deploy-cloudrun.sh backend frontend</code> silently deploys only the <code>backend</code> and ignores <code>frontend</code>. Deploy each service in a separate command.
+</p>
+
+<h4>Trap 3 — build from a clean copy, not the git folder</h4>
+<p>
+Google's build command crashes if it tries to package the code straight from inside the git repository. To avoid this, the script first copies each service's source to a clean temporary folder under <code>/tmp</code> (skipping things like <code>.git</code>, <code>node_modules</code>, and the Python virtual environment) and builds from there. This is the <code>stage_clean</code> function.
+</p>
+
+<h4>Trap 4 — the PWA cache (verify in incognito)</h4>
+<p>
+The frontend is a <strong>PWA (Progressive Web App)</strong> — a website that installs a small background helper called a <strong>service worker</strong> to cache files so the page loads fast and works offline. The downside: after a deploy, your browser may keep serving the <em>old</em> cached version, so your change looks like it "didn't deploy." Always check UI changes in a fresh <strong>incognito window</strong>, which bypasses that cache.
+</p>
+
+<div class="callout"><strong>Note:</strong> A useful rule of thumb from the project's own notes: if a "fresh deploy didn't fix the bug," the bug is almost never in the deploy pipeline — look at the actual code path instead.</div>
+
+<h3>1.7 Running it on your own laptop (local development)</h3>
+<p>
+A developer can run all three services locally to test changes before deploying. The setup uses a Python <strong>virtual environment</strong> (a "venv" — a private, isolated folder of Python packages so this project's libraries do not clash with other projects) located at <code>~/Desktop/ora-navigator/.venv</code>. Logging in to Google's cloud tools from the laptop is handled by saved credentials at <code>~/.config/gcloud/application_default_credentials.json</code>.
+</p>
+<p>You start the three services in three separate terminals, in this order:</p>
+<ul>
+  <li><strong>1. ADK Agent</strong> (the AI worker):<br>
+  <code>cd ~/Desktop/ora-navigator/adk_agent &amp;&amp; source ../.venv/bin/activate &amp;&amp; adk web . --port 8081</code></li>
+  <li><strong>2. Backend</strong> (the brain):<br>
+  <code>cd ~/Desktop/ora-navigator/backend &amp;&amp; source ../.venv/bin/activate &amp;&amp; uvicorn main:app --host 127.0.0.1 --port 5002</code></li>
+  <li><strong>3. Frontend</strong> (the UI):<br>
+  <code>cd ~/Desktop/ora-navigator/frontend &amp;&amp; npm run dev -- --port 3001</code></li>
+</ul>
+<div class="callout"><strong>Note:</strong> One quirk: to start the ADK agent locally in headless mode (the mode the backend talks to), use <code>python -m google.adk.cli api_server . --port 8081</code>, because the <code>adk web</code> dev-UI mode can crash in this environment with a server-config error.</div>
+
+<h3>1.8 The top-level folder layout</h3>
+<p>The repository is organized so each of the three services has its own folder:</p>
+<ul>
+  <li><code>frontend/</code> — the React + Vite user interface (its <code>package.json</code>, <code>src/</code> source code, <code>Dockerfile</code> for building the container, and Nginx config for serving it).</li>
+  <li><code>backend/</code> — the FastAPI server. Key files include <code>main.py</code> (the entry point), <code>db.py</code> (database connection), <code>models.py</code> (database table definitions), <code>cache.py</code> (answer caching), <code>vertex_agent.py</code> (the code that talks to the ADK/AI), <code>kb_browser.py</code> (browses the knowledge base), and the <code>kb_structured/</code> folder holding the 382 source documents.</li>
+  <li><code>adk_agent/</code> — the Google ADK AI agent, with its agent logic under <code>ora_navigator_unified/</code> and its own <code>Dockerfile</code>.</li>
+  <li><code>deploy-cloudrun.sh</code> — the one deployment script.</li>
+  <li><code>CLAUDE.md</code> — the project's master notes file.</li>
+</ul>

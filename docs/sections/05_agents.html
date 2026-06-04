@@ -1,0 +1,130 @@
+<h2 id="agents">5. The AI Agents &amp; Proposals / Forms</h2>
+
+<p>This section explains the part of ORA Navigator that helps a faculty member actually <em>build and submit a grant proposal</em> — not just chat about grants. There are three small AI helpers (called "agents"), plus the screens and database tables they read and write. Everything here is wired up so a wrong guess by the AI can never quietly cause harm: a human always reviews before anything is committed, and the AI's output is double-checked against the real document.</p>
+
+<h3>5.1 The big idea: agents that coordinate through a shared record</h3>
+<p>An "agent" here just means a focused piece of software that does one job and can call the AI model (Gemini) when it needs to. ORA Navigator has <strong>three</strong> agents:</p>
+<ul>
+<li><strong>Solicitation Ingestion</strong> — reads a sponsor's grant announcement PDF and pulls out the key facts.</li>
+<li><strong>Draft Critic</strong> — checks a faculty member's draft proposal PDF against the rules.</li>
+<li><strong>Deadline Watcher</strong> — emails faculty as a deadline gets close.</li>
+</ul>
+<div class="callout"><strong>Note:</strong> There used to be a fourth agent called "Sponsor Fit-Finder" (it suggested funding sources). It was <strong>removed on 2026-06-01</strong>. The funding knowledge-base documents were kept, so the chatbot can still answer funding questions — but the agent itself is gone. So today there are exactly three agents.</div>
+<p>The most important design point: <strong>the agents never call each other directly.</strong> Instead, they all read and write the <em>same</em> proposal record in the database. Think of it like a shared notebook on a desk. Solicitation Ingestion writes the proposal's facts into the notebook. Later, Draft Critic opens the same notebook to learn the rules. Later still, Deadline Watcher opens it to see when things are due. None of them phones the others — they just share the notebook (the <code>submissions</code> and <code>submission_tasks</code> tables in the database).</p>
+<p>All three are <strong>real LLM-backed agents</strong> — they genuinely call the Gemini AI model. But every one of them is protected by <strong>evidence verification</strong>, not just polite instructions. "Evidence verification" means: after the AI says something, the code mechanically checks whether the AI's claim is actually backed by a real quote from the source document. If the AI invents a fact, the code catches it and throws it away. This is the difference between <em>asking</em> the AI to behave ("please don't make things up") and <em>forcing</em> it to ("if you can't quote it, we delete it").</p>
+
+<h4>The shared Gemini client</h4>
+<p>All three agents reach Gemini through one shared helper, <code>backend/services/gemini_client.py</code> — "one reusable phone line to Gemini 2.5 Flash." It does three helpful things:</p>
+<ul>
+<li><strong>Builds the connection once and reuses it</strong> — no slow setup on every call.</li>
+<li><strong>Fails fast and safely.</strong> If the AI can't be reached at all (for example, running offline or in a test), every call returns <code>None</code> <em>immediately</em> instead of hanging. This is what lets each agent quietly fall back to its non-AI behavior.</li>
+<li><strong>Never crashes.</strong> The two public functions <code>generate_text</code> and <code>generate_json</code> always return either a clean result or <code>None</code> — they never raise an error. <code>generate_json</code> also strips out any stray markdown code-fences and tolerates odd control characters that PDFs sometimes leak.</li>
+</ul>
+<p>The model name is hard-coded to <code>"gemini-2.5-flash"</code> because the older <code>gemini-2.0-flash</code> name returns a "not found" error in this Google Cloud project.</p>
+
+<h3>5.2 Agent 1 — Solicitation Ingestion (PDF in, structured proposal out)</h3>
+<p>A "solicitation" (also called an FOA, "Funding Opportunity Announcement") is the long PDF a sponsor like NSF or NIH publishes to describe a grant: who can apply, how much money, the deadline, page limits, what attachments are required. Reading it carefully is tedious and error-prone. This agent does the first pass for you. Code lives in <code>backend/services/solicitation_extractor.py</code>.</p>
+<h4>Step by step, what happens to the PDF</h4>
+<ol>
+<li><strong>You upload the PDF.</strong> The browser sends it to the endpoint <code>POST /api/me/submissions/from-solicitation</code>. The file must be a PDF and at most 25 MB.</li>
+<li><strong>The PDF is read into memory only.</strong> The endpoint does <code>pdf_bytes = await file.read()</code> — the bytes live in RAM for the length of the request. <strong>The PDF file is never saved to disk and never stored in any database table.</strong> Once the request finishes, the bytes are gone.</li>
+<li><strong>pdfplumber turns the PDF into plain text.</strong> <code>extract_text_from_pdf</code> opens the PDF with the <code>pdfplumber</code> library and pulls the text out of each page. It also strips illegal control characters that pdfplumber sometimes emits — those would otherwise break the next step.</li>
+<li><strong>Gemini extracts the facts as JSON.</strong> The text (up to 250,000 characters — a big window so facts buried deep in long FOAs aren't missed) is sent to Gemini with a very strict instruction sheet called <code>_EXTRACT_SYSTEM</code>. Gemini must return a JSON object with exactly these fields: <code>sponsor</code>, <code>program_id</code>, <code>program_name</code>, <code>deadline</code>, <code>page_limits</code>, <code>required_attachments</code>, <code>eligibility</code>, <code>budget_cap</code>, <code>submission_portal</code>, and <code>source_quotes</code>.</li>
+</ol>
+<p>The <code>source_quotes</code> field is the clever part. For <em>every</em> value Gemini fills in, it must also paste the <strong>exact verbatim sentence</strong> from the PDF that proves that value. If Gemini can't find a real supporting quote, the rules tell it to return <code>null</code> ("no quote, no value"). The instruction sheet also forces other safety rules: never guess a deadline, use the <em>most restrictive</em> number when several are given (smallest budget cap, smallest page limit, so an applicant is never told they have more room than they do), and <code>budget_cap</code> means the maximum <em>per award</em>, not the total program budget.</p>
+<h4>The anti-hallucination check: flag, don't drop</h4>
+<p>Telling the AI "always quote your source" is not enough — an AI can paste a fake quote. So after Gemini answers, a deterministic (non-AI) function <code>_verify_source_quotes</code> checks each filled field: it normalizes the text (lowercase, drop bullet symbols, collapse spaces) and asks "is this quote actually a substring of the real PDF text?" If a field has a value but no real quote behind it, that field name is added to a list called <code>unverified_fields</code>.</p>
+<p>The key policy is <strong>"flag, don't drop"</strong>: the suspicious value is <em>not</em> deleted. It is kept but marked, and the UI shows it in <strong>red</strong> so the human reviewing it knows to double-check that one. This is safe because a human reviews everything before it becomes a real proposal.</p>
+<div class="callout"><strong>Note:</strong> A wrong deadline can cost a faculty member an entire grant. That is exactly why this agent <strong>never</strong> creates a proposal by itself. Step 1 only <em>returns</em> the extracted facts for review. Nothing is saved yet.</div>
+<h4>Step two: the human confirms, and a Submission is born</h4>
+<p>After the user reviews and edits the extracted fields on screen, the browser calls a <em>second, separate</em> endpoint, <code>POST /api/me/submissions/from-solicitation/confirm</code>. This two-step design means a wrong AI guess can never auto-commit — the user must explicitly confirm.</p>
+<p>Confirm calls <code>create_submission_from_solicitation</code>, which is where the extracted facts finally get <strong>saved to the database</strong>:</p>
+<ul>
+<li>A new row is inserted into the <code>submissions</code> table: the <code>title</code>, <code>sponsor</code>, parsed <code>deadline</code>, <code>status="active"</code>, and a <code>notes</code> text blob.</li>
+<li>The <code>notes</code> column carries the leftover facts in a structured, machine-readable format — lines like <code>"Budget cap: $600,000"</code>, <code>"Page limits: project_description: 15p, ..."</code>, and <code>"Required attachments: ..."</code>. This matters later: Draft Critic reads these exact lines back out.</li>
+<li>The checklist tasks are inserted into the <code>submission_tasks</code> table: first the sponsor's standard template tasks, then one extra task per required attachment that the template didn't already cover (titled <code>"Prepare required attachment: X"</code>).</li>
+</ul>
+<table>
+<thead><tr><th>Artifact</th><th>Where it is saved</th></tr></thead>
+<tbody>
+<tr><td>The uploaded solicitation PDF</td><td>Nowhere persistent — read into memory, used, then discarded. Never on disk, never in a table.</td></tr>
+<tr><td>The extracted fields (before confirm)</td><td>Nowhere — returned in the HTTP response only; they live in the browser until the user confirms.</td></tr>
+<tr><td>The proposal itself (after confirm)</td><td>One row in the <code>submissions</code> table; budget cap / page limits / attachments stored as text lines in the <code>submissions.notes</code> column.</td></tr>
+<tr><td>The checklist items</td><td>Rows in the <code>submission_tasks</code> table.</td></tr>
+</tbody>
+</table>
+
+<h3>5.3 Agent 2 — Draft Critic (check your draft before you submit)</h3>
+<p>Once you've written your actual proposal, Draft Critic gives it a pre-submission once-over: is it under the page limit? are all required attachments present? is the budget under the cap? Code lives in <code>backend/services/draft_critic.py</code>.</p>
+<p>You upload your draft to <code>POST /api/me/submissions/{submission_id}/critique</code>. Just like the solicitation upload, the draft PDF is <strong>read into memory only</strong> and never stored — it is parsed, checked, and discarded when the request ends.</p>
+<h4>Where the "rules" come from: reconstructed solicitation context</h4>
+<p>Draft Critic needs to know the rules to check against. It gets them by <em>rebuilding</em> them from the proposal record, using <code>reconstruct_solicitation_context</code>. This function reads the <code>submissions.notes</code> lines that Solicitation Ingestion wrote earlier — the budget cap, the page limits, the required attachments — and turns them back into a small rules dictionary. This is the "shared notebook" idea in action: Agent 1 wrote the rules into <code>notes</code>; Agent 2 reads them back out. The two agents never talk; they just share the record.</p>
+<h4>The two layers: deterministic core (boss) + advisory AI (helper)</h4>
+<p>The single entry point is <code>critique_pdf</code>. It produces two layers, and it is important which one is in charge.</p>
+<p><strong>Layer 1 — the deterministic core, which is AUTHORITATIVE (the boss).</strong> "Deterministic" means it uses plain, predictable code with no AI — so there is zero chance of hallucination. These checks run in order:</p>
+<ul>
+<li><strong>Sanity check</strong> — does this PDF look like a sponsor solicitation instead of a proposal? (catches the common mistake of uploading the wrong file).</li>
+<li><strong>Page count</strong> vs the document-wide limit.</li>
+<li><strong>Required attachments</strong> — is each one present as a real heading in the draft? It uses "header-aware" detection — a section counts as present only if its name appears at the <em>start of a line</em>, not buried in a sentence — which avoids false "found it!" matches.</li>
+<li><strong>Standard sponsor sections</strong> — the usual NSF/NIH/DoD skeleton, with anything already flagged above suppressed so you don't see it twice.</li>
+<li><strong>Project Summary word count</strong>, <strong>per-section page limits</strong> for DMP/biosketch etc., and <strong>budget vs cap</strong> (which understands "$2.5 million" as well as plain numbers).</li>
+</ul>
+<p>All these results roll up into a one-line <strong>verdict banner</strong>: "Critical issues" (red) if anything failed, "Needs review" / "Minor issues" (amber) for warnings, or "Looks ready" (green) if all clear. Because this layer is pure code, if it says "Biographical Sketch: MISSING," the user can trust that string really is absent from the document.</p>
+<p><strong>Layer 2 — the advisory AI review (the helper).</strong> Since 2026-06-03, after the deterministic checks finish, an optional Gemini review is added under a separate key called <code>ai_review</code> (turned on by the <code>include_ai=True</code> argument). It gives a plain-English summary, judgment calls the rules can't make, and rewrite suggestions. It runs against a strict instruction sheet which tells it to ground every claim in the draft and quote its evidence.</p>
+<p>Crucially, this AI layer is <strong>advisory only — it never changes the verdict, checks, or counts</strong>. And it gets the same evidence-verification treatment: <code>_verify_evidence</code> drops any finding whose quote is <em>not</em> actually a substring of the draft, and drops any "the draft does X" claim that came with no quote at all. So if the AI invents a quote or a feature, that whole finding is thrown away before you ever see it. If the AI is unavailable or errors, <code>ai_review</code> is simply <code>None</code> and the deterministic output is unchanged.</p>
+<div class="callout"><strong>Note:</strong> A clean way to remember it: the rules engine is the judge whose verdict is final; the AI is a colleague offering a second opinion in a clearly-labeled advisory box. The colleague can be ignored, can be wrong, or can be silent — and the judge's verdict never moves.</div>
+
+<h3>5.4 Agent 3 — Deadline Watcher (reminder emails that never double-send)</h3>
+<p>This agent emails faculty when one of their in-flight proposals is approaching its deadline. Code lives in <code>backend/services/deadline_watcher.py</code>.</p>
+<h4>When reminders fire</h4>
+<p>Reminders go out at exactly five points before the deadline: <code>THRESHOLD_DAYS = (14, 7, 3, 1, 0)</code> — so 14 days out, 7 days out, 3 days out, 1 day out, and on the due day (0). These are exact matches: a proposal that is 8 days out fires nothing; it waits until it hits 7. There are no negative buckets — once a deadline passes, the watcher stops nagging.</p>
+<h4>Idempotency: it won't send the same reminder twice</h4>
+<p>"Idempotency" is a fancy word for a simple promise: <strong>running the reminder check twice produces the same result as running it once — you never get a duplicate email.</strong> Every time an email is successfully sent, the watcher writes one row into the <code>deadline_reminder_log</code> table recording <em>which proposal</em> (<code>submission_id</code>) and <em>which threshold</em> (<code>threshold_days</code>) it was for. On the next run, <code>find_due_reminders</code> skips any proposal-and-threshold pair that already has a log row. So you can re-run the check safely, the daily cron can fire twice, and a network retry can happen — and the faculty member still gets each reminder exactly once.</p>
+<p>The log row is written <em>only after</em> a successful send. If the email fails, no row is written, so the next run will retry. And the log row cascade-deletes if the proposal is deleted — so a user who withdraws and recreates a proposal legitimately gets the full reminder schedule again.</p>
+<h4>The AI part: a personalized email, with a hard safety net</h4>
+<p>The orchestrator <code>send_due_reminders</code> tries to write a warmer, personalized email body using Gemini via <code>compose_reminder_email_ai</code>. The AI can do two things: write 2-4 friendly sentences whose urgency scales with how many days are left, and <em>reorder</em> the open checklist tasks by what to do first. Its instruction sheet forbids it from inventing any specifics — no fake dates, dollar amounts, or names.</p>
+<p>The anti-hallucination guard here: the AI's reordered task list is accepted <strong>only if it is a valid rearrangement of exactly the real open tasks</strong>. If the AI dropped, renamed, or invented a task, the code throws away the AI ordering and keeps the original — so a made-up task title can never appear in the email.</p>
+<p>And there is a <strong>hard fallback</strong> so a reminder <em>always</em> sends. If the AI is slow, down, or fails for any reason, <code>compose_reminder_email_ai</code> returns <code>None</code>, and the code falls back to the deterministic template <code>compose_reminder_email</code>. The email <em>subject</em> is always deterministic (for a consistent inbox), and only the body prose is ever AI-written.</p>
+<h4>What triggers it</h4>
+<p>The watcher runs when something POSTs to <code>/api/internal/deadlines/check</code>. This endpoint is protected by a shared secret in the <code>X-Research-Secret</code> request header, matched against the <code>RESEARCH_SECRET</code> environment variable — so random internet traffic can't trigger it. In production, Google Cloud Scheduler calls this endpoint automatically once a day (at 7am Eastern). The endpoint just opens a database session and calls <code>send_due_reminders(db)</code>, then returns a small JSON summary (how many scanned, sent, failed).</p>
+
+<h3>5.5 The Proposals tracker screen (/my-proposals)</h3>
+<p>This is the page where a faculty member sees and manages their proposals. The UI code is <code>frontend/src/components/MyProposals.jsx</code>.</p>
+<p>What the user sees:</p>
+<ul>
+<li>A list of their proposal cards, each showing the title, sponsor, status pill (Active / Submitted / Withdrawn), and a countdown to the deadline that turns urgent when 7 or fewer days remain and "overdue" when it's past.</li>
+<li>Inside a proposal, the checklist of tasks. Each <code>TaskRow</code> shows a check circle, the task title, an optional description, and a "N days before deadline" hint. Clicking the circle toggles the task between pending and done.</li>
+<li>Buttons to upload a solicitation PDF (opening <code>SolicitationUploadModal</code>) and to critique a draft (<code>DraftCritiqueModal</code>). The "Critique Draft" button only appears for proposals that actually carry solicitation rules — the frontend checks the same <code>notes</code> lines the backend wrote.</li>
+</ul>
+<h4>Proposal templates (the seeded checklist)</h4>
+<p>When a proposal is created, its checklist isn't blank — it's seeded from a template so the user lands on a populated to-do list. Templates live in <code>backend/services/proposal_templates.py</code>. There is a <code>_GENERIC_CHECKLIST</code> used for any sponsor, plus NSF-specific and NIH-specific add-on tasks. <code>get_template</code> returns the right combined list for the sponsor. There's also a special NSF Education-program-only task that is appended <em>only</em> when the program text actually looks like an NSF education program — so a plain NSF science proposal doesn't get an irrelevant education checklist.</p>
+<h4>The kb_doc_id "Open form" link — and an honest caveat</h4>
+<p>Each template task can carry a <code>kb_doc_id</code> — a pointer to the matching form/template in the knowledge base, the idea being the UI could show an "Open form" link right on the task row. For example, "Build the proposal budget" points to <code>form_budget_justification_template</code>. This value <em>is</em> saved on the task row (column <code>submission_tasks.kb_doc_id</code>) and <em>is</em> sent to the browser by the API.</p>
+<div class="callout"><strong>Note (verified against the code):</strong> The frontend does <strong>not</strong> yet use <code>kb_doc_id</code>. The <code>TaskRow</code> component renders only the title, description, and the days-before-deadline hint — there is no "Open form" link anywhere in the file. So the data is delivered but unused: the "Open form" button is still to be built. (Tasks that have no matching KB form — biosketch, DMP, Specific Aims, etc. — correctly leave <code>kb_doc_id</code> as <code>None</code> so no dead link could ever be created.)</div>
+<h4>The proposal/task API endpoints</h4>
+<p>The tracker talks to a small set of endpoints in <code>main.py</code>: list (<code>GET /api/me/submissions</code>), create (which seeds the template), get one, update, delete (which cascade-deletes its tasks), plus add / update / delete individual tasks, and a template list for the create dropdown. Every one of these is gated so a user can only touch their own proposals.</p>
+
+<h3>5.6 The Forms catalog (/forms)</h3>
+<p>The Forms catalog is a browsable list of ORA's forms, templates, checklists, and memos — so a faculty member can open the right PDF in one click without asking the chatbot (which would burn an AI call and risk a made-up link). Code lives in <code>backend/services/forms_catalog.py</code>.</p>
+<p>Where the catalog data comes from: it is a <strong>pure static read of a bundled file</strong> — no database, no AI, no network. At import time it reads <code>kb_structured/_all_documents.jsonl</code> once, keeps only the "form-like" documents (those whose subcategory mentions words like form, template, docusign, checklist, memo, sample), and for each one derives extra tags it can be filtered by:</p>
+<ul>
+<li><strong>sponsor</strong> — guessed by keyword-matching the title and content; "Internal" if nothing external matches.</li>
+<li><strong>roles</strong> — guessed from the document's category (e.g. pre-award forms serve "PI" and "Staff"; a form can have several roles).</li>
+</ul>
+<p>Each catalog entry includes the clickable form link (<code>url</code>), a "View on morgan.edu" source link (<code>source_url</code>), a short summary, and the sponsor/role tags. The endpoint <code>GET /api/forms</code> calls <code>list_forms</code> with optional <code>category</code>, <code>sponsor</code>, and <code>role</code> filters. Because everything is read straight from the bundled knowledge base, every link is real — nothing here is invented by an AI.</p>
+
+<h3>5.7 The tables that store all of this</h3>
+<table>
+<thead><tr><th>Table</th><th>Key columns</th><th>What it holds</th></tr></thead>
+<tbody>
+<tr><td><code>submissions</code></td><td><code>id</code>, <code>user_id</code>, <code>title</code>, <code>sponsor</code> (default "Internal"), <code>deadline</code>, <code>status</code> (<code>active</code> / <code>submitted</code> / <code>withdrawn</code>, default <code>active</code>), <code>notes</code>, <code>created_at</code>, <code>updated_at</code></td><td>One in-flight proposal. The <code>notes</code> column secretly carries the structured solicitation rules (budget cap, page limits, attachments) that Draft Critic reads back.</td></tr>
+<tr><td><code>submission_tasks</code></td><td><code>id</code>, <code>submission_id</code>, <code>title</code>, <code>description</code>, <code>kb_doc_id</code>, <code>due_offset_days</code>, <code>status</code> (<code>pending</code> / <code>done</code>, default <code>pending</code>), <code>notes</code>, <code>sort_order</code></td><td>One checklist item under a proposal. Deletes automatically (cascade) when its proposal is deleted.</td></tr>
+<tr><td><code>deadline_reminder_log</code></td><td><code>id</code>, <code>submission_id</code>, <code>threshold_days</code> (14/7/3/1/0), <code>sent_at</code>, <code>sent_to</code> (which email)</td><td>One row per reminder already sent. This is the memory that makes Deadline Watcher never double-send.</td></tr>
+</tbody>
+</table>
+<p><strong>How tasks are generated:</strong> when a proposal is created manually, <code>create_submission</code> seeds tasks straight from the sponsor template. When a proposal is created from a solicitation, <code>create_submission_from_solicitation</code> seeds the template tasks <em>plus</em> one extra "Prepare required attachment: X" task for each attachment the solicitation listed that the template didn't already cover. After that, the user can freely add, edit, toggle, or delete tasks.</p>
+
+<h3>5.8 How your profile feeds the agents</h3>
+<p>A user's profile fields — Department, Title, Role, and research Interests — aren't just decoration; they quietly flow into the system that personalizes answers. The bridge is <code>mirror_profile_to_memories</code>, called from the profile-save path.</p>
+<p>"Mirroring" means copying the profile values into the <code>user_memories</code> table as memory facts: <code>department</code> becomes a memory of type <code>department</code>, the role becomes a memory of type <code>role</code>, and each interest becomes its own <code>interest</code> memory. (Title is intentionally <em>not</em> mirrored — there's no matching memory type.) A profile value <strong>overwrites</strong> any conflicting fact the system auto-learned earlier — the profile wins.</p>
+<p>Why bother? Because the chatbot already builds its context for each answer by reading the <code>user_memories</code> table through <code>build_memory_context</code>. By mirroring the profile into that same table, the profile values get picked up automatically — <strong>with no code change needed in the agent or chat path.</strong> It's the shared-notebook pattern again: instead of teaching the chatbot to read profile fields directly, the profile writes itself into the place the chatbot already looks. So a faculty member who sets their role to "PI" and department to "Chemistry" will get answers tailored to a Chemistry PI, simply because those facts now live in the memory the agent already consults.</p>

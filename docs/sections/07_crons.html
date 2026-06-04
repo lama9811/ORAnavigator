@@ -1,0 +1,148 @@
+<h2 id="crons">7. Cron Jobs &amp; All Scheduled Work</h2>
+
+<p>This section explains every piece of work in ORA Navigator that runs <em>by itself</em> on a timer, plus the small background jobs that fire automatically right after every chat message. Nobody clicks a button to start these; the computer runs them on its own.</p>
+
+<h3>7.1 Two quick definitions</h3>
+<ul>
+  <li><strong>Cron job</strong> — a task that runs automatically on a fixed schedule (for example, "every day at 3 in the morning"). The name comes from an old Unix program called <code>cron</code>. You set the schedule once and it keeps firing forever.</li>
+  <li><strong>Cloud Scheduler</strong> — Google Cloud's service that acts as the alarm clock. At the scheduled time it sends an HTTP request (it "pings" a web address) to wake up the job. ORA Navigator's scheduled jobs are Cloud Scheduler jobs that POST to a special "internal" web address on the backend.</li>
+</ul>
+<p>So the pattern is always the same: <strong>Cloud Scheduler (the alarm) → calls an internal endpoint on the backend (the door) → which runs a Python function (the actual work) → which writes results into a database table.</strong></p>
+
+<h3>7.2 How the alarm proves it is allowed in (the auth model)</h3>
+<p>The internal endpoints are not for normal users. They are protected by a <strong>shared secret</strong> — basically a long password. Every internal endpoint reads an HTTP header called <code>X-Research-Secret</code> from the incoming request and compares it to an environment variable called <code>RESEARCH_SECRET</code> on the server. If they do not match exactly, the request is rejected with HTTP 403 ("forbidden").</p>
+<p>The code is the same few lines for every internal endpoint: read the header, read the env var, and if the env var is blank or the two do not match, raise a 403.</p>
+<div class="callout"><strong>Note:</strong> Both Cloud Scheduler jobs (the 7am deadline job and the 3am memory job) use the <em>same</em> shared secret, sent in the same <code>X-Research-Secret</code> header. This secret was <strong>rotated</strong> (changed to a fresh value) on 2026-06-02 after it was briefly exposed; the value stored in Cloud Run and the value baked into both scheduler job headers were re-synced and verified to match.</div>
+<div class="callout"><strong>Note (local-development gotcha):</strong> When testing this stack on a laptop, the local ADK agent must be started with <code>python -m google.adk.cli api_server . --port 8081</code>. The friendlier <code>adk web</code> developer-UI mode crashes here on a uvicorn <code>config.load()</code> error; <code>api_server</code> is the plain, headless mode that the backend actually talks to.</div>
+
+<h3>7.3 Master table of every scheduled / background job</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Job name</th>
+      <th>Schedule / trigger</th>
+      <th>Endpoint or function called</th>
+      <th>What it actually does (plain words)</th>
+      <th>What it writes + where</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>ora-deadline-watcher</code></td>
+      <td>Cloud Scheduler, daily at <strong>7am Eastern</strong></td>
+      <td>POST <code>/api/internal/deadlines/check</code> → <code>send_due_reminders()</code></td>
+      <td>Looks at every active proposal, finds the ones sitting exactly on a reminder day, and emails the faculty owner a reminder.</td>
+      <td>One <code>deadline_reminder_log</code> row per email sent.</td>
+    </tr>
+    <tr>
+      <td><code>ora-memory-consolidate</code></td>
+      <td>Cloud Scheduler, daily at <strong>3am Eastern</strong></td>
+      <td>POST <code>/api/internal/memory/consolidate</code> → <code>consolidate_user_memories(24)</code></td>
+      <td>Reads the last 24 hours of chat, asks Gemini to pull out durable one-line facts about each user, and saves those facts.</td>
+      <td>Fact rows in <code>user_memories</code> (deduped, capped 5 per type). <strong>Never touches chat history.</strong></td>
+    </tr>
+    <tr>
+      <td>Memory idle-sweep</td>
+      <td>Cloud Scheduler, <strong>every 5 minutes</strong></td>
+      <td>POST <code>/api/internal/memory/idle-sweep</code> → <code>consolidate_idle_users(5, 10)</code></td>
+      <td>Finds users who chatted recently but have now gone quiet for 5–10 minutes, and extracts their facts right away so mid-session details are not lost waiting for 3am.</td>
+      <td>Fact rows in <code>user_memories</code>.</td>
+    </tr>
+    <tr>
+      <td>Research batch</td>
+      <td>Internal endpoint (intended for a daily trigger) and the admin "Run research now" button</td>
+      <td>POST <code>/api/internal/research/run</code> → <code>run_research_batch()</code></td>
+      <td>Takes questions the chatbot failed to answer well, groups similar ones together, researches each group, and drafts a proposed knowledge-base answer for a human to approve.</td>
+      <td>Updates <code>failed_queries</code> rows and writes draft answers to <code>kb_suggestions</code>.</td>
+    </tr>
+    <tr>
+      <td>Profile backfill (one-time)</td>
+      <td>Manual, run once</td>
+      <td>POST <code>/api/internal/memory/backfill-profiles</code> → <code>backfill_profile_memories()</code></td>
+      <td>Copies every existing user's saved profile (department/role) into their memory notebook so the bot can recall it without them re-saving. Safe to re-run.</td>
+      <td>Upserts fact rows in <code>user_memories</code>.</td>
+    </tr>
+    <tr>
+      <td>Post-commit: session summary</td>
+      <td>Background, after <strong>every</strong> chat turn (self-gates: only acts at ~8+ turns)</td>
+      <td><code>run_session_summary()</code></td>
+      <td>Summarizes the earlier part of a long conversation so the bot does not forget how the chat started.</td>
+      <td>The <code>session_summary</code> column of the just-saved <code>chat_history</code> row.</td>
+    </tr>
+    <tr>
+      <td>Post-commit: realtime memory extraction</td>
+      <td>Background, fires <strong>every 6 turns</strong></td>
+      <td><code>consolidate_user_memories_single(user_id, 2)</code></td>
+      <td>Pulls durable facts from the last ~2 hours of this user's chat in the middle of a session, so memory does not lag a whole day.</td>
+      <td>Fact rows in <code>user_memories</code>.</td>
+    </tr>
+    <tr>
+      <td>Post-commit: suggestion regeneration</td>
+      <td>Background, after every chat turn (throttled to 10 min)</td>
+      <td><code>regenerate_for_user()</code></td>
+      <td>Refreshes the personalized "questions you might ask" shown on the home screen.</td>
+      <td>Rows in <code>user_suggested_questions</code>.</td>
+    </tr>
+    <tr>
+      <td>Post-commit: turn embedding</td>
+      <td>Background, after every chat turn</td>
+      <td><code>embed_and_store_turn()</code></td>
+      <td>Turns the question + answer into a numeric "embedding" vector so future sessions can semantically recall this exact turn.</td>
+      <td>The embedding on the <code>chat_history</code> turn.</td>
+    </tr>
+    <tr>
+      <td>Post-commit: touch last-chat time</td>
+      <td>Background, after every chat turn</td>
+      <td><code>touch_user_last_chat_at()</code></td>
+      <td>Stamps "this user just chatted" so the idle-sweep cron knows who went quiet 5–10 minutes ago.</td>
+      <td><code>users.last_chat_at</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>7.4 The two real Cloud Scheduler cron jobs, in detail</h3>
+<h4>(1) ora-deadline-watcher — daily 7am Eastern</h4>
+<p>This is the proposal-deadline reminder system. The chain is: Cloud Scheduler → POST <code>/api/internal/deadlines/check</code> → <code>send_due_reminders()</code>.</p>
+<ul>
+  <li>It defines five "reminder buckets" — <code>THRESHOLD_DAYS = (14, 7, 3, 1, 0)</code>. A faculty member gets pinged when their proposal deadline is 14, 7, 3, 1, and 0 days away.</li>
+  <li><code>find_due_reminders()</code> scans active proposals and keeps only the ones whose deadline lands exactly on one of those buckets <em>today</em>.</li>
+  <li>For each one, it first tries to write a friendly, personalized email body with Gemini. If the AI is slow or fails, it falls back hard to a fixed template — so <strong>a reminder always sends</strong>.</li>
+  <li>It emails the proposal's owner.</li>
+</ul>
+<p><strong>What it writes + where:</strong> only after a successful send, it inserts one <code>DeadlineReminderLog</code> row into the <code>deadline_reminder_log</code> table, recording the submission, the threshold bucket, and who it was sent to. This row is the "I already sent this one" memory. Because of it, if the job is run twice, the same person is never double-emailed for the same bucket — this is called <strong>idempotency</strong>. If the send fails, no log row is written, so the next run retries.</p>
+<h4>(2) ora-memory-consolidate — daily 3am Eastern</h4>
+<p>Chain: Cloud Scheduler → POST <code>/api/internal/memory/consolidate</code> → <code>consolidate_user_memories(24)</code>.</p>
+<ul>
+  <li>It looks at the last 24 hours of chat and finds every user who has messages in that window.</li>
+  <li>For each such user it grabs up to 50 recent messages and builds a transcript, but <strong>only</strong> if they have at least 3 messages — very quiet users are skipped.</li>
+  <li>It asks Gemini to extract durable one-line facts about the user's research-admin context — things like their role, department, or active grant. The prompt deliberately excludes private/financial details.</li>
+  <li>It merges those facts in with <code>_merge_memories()</code>.</li>
+</ul>
+<p><strong>What it writes + where:</strong> fact rows in the <code>user_memories</code> table. The merge logic is careful: a new fact is skipped if an existing fact already contains it, or vice-versa (dedup); and if a category already has 5 facts, it overwrites the <em>oldest</em> one of that type instead of growing without limit (cap of 5 per type).</p>
+<div class="callout"><strong>Note (very important):</strong> This 3am job <strong>only reads</strong> <code>chat_history</code> — it never deletes or edits chat transcripts. The word "consolidate" means it <em>distills and caps the fact list</em> in the separate <code>user_memories</code> table, not "clean up the chat." Your raw conversation history is left completely untouched.</div>
+
+<h3>7.5 The idle-sweep cron — every 5 minutes</h3>
+<p>Chain: Cloud Scheduler (every 5 min) → POST <code>/api/internal/memory/idle-sweep</code> → <code>consolidate_idle_users(5, 10)</code>.</p>
+<p>The 3am job catches everyone overnight, but that means a fact you mention at 10am could sit uncaptured for many hours. The idle-sweep closes that gap. Every 5 minutes it queries the <code>users</code> table for anyone whose <code>last_chat_at</code> is between 5 and 10 minutes ago — meaning they just stopped chatting. For each of those users it runs the same realtime extraction (over the last 2 hours) so their mid-session facts get saved before they ever reach the 3am cron. Re-running is harmless — re-extraction just rewrites the same facts and the dedup logic absorbs the repeats.</p>
+
+<h3>7.6 The research batch — turning failed questions into draft answers</h3>
+<p>Chain: POST <code>/api/internal/research/run</code> (and the admin dashboard's "Run research now" button) → <code>run_research_batch()</code>.</p>
+<p>This is the self-improvement loop for the knowledge base. In plain words:</p>
+<ul>
+  <li><strong>Cluster:</strong> <code>cluster_failed_queries()</code> takes questions the bot answered poorly, turns each into an embedding, and greedily groups similar ones together by cosine similarity so "How do I add a co-PI?" and "adding a co-investigator?" land in one cluster.</li>
+  <li><strong>Research:</strong> for the biggest clusters it picks a representative question and calls <code>research_topic()</code> to draft a researched answer with sources and a confidence level.</li>
+  <li><strong>Suggest:</strong> it creates a <code>KBSuggestion</code> row with the topic, the drafted answer, the sources, and a status of <code>"pending"</code>, then marks the cluster's queries as <code>"researched"</code>.</li>
+</ul>
+<p>These suggestions are <em>proposals</em> for a human admin to approve, reject, or push into the real knowledge base — the bot never silently adds them itself. (See Section 4 for the full five-stage lifecycle.)</p>
+
+<h3>7.7 Per-turn background work (not cron, but automatic)</h3>
+<p>Cron jobs run on a clock. This last group runs on an <em>event</em> instead: it fires automatically right after every chat message is saved. All of it is launched from one helper, <code>_schedule_post_commit_memory_tasks()</code>, called from each chat endpoint after the answer is already committed. The key idea: this work happens <strong>after the response has already been sent to the user</strong>, so it adds zero waiting time to the chat. Each sub-task is independently switchable with a feature flag and self-checks whether it should actually do anything.</p>
+<p>The five sub-tasks it fires:</p>
+<ul>
+  <li><strong>Session summary</strong>: summarizes the earlier turns of a long chat (self-gates to ~8+ turns). Writes into <code>chat_history.session_summary</code>.</li>
+  <li><strong>Touch last-chat time</strong>: stamps <code>users.last_chat_at = now()</code>. This is the breadcrumb the 5-minute idle-sweep cron reads to know who just went quiet.</li>
+  <li><strong>Embed turn</strong>: converts the question + answer into a numeric embedding for future cross-session semantic recall. Writes the embedding onto the <code>chat_history</code> turn.</li>
+  <li><strong>Realtime memory extraction</strong>: counts the session's turns; only every 6th turn does it actually run. When it fires, it pulls durable facts from the last ~2 hours and merges them. A per-user lock stops two of these from running at once for the same person. Writes fact rows into <code>user_memories</code>.</li>
+  <li><strong>Suggestion regeneration</strong>: refreshes the personalized home-screen question suggestions, throttled internally to a 10-minute window. Writes rows into <code>user_suggested_questions</code>.</li>
+</ul>
+<div class="callout"><strong>Note:</strong> None of these per-turn tasks use the <code>X-Research-Secret</code> header — they are not web endpoints. They run as fire-and-forget background tasks <em>inside</em> the backend process, so there is no external request to authenticate. The secret-protected endpoints are only the cron-triggered ones in Section 7.3.</div>

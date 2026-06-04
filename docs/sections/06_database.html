@@ -1,0 +1,191 @@
+<h2 id="database">6. The Database, Caching &amp; Authentication</h2>
+
+<p>This section explains three "behind the scenes" systems that ORA Navigator depends on: the <strong>database</strong> (where all the durable information is stored), the <strong>cache</strong> (a memory of recent answers so the app doesn't redo expensive work), and <strong>authentication</strong> (how the app knows who you are and whether you are allowed in).</p>
+
+<h3>6.1 What a database is, and the tables ORA Navigator uses</h3>
+<p>A <strong>database</strong> is an organized collection of information stored on a server so it survives restarts. A <strong>table</strong> inside a database is like one spreadsheet: it has named <strong>columns</strong> (the kinds of fact it stores) and <strong>rows</strong> (one record each). ORA Navigator uses a <strong>MySQL 8.4</strong> database (Google Cloud SQL instance <code>oranavigator-db</code>). The tables are described in Python using a tool called <strong>SQLAlchemy ORM</strong> ("ORM" = Object-Relational Mapping, which means each table is written as a Python class and each column as a class attribute). All these classes live in <code>backend/models.py</code>.</p>
+<div class="callout"><strong>Note:</strong> A few columns are typed <code>Text</code> but actually hold <strong>JSON text</strong> (a list or object turned into a string with Python's <code>json.dumps</code>, and read back with <code>json.loads</code>). So when you see <code>citations</code>, <code>questions</code>, <code>embedding</code>, or <code>sources</code> below, picture a piece of text that, when decoded, becomes a list.</div>
+
+<h4>Table: <code>users</code></h4>
+<p><strong>Purpose:</strong> one row per person who has an account. It holds their login credentials, their role (regular user or admin), their profile, and several "memory" control flags.</p>
+<table>
+<tr><td><code>id</code></td><td>A unique number for the user (the "primary key"). Other tables point back to this number.</td></tr>
+<tr><td><code>email</code></td><td>The user's email address. Must be unique; used to log in.</td></tr>
+<tr><td><code>password_hash</code></td><td>A scrambled version of the password (never the real password).</td></tr>
+<tr><td><code>role</code></td><td>Either <code>"user"</code> (default) or <code>"admin"</code>. Admins can see admin-only screens.</td></tr>
+<tr><td><code>name</code></td><td>The user's display name. Optional.</td></tr>
+<tr><td><code>profile_picture</code> / <code>profile_picture_data</code></td><td>A path/URL to a profile image, or the actual image stored inline as base64 text.</td></tr>
+<tr><td><code>email_verified</code></td><td>True/False: has the user clicked the email verification link yet?</td></tr>
+<tr><td><code>verification_token</code> / <code>reset_token</code> / <code>reset_token_expires</code></td><td>One-time codes for email verification and "forgot my password" resets, plus when the reset code stops working.</td></tr>
+<tr><td><code>created_at</code></td><td>When the account was created.</td></tr>
+<tr><td><code>last_chat_at</code></td><td>When the user last chatted. The "idle-sweep" memory job uses this to extract facts 5-10 minutes after someone goes quiet.</td></tr>
+<tr><td><code>memory_paused</code></td><td>True/False: if True, the app stops recalling and extracting personal memory for this user (a global privacy switch).</td></tr>
+<tr><td><code>department</code> / <code>title</code></td><td>The user's department and job title. Optional; help the agent tailor answers.</td></tr>
+<tr><td><code>primary_role</code></td><td>Their research-admin role. Allowed values are validated in code: PI, Co-PI, Research Staff, Department Admin, Faculty, Postdoc, Student.</td></tr>
+</table>
+
+<h4>Table: <code>chat_history</code></h4>
+<p><strong>Purpose:</strong> one row per chat turn (a question and its answer). It also stores the Sources shown with the answer, plus extra fields used by the long-term memory system.</p>
+<table>
+<tr><td><code>id</code></td><td>Unique number for this chat turn.</td></tr>
+<tr><td><code>user_id</code></td><td>Which user this turn belongs to.</td></tr>
+<tr><td><code>session_id</code></td><td>Which conversation thread this turn is part of (defaults to <code>"default"</code>).</td></tr>
+<tr><td><code>user_query</code> / <code>bot_response</code></td><td>The exact text the user typed and the exact answer the bot gave.</td></tr>
+<tr><td><code>citations</code></td><td>JSON list of <code>{title, url}</code> Sources for this answer. Saving them here means the "Sources" box survives cache hits, page refreshes, and history reloads.</td></tr>
+<tr><td><code>timestamp</code></td><td>When the turn happened.</td></tr>
+<tr><td><code>session_summary</code> / <code>summary_through_id</code></td><td>A rolling plain-text summary of the conversation so far, and the last chat <code>id</code> the summary already covers.</td></tr>
+<tr><td><code>embedding</code> / <code>embedding_model</code></td><td>A JSON list of numbers representing this turn's meaning (used for semantic recall across sessions), plus the model that produced it.</td></tr>
+<tr><td><code>topic_label</code></td><td>A short label for the turn's topic.</td></tr>
+</table>
+
+<h4>Table: <code>feedback</code></h4>
+<p><strong>Purpose:</strong> records when a user rates an answer (thumbs up/down or a report), so the team can improve the bot.</p>
+<table>
+<tr><td><code>id</code>, <code>user_id</code>, <code>session_id</code></td><td>Identity of the record, who gave it, and which conversation.</td></tr>
+<tr><td><code>message_text</code></td><td>The bot message the feedback is about.</td></tr>
+<tr><td><code>feedback_type</code></td><td>One of <code>"helpful"</code>, <code>"not_helpful"</code>, or <code>"report"</code>.</td></tr>
+<tr><td><code>report_details</code></td><td>Optional extra text the user wrote when reporting.</td></tr>
+<tr><td><code>timestamp</code></td><td>When the feedback was submitted.</td></tr>
+</table>
+
+<h4>Table: <code>support_tickets</code></h4>
+<p><strong>Purpose:</strong> bug reports, feature requests, and questions submitted by users, with status tracking and an admin response area.</p>
+<table>
+<tr><td><code>id</code>, <code>user_id</code></td><td>Ticket number and who opened it.</td></tr>
+<tr><td><code>subject</code> / <code>description</code></td><td>Short title and full description of the issue.</td></tr>
+<tr><td><code>category</code></td><td>One of <code>"bug"</code>, <code>"feature"</code>, <code>"question"</code>, <code>"other"</code>.</td></tr>
+<tr><td><code>attachment_data</code> / <code>attachment_name</code></td><td>An optional attached file stored as base64 text (up to ~12MB), and its name.</td></tr>
+<tr><td><code>status</code></td><td>One of <code>"open"</code>, <code>"in_progress"</code>, <code>"resolved"</code>, <code>"closed"</code> (defaults to "open").</td></tr>
+<tr><td><code>priority</code></td><td>One of <code>"low"</code>, <code>"normal"</code>, <code>"high"</code>, <code>"urgent"</code> (defaults to "normal").</td></tr>
+<tr><td><code>admin_notes</code>, <code>resolved_by</code>, <code>resolved_at</code></td><td>Internal notes, the admin who resolved it, and when.</td></tr>
+<tr><td><code>created_at</code> / <code>updated_at</code></td><td>When it was opened and last changed.</td></tr>
+</table>
+
+<h4>Table: <code>user_memories</code></h4>
+<p><strong>Purpose:</strong> long-term facts about each user, distilled from their conversations by a nightly job. These are short one-line facts (not raw chat), used to personalize answers.</p>
+<table>
+<tr><td><code>id</code>, <code>user_id</code></td><td>Unique number and which user this fact is about.</td></tr>
+<tr><td><code>memory_type</code></td><td>The kind of fact: <code>role</code>, <code>department</code>, <code>active_grant</code>, <code>irb_protocol</code>, <code>iacuc_protocol</code>, <code>sponsor</code>, <code>interest</code>, <code>preference</code>, <code>goal</code>, or <code>context</code>.</td></tr>
+<tr><td><code>content</code></td><td>The fact itself, in plain words (e.g. "Works in the Biology department").</td></tr>
+<tr><td><code>created_at</code> / <code>updated_at</code></td><td>When the fact was first stored and last changed.</td></tr>
+<tr><td><code>embedding</code> / <code>embedding_model</code></td><td>A JSON list of 256 numbers (a meaning-vector) so the app can find the most relevant facts by similarity, plus the model that produced it.</td></tr>
+<tr><td><code>paused</code></td><td>True/False: if True this single fact is skipped during recall (a per-fact privacy switch, separate from <code>users.memory_paused</code>).</td></tr>
+</table>
+
+<h4>Table: <code>user_suggested_questions</code></h4>
+<p><strong>Purpose:</strong> the personalized "you might want to ask…" prompts shown on the home screen, precomputed per user so the page loads instantly.</p>
+<table>
+<tr><td><code>user_id</code></td><td>Which user these suggestions belong to. This is also the primary key (one row per user).</td></tr>
+<tr><td><code>questions</code></td><td>A JSON list of suggested question strings.</td></tr>
+<tr><td><code>generated_at</code></td><td>When the suggestions were last generated.</td></tr>
+<tr><td><code>source_signature</code></td><td>A fingerprint like <code>"{max_chat_id}:{max_memory_updated_epoch}"</code> used to skip regeneration when nothing has changed.</td></tr>
+<tr><td><code>source</code></td><td>Either <code>"personalized"</code> or <code>"default"</code> (a generic cold-start sample).</td></tr>
+</table>
+
+<h4>Table: <code>failed_queries</code></h4>
+<p><strong>Purpose:</strong> records questions the bot couldn't answer well (knowledge-base "misses"), so an auto-research process can later find and fill those gaps.</p>
+<table>
+<tr><td><code>id</code></td><td>Unique number for this failed query.</td></tr>
+<tr><td><code>user_query</code> / <code>bot_response</code></td><td>The question the bot struggled with and what it said (often a refusal).</td></tr>
+<tr><td><code>user_id</code></td><td>Who asked (optional — can be empty for guests).</td></tr>
+<tr><td><code>cluster_id</code></td><td>A group number linking similar failed questions together.</td></tr>
+<tr><td><code>status</code></td><td>One of <code>new</code>, <code>clustered</code>, <code>researched</code>, <code>dismissed</code>.</td></tr>
+<tr><td><code>created_at</code></td><td>When it was logged.</td></tr>
+</table>
+
+<h4>Table: <code>kb_suggestions</code></h4>
+<p><strong>Purpose:</strong> proposed knowledge-base additions generated by the auto-research agent. An admin reviews and approves each one before it goes into the live knowledge base.</p>
+<table>
+<tr><td><code>id</code>, <code>cluster_id</code></td><td>Unique number and the group of failed queries this answers.</td></tr>
+<tr><td><code>topic</code> / <code>representative_query</code> / <code>query_count</code></td><td>A short topic name, one example question, and how many user questions fell into the cluster.</td></tr>
+<tr><td><code>researched_answer</code> / <code>sources</code> / <code>confidence</code></td><td>The drafted answer, a JSON array of source URLs, and a high/medium/low confidence.</td></tr>
+<tr><td><code>suggested_doc_id</code> / <code>suggested_content</code></td><td>The proposed KB document id and its text.</td></tr>
+<tr><td><code>status</code></td><td>One of <code>pending</code>, <code>approved</code>, <code>rejected</code>, <code>pushed</code>.</td></tr>
+<tr><td><code>admin_notes</code>, <code>reviewed_by</code>, <code>reviewed_at</code></td><td>Reviewer's notes, who reviewed it, and when.</td></tr>
+<tr><td><code>created_at</code> / <code>updated_at</code></td><td>When created and last changed.</td></tr>
+</table>
+
+<h4>Table: <code>submissions</code></h4>
+<p><strong>Purpose:</strong> one row per in-progress grant proposal a user is tracking. Each submission owns an ordered checklist of tasks.</p>
+<table>
+<tr><td><code>id</code>, <code>user_id</code></td><td>Unique number and the owner.</td></tr>
+<tr><td><code>title</code> / <code>sponsor</code></td><td>The proposal's name and who is being applied to (defaults to "Internal").</td></tr>
+<tr><td><code>deadline</code></td><td>When the proposal is due (optional).</td></tr>
+<tr><td><code>status</code></td><td>One of <code>active</code> (default), <code>submitted</code>, <code>withdrawn</code>.</td></tr>
+<tr><td><code>notes</code></td><td>Free-text notes — and the structured solicitation rules that Draft Critic reads back.</td></tr>
+<tr><td><code>created_at</code> / <code>updated_at</code></td><td>When created and last changed.</td></tr>
+</table>
+<p><strong>Cascade behavior:</strong> deleting a submission automatically deletes its tasks.</p>
+
+<h4>Table: <code>submission_tasks</code></h4>
+<p><strong>Purpose:</strong> a single checklist item under a submission (for example "Upload biosketch"). Seeded from a template when the proposal is created, then editable by the user.</p>
+<table>
+<tr><td><code>id</code>, <code>submission_id</code></td><td>Unique number and which proposal this task belongs to (deletes with the parent).</td></tr>
+<tr><td><code>title</code> / <code>description</code></td><td>The task name and an optional longer explanation.</td></tr>
+<tr><td><code>kb_doc_id</code></td><td>Optional link to the knowledge-base form/template this task matches, so the UI can show an "Open form" link.</td></tr>
+<tr><td><code>due_offset_days</code></td><td>How many days <em>before</em> the deadline this task should be done.</td></tr>
+<tr><td><code>status</code></td><td><code>pending</code> (default) or <code>done</code>.</td></tr>
+<tr><td><code>notes</code> / <code>sort_order</code></td><td>Free-text notes and the position of this task in the checklist.</td></tr>
+<tr><td><code>created_at</code> / <code>updated_at</code></td><td>When created and last changed.</td></tr>
+</table>
+
+<h4>Table: <code>deadline_reminder_log</code></h4>
+<p><strong>Purpose:</strong> a bookkeeping log so the Deadline Watcher never emails the same reminder twice. Each time it sends a "deadline in N days" email, it writes one row here.</p>
+<table>
+<tr><td><code>id</code>, <code>submission_id</code></td><td>Unique number and which proposal the reminder was for (deletes with the parent).</td></tr>
+<tr><td><code>threshold_days</code></td><td>Which "days before deadline" bucket this was: 14, 7, 3, 1, or 0.</td></tr>
+<tr><td><code>sent_at</code> / <code>sent_to</code></td><td>When the email was sent and the address it went to (for audit only).</td></tr>
+</table>
+<p><strong>Why it matters ("idempotency"):</strong> before sending, the watcher checks whether a row already exists for that <code>(submission_id, threshold_days)</code> pair; if it does, it skips. So a faculty member never gets two "14 days left" emails for the same proposal.</p>
+
+<div class="callout"><strong>Note:</strong> The full set of tables is exactly: <code>users</code>, <code>chat_history</code>, <code>feedback</code>, <code>support_tickets</code>, <code>user_memories</code>, <code>user_suggested_questions</code>, <code>failed_queries</code>, <code>kb_suggestions</code>, <code>submissions</code>, <code>submission_tasks</code>, and <code>deadline_reminder_log</code> — eleven tables in total.</div>
+
+<h3>6.2 How the app connects to the database (two environments)</h3>
+<p>The connection code lives in <code>backend/db.py</code>. It reads a single setting called <code>DATABASE_URL</code> from the environment. If that setting is missing, it falls back to a local SQLite file so the app still starts. For the real MySQL database, the function <code>_make_engine</code> builds the connection in one of two ways.</p>
+<h4>(a) On a developer's laptop: TCP + SSL to the Cloud SQL public IP</h4>
+<p>"TCP" just means a normal network connection over the internet to the database server's public IP address. MySQL 8.4 <strong>requires encryption</strong> for such connections, so the code builds an <strong>SSL context</strong> (a secure-channel object) and attaches it. It sets <code>check_hostname = False</code> and <code>verify_mode = CERT_NONE</code> — meaning "encrypt the traffic, but don't insist on verifying the server's certificate name." Without this SSL context you get a confusing <code>Access denied</code> error <em>even with the correct password</em>, because MySQL 8.4 refuses unencrypted logins.</p>
+<h4>(b) On Cloud Run (production): a Unix socket via the Cloud SQL Auth Proxy</h4>
+<p>In production the app runs inside Google Cloud Run, which talks to the database through the <strong>Cloud SQL Auth Proxy</strong> — a secure local tunnel that appears as a <strong>Unix socket</strong> (a special file on disk that two programs use to talk, instead of a network address). The <code>DATABASE_URL</code> contains a <code>unix_socket=</code> setting. The code detects it and uses SQLAlchemy's <strong>"creator" pattern</strong>: instead of letting SQLAlchemy parse the URL, it hands SQLAlchemy a small function that calls <code>pymysql.connect(...)</code> directly with the socket path. This bypasses URL parsing entirely (which would choke on the socket path).</p>
+<div class="callout"><strong>Note:</strong> Why two methods? A laptop is outside Google's network, so it must reach the database over the public internet — which requires SSL. Cloud Run is inside Google's network and uses the proxy/socket, which is both faster and avoids exposing the database publicly. Every connection also sets <code>pool_pre_ping=True</code> and <code>pool_recycle=3600</code>, meaning "test a reused connection before using it, and throw away connections older than one hour" so stale connections don't cause errors.</div>
+
+<h3>6.3 How schema changes are applied (adding tables and columns safely)</h3>
+<p>Over time the code adds new tables and new columns. There are <strong>three</strong> mechanisms, and it's important to know which one runs automatically.</p>
+<ul>
+<li><strong>New tables — automatic.</strong> On startup, <code>init_db()</code> calls <code>Base.metadata.create_all(bind=engine)</code>. This creates any table that is defined in <code>models.py</code> but doesn't yet exist. It is safe to run every time: it never touches tables that already exist.</li>
+<li><strong>New columns on existing tables — self-healed by "SELECT → ALTER" checks.</strong> <code>create_all</code> does <em>not</em> add new columns to tables that already exist. So <code>init_db()</code> includes hand-written checks that try to <code>SELECT</code> the new column; if that fails (because the column is missing), it runs an <code>ALTER TABLE … ADD COLUMN</code> to add it. Examples: adding <code>chat_history.session_id</code>, <code>users.profile_picture_data</code>, the email-auth columns, and <code>chat_history.citations</code>. This is called "self-healing" because the running app fixes its own schema on boot.</li>
+<li><strong>The big migration script — NOT run automatically.</strong> <code>backend/migrate_db.py</code> has a <code>migrate()</code> function with the full, ordered list of column adds, new-table creates, legacy-cleanup steps, and the role rename from "student" to "user". This file only runs if you execute it directly. The app does <strong>not</strong> call it on startup.</li>
+</ul>
+<div class="callout"><strong>Note:</strong> Practical takeaway: a brand-new table you define in <code>models.py</code> appears by itself (via <code>create_all</code>). A brand-new <em>column</em> on an existing table only appears in production if it is covered by a <code>SELECT→ALTER</code> check in <code>init_db()</code> — you can't rely on <code>migrate_db.migrate()</code> running, because it doesn't run automatically.</div>
+
+<h3>6.4 Caching: remembering answers so the app doesn't redo work</h3>
+<p>A <strong>cache</strong> is a short-term memory of recent results. Producing a chat answer can take a full Gemini call (about 2-5 seconds and real cost). If the same question is asked again, the cache hands back the saved answer in milliseconds. All cache code lives in <code>backend/cache.py</code>, exposed through one global object <code>query_cache</code>. It has <strong>three layers</strong>, checked in order from fastest to smartest.</p>
+<h4>Layer L1 — in-memory cache (fastest)</h4>
+<p>L1 is a <code>TTLCache</code> held in the server's own memory. "TTL" means <strong>Time To Live</strong>: entries expire after a set time — here 24 hours — and it holds at most 500 entries, dropping the least-recently-used when full. It is roughly 0.001 ms fast, but it is local to one server instance and is wiped on restart.</p>
+<h4>Layer L2 — Redis cache (shared and durable)</h4>
+<p>L2 is <strong>Redis</strong>, a separate fast database used purely for caching. It is shared across all server instances and survives restarts, with a 7-day expiry. Its connection string comes from the <code>REDIS_URL</code> environment variable (the cloud secret <code>ora-redis-url</code>). All keys are namespaced with an <code>oranavigator:</code> prefix. If Redis can't be reached, the code logs a warning and simply runs without L2 — so the app keeps working.</p>
+<h4>Layer "Semantic" — meaning-based matching</h4>
+<p>The third layer catches questions that are <strong>worded differently but mean the same thing</strong>. It turns each question into an <strong>embedding</strong> — a list of numbers representing meaning — using Google's <code>text-embedding-004</code> model at 256 dimensions. To compare two questions it computes <strong>cosine similarity</strong> (a score from 0 to 1, where 1 means "same meaning"). If the best match scores at least <strong>0.95</strong>, it reuses that cached answer. The high 0.95 bar is deliberate: it only allows near-identical matches, to avoid mixing up different topics. Example: <code>"what is the F&amp;A rate"</code> matches <code>"what indirect cost rate does Morgan State charge"</code>. It keeps at most 100 such entries in memory and also persists them to Redis so they survive restarts.</p>
+<p><strong>The lookup order</strong>: check L1 (exact match) → check L2/Redis (exact match) → check Semantic (similar meaning) → otherwise it's a "miss" and the AI is asked. When the AI answers, it is written to L1, L2, and Semantic together. A separate parallel store keeps the answer's Sources list under a <code>cit:</code>-prefixed key so a cache hit can re-show its Sources.</p>
+<h4>What is deliberately NEVER cached</h4>
+<p>The function <code>_should_cache</code> blocks caching for:</p>
+<ul>
+<li><strong>Very short questions</strong> — under 15 characters, so "hi" and "hello" aren't cached.</li>
+<li><strong>Personal-recall questions.</strong> The cache key is built only from the question text and model — it has <strong>no user_id</strong>. So if a personalized answer were cached, it could leak one user's facts to another user who asked the same words. To prevent that, any question containing words like "my grant", "my deadline", "about me", "remember", "for me" is skipped, and the code also defers to the agent's shared detector <code>_is_personal_recall</code>.</li>
+<li><strong>Refusals, errors, and low-confidence answers.</strong> Answers that start with "error"/"unavailable", contain "trouble connecting"/"system issue", carry grounding disclaimers, or are refusal phrases like "I do not have"/"I cannot access" are not stored. Caching a refusal would keep serving it even after the bot is fixed.</li>
+</ul>
+<div class="callout"><strong>Note:</strong> In <strong>local development</strong> there is usually no Redis configured, so <code>REDIS_URL</code> is blank, the L2 connection "fails" gracefully, and only L1 (and Semantic, if the embedding client is available) is used. Setting <code>REDIS_URL</code> turns L2 back on. The raw cache key is built from the normalized question plus a small model-name hash, which is exactly why personal-recall answers are excluded from caching entirely rather than relying on the key.</div>
+
+<h3>6.5 Authentication &amp; roles (knowing who you are, and what you may do)</h3>
+<p><strong>Authentication</strong> is proving who you are; <strong>authorization</strong> is what you're allowed to do once known. ORA Navigator handles both with email-restricted signup, email verification, hashed passwords, and JWT tokens.</p>
+<h4>Signup is restricted to @morgan.edu, with a "verify first" flow</h4>
+<p>The auth endpoints live in <code>backend/routers/auth.py</code>. Signup (<code>POST /api/register</code>) does these checks: the email format must be valid; at most 3 signup attempts per email per hour (returns HTTP 429 if exceeded); only addresses ending in <code>morgan.edu</code> are allowed (a test-only <code>@test.com</code> exception is gated behind <code>ALLOW_TEST_EMAILS</code>, which is off in production); and the password must be at least 8 characters.</p>
+<p>Crucially, <code>/api/register</code> does <strong>not</strong> create a user row. Instead it builds a signed JWT that contains the email, the already-hashed password, and the name, and emails that token as a verification link. The user row is only created when the person clicks the link and <code>GET /api/verify-email</code> decodes the token and inserts the user with <code>email_verified=True</code>. So if someone never clicks, no account ever exists.</p>
+<h4>Login, and why admins skip verification</h4>
+<p><code>POST /api/login</code> looks up the user by email, checks the password, and — if the password is right — issues a JWT access token. There's a guard that rejects unverified accounts, but it explicitly exempts admins: <code>if not email_verified and role != "admin"</code>. <strong>The admins</strong> are <code>milam5@morgan.edu</code> (user id 6) and a backup <code>admin@local.dev</code>; the admin account is created/upgraded on startup using the <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code> environment values.</p>
+<h4>Password hashing (passwords are never stored in plain text)</h4>
+<p>Passwords are run through <strong>bcrypt</strong>, a deliberately slow one-way hashing algorithm, in <code>backend/security.py</code>. <code>hash_password</code> truncates the password to bcrypt's 72-byte limit, generates a random "salt" with 12 rounds of work, and stores only the resulting hash. <code>verify_password</code> re-hashes the entered password and checks it against the stored hash. Because hashing is one-way, even someone with the database cannot read the real passwords.</p>
+<h4>JWT tokens (the "I'm logged in" badge)</h4>
+<p>A <strong>JWT</strong> (JSON Web Token) is a signed string the browser keeps after login and sends on each request to prove identity. <code>create_access_token</code> packs the user's id, role, and email into the token, adds an expiry (default 240 minutes), and signs it with the secret <code>JWT_SECRET</code> using the <code>HS256</code> algorithm. On every protected request, <code>get_current_user</code> in <code>backend/deps.py</code> decodes the token with that same secret, loads the matching user, and returns a small dict of <code>user_id</code>, <code>email</code>, <code>role</code>, <code>name</code>, and the profile fields. If the token is invalid or the user is missing, it raises HTTP 403. A sibling helper <code>get_optional_user</code> returns <code>None</code> instead of erroring, for endpoints that also serve guests.</p>
+<h4>Where the secrets come from</h4>
+<p><code>JWT_SECRET</code> is read from the environment, and the code refuses to start if it's missing. In production these values come from Google <strong>Secret Manager</strong> — for example <code>ora-jwt-secret</code> (the JWT signing key), plus <code>ora-database-url</code>, <code>ora-admin-email</code>, <code>ora-admin-password</code>, and <code>ora-redis-url</code>. Storing secrets in Secret Manager (instead of in the code) means they can be rotated without changing code, and they never appear in the repository.</p>
+<div class="callout"><strong>Note (the ProfileUpdateRequest lesson):</strong> FastAPI uses small classes called <strong>request models</strong> to describe and validate the JSON a client sends. <code>backend/deps.py</code> is the single home for these. There must be exactly <strong>one</strong> definition of each request model. Earlier, a duplicate local copy of <code>ProfileUpdateRequest</code> in <code>main.py</code> silently "shadowed" the real one, so newly added profile fields were quietly dropped. Keeping these models defined only in <code>deps.py</code> ensures every endpoint sees the same, complete set of fields.</div>

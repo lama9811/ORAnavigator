@@ -1,0 +1,252 @@
+<h2 id="frontend">9. The Frontend, How Everything Connects &amp; Changelog</h2>
+
+<p>This section is about the part of ORA Navigator you can actually see and click: the website (the "frontend"). It also explains how that website talks to the rest of the system, and it lists, in plain dated bullets, the important changes the team made over time.</p>
+
+<p>A quick vocabulary note before we start, so nothing is confusing:</p>
+<ul>
+  <li><strong>Frontend</strong> = the web pages running in your browser. Built with <strong>React</strong> (a popular tool for building web pages out of reusable pieces) and <strong>Vite</strong> (the tool that bundles and serves those pages). Source lives in <code>frontend/src/</code>.</li>
+  <li><strong>Component</strong> = one reusable piece of the page, written in a <code>.jsx</code> file. For example, <code>Chatbox.jsx</code> is the chat window, <code>NavBar.jsx</code> is the top menu bar.</li>
+  <li><strong>Backend</strong> = the program on the server (FastAPI, port 5002) that the frontend sends requests to. The frontend never talks to the AI directly — it always goes through the backend.</li>
+  <li><strong>Endpoint</strong> = one specific web address on the backend that does one job, like <code>/api/me/submissions</code> (give me my proposals) or <code>/chat/stream</code> (answer my question, streaming).</li>
+  <li><strong>Route</strong> = one page-path in the frontend, like <code>/chat</code> or <code>/forms</code>. The file that maps paths to pages is <code>frontend/src/App.jsx</code>.</li>
+  <li><strong>Token</strong> = a small signed string proving you are logged in. After you log in, it is saved in the browser and attached to every request as <code>Authorization: Bearer &lt;token&gt;</code>.</li>
+</ul>
+
+<h3 id="frontend-walkthrough">9.1 Frontend Walkthrough (page by page)</h3>
+
+<p>All the pages are wired together in <code>frontend/src/App.jsx</code>. That one file is the "map" of the app: it lists every route (page-path) and decides whether you need to be logged in to see it. Let's read that map first, then walk each page.</p>
+
+<h4>The route map (who can see what)</h4>
+
+<p>In <code>App.jsx:398-552</code> there is a list of routes. A helper called <code>RequireAuth</code> (<code>App.jsx:43-47</code>) checks "is there a login token saved in the browser?" — if not, it bounces you to <code>/login</code>. So routes wrapped in <code>RequireAuth</code> are private; the rest are public.</p>
+
+<table>
+  <thead><tr><th>Path (route)</th><th>Page shown</th><th>Public or private?</th></tr></thead>
+  <tbody>
+    <tr><td><code>/</code> (the root)</td><td>Redirects you: logged in &rarr; <code>/chat</code>, logged out &rarr; <code>/trychat</code> (<code>App.jsx:428-431</code>)</td><td>—</td></tr>
+    <tr><td><code>/trychat</code></td><td>Landing page with a guest "try it" chat (<code>LandingPage.jsx</code> &rarr; <code>GuestChatbox.jsx</code>)</td><td>Public</td></tr>
+    <tr><td><code>/login</code></td><td>Login page (<code>Login.jsx</code>)</td><td>Public</td></tr>
+    <tr><td><code>/signup</code></td><td>Sign-up page (<code>SignUp.jsx</code>)</td><td>Public</td></tr>
+    <tr><td><code>/forgot-password</code></td><td>Request a password-reset email (<code>ForgotPassword.jsx</code>)</td><td>Public</td></tr>
+    <tr><td><code>/reset-password</code></td><td>Set a new password from the email link (<code>ResetPassword.jsx</code>)</td><td>Public</td></tr>
+    <tr><td><code>/chat</code></td><td>The main chat (<code>Chatbox.jsx</code> inside a sidebar layout)</td><td>Private</td></tr>
+    <tr><td><code>/forms</code></td><td>Forms &amp; templates catalog (<code>FormsCatalog.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/my-proposals</code></td><td>Proposal tracker (<code>MyProposals.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/profile</code></td><td>Profile / settings (<code>ProfilePage.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/admin</code></td><td>Admin dashboard (<code>AdminDashboard.jsx</code>) — and only if your token says role = admin; otherwise a "Forbidden" page (<code>App.jsx:538-545</code>)</td><td>Private + admin-only</td></tr>
+    <tr><td>anything else</td><td>Falls back to <code>/chat</code> or <code>/trychat</code> (<code>App.jsx:548-551</code>)</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<p>The top menu bar (<code>NavBar.jsx</code>) holds the links that move you between these pages: My Proposals, Forms, Profile (<code>NavBar.jsx:118-136</code>), plus Try Free / Log in / Sign up when you are logged out (<code>NavBar.jsx:161-171</code>). On the left there is also a <code>ChatSidebar.jsx</code> that lists your past chat conversations.</p>
+
+<h4>1. The Chat page (<code>/chat</code>) — the heart of the app</h4>
+
+<p>This is the page in <code>Chatbox.jsx</code>. You type a research-admin question, hit send, and the answer streams in word-by-word. Here is exactly what happens, in order:</p>
+
+<ul>
+  <li><strong>Suggested questions.</strong> When the page opens it shows clickable example questions. If you are logged in it asks the backend for <em>personalized</em> ones at <code>/api/me/suggested-questions</code>; if those aren't ready it falls back to <code>/api/popular-questions</code> (<code>Chatbox.jsx:259-264</code>). There is also a hard-coded starter list (<code>FEATURED_QUESTIONS</code>, <code>Chatbox.jsx:16-25</code>) like "What is Morgan State's federal F&amp;A (indirect cost) rate?".</li>
+  <li><strong>Sending a question.</strong> Pressing send POSTs your text to <code>/chat/stream</code> with your token, the chat-session id, and the chosen model (<code>Chatbox.jsx:805-817</code>). The page immediately adds an empty "bot is typing" bubble (<code>Chatbox.jsx:802</code>).</li>
+  <li><strong>Streaming (SSE).</strong> The answer comes back as a stream of small events, a technique called <strong>SSE</strong> (Server-Sent Events) — the server keeps the connection open and pushes pieces as they're ready, so you see the answer appear gradually instead of waiting for the whole thing. The code reads the stream chunk by chunk (<code>Chatbox.jsx:836-847</code>). Each line that starts with <code>data: </code> is one event. There are a few event types:
+    <ul>
+      <li><code>status</code> — a "still working" ping that advances the little thinking animation (<code>Chatbox.jsx:854-856</code>).</li>
+      <li><code>chunk</code> — a piece of the answer text; it gets appended to the bubble (<code>Chatbox.jsx:857-867</code>).</li>
+      <li><code>citations</code> — the list of source documents, which becomes the <strong>Sources</strong> block (<code>Chatbox.jsx:868-877</code>).</li>
+      <li><code>done</code> — "the answer is finished"; the bubble stops showing the typing state (<code>Chatbox.jsx:878-886</code>).</li>
+    </ul>
+  </li>
+  <li><strong>The Sources block.</strong> Under each finished bot answer, if there are citations, the page shows a "Sources" label and clickable links to the real morgan.edu pages the answer came from (<code>Chatbox.jsx:1307-1318</code>). This is what lets a faculty member trust the answer — they can click through to the official page.</li>
+  <li><strong>The "buffer flush" safety net (an important bug fix).</strong> When reading a stream you split the text on newlines and keep the last, possibly-incomplete line in a holding variable called <code>buffer</code> (<code>Chatbox.jsx:847</code>). If the connection closes right after the final <code>done</code> event but before a final newline, that last event is still sitting in <code>buffer</code>. So after the read loop ends, the code <em>flushes the buffer</em> — re-parses whatever is left (<code>Chatbox.jsx:944-981</code>). Without this flush, a fully-written answer could be silently dropped and the user would wrongly see "I couldn't generate a response."</li>
+  <li><strong>The recover-saved-answer safety net.</strong> Even if the live stream fails entirely, the backend has already <em>saved</em> the finished answer to chat history. So the page can fetch it back from <code>/chat-history</code> and show the real answer instead of the error (<code>Chatbox.jsx:36-63</code> and <code>984-1000</code>). It even retries once, because the server's save may land a moment after the stream closed.</li>
+  <li><strong>Thumbs up / down / report.</strong> Each bot answer has feedback buttons; clicking one POSTs to <code>/api/feedback</code> (<code>Chatbox.jsx:693</code>). This feedback is what an admin later reviews in the dashboard.</li>
+  <li><strong>File upload + voice.</strong> You can attach a file (POSTs to <code>/api/upload-file</code>, <code>Chatbox.jsx:767</code>) and there is a text-to-speech "read it aloud" feature (<code>/api/tts</code>, <code>Chatbox.jsx:341</code>), though TTS is off in production because no key is configured.</li>
+</ul>
+
+<div class="callout">
+<strong>Plain-English summary of the chat page:</strong> you ask a question &rarr; it streams in live with a Sources block &rarr; and there are two layers of safety net so a finished answer is never lost even if the live connection hiccups.
+</div>
+
+<h4>2. The guest chat (<code>/trychat</code>) — try before you sign up</h4>
+
+<p><code>GuestChatbox.jsx</code> is a stripped-down chat for people who are not logged in. It POSTs to a separate endpoint, <code>/chat/guest</code> (<code>GuestChatbox.jsx:134, 166</code>), which is rate-limited. When the guest hits the limit, the page tells them to sign up for unlimited access (<code>GuestChatbox.jsx:176</code>). This is the "free sample" that funnels visitors toward making an account.</p>
+
+<h4>3. My Proposals (<code>/my-proposals</code>) — the grant tracker</h4>
+
+<p><code>MyProposals.jsx</code> is a personal to-do tracker for grant submissions. Everything here is private to the logged-in user. The page has two views:</p>
+
+<ul>
+  <li><strong>List view</strong> — shows all your proposals as cards, each with sponsor, title, deadline, and a countdown like "7d left" or "3d overdue" (<code>MyProposals.jsx:259-288</code>). It loads them from <code>GET /api/me/submissions</code> (<code>MyProposals.jsx:76</code>).</li>
+  <li><strong>Detail view</strong> — click a card to open it (<code>GET /api/me/submissions/{id}</code>, <code>MyProposals.jsx:95</code>). You see a checklist of tasks with a progress bar; ticking a task off saves via <code>PATCH .../tasks/{taskId}</code> (<code>MyProposals.jsx:117-123</code>). The tick is "optimistic" — the UI flips instantly and only re-fetches if the save fails (<code>MyProposals.jsx:109-128</code>).</li>
+</ul>
+
+<p>There are two ways to start a proposal (<code>MyProposals.jsx:193-206</code>):</p>
+<ul>
+  <li><strong>New Proposal</strong> — a manual form (title, sponsor, deadline, notes). NSF and NIH proposals get extra sponsor-specific checklist steps; others get a generic 10-step checklist (<code>MyProposals.jsx:464-467</code>). Creating it POSTs to <code>/api/me/submissions</code> (<code>MyProposals.jsx:149</code>).</li>
+  <li><strong>Start from Solicitation</strong> — opens <code>SolicitationUploadModal.jsx</code>. You drop the sponsor's PDF; the app reads it with AI and pre-fills deadline, page limits, and required attachments. It is a deliberate two-step flow so a wrong AI-read deadline can never auto-save: first <code>POST /api/me/submissions/from-solicitation</code> extracts the fields for you to review (<code>SolicitationUploadModal.jsx:54-63</code>), then you confirm with <code>POST .../from-solicitation/confirm</code> (<code>SolicitationUploadModal.jsx:78-84</code>). Any field whose supporting quote wasn't actually found in the PDF is shown in red so you double-check it.</li>
+</ul>
+
+<p>If a proposal came from a solicitation (so it has real rules like a page limit), a <strong>Critique Draft</strong> button appears (<code>MyProposals.jsx:309-317</code>). It opens <code>DraftCritiqueModal.jsx</code>, where you upload your draft PDF and it is checked against those rules via <code>POST /api/me/submissions/{id}/critique</code> (<code>DraftCritiqueModal.jsx:136-137</code>). The result has a verdict banner and a deterministic checklist (page count, attachments, budget), plus an <em>advisory</em> AI Review clearly badged as "advisory" so nobody mistakes the AI's opinion for the hard rules (<code>DraftCritiqueModal.jsx:73</code>).</p>
+
+<h4>4. Forms &amp; Templates (<code>/forms</code>)</h4>
+
+<p><code>FormsCatalog.jsx</code> is a searchable list of ORA forms, checklists, and memo templates. It loads them from <code>GET /api/forms</code>, optionally filtered by category (<code>FormsCatalog.jsx:84</code>), and gives a search box to filter by title or description (<code>FormsCatalog.jsx:164</code>). The heading is "Forms &amp; Templates" (<code>FormsCatalog.jsx:110</code>).</p>
+
+<h4>5. Profile / Settings (<code>/profile</code>)</h4>
+
+<p><code>ProfilePage.jsx</code> is where you edit who you are. It reads your profile from <code>GET /api/profile</code> and saves edits with a write to the same path (<code>ProfilePage.jsx:65, 102</code>). The editable fields are Name, Department, Title, Role, and Research Interests (<code>ProfilePage.jsx:299-349</code>). These fields matter beyond decoration: the backend mirrors them into the memory system so the AI agents know your context (more on this in 9.2). You can also change your password (<code>/api/change-password</code>, <code>ProfilePage.jsx:157</code>) and upload a profile picture (<code>/api/upload-profile-picture</code>, <code>ProfilePage.jsx:196</code>).</p>
+
+<h4>6. Login, Sign up, Password reset</h4>
+
+<ul>
+  <li><strong>Login</strong> (<code>Login.jsx</code>) — POSTs email + password to <code>/api/login</code> (<code>Login.jsx:72</code>); on success it gets a token, saves it, and sends you to <code>/chat</code>. If your email isn't verified yet it can resend the verification email (<code>/api/resend-verification</code>, <code>Login.jsx:103</code>).</li>
+  <li><strong>Sign up</strong> (<code>SignUp.jsx</code>) — POSTs to <code>/api/register</code> (<code>SignUp.jsx:113</code>). The form is restricted to <code>@morgan.edu</code> addresses (the label literally says "@morgan.edu only", <code>SignUp.jsx:202</code>) and then asks you to verify your email.</li>
+  <li><strong>Forgot / Reset password</strong> (<code>ForgotPassword.jsx</code>, <code>ResetPassword.jsx</code>) — request a reset email, then set a new password from the emailed link.</li>
+  <li>All four share a clean split-screen look from <code>components/auth/AuthLayout.jsx</code>.</li>
+</ul>
+
+<h4>7. Admin Dashboard (<code>/admin</code>) — staff only</h4>
+
+<p><code>AdminDashboard.jsx</code> is a single big page with tabs across the top (<code>AdminDashboard.jsx:1064-1089</code>). It is only reachable if your login token says you are an admin. The internal tab names and their friendly labels and jobs:</p>
+
+<table>
+  <thead><tr><th>Tab (label shown)</th><th>What it does</th><th>Main backend endpoints</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Home</strong> (overview)</td><td>Top-level stats and quick actions; cards link into the other tabs.</td><td><code>/api/admin/analytics</code>, <code>/api/admin/users/stats</code>, <code>/api/admin/health</code>, <code>/api/admin/cache/stats</code>, <code>/api/admin/cloud-kb/stats</code></td></tr>
+    <tr><td><strong>Database</strong> (cloud-kb)</td><td>Browse, search, view, upload, edit, delete the knowledge-base documents stored in Vertex AI Search, and trigger a re-sync.</td><td><code>/api/admin/cloud-kb/documents</code>, <code>.../search</code>, <code>.../upload</code>, <code>.../sync</code></td></tr>
+    <tr><td><strong>Users</strong></td><td>List users, see user stats, change a user's role.</td><td><code>/api/admin/users</code>, <code>.../users/stats</code>, <code>.../users/{id}/role</code></td></tr>
+    <tr><td><strong>Tickets</strong></td><td>Support tickets faculty submit; a red badge shows the open count. Admin can update a ticket's status.</td><td><code>/api/tickets</code>, <code>.../tickets/stats/summary</code>, <code>.../tickets/{id}</code></td></tr>
+    <tr><td><strong>Reviews</strong> (feedback)</td><td>The thumbs-up/down and "report" feedback users left on chat answers; a badge shows how many were reported.</td><td><code>/api/feedback/stats</code>, <code>/api/feedback/all</code></td></tr>
+    <tr><td><strong>Research</strong></td><td>The self-improvement loop: it shows questions the bot failed to answer, AI-generated KB suggestions to fix the gaps, and can run the research job or push a suggestion live. A badge shows pending suggestions.</td><td><code>/api/admin/research/stats</code>, <code>.../research/suggestions</code>, <code>.../research/failed-queries</code>, <code>.../research/run</code>, <code>.../research/suggestions/{id}/push</code></td></tr>
+    <tr><td><strong>System</strong></td><td>Health check and cache stats, with a "clear cache" button.</td><td><code>/api/admin/health</code>, <code>/api/admin/cache/stats</code>, <code>/api/admin/cache/clear</code></td></tr>
+  </tbody>
+</table>
+
+<p>Which data loads is tied to the active tab (<code>AdminDashboard.jsx:685-695</code>) — for example opening the Research tab loads research stats and suggestions. This keeps the page fast by only fetching what you're looking at.</p>
+
+<h4>The PWA / service-worker caching gotcha (why you sometimes need incognito)</h4>
+
+<p>ORA Navigator is a <strong>PWA</strong> (Progressive Web App) — a website that can install like an app and work partly offline. The magic that makes that possible is a <strong>service worker</strong>: a tiny background script the browser installs that <em>caches</em> (saves a local copy of) the app's files so it loads instantly next time.</p>
+
+<p>The config that turns this on is in <code>frontend/vite.config.js</code>: <code>VitePWA({ registerType: 'autoUpdate', ... })</code>. The <code>autoUpdate</code> setting means the service worker quietly grabs the newest version in the background.</p>
+
+<p>Here is the catch for anyone testing changes: because the browser is showing you the <em>cached</em> copy, right after a new deploy you might still see the <em>old</em> version of the page. The fix is to open the site in an <strong>incognito / private window</strong>, which starts with no service worker and no cache, so you always see the freshest build. The project notes this explicitly: "verify UI changes in incognito to bypass the service-worker cache." Each deploy produces files with new hashed names, so eventually every browser updates — but incognito skips the wait.</p>
+
+<h3 id="how-connects">9.2 How Everything Connects</h3>
+
+<p>Now let's zoom out and see how all these pieces feed each other. The golden rule: <strong>the browser only ever talks to the backend.</strong> The backend is the middleman that talks to everything else (the AI, the search engine, the database, email). This keeps secrets (like AI keys) off the user's computer.</p>
+
+<h4>The narrative, in plain English</h4>
+
+<ol>
+  <li><strong>You ask a question.</strong> The chat page sends it to the backend's <code>/chat/stream</code>.</li>
+  <li><strong>The backend does quick checks first.</strong> A greeting like "hi" gets a canned reply. A repeat question gets pulled from the cache. A "list X" request gets an instant menu. Only a real question moves on.</li>
+  <li><strong>The backend calls the ADK agent</strong> (a separate small service running Google's ADK). The agent is the "brain" wrapper around <strong>Gemini</strong> (Google's large language model — the actual AI that writes sentences).</li>
+  <li><strong>The agent searches the knowledge base.</strong> It uses <strong>Vertex AI Search</strong> — a search engine that finds documents by <em>meaning</em>, not just keywords — over the 382 ORA documents. The documents it pulls become the "Sources."</li>
+  <li><strong>The backend fact-checks the draft</strong> before trusting it. If the answer isn't well-grounded in the found documents, it forces a strict "use only the documents" redo, and if there's still nothing, it refuses and tells you to contact ORA. This is what keeps the bot from making things up.</li>
+  <li><strong>The answer streams back</strong> to your chat page along with the Sources block, and the whole turn is saved to the database (so it survives a refresh) and to the cache (so the next person asking the same thing gets it instantly).</li>
+  <li><strong>If the bot couldn't answer, that failure is recorded.</strong> Admins see these "failed queries" in the Research tab, the system suggests new KB content to fill the gap, an admin approves it, and the knowledge base grows — so next time the same question <em>does</em> get answered. That is the self-improvement loop.</li>
+  <li><strong>Your chats also build memory.</strong> A nightly job reads recent conversations and distills durable facts about you (your role, department, active grant) into a memory table. Your Profile fields feed the same memory. That memory powers two things: more personalized answers, and the personalized suggested questions shown on the chat page.</li>
+  <li><strong>The proposal side runs in parallel.</strong> Upload a solicitation PDF &rarr; the backend extracts its rules &rarr; that becomes a Submission with a task checklist. A scheduled "Deadline Watcher" then emails you as deadlines approach (14, 7, 3, 1, and 0 days out). The Draft Critic checks your draft PDF against the very same rules.</li>
+  <li><strong>Support and feedback flow to admins.</strong> Thumbs-down/report on a chat answer, or a support ticket, both land in the Admin Dashboard for staff to review.</li>
+</ol>
+
+<h4>The connections diagram</h4>
+
+<pre>
+            YOU (browser, the React frontend)
+                       |
+        Profile edits  |  Chat question        Upload solicitation PDF
+        Feedback/report|  (/chat/stream)        (/api/me/submissions/...)
+                       v                                   |
+        +==============================  BACKEND  (FastAPI :5002) ==============+
+        |   quick checks: greeting? cached? "list X"? -> instant reply         |
+        |        | (a real question)                                           |
+        |        v                                                             |
+        |   ADK AGENT (:8081) ----> GEMINI (writes the draft answer)           |
+        |        |                                                             |
+        |        +----> VERTEX AI SEARCH (382 KB docs) --> found docs = Sources|
+        |        v                                                             |
+        |   FACT-CHECK: grounded? -> if weak, redo "KB-only" -> else REFUSE    |
+        |        |                                                             |
+        |   save turn -> DATABASE (chat_history, with citations)               |
+        |   save turn -> CACHE (next identical ask is instant)                 |
+        +=====================================================================+
+             |                  |                    |               |
+   answer +  |   couldn't       |  every chat        | solicitation  | feedback +
+   Sources   |   answer?        |  feeds MEMORY      | -> SUBMISSION | tickets
+   stream    |   -> FAILED      |  (nightly distill  | + TASK        | -> ADMIN
+   back to   |   QUERIES        |  + profile mirror) | CHECKLIST     | DASHBOARD
+   the chat  |       |          |        |           |     |         | (Reviews,
+   page      |       v          |        v           |     v         |  Tickets)
+             |  RESEARCH tab:    |  personalized      | DEADLINE WATCHER
+             |  AI suggests KB   |  answers + the     | emails you at
+             |  fix -> admin     |  "suggested        | 14/7/3/1/0 days
+             |  approves -> KB   |  questions" on     | before deadline
+             |  grows -> better  |  the chat page     |
+             |  answers next time|                    | DRAFT CRITIC checks
+             |                   |                    | your draft vs the
+             |                   |                    | same rules
+             v                   v                    v
+        (the loop closes: failures become fixes, chats become memory,
+         memory becomes personalization, proposals become reminders)
+</pre>
+
+<div class="callout">
+<strong>The big idea:</strong> features feed each other in loops. Failed answers become knowledge-base improvements. Chats become memory, and memory becomes personalization. A solicitation PDF becomes a checklist, and the checklist becomes deadline emails. The frontend is the surface; the backend is the hub that connects all of it.
+</div>
+
+<h3 id="changelog">9.3 Changelog — What changes did we make</h3>
+
+<p>This is a simple list of the load-bearing changes, newest first, taken from the real git history and the project notes. Each line says <em>what</em> changed and <em>why</em> it mattered. Dates are from the development sessions in late May to early June 2026.</p>
+
+<h4>Anti-hallucination &amp; accuracy (the "don't make things up" work)</h4>
+<ul>
+  <li><strong>Solicitation strict prompt + evidence verification</strong> (<code>cae413b</code>) — when reading a sponsor PDF, the AI is given a strict "only report what's actually in the document" instruction, and a checker flags any extracted field whose supporting quote isn't found in the PDF (shown red in the review modal). Why: so a hallucinated deadline never silently becomes your real deadline.</li>
+  <li><strong>NSF EIR checklist fix</strong> (<code>8f11f8e</code>) — the special "EIR" checklist now only attaches to NSF <em>education-program</em> proposals, not every NSF proposal. Why: it was wrongly adding irrelevant steps to ordinary NSF proposals.</li>
+  <li><strong>Hybrid AI layer for Draft Critic + Deadline Watcher</strong> (<code>a7ee405</code>) — these two agents got a real AI layer (advisory critique, personalized reminder emails) on top of their deterministic core, with strict prompts and evidence verification so the AI can't override the hard rules and a reminder always still sends even if the AI part fails. Why: smarter output without sacrificing reliability.</li>
+  <li><strong>Curb invented dates/pages/filenames + smarter identifier check</strong> (<code>b367c4d</code>) — tightened the faithfulness checker that verifies numbers, dates, emails, and phone numbers appear verbatim in the source docs. Why: to catch fabricated specifics.</li>
+  <li><strong>Stop appending the "could not be verified" footer</strong> (<code>ae0ce8c</code>) — removed the user-facing warning footer about unverified numbers (it now only logs). Why: it produced false alarms — for example it flagged a number the answer was actually <em>refuting</em>, because the check is verbatim-token-based and can't tell refutation from assertion.</li>
+  <li><strong>Solicitation accuracy + review-step guard</strong> (<code>c92fabc</code>) and <strong>Draft Critic round-trip audit</strong> (<code>1e92206</code>) — hardened the extract-then-confirm flow and fixed 34 findings from an audit. Why: to make the proposal-from-PDF feature trustworthy.</li>
+  <li><strong>Recalibrated the faithfulness rubric</strong> (<code>3b4f3a4</code>) and <strong>recorded the eval baseline</strong> (<code>37edbda</code>) — turned the automated grading into a pure "did it hallucinate?" check and locked in a baseline (faithfulness 0.708). Why: so future changes can be measured against a fixed bar and regressions get caught.</li>
+</ul>
+
+<h4>Chat reliability &amp; the Sources block</h4>
+<ul>
+  <li><strong>Flush leftover SSE buffer</strong> (<code>8f3dc23</code>) — the streaming reader now re-parses the last bit of the stream after the loop ends. Why: a final <code>done</code> event arriving without a trailing newline was being dropped, which made real, fully-written answers show the false "I couldn't generate a response" message. This was a frontend-only bug — the backend had the answer the whole time.</li>
+  <li><strong>Auto-recover the saved answer when the stream drops the finish</strong> (<code>8bad1f0</code>) — if the live stream fails, the page re-fetches the answer the backend already saved. Why: a second safety net so an answer is never lost.</li>
+  <li><strong>Never return a blank answer; graceful refusal</strong> (<code>c8810af</code>) — if the AI produces empty text and found zero documents, the system now politely refuses and routes you to ORA instead of hitting a dead-end error. Why: asking it to "confirm SOP 37 exists" used to go silent; now it clearly says that isn't in ORA's published records.</li>
+  <li><strong>Persist citations so the Sources block survives</strong> (<code>5f71afb</code>) — citations are now saved in the database alongside each answer, so the Sources block reappears after a refresh, a cache hit, or reloading history (<code>App.jsx:233-238</code>). Why: previously the Sources vanished on reload.</li>
+  <li><strong>Trim Sources to docs the answer actually cited, but never blank the list</strong> (<code>6ba0358</code>, <code>77812d5</code>) — show only the sources the answer truly used, while guarding against accidentally showing none. Why: cleaner, honest source lists.</li>
+</ul>
+
+<h4>Knowledge-base / enumeration behavior</h4>
+<ul>
+  <li><strong>Weak topicless enumeration defers to the agent</strong> (<code>19819b5</code>) — a vague request no longer dumps the entire 9-section KB tree; only a strong, fresh "list everything" does. Why: a real question like "what forms do I need to add a co-investigator?" was getting answered with a giant directory dump instead of an actual answer.</li>
+  <li><strong>Filtered questions defer to the agent</strong> (<code>f6fceec</code>) and <strong>stop enumeration over-trigger</strong> (<code>ec687c3</code>) — same theme: stop the "instant menu" shortcut from hijacking real questions.</li>
+</ul>
+
+<h4>Memory &amp; personalization</h4>
+<ul>
+  <li><strong>Backfill profile &rarr; memory for existing users</strong> (<code>ee98da6</code>) — Profile fields (Department, Title, Role, Interests) are mirrored into the memory the AI agents read, and the mirroring now also runs for users who existed before the feature. Why: so the agents actually know your context.</li>
+</ul>
+
+<h4>Design / look-and-feel</h4>
+<ul>
+  <li><strong>Navy + Morgan-orange design-system retheme</strong> (<code>dc84bdd</code> and the slices that followed: <code>04987c9</code> login/signup, <code>0a5787a</code> sidebar+chat, <code>348e63c</code> proposals+forms, <code>a0d4831</code> profile+admin) — a full visual refresh into Morgan State's colors. Why: a consistent, on-brand, professional look.</li>
+  <li><strong>Swapped all icons to Lucide</strong> (<code>a0d4831</code>) — one clean modern icon set everywhere.</li>
+  <li><strong>Mobile optimization + remove dark mode</strong> (<code>711f974</code>) — the app is now light-only and works well on phones. Why: simpler to maintain and the dark theme had contrast bugs.</li>
+  <li><strong>Fix invisible admin buttons</strong> (<code>5ab7a1a</code>) and <strong>navy sidebar footer so the Install App button is visible</strong> (<code>03029cf</code>, <code>3a1712b</code>) — contrast fixes for buttons that were dark-on-dark. Why: they were literally unreadable.</li>
+</ul>
+
+<h4>Features removed / simplified</h4>
+<ul>
+  <li><strong>Removed the Sponsor Fit-Finder agent</strong> (<code>a6cf01f</code>) — dropped the fourth AI agent but <em>kept</em> the funding knowledge-base docs, so the chatbot can still answer funding questions. Why: it wasn't pulling its weight, but the underlying knowledge was still useful.</li>
+</ul>
+
+<h4>Plumbing / deploy fixes that prevented real bugs</h4>
+<ul>
+  <li><strong>main.py was shadowing the deps.py request model</strong> (<code>4de7ca5</code>) — a duplicate local definition of the profile-update model was silently dropping new fields; removing it fixed it. Why: this kind of "duplicate definition" bug is invisible and wasted real debugging time.</li>
+  <li><strong>Deploy script builds from a clean /tmp staging copy</strong> (<code>73d7ab3</code>) — the deploy tool now copies the code somewhere clean before uploading. Why: uploading straight from the git folder crashed the deploy tool.</li>
+  <li><strong>Fixed e2e auth tests (TrustedHosts)</strong> (<code>0c614e3</code>) — made the end-to-end login tests pass reliably.</li>
+  <li><strong>Profile interests field + redeploy fix</strong> (<code>fd15bcc</code>) — added the Research Interests field that later feeds the agents' memory.</li>
+</ul>

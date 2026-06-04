@@ -200,6 +200,18 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint, tests, health-check ag
 
 ---
 
+## Documentation
+
+A complete, plain-English technical guide to the whole system — every feature, the chat/RAG pipeline, the memory system, the self-healing research pipeline, the three AI agents (Solicitation Ingestion, Draft Critic, Deadline Watcher), all database tables, every cron job, and a "where is each artifact saved" reference — lives in `docs/`:
+
+- `docs/ORA_Navigator_Complete_Guide.html` — the assembled 11-chapter guide (open in a browser)
+- `docs/sections/` — the per-chapter HTML sources
+- `docs/build_guide.py` — rebuilds the guide; render to PDF with headless Chrome `--print-to-pdf` (the PDF itself is git-ignored)
+
+Quick-start lives in `STARTUP.md`; this `README` covers architecture and deployment; `CLAUDE.md` holds the deep operational notes.
+
+---
+
 ## Security
 
 See `SECURITY.md`. Highlights:
