@@ -87,7 +87,7 @@ export default function ForgotPassword() {
             </div>
           </div>
 
-          <button type="submit" className="auth__submit" disabled={loading}>
+          <button type="submit" className="auth__submit" disabled={loading || !email.trim()}>
             {loading ? "Sending..." : "Send Reset Link"}
           </button>
         </form>

@@ -558,8 +558,19 @@ body.dark .navbar-forms-btn:hover {
     display: none;
   }
 
+  /* Keep guest auth links reachable on phones (compact, never hidden) */
   .nav-links {
-    display: none;
+    display: flex;
+    gap: 2px;
+  }
+
+  .nav-link {
+    font-size: 0.72rem;
+    padding: 5px 7px;
+  }
+
+  .nav-cta {
+    margin-left: 2px;
   }
 
   .profile-icon-btn {

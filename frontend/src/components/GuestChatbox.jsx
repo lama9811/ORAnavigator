@@ -49,7 +49,14 @@ export default function GuestChatbox() {
   const navigate = useNavigate();
 
   // State
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("guest_messages");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [guestProfile] = useState(generateGuestProfile);
@@ -80,6 +87,16 @@ export default function GuestChatbox() {
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Persist guest messages so a page refresh doesn't wipe the conversation.
+  // sessionStorage survives reload but clears when the tab is closed.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("guest_messages", JSON.stringify(messages));
+    } catch {
+      // ignore storage errors (private mode / quota)
+    }
   }, [messages]);
 
   // Timer countdown effect

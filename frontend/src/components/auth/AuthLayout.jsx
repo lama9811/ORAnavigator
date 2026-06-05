@@ -75,7 +75,9 @@ export default function AuthLayout({ title, subtitle, children, footer }) {
             <span className="auth__eyebrow">ORA Navigator</span>
             <h2 className="auth__title">{title}</h2>
             <p className="auth__titleSub">
-              {title === "Log in"
+              {subtitle
+                ? subtitle
+                : title === "Log in"
                 ? "Welcome back. Sign in with your Morgan State email to continue."
                 : "Use your @morgan.edu email to create your ORA Navigator account."}
             </p>
