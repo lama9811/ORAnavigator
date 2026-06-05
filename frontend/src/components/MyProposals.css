@@ -653,6 +653,25 @@ body.dark .proposal-progress-bar {
   text-decoration: underline;
 }
 
+.calendar-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 16px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent, #1d4ed8);
+  background: transparent;
+  border: 1px solid var(--accent, #1d4ed8);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.calendar-export:hover {
+  background: var(--accent, #1d4ed8);
+  color: #fff;
+}
+
 /* Mobile */
 @media (max-width: 700px) {
   .proposals { padding: 18px 16px 40px; }
