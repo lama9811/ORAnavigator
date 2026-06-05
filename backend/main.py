@@ -3042,6 +3042,46 @@ async def list_my_submissions(
     }
 
 
+@app.get("/api/me/deadlines-token")
+async def my_deadlines_token(
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    """Mint the per-user calendar URLs (download + webcal subscribe).
+    The token is scoped to 'ics' and carries no email claim, so it can't be
+    used as a normal auth bearer."""
+    from services.ics_export import mint_ics_token
+    tok = mint_ics_token(user["user_id"])
+    base = str(request.base_url).rstrip("/")          # e.g. https://host
+    ics_url = f"{base}/api/me/deadlines.ics?token={tok}"
+    host = request.url.hostname or ""
+    if request.url.port and request.url.port not in (80, 443):
+        host = f"{host}:{request.url.port}"
+    webcal_url = f"webcal://{host}/api/me/deadlines.ics?token={tok}"
+    return {"ics_url": ics_url, "webcal_url": webcal_url}
+
+
+@app.get("/api/me/deadlines.ics")
+async def my_deadlines_ics(
+    token: str = "",
+    db: Session = Depends(get_db),
+):
+    """Token-authed (no Bearer) calendar feed of the user's proposal
+    deadlines. Calendar apps fetch this URL directly."""
+    from fastapi import Response
+    from services.ics_export import decode_ics_token, build_calendar
+    user_id = decode_ics_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid calendar token")
+    subs = _proposals_service.list_submissions(db, user_id=user_id)
+    body = build_calendar(subs)
+    return Response(
+        content=body,
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="ora-deadlines.ics"'},
+    )
+
+
 @app.post("/api/me/submissions")
 async def create_my_submission(
     payload: dict,
