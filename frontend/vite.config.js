@@ -11,6 +11,21 @@ export default defineConfig({
   esbuild: {
     drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Only pin the core React vendor (needed on first paint) into its own
+        // cacheable chunk. Heavy libs (markdown / syntax-highlighter / motion)
+        // are intentionally NOT named here -- naming them hoists them into the
+        // entry's modulepreload. Left unnamed, Vite auto-splits them along the
+        // lazy Chatbox / LandingPage boundaries, so they load only when a chat
+        // view mounts, not on first paint.
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

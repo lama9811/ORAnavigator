@@ -2,8 +2,34 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+// PrismLight ships zero languages by default; register only the few that
+// actually appear in ORA chat answers. Unregistered languages render as
+// plain text (no crash). This drops ~200 bundled Prism grammars from the
+// first-load bundle.
+import jsLang from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
+import pyLang from 'react-syntax-highlighter/dist/esm/languages/prism/python';
+import bashLang from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
+import jsonLang from 'react-syntax-highlighter/dist/esm/languages/prism/json';
+import sqlLang from 'react-syntax-highlighter/dist/esm/languages/prism/sql';
+import yamlLang from 'react-syntax-highlighter/dist/esm/languages/prism/yaml';
+import mdLang from 'react-syntax-highlighter/dist/esm/languages/prism/markdown';
+import tsLang from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
+
+SyntaxHighlighter.registerLanguage('javascript', jsLang);
+SyntaxHighlighter.registerLanguage('js', jsLang);
+SyntaxHighlighter.registerLanguage('python', pyLang);
+SyntaxHighlighter.registerLanguage('py', pyLang);
+SyntaxHighlighter.registerLanguage('bash', bashLang);
+SyntaxHighlighter.registerLanguage('sh', bashLang);
+SyntaxHighlighter.registerLanguage('shell', bashLang);
+SyntaxHighlighter.registerLanguage('json', jsonLang);
+SyntaxHighlighter.registerLanguage('sql', sqlLang);
+SyntaxHighlighter.registerLanguage('yaml', yamlLang);
+SyntaxHighlighter.registerLanguage('markdown', mdLang);
+SyntaxHighlighter.registerLanguage('typescript', tsLang);
+SyntaxHighlighter.registerLanguage('ts', tsLang);
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { ArrowUpCircle, AudioLines, EllipsisVertical, File, FileImage, FileText, Flag, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Volume2, X } from "lucide-react";
