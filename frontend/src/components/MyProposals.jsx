@@ -4,7 +4,7 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calendar, Check, CheckCircle, Circle, ClipboardCheck, FileText, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
@@ -406,6 +406,17 @@ function TaskRow({ task, onToggle }) {
             <Calendar size={9} />
             <span>{task.due_offset_days} days before deadline</span>
           </div>
+        )}
+        {task.kb_doc_url && (
+          <a
+            className="task-form-link"
+            href={task.kb_doc_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink size={12} />
+            <span>Open {task.kb_doc_title || "form"}</span>
+          </a>
         )}
       </div>
     </li>

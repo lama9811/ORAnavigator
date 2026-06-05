@@ -639,6 +639,20 @@ body.dark .proposal-progress-bar {
   box-shadow: none;
 }
 
+.task-form-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent, #1d4ed8);
+  text-decoration: none;
+}
+.task-form-link:hover {
+  text-decoration: underline;
+}
+
 /* Mobile */
 @media (max-width: 700px) {
   .proposals { padding: 18px 16px 40px; }
