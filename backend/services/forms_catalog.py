@@ -173,3 +173,18 @@ def list_forms(category: Optional[str] = None,
     if role:
         forms = [f for f in forms if role in f["roles"]]
     return forms
+
+
+@lru_cache(maxsize=1)
+def _catalog_by_id() -> dict:
+    """doc_id -> form row, built once from the cached catalog."""
+    return {f["doc_id"]: f for f in _load_catalog()}
+
+
+def get_form(doc_id: Optional[str]) -> Optional[dict]:
+    """Return the catalog row for a single doc_id, or None if the id is
+    falsy or not a form-like doc. Used to resolve a proposal task's
+    kb_doc_id to an openable URL."""
+    if not doc_id:
+        return None
+    return _catalog_by_id().get(doc_id)

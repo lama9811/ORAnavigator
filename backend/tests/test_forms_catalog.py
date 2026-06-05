@@ -129,3 +129,24 @@ def test_url_is_clickable():
 def test_empty_filters_equivalent_to_no_filters():
     """Passing empty strings is equivalent to None (open filter)."""
     assert list_forms() == list_forms(category="", sponsor="", role="")
+
+
+def test_get_form_returns_row_for_known_doc_id():
+    from services.forms_catalog import list_forms, get_form
+    forms = list_forms()
+    assert forms, "catalog should be non-empty"
+    known = forms[0]["doc_id"]
+    row = get_form(known)
+    assert row is not None
+    assert row["doc_id"] == known
+    assert "url" in row and "title" in row
+
+
+def test_get_form_returns_none_for_unknown_doc_id():
+    from services.forms_catalog import get_form
+    assert get_form("definitely_not_a_real_doc_id_xyz") is None
+
+
+def test_get_form_returns_none_for_none():
+    from services.forms_catalog import get_form
+    assert get_form(None) is None
