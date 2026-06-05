@@ -4,7 +4,7 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calendar, Check, CheckCircle, Circle, ClipboardCheck, FileText, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
@@ -163,6 +163,21 @@ export default function MyProposals() {
     }
   };
 
+  const addToCalendar = async () => {
+    const token = localStorage.getItem("token");
+    const r = await fetch(`${API_BASE}/api/me/deadlines-token`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!r.ok) return;
+    const { ics_url } = await r.json();
+    const a = document.createElement("a");
+    a.href = ics_url;
+    a.download = "ora-deadlines.ics";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   // ---------- DETAIL VIEW ----------
   if (active) {
     return (
@@ -223,11 +238,19 @@ export default function MyProposals() {
           </p>
         </div>
       ) : (
-        <ul className="proposals-list">
-          {submissions.map((s) => (
-            <ProposalCard key={s.id} sub={s} onOpen={() => openDetail(s.id)} />
-          ))}
-        </ul>
+        <>
+          {submissions.some((s) => s.deadline) && (
+            <button className="calendar-export" onClick={addToCalendar}>
+              <CalendarPlus size={16} />
+              <span>Add deadlines to calendar</span>
+            </button>
+          )}
+          <ul className="proposals-list">
+            {submissions.map((s) => (
+              <ProposalCard key={s.id} sub={s} onOpen={() => openDetail(s.id)} />
+            ))}
+          </ul>
+        </>
       )}
 
       {showCreate && (
@@ -406,6 +429,17 @@ function TaskRow({ task, onToggle }) {
             <Calendar size={9} />
             <span>{task.due_offset_days} days before deadline</span>
           </div>
+        )}
+        {task.kb_doc_url && (
+          <a
+            className="task-form-link"
+            href={task.kb_doc_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink size={12} />
+            <span>Open {task.kb_doc_title || "form"}</span>
+          </a>
         )}
       </div>
     </li>
