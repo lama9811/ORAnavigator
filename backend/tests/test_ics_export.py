@@ -4,7 +4,9 @@ The security contract: the calendar token carries `sub` + `scope` but NO
 `email` claim, so it cannot be replayed as a normal auth bearer
 (get_current_user authenticates on `email`, deps.py:48).
 """
-import pytest
+from datetime import datetime as _dt
+from types import SimpleNamespace
+
 from jose import jwt
 
 from services import ics_export
@@ -35,10 +37,6 @@ def test_decode_rejects_garbage():
 
 def test_decode_rejects_empty():
     assert ics_export.decode_ics_token("") is None
-
-
-from datetime import datetime as _dt
-from types import SimpleNamespace
 
 
 def _sub(id, title, sponsor, deadline):

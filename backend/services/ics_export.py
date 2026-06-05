@@ -17,7 +17,6 @@ from jose import jwt, JWTError
 from security import JWT_SECRET, ALGORITHM
 
 _ICS_SCOPE = "ics"
-_CAL_TZID = "America/New_York"   # matches the deadline-watcher cron tz
 _PRODID = "-//ORA Navigator//Deadlines//EN"
 
 
