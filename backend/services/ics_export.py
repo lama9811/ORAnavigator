@@ -45,12 +45,13 @@ def decode_ics_token(token: str) -> Optional[int]:
 
 
 def _escape(text: str) -> str:
-    """RFC 5545 text escaping: backslash, comma, semicolon, newline."""
+    """RFC 5545 text escaping: backslash, colon, comma, semicolon, newline."""
     if text is None:
         return ""
     return (
         str(text)
         .replace("\\", "\\\\")
+        .replace(":", "\\:")
         .replace(";", "\\;")
         .replace(",", "\\,")
         .replace("\r\n", "\\n")

@@ -35,3 +35,37 @@ def test_decode_rejects_garbage():
 
 def test_decode_rejects_empty():
     assert ics_export.decode_ics_token("") is None
+
+
+from datetime import datetime as _dt
+from types import SimpleNamespace
+
+
+def _sub(id, title, sponsor, deadline):
+    return SimpleNamespace(id=id, title=title, sponsor=sponsor, deadline=deadline)
+
+
+def test_build_calendar_one_vevent_per_deadline():
+    subs = [
+        _sub(1, "NSF CAREER", "NSF", _dt(2026, 7, 1)),
+        _sub(2, "No deadline", "NIH", None),   # skipped
+    ]
+    cal = ics_export.build_calendar(subs)
+    assert cal.count("BEGIN:VEVENT") == 1
+    assert "UID:submission-1@ora.inavigator.ai" in cal
+    assert "DTSTART;VALUE=DATE:20260701" in cal
+    assert "SUMMARY:NSF\\: NSF CAREER (deadline)" in cal
+    assert cal.startswith("BEGIN:VCALENDAR")
+    assert cal.rstrip().endswith("END:VCALENDAR")
+
+
+def test_build_calendar_escapes_special_chars():
+    subs = [_sub(3, "Title, with; chars", "", _dt(2026, 8, 9))]
+    cal = ics_export.build_calendar(subs)
+    assert "Title\\, with\\; chars" in cal
+
+
+def test_build_calendar_empty_is_valid():
+    cal = ics_export.build_calendar([])
+    assert "BEGIN:VCALENDAR" in cal and "END:VCALENDAR" in cal
+    assert "BEGIN:VEVENT" not in cal
