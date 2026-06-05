@@ -23,6 +23,18 @@ Deployed on Google Cloud Run with multi-instance scaling, Cloud SQL session pers
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/landing.png" alt="ORA Navigator landing page — guest trial chat with suggested research-administration questions" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/mobile-chat.png" alt="ORA Navigator on mobile — responsive guest chat" width="300">
+</p>
+
+---
+
 ## What ORA Navigator answers
 
 | Area | Examples |
@@ -32,6 +44,21 @@ Deployed on Google Cloud Run with multi-instance scaling, Cloud SQL session pers
 | **Post-Award** | NCE (No-Cost Extension) 60-day rule · subaward setup · effort reporting (14-day Searchlight) · final reports (90-day) |
 | **Forms & Policies** | PI Handbook policies · 271 forms (PDFs, DocuSign, IACUC SOPs, RACC, D-RED slides) · request templates |
 | **Staff routing** | Function-to-staff lookup · ORA staff directory (14 people) · ask.ora@morgan.edu mailing list |
+
+---
+
+## Beyond chat — proposal workflow & tools
+
+ORA Navigator is more than a chatbot. It also gives PIs a place to *run* a proposal:
+
+| Tool | What it does |
+|---|---|
+| **Forms catalog** (`/forms`) | One-click browse of every ORA form / template / DocuSign PDF, filterable by category, sponsor, and role — no LLM call, no hallucinated links. |
+| **Proposals tracker** (`/my-proposals`) | Per-submission task checklists seeded from sponsor templates. Each task with a known form shows an **"Open form"** link resolved from its `kb_doc_id`. |
+| **Calendar export** | Deadlines export to any calendar app via a scoped, replay-safe token feed — **download `.ics`** or subscribe over `webcal://` (`GET /api/me/deadlines.ics`). |
+| **Solicitation Ingestion** (AI) | Drop a sponsor PDF → Gemini extracts deadline, page limits, and required attachments (with source-quote verification) → review → seed a tracked submission. |
+| **Draft Critic** (AI) | Pre-submission check of a draft PDF against the reconstructed solicitation rules — deterministic verdict plus an evidence-verified advisory AI review. |
+| **Deadline Watcher** (AI) | Emails PIs at 14/7/3/1/0 days out (idempotent per submission+threshold), with an AI-personalized body and a hard fallback to a deterministic template. |
 
 ---
 
