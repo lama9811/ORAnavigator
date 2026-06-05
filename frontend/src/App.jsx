@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 
+// Eager: always-mounted layout chrome (light, shown on every screen).
 import NavBar         from "./components/NavBar";
 import ChatSidebar    from "./components/ChatSidebar";
-import Chatbox        from "./components/Chatbox";
-import ProfilePage    from "./components/ProfilePage";
-import FormsCatalog   from "./components/FormsCatalog";
-import MyProposals    from "./components/MyProposals";
-import AdminDashboard from "./components/AdminDashboard";
-import Forbidden      from "./components/Forbidden";
-import LandingPage    from "./components/LandingPage";
 import CommandPalette from "./components/CommandPalette";
-// WelcomeModal removed
+import Forbidden      from "./components/Forbidden";
 
-import SignUp from "./SignUp";
-import Login  from "./Login";
-import ForgotPassword from "./ForgotPassword";
-import ResetPassword from "./ResetPassword";
+// Lazy: each page loads only when its route is opened, so the first paint
+// no longer ships every screen (Admin, chat, markdown/highlighter, etc.).
+const Chatbox        = lazy(() => import("./components/Chatbox"));
+const ProfilePage    = lazy(() => import("./components/ProfilePage"));
+const FormsCatalog   = lazy(() => import("./components/FormsCatalog"));
+const MyProposals    = lazy(() => import("./components/MyProposals"));
+const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
+const LandingPage    = lazy(() => import("./components/LandingPage"));
+
+const SignUp         = lazy(() => import("./SignUp"));
+const Login          = lazy(() => import("./Login"));
+const ForgotPassword = lazy(() => import("./ForgotPassword"));
+const ResetPassword  = lazy(() => import("./ResetPassword"));
 
 import "./index.css";
 
@@ -395,6 +398,7 @@ export default function App() {
         onToggleSidebar={toggleSidebar}
       />
 
+      <Suspense fallback={<div className="route-loading" aria-busy="true" />}>
       <Routes>
         {/* public */}
         <Route
@@ -550,6 +554,7 @@ export default function App() {
           element={<Navigate to={token ? "/chat" : "/trychat"} replace />}
         />
       </Routes>
+      </Suspense>
     </>
   );
 }
