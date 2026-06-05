@@ -187,4 +187,6 @@ def get_form(doc_id: Optional[str]) -> Optional[dict]:
     kb_doc_id to an openable URL."""
     if not doc_id:
         return None
-    return _catalog_by_id().get(doc_id)
+    # Shallow-copy so callers can't mutate the lru-cached catalog row.
+    row = _catalog_by_id().get(doc_id)
+    return dict(row) if row else None
