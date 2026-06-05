@@ -2994,11 +2994,17 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
 
 
 def _submission_task_to_dict(t) -> dict:
+    from services.forms_catalog import get_form
+    form = get_form(t.kb_doc_id)
     return {
         "id": t.id,
         "title": t.title,
         "description": t.description,
         "kb_doc_id": t.kb_doc_id,
+        # Resolved form link (None when the task has no linked form, e.g.
+        # biosketch / DMP / Specific Aims -- intentionally unlinked).
+        "kb_doc_url": form["url"] if form else None,
+        "kb_doc_title": form["title"] if form else None,
         "due_offset_days": t.due_offset_days,
         "status": t.status,
         "notes": t.notes,
