@@ -54,7 +54,7 @@ def test_build_calendar_one_vevent_per_deadline():
     assert cal.count("BEGIN:VEVENT") == 1
     assert "UID:submission-1@ora.inavigator.ai" in cal
     assert "DTSTART;VALUE=DATE:20260701" in cal
-    assert "SUMMARY:NSF\\: NSF CAREER (deadline)" in cal
+    assert "SUMMARY:NSF: NSF CAREER (deadline)" in cal
     assert cal.startswith("BEGIN:VCALENDAR")
     assert cal.rstrip().endswith("END:VCALENDAR")
 

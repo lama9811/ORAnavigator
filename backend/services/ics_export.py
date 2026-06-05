@@ -45,13 +45,14 @@ def decode_ics_token(token: str) -> Optional[int]:
 
 
 def _escape(text: str) -> str:
-    """RFC 5545 text escaping: backslash, colon, comma, semicolon, newline."""
+    """RFC 5545 (sec 3.3.11) TEXT escaping: backslash, semicolon, comma,
+    newline. Colon is NOT escaped in a TEXT value -- parsers split a content
+    line on the first colon only, so a colon inside the value is literal."""
     if text is None:
         return ""
     return (
         str(text)
         .replace("\\", "\\\\")
-        .replace(":", "\\:")
         .replace(";", "\\;")
         .replace(",", "\\,")
         .replace("\r\n", "\\n")
