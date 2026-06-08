@@ -178,7 +178,11 @@ _LEADING_RE = re.compile(
 # re-loosening into substring matching: "&" -> "and", whitespace collapse,
 # and a tiny curated alias list.
 _WS_RE = re.compile(r"\s+")
-_NAME_ALIASES = (("biosketch", "biographical sketch"),)
+_NAME_ALIASES = (
+    ("biosketch", "biographical sketch"),
+    ("bibliography and references cited", "references cited"),
+    ("data management and sharing plan", "data management plan"),
+)
 
 
 def _norm(s: Optional[str]) -> str:
@@ -198,7 +202,7 @@ def _header_match(line: str, target_norm: str) -> bool:
     but "Summary:", "Plan (2 pages)", and "Sketch ..." all still match.
     No substring / anywhere-colon matching (that caused false passes)."""
     cand = _norm(_LEADING_RE.sub("", line.strip()))
-    if cand == target_norm:
+    if cand == target_norm or cand == target_norm + "s":  # allow a simple plural
         return True
     if target_norm and cand.startswith(target_norm):
         rest = cand[len(target_norm):].lstrip()
