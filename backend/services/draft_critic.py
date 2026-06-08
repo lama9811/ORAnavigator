@@ -231,6 +231,7 @@ def _section_present(text: str, name: str) -> bool:
 def check_page_count(
     actual_pages: int,
     page_limits: Optional[dict],
+    pages_text: Optional[list[str]] = None,
 ) -> dict:
     """Compare the PDF's total page count to the document-wide limit
     declared in the solicitation. Most solicitations enumerate the
@@ -291,20 +292,31 @@ def check_page_count(
             "value": _plural(actual_pages, "page"),
             "detail": f"Ignoring a non-positive page limit ({limit_int}).",
         }
-    status = "ok" if actual_pages <= limit_int else "fail"
-    over_by = actual_pages - limit_int
+    # When we have per-page text and the cap names a narrative section, measure
+    # THAT section's span (reusing _estimate_section_pages) rather than the whole
+    # document -- a full assembled package shouldn't fail a section page cap.
+    measured = actual_pages
+    scope_note = ""
+    if pages_text:
+        est = _estimate_section_pages(pages_text, label.replace("_", " "))
+        if est is not None:
+            measured = est
+            scope_note = f" (measured the {label.replace('_', ' ')} section span)"
+
+    status = "ok" if measured <= limit_int else "fail"
+    over_by = measured - limit_int
     if status == "ok":
-        detail = (f"Draft is {_plural(actual_pages, 'page')}; "
-                  f"the solicitation caps {label.replace('_', ' ')} at "
-                  f"{limit_int}.")
+        detail = (f"{label.replace('_', ' ').capitalize()} is "
+                  f"{_plural(measured, 'page')}; the solicitation caps it at "
+                  f"{limit_int}.{scope_note}")
     else:
-        detail = (f"Draft is {_plural(actual_pages, 'page')} -- "
-                  f"{over_by} over the {limit_int}-page cap on "
-                  f"{label.replace('_', ' ')}. Trim before submitting.")
+        detail = (f"{label.replace('_', ' ').capitalize()} is "
+                  f"{_plural(measured, 'page')} -- {over_by} over the "
+                  f"{limit_int}-page cap.{scope_note} Trim before submitting.")
     return {
         "name": "Page count",
         "status": status,
-        "value": f"{actual_pages} / {limit_int}",
+        "value": f"{measured} / {limit_int}",
         "detail": detail,
     }
 
@@ -969,8 +981,9 @@ def critique_pdf(
     if sanity is not None:
         checks.append(sanity)
 
-    # 1. Page count (document-wide)
-    checks.append(check_page_count(page_count, sol.get("page_limits")))
+    # 1. Page count (scoped to the narrative section when pages_text allows)
+    checks.append(check_page_count(page_count, sol.get("page_limits"),
+                                   pages_text=pages_text))
 
     # 2. Required attachments
     req_check = check_required_attachments(text, sol.get("required_attachments") or [])

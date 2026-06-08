@@ -65,3 +65,30 @@ def test_budget_still_fails_on_genuine_overage():
     text = "Total Costs: $650,000 requested.\n"
     r = check_budget_cap(text, 500_000)
     assert r["status"] == "fail"
+
+
+# ---------------------------------------------------------------------------
+# Task 3: page-limit check scoped to the named section, not the whole document
+# ---------------------------------------------------------------------------
+
+def test_page_count_scopes_to_named_section_when_pages_given():
+    # 15-page packet, but the Research Strategy itself spans ~2 pages; a
+    # 12-page section cap should therefore be OK, not a false 'fail'.
+    pages = (["Cover", "Project Summary/Abstract\n..."]
+             + ["Research Strategy\nA. Significance ..."]
+             + ["...aim 1 and aim 2 detail..."]
+             + ["Biographical Sketch\nDr X ..."]
+             + ["pad"] * 9
+             + ["References Cited\n[1] ..."])      # 15 pages total, RS ~2
+    r = check_page_count(len(pages), {"research_strategy": 12}, pages_text=pages)
+    assert r["status"] == "ok"
+
+
+def test_page_count_falls_back_to_total_when_section_not_found():
+    r = check_page_count(20, {"project_description": 15}, pages_text=["x", "y"])
+    assert r["status"] == "fail"        # header absent -> total-doc fallback
+
+
+def test_page_count_backward_compatible_without_pages_text():
+    r = check_page_count(10, {"project_description": 15})
+    assert r["status"] == "ok"
