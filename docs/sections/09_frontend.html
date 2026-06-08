@@ -199,6 +199,15 @@
 
 <p>This is a simple list of the load-bearing changes, newest first, taken from the real git history and the project notes. Each line says <em>what</em> changed and <em>why</em> it mattered. Dates are from the development sessions in late May to early June 2026.</p>
 
+<h4>June 8, 2026 — Draft Critic accuracy, 100% live form links, faster login &amp; safer deploys</h4>
+<ul>
+  <li><strong>The Draft Critic now reads real proposals reliably.</strong> We tested it on 12 real grant applications and a set of real draft write-ups. It went from finding the right sections about two-thirds of the time to <strong>finding them every time</strong> in our tests. We taught it to recognize a section even when it's written a little differently — a plural heading, "Resource Sharing Plan" meaning the data-management plan, "Facilities &amp; Other Resources" — when the heading carries a page number, and the way NIH's grant system stamps each page (e.g. "Specific Aims — Page 63"). We also made the budget check honest: if it can't clearly read the budget total, it now <em>warns you to double-check</em> instead of guessing a number. Why: so a professor can actually trust what it says about their draft.</li>
+  <li><strong>Every ORA form link is now live (100%).</strong> We checked all 74 form and template links the app can hand you. Two IACUC (animal-research) forms had been moved on Morgan's website and were dead (404); we found their new homes and fixed them. Why: an "Open form" button should never lead to a missing page.</li>
+  <li><strong>Login is fast again.</strong> Logging in sometimes took about 30 seconds — but that wasn't the login itself. To save money the server was allowed to "fall asleep" when idle, and the first person in had to wait for it to wake up. We now keep one copy always awake, so the wait is gone for everyone.</li>
+  <li><strong>Deployments are safer.</strong> We added a one-command deploy script that automatically preserves the server's settings (email, security keys, and the always-awake setting) that the old deploy step could accidentally erase. Why: so shipping an update can't quietly break email or bring back the slow login.</li>
+  <li><strong>The documentation was reorganized.</strong> The project notes were split into clear, one-topic pages — the architecture, the tech stack, how the AI agents work, and one page per feature — so anyone new can understand the system quickly instead of reading one giant file.</li>
+</ul>
+
 <h4>Anti-hallucination &amp; accuracy (the "don't make things up" work)</h4>
 <ul>
   <li><strong>Solicitation strict prompt + evidence verification</strong> (<code>cae413b</code>) — when reading a sponsor PDF, the AI is given a strict "only report what's actually in the document" instruction, and a checker flags any extracted field whose supporting quote isn't found in the PDF (shown red in the review modal). Why: so a hallucinated deadline never silently becomes your real deadline.</li>

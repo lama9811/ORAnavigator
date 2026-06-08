@@ -36,7 +36,7 @@ toc_rows = "\n".join(
     for i, (cid, title) in enumerate(TOC)
 )
 
-DATE = "June 4, 2026"
+DATE = "June 8, 2026"
 
 CSS = """
 :root{
