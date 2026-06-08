@@ -7,6 +7,7 @@ Covers the three weak spots a real-proposal benchmark exposed:
 """
 
 from services.draft_critic import (
+    _estimate_section_pages,
     _section_present,
     _section_present_pages,
     check_budget_cap,
@@ -156,3 +157,29 @@ def test_required_attachments_still_flags_a_truly_absent_section():
     r = check_required_attachments(text, ["Biographical Sketch"], pages_text=[text])
     assert r["status"] == "fail"
     assert "Biographical Sketch" in r["missing"]
+
+
+# ---------------------------------------------------------------------------
+# Round 2 / #3: section page-span estimate stops at the next MAJOR section
+# ---------------------------------------------------------------------------
+
+def test_estimate_section_pages_ignores_internal_subheadings():
+    pages = [
+        "Specific Aims\nWe aim ...",
+        "Research Strategy\nSignificance ...",   # section starts here (index 1)
+        "Significance continued discussion ...",  # internal -> NOT a boundary
+        "Approach\nmethods and timeline ...",      # internal -> NOT a boundary
+        "Biographical Sketch\nDr X ...",           # next MAJOR section -> boundary (index 4)
+        "more biosketch",
+    ]
+    assert _estimate_section_pages(pages, "Research Strategy") == 3
+
+
+def test_estimate_section_pages_handles_pagenumber_running_headers():
+    pages = [
+        "Research Strategy 80\nAim 1 ...",
+        "Research Strategy 81\n... continued ...",
+        "Research Strategy 82\n... continued ...",
+        "References Cited 83\n[1] Smith ...",      # next MAJOR section -> boundary
+    ]
+    assert _estimate_section_pages(pages, "Research Strategy") == 3

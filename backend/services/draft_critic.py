@@ -636,41 +636,61 @@ _PER_SECTION_LIMITS = {
 }
 
 
+# Major sections that legitimately END another section's page span. Internal
+# subheadings ("Significance", "Approach", "Aim 1") are deliberately NOT here,
+# so a section's span isn't cut short at its own sub-parts.
+_MAJOR_SECTION_NORMS = {
+    _norm(s) for s in (
+        list(_NSF_DEFAULT_SECTIONS) + list(_NIH_DEFAULT_SECTIONS)
+        + list(_DOD_DEFAULT_SECTIONS) + [
+            "Specific Aims", "Research Strategy", "Project Description",
+            "Project Summary", "Project Narrative", "References Cited",
+            "Bibliography and References Cited", "Biographical Sketch",
+            "Budget Justification", "Facilities", "Equipment",
+            "Protection of Human Subjects", "Human Subjects",
+            "Vertebrate Animals", "Resource Sharing Plan",
+            "Data Management Plan", "Authentication of Key Biological",
+            "Letters of Support", "Multiple PD PI Leadership Plan",
+            "Consortium", "Cover Letter", "Select Agent Research",
+        ]
+    )
+}
+
+
+def _first_line_section_norm(page_text: str) -> str:
+    """Normalized first non-empty line of a page, with leading numbering and a
+    trailing page number stripped -- so 'Research Strategy 80' -> 'research
+    strategy'. Used to detect section starts/boundaries by header position."""
+    first = next((ln.strip() for ln in page_text.splitlines() if ln.strip()), "")
+    cand = _norm(_LEADING_RE.sub("", first))
+    return _TRAILING_PAGENO_RE.sub("", cand).strip()
+
+
 def _estimate_section_pages(pages_text: list[str], section_name: str) -> Optional[int]:
-    """Estimate how many pages a named section occupies, by finding the
-    page where the section header first appears and counting forward
-    until the next likely section header. Returns None if the section
-    isn't found."""
+    """Estimate how many pages a named section occupies: find where its header
+    first appears (a clean header anywhere on a page, OR a page-numbered running
+    header as the page's first line) and count forward until the next MAJOR
+    section header. Returns None if the section isn't found."""
     if not pages_text or not section_name:
         return None
     target = _norm(section_name)
-    name_lc = section_name.lower()  # used by the forward-walk heuristic below
+    target_grp = {_norm(v) for v in _equivalent_names(section_name)}
     start_page = None
     for i, page_text in enumerate(pages_text):
-        if any(_header_match(line, target)
-               for line in page_text.splitlines() if line.strip()):
+        if (_first_line_section_norm(page_text) in target_grp
+                or any(_header_match(line, target)
+                       for line in page_text.splitlines() if line.strip())):
             start_page = i
             break
     if start_page is None:
         return None
-    # Walk forward; stop at the first page that starts with another
-    # plausible section header (a non-empty line ending without
-    # punctuation, shorter than 80 chars, and not the same section).
+    # Walk forward; stop only at a page whose FIRST line is a DIFFERENT major
+    # section header (not this section's own continuation). Internal subheads
+    # don't count, so the span isn't truncated at "Significance"/"Approach".
     end_page = len(pages_text)
     for j in range(start_page + 1, len(pages_text)):
-        first_lines = [
-            l.strip() for l in pages_text[j].splitlines() if l.strip()
-        ][:3]
-        if not first_lines:
-            continue
-        first = first_lines[0]
-        is_new_section = (
-            len(first) < 80
-            and not first.endswith((".", ","))
-            and name_lc not in first.lower()
-            and first[0].isupper()
-        )
-        if is_new_section:
+        fl = _first_line_section_norm(pages_text[j])
+        if fl and fl in _MAJOR_SECTION_NORMS and fl not in target_grp:
             end_page = j
             break
     return end_page - start_page
