@@ -240,7 +240,15 @@ _SECTION_EQUIVALENTS = (
      "resource sharing plan", "resource sharing plans"},
     {"references cited", "bibliography and references cited", "references"},
     {"biographical sketch", "biosketch"},
+    {"facilities", "facilities and other resources",
+     "facilities equipment and other resources",
+     "facilities, equipment and other resources"},
 )
+
+# How many leading non-empty lines of a page to scan for a running header.
+# NIH assembled applications stamp a "Contact PD/PI: ..." banner as line 1 of
+# every page, so the real section header sits on line 2-3.
+_RUNHDR_SCAN_LINES = 3
 
 # A trailing page-number token on a header line: "Research Strategy 80",
 # "References Cited Page 30", "Budget Justification p 12".
@@ -269,15 +277,17 @@ def _running_header_present(pages_text: Optional[list[str]], name: str) -> bool:
         return False
     hits = 0
     for pt in pages_text:
-        first = next((ln.strip() for ln in pt.splitlines() if ln.strip()), "")
-        if not first:
-            continue
-        cand = _norm(_LEADING_RE.sub("", first))
-        cand = _TRAILING_PAGENO_RE.sub("", cand).strip()
-        if cand == target or cand == target + "s":
-            hits += 1
-            if hits >= 2:
-                return True
+        # Scan the first few non-empty lines (a per-page PI banner often sits
+        # above the real running header).
+        top = [ln.strip() for ln in pt.splitlines() if ln.strip()][:_RUNHDR_SCAN_LINES]
+        for line in top:
+            cand = _norm(_LEADING_RE.sub("", line))
+            cand = _TRAILING_PAGENO_RE.sub("", cand).strip()
+            if cand == target or cand == target + "s":
+                hits += 1
+                break
+        if hits >= 2:
+            return True
     return False
 
 

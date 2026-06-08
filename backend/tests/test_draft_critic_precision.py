@@ -183,3 +183,23 @@ def test_estimate_section_pages_handles_pagenumber_running_headers():
         "References Cited 83\n[1] Smith ...",      # next MAJOR section -> boundary
     ]
     assert _estimate_section_pages(pages, "Research Strategy") == 3
+
+
+# ---------------------------------------------------------------------------
+# Round 3: real-corpus gaps (Facilities naming + NIH per-page PI banner)
+# ---------------------------------------------------------------------------
+
+def test_facilities_matches_facilities_and_other_resources():
+    text = "Facilities & Other Resources\nOur labs include a BSL-3 suite."
+    assert _section_present_pages(text, [text], "Facilities")
+
+
+def test_running_header_detected_below_per_page_pi_banner():
+    # NIH assembled apps stamp a "Contact PD/PI:" banner as line 1 of EVERY
+    # page; the real section running-header sits on line 2-3. Must still detect.
+    pages = [
+        "Contact PD/PI: Smith, Jane\nResearch Strategy 80\nAim 1 ...",
+        "Contact PD/PI: Smith, Jane\nResearch Strategy 81\n... continued ...",
+        "Contact PD/PI: Smith, Jane\nBiographical Sketch\nDr X ...",
+    ]
+    assert _section_present_pages("\n\n".join(pages), pages, "Research Strategy")
