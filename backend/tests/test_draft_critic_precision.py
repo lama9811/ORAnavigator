@@ -203,3 +203,24 @@ def test_running_header_detected_below_per_page_pi_banner():
         "Contact PD/PI: Smith, Jane\nBiographical Sketch\nDr X ...",
     ]
     assert _section_present_pages("\n\n".join(pages), pages, "Research Strategy")
+
+
+# ---------------------------------------------------------------------------
+# Round 4: NIH eRA Commons assembled-package attachment-page headers
+# ---------------------------------------------------------------------------
+
+def test_era_attachment_page_headers_detected():
+    # eRA titles each attachment page "<Section> Attachment Page N",
+    # "<Section> Page N", or "<Section> <uploaded-filename>.pdf" -- all real.
+    t1 = "Budget Justification Attachment Page 50\nPersonnel: $200,000 ..."
+    assert _section_present_pages(t1, [t1], "Budget Justification")
+    t2 = "Specific Aims Page 63\nWe aim to determine ..."
+    assert _section_present_pages(t2, [t2], "Specific Aims")
+    t3 = "10.Facilities & Other Resources Facilities-resubmission.pdf\nOur labs ..."
+    assert _section_present_pages(t3, [t3], "Facilities")
+
+
+def test_era_artifact_strip_does_not_overmatch_a_looser_name():
+    # Stripping the eRA tail must NOT turn "Budget Justification ..." into "Budget".
+    t = "Budget Justification Attachment Page 50\n..."
+    assert not _section_present_pages(t, [t], "Budget")

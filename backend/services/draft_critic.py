@@ -249,6 +249,14 @@ _SECTION_EQUIVALENTS = (
 # "References Cited Page 30", "Budget Justification p 12".
 _TRAILING_PAGENO_RE = re.compile(r"\s+(?:page|pg|pp)?\.?\s*\d{1,4}$", re.IGNORECASE)
 
+# NIH eRA Commons stamps each attachment page's header as "<Section> Attachment
+# Page N", "<Section> Page N", or "<Section> <uploaded-filename>.pdf". This
+# strips that trailing artifact so the section name underneath can be matched.
+# It only fires on these specific eRA suffixes (Page N / Attachment / *.pdf) --
+# which a table-of-contents entry never carries -- so it stays TOC-safe.
+_ERA_TAIL_RE = re.compile(
+    r"\s+(?:attachment\b.*|page\s+\d{1,4}.*|\S*\.pdf)$", re.IGNORECASE)
+
 
 def _equivalent_names(name: str) -> list[str]:
     """All section names equivalent to `name` (just itself if no group hits)."""
@@ -292,9 +300,38 @@ def _running_header_present(pages_text: Optional[list[str]], name: str) -> bool:
     return False
 
 
+def _era_header_present(pages_text: Optional[list[str]], name: str) -> bool:
+    """True when a line equals the section name once its eRA Commons attachment
+    artifact ('Attachment Page N' / 'Page N' / '<filename>.pdf') is stripped.
+    A single occurrence is enough -- those suffixes mark a real eRA section
+    page, never a table-of-contents entry. Whole-line equality after the strip
+    keeps it from matching a longer, different header."""
+    if not pages_text:
+        return False
+    target = _norm(name)
+    if not target:
+        return False
+    for pt in pages_text:
+        for line in pt.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            # eRA prefixes a no-space outline number ("10.Facilities ..."), which
+            # _LEADING_RE (which needs trailing space) won't strip -- handle it here.
+            line = re.sub(r"^\s*\d+[.)]", "", line)
+            cand = _norm(_LEADING_RE.sub("", line))
+            cand = _ERA_TAIL_RE.sub("", cand).strip()
+            if cand == target or cand == target + "s":
+                return True
+    return False
+
+
 def _present_single(text: str, pages_text: Optional[list[str]], name: str) -> bool:
-    """One name: a clean header anywhere (strict) OR a running header (>=2 pages)."""
-    return _section_present(text, name) or _running_header_present(pages_text, name)
+    """One name: a clean header anywhere (strict), OR a running header (>=2
+    pages), OR an eRA Commons attachment-page header (single occurrence)."""
+    return (_section_present(text, name)
+            or _running_header_present(pages_text, name)
+            or _era_header_present(pages_text, name))
 
 
 def _section_present_pages(text: str, pages_text: Optional[list[str]],
