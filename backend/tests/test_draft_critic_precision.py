@@ -8,8 +8,10 @@ Covers the three weak spots a real-proposal benchmark exposed:
 
 from services.draft_critic import (
     _section_present,
+    _section_present_pages,
     check_budget_cap,
     check_page_count,
+    check_required_attachments,
 )
 
 
@@ -100,3 +102,57 @@ def test_page_count_falls_back_to_total_when_section_not_found():
 def test_page_count_backward_compatible_without_pages_text():
     r = check_page_count(10, {"project_description": 15})
     assert r["status"] == "ok"
+
+
+# ---------------------------------------------------------------------------
+# Round 2 / #1: running-header (positional, multi-page) matching
+# ---------------------------------------------------------------------------
+
+def test_running_header_with_page_number_detected():
+    # "Research Strategy 80/81" as the first line of >=2 pages = a real header.
+    pages = ["Cover sheet",
+             "Research Strategy 80\nAim 1 narrative ...",
+             "Research Strategy 81\n... continued ...",
+             "Biographical Sketch\nDr X ..."]
+    assert _section_present_pages("\n\n".join(pages), pages, "Research Strategy")
+
+
+def test_toc_single_pagenumber_line_is_not_a_false_positive():
+    # A table-of-contents that lists "Research Strategy 80" ONCE must not count.
+    toc = "Table of Contents\nResearch Strategy 80\nBudget Justification 95\nReferences 110"
+    pages = [toc, "Body text that never repeats a Research Strategy header."]
+    assert not _section_present_pages("\n\n".join(pages), pages, "Research Strategy")
+
+
+def test_running_header_needs_two_pages_not_one():
+    pages = ["Research Strategy 80\nonly once here", "totally different content"]
+    assert not _section_present_pages("\n\n".join(pages), pages, "Research Strategy")
+
+
+# ---------------------------------------------------------------------------
+# Round 2 / #2: synonym groups
+# ---------------------------------------------------------------------------
+
+def test_resource_sharing_plan_satisfies_data_management_plan():
+    text = "Resource Sharing Plan\nData and models will be shared publicly."
+    assert _section_present_pages(text, [text], "Data Management Plan")
+
+
+def test_bare_references_satisfies_references_cited():
+    text = "References\n[1] Smith J. 2024. Journal of Things."
+    assert _section_present_pages(text, [text], "References Cited")
+
+
+def test_synonyms_flow_through_required_attachments_check():
+    text = "Resource Sharing Plan\nData shared.\nReferences\n[1] X."
+    r = check_required_attachments(text, ["Data Management Plan", "References Cited"],
+                                   pages_text=[text])
+    assert r["status"] == "ok"
+    assert r["missing"] == []
+
+
+def test_required_attachments_still_flags_a_truly_absent_section():
+    text = "Specific Aims\nWe aim to do things.\nResearch Strategy\nApproach ..."
+    r = check_required_attachments(text, ["Biographical Sketch"], pages_text=[text])
+    assert r["status"] == "fail"
+    assert "Biographical Sketch" in r["missing"]

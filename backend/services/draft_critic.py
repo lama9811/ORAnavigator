@@ -224,6 +224,79 @@ def _section_present(text: str, name: str) -> bool:
                for line in text.splitlines() if line.strip())
 
 
+# ---------------------------------------------------------------------------
+# Synonym groups + running-header (positional, multi-page) presence
+# ---------------------------------------------------------------------------
+
+# Curated equivalence groups: a required / standard section counts as present
+# if ANY member of its group appears. Members are compared after _norm(), so
+# the _NAME_ALIASES collapses (biosketch -> biographical sketch, ...) still
+# apply. This only EXPANDS matching within hand-picked groups -- it never
+# loosens into generic substring matching, so "Budget" still != "Budget
+# Justification".
+_SECTION_EQUIVALENTS = (
+    {"data management plan", "data management and sharing plan",
+     "data management sharing plan", "data management sharing",
+     "resource sharing plan", "resource sharing plans"},
+    {"references cited", "bibliography and references cited", "references"},
+    {"biographical sketch", "biosketch"},
+)
+
+# A trailing page-number token on a header line: "Research Strategy 80",
+# "References Cited Page 30", "Budget Justification p 12".
+_TRAILING_PAGENO_RE = re.compile(r"\s+(?:page|pg|pp)?\.?\s*\d{1,4}$", re.IGNORECASE)
+
+
+def _equivalent_names(name: str) -> list[str]:
+    """All section names equivalent to `name` (just itself if no group hits)."""
+    n = _norm(name)
+    for grp in _SECTION_EQUIVALENTS:
+        if any(_norm(m) == n for m in grp):
+            return list(grp)
+    return [name]
+
+
+def _running_header_present(pages_text: Optional[list[str]], name: str) -> bool:
+    """True when `name` is the FIRST non-empty line of >=2 pages, allowing a
+    trailing page number ("Research Strategy 80"). That is the signature of a
+    running / continuation header -- which the strict matcher rejects -- and a
+    table-of-contents entry CANNOT clear the >=2-page bar (it lists each
+    section once), so this stays false-positive-safe."""
+    if not pages_text:
+        return False
+    target = _norm(name)
+    if not target:
+        return False
+    hits = 0
+    for pt in pages_text:
+        first = next((ln.strip() for ln in pt.splitlines() if ln.strip()), "")
+        if not first:
+            continue
+        cand = _norm(_LEADING_RE.sub("", first))
+        cand = _TRAILING_PAGENO_RE.sub("", cand).strip()
+        if cand == target or cand == target + "s":
+            hits += 1
+            if hits >= 2:
+                return True
+    return False
+
+
+def _present_single(text: str, pages_text: Optional[list[str]], name: str) -> bool:
+    """One name: a clean header anywhere (strict) OR a running header (>=2 pages)."""
+    return _section_present(text, name) or _running_header_present(pages_text, name)
+
+
+def _section_present_pages(text: str, pages_text: Optional[list[str]],
+                           name: str) -> bool:
+    """Header-aware presence with two safe relaxations over `_section_present`:
+    (1) synonym groups (Resource Sharing Plan == Data Management Plan, bare
+    References == References Cited, ...) and (2) running/continuation headers
+    that carry a page number. Falls back to pure-text behavior when
+    `pages_text` is None."""
+    return any(_present_single(text, pages_text, v)
+               for v in _equivalent_names(name))
+
+
 # ===========================================================================
 # Individual check functions (pure, unit-testable)
 # ===========================================================================
@@ -324,6 +397,7 @@ def check_page_count(
 def check_required_attachments(
     text: str,
     required: list[str],
+    pages_text: Optional[list[str]] = None,
 ) -> dict:
     """For each required attachment from the solicitation, check
     whether a matching section / heading appears in the draft."""
@@ -341,7 +415,7 @@ def check_required_attachments(
     for att in required:
         if not att or not str(att).strip():
             continue
-        if _section_present(text, str(att).strip()):
+        if _section_present_pages(text, pages_text, str(att).strip()):
             found.append(att)
         else:
             missing.append(att)
@@ -368,6 +442,7 @@ def check_sponsor_default_sections(
     text: str,
     sponsor: Optional[str],
     suppress: Optional[set[str]] = None,
+    pages_text: Optional[list[str]] = None,
 ) -> dict:
     """Standard sponsor skeleton check. `suppress` is a set of section
     names already reported by another check (typically Required
@@ -375,7 +450,7 @@ def check_sponsor_default_sections(
     same missing item twice."""
     suppress_lc = {s.lower() for s in (suppress or set())}
     sections = _sponsor_default_sections(sponsor)
-    found = [s for s in sections if _section_present(text, s)]
+    found = [s for s in sections if _section_present_pages(text, pages_text, s)]
     missing_all = [s for s in sections if s not in found]
     missing = [s for s in missing_all if s.lower() not in suppress_lc]
     status = "ok" if not missing else "warn"
@@ -986,13 +1061,15 @@ def critique_pdf(
                                    pages_text=pages_text))
 
     # 2. Required attachments
-    req_check = check_required_attachments(text, sol.get("required_attachments") or [])
+    req_check = check_required_attachments(text, sol.get("required_attachments") or [],
+                                           pages_text=pages_text)
     checks.append(req_check)
 
     # 3. Standard sponsor sections, with attachments already flagged by
     #    Required Attachments suppressed to avoid double-reporting.
     suppress = set(req_check.get("missing") or [])
-    checks.append(check_sponsor_default_sections(text, sponsor, suppress=suppress))
+    checks.append(check_sponsor_default_sections(text, sponsor, suppress=suppress,
+                                                 pages_text=pages_text))
 
     # 4. Project Summary word count (if a summary section is detectable)
     summary_check = check_project_summary_wordcount(pages_text)
