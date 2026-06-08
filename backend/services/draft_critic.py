@@ -425,6 +425,38 @@ def _largest_dollar_amount(text: str) -> Optional[int]:
     return int(largest) if found_any else None
 
 
+_BUDGET_TOTAL_RE = re.compile(
+    r"(?:total\s+(?:direct\s+)?(?:costs?|project\s+costs?|budget)"
+    r"|total\s+amount(?:\s+requested)?"
+    r"|amount\s+requested"
+    r"|budget\s+total)"
+    r"[^\$\d]{0,40}\$?\s*([\d,]+(?:\.\d+)?)\s*"
+    r"(million|billion|thousand|mm|m|b|k)?",
+    re.IGNORECASE,
+)
+
+
+def _budget_total_amount(text: str) -> Optional[int]:
+    """Largest amount attached to a 'Total ... costs/budget/amount requested'
+    label -- a far better proxy for the requested budget than the single
+    largest dollar figure in the document (which is often a stray market /
+    population / id number)."""
+    if not text:
+        return None
+    best = None
+    for m in _BUDGET_TOTAL_RE.finditer(text):
+        try:
+            val = float(m.group(1).replace(",", ""))
+        except ValueError:
+            continue
+        val *= _MAGNITUDE.get((m.group(2) or "").upper(), 1)
+        if not math.isfinite(val) or val <= 0 or val > 1e12:
+            continue
+        if best is None or val > best:
+            best = val
+    return int(best) if best is not None else None
+
+
 def check_budget_cap(
     text: str,
     budget_cap: Optional[int],
@@ -443,8 +475,13 @@ def check_budget_cap(
             "value": "no cap set",
             "detail": "Budget cap isn't a number; skipping the budget check.",
         }
+    # Prefer a figure tied to a "Total ... costs/budget" label; only fall back
+    # to the single largest $ in the document when no labeled total is found.
+    labeled = _budget_total_amount(text)
     largest = _largest_dollar_amount(text)
-    if largest is None:
+    figure = labeled if labeled is not None else largest
+
+    if figure is None:
         return {
             "name": "Budget vs cap",
             "status": "warn",
@@ -454,24 +491,46 @@ def check_budget_cap(
                 "section may be missing, or the PDF is image-only."
             ),
         }
-    status = "ok" if largest <= budget_cap else "fail"
+    # Fallback path only: a figure wildly above the cap is almost certainly NOT
+    # the budget (market size, genome length, an id number). Warn, don't false-fail.
+    if labeled is None and figure > budget_cap * 50:
+        return {
+            "name": "Budget vs cap",
+            "status": "warn",
+            "value": f"${figure:,}? / ${budget_cap:,}",
+            "detail": (f"Largest $ figure in the draft is ${figure:,} -- far above "
+                       f"the ${budget_cap:,} cap, so it's probably a stray number, "
+                       f"not the budget total. Confirm the budget section."),
+        }
+    # Only a $0 (or nothing meaningful) could be read -- don't pass it off as
+    # 'under cap'; the real total likely lives in a form field the text omits.
+    if figure == 0:
+        return {
+            "name": "Budget vs cap",
+            "status": "warn",
+            "value": f"cap ${budget_cap:,}",
+            "detail": ("Couldn't read a budget total (found only $0). The budget "
+                       "may be in a form field the PDF text doesn't expose -- "
+                       "verify manually."),
+        }
+    status = "ok" if figure <= budget_cap else "fail"
     if status == "fail":
-        over = largest - budget_cap
-        detail = (f"Largest figure in the draft is ${largest:,} -- "
+        over = figure - budget_cap
+        detail = (f"Budget figure in the draft is ${figure:,} -- "
                   f"${over:,} over the ${budget_cap:,} per-award cap. "
                   f"Trim before submitting.")
-    elif largest == budget_cap:
-        detail = (f"Largest figure (${largest:,}) is exactly at the cap. "
+    elif figure == budget_cap:
+        detail = (f"Budget figure (${figure:,}) is exactly at the cap. "
                   f"Reviewer scrutiny on tight budgets is high -- double-"
                   f"check the budget justification.")
     else:
-        headroom = budget_cap - largest
-        detail = (f"Largest figure in the draft is ${largest:,}; "
+        headroom = budget_cap - figure
+        detail = (f"Budget figure in the draft is ${figure:,}; "
                   f"${headroom:,} under the ${budget_cap:,} cap.")
     return {
         "name": "Budget vs cap",
         "status": status,
-        "value": f"${largest:,} / ${budget_cap:,}",
+        "value": f"${figure:,} / ${budget_cap:,}",
         "detail": detail,
     }
 
