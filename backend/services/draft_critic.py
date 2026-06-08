@@ -245,11 +245,6 @@ _SECTION_EQUIVALENTS = (
      "facilities, equipment and other resources"},
 )
 
-# How many leading non-empty lines of a page to scan for a running header.
-# NIH assembled applications stamp a "Contact PD/PI: ..." banner as line 1 of
-# every page, so the real section header sits on line 2-3.
-_RUNHDR_SCAN_LINES = 3
-
 # A trailing page-number token on a header line: "Research Strategy 80",
 # "References Cited Page 30", "Budget Justification p 12".
 _TRAILING_PAGENO_RE = re.compile(r"\s+(?:page|pg|pp)?\.?\s*\d{1,4}$", re.IGNORECASE)
@@ -277,10 +272,16 @@ def _running_header_present(pages_text: Optional[list[str]], name: str) -> bool:
         return False
     hits = 0
     for pt in pages_text:
-        # Scan the first few non-empty lines (a per-page PI banner often sits
-        # above the real running header).
-        top = [ln.strip() for ln in pt.splitlines() if ln.strip()][:_RUNHDR_SCAN_LINES]
-        for line in top:
+        # A running header is a standalone line equal to the section name
+        # (allowing a trailing page number), anywhere on the page -- NIH stamps
+        # a multi-line "Contact PD/PI:" banner above it, so a top-N-lines scan
+        # isn't enough. The whole-line equality keeps prose out ("our research
+        # strategy ..." != "research strategy"), and the >=2-page bar keeps a
+        # single table-of-contents entry out.
+        for line in pt.splitlines():
+            line = line.strip()
+            if not line:
+                continue
             cand = _norm(_LEADING_RE.sub("", line))
             cand = _TRAILING_PAGENO_RE.sub("", cand).strip()
             if cand == target or cand == target + "s":
