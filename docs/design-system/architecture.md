@@ -140,8 +140,11 @@ frontend/src/
 
 - `deploy-cloudrun.sh <service>` builds and deploys **one** service per invocation
   (it silently ignores extra args — deploy each separately).
-- It **overwrites** Cloud Run env vars from `.env`, so `bash /tmp/post_deploy_backend.sh`
-  must run after every backend deploy to restore `SMTP_*`, `API_URL`, `RESEARCH_SECRET`, etc.
+- It **overwrites** Cloud Run env vars (`--set-env-vars` replaces the whole block) and resets
+  `--min-instances 0`, so it wipes `SMTP_*`, `API_URL`, `RESEARCH_SECRET`, `ALLOW_TEST_EMAILS`,
+  `FROM_EMAIL` and the warm-instance setting. **Use `bash scripts/deploy_backend.sh`** — a durable
+  wrapper that captures the live env + min-instances before the deploy and restores them after
+  (replaces the old, non-durable `/tmp/post_deploy_backend.sh`). No secrets are stored in the repo.
 - The frontend is a **PWA** (`registerType: 'autoUpdate'`) — verify UI changes in
   **incognito** to bypass the service-worker cache.
 - Single-worker uvicorn is required (thread-local grounding state in `vertex_agent.py`).
