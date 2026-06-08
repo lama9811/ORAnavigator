@@ -5,8 +5,8 @@
   "subcategory": "iacuc_form",
   "display_label": "IACUC Protocol Amendment Form",
   "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
-  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/IACUS%20FORMS/Protocol%20Amendment%20Request%20form.docx",
+  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Protocol%20Amendment%20Request%20form.docx",
   "content": "Word form used to request IACUC review of changes to an approved animal-research protocol — including changes to procedures, personnel, species, animal numbers, or housing.",
-  "last_scraped": "2026-05-14",
+  "last_scraped": "2026-06-08",
   "legacy_category": "form"
 }

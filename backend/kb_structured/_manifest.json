@@ -1410,7 +1410,7 @@
                   "doc_id": "form_iacuc_change_pi",
                   "title": "IACUC Change of Principal Investigator Form",
                   "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
-                  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/IACUS%20FORMS/Change%20PI%20form.docx",
+                  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Change%20PI%20form.docx",
                   "file_path": "research_compliance/animal_research/iacuc_forms/form_iacuc_change_pi.json",
                   "playwright_verified": false
                 },
@@ -1418,7 +1418,7 @@
                   "doc_id": "form_iacuc_amendment",
                   "title": "IACUC Protocol Amendment Request Form",
                   "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/animal-research/iacuc-forms",
-                  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/IACUS%20FORMS/Protocol%20Amendment%20Request%20form.docx",
+                  "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/DIVISIONS/RED/2021/Animal%20Research/IACUS%20FORMS/Protocol%20Amendment%20Request%20form.docx",
                   "file_path": "research_compliance/animal_research/iacuc_forms/form_iacuc_amendment.json",
                   "playwright_verified": false
                 },
