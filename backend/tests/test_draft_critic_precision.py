@@ -67,6 +67,14 @@ def test_budget_still_fails_on_genuine_overage():
     assert r["status"] == "fail"
 
 
+def test_budget_ignores_labeled_total_without_dollar_sign():
+    # NIH budget forms print totals as bare numbers; a "Total Direct Costs 75"
+    # must NOT be read as a $75 budget (that was a real false 'ok' on liu_r01).
+    text = "Budget Form\nTotal Direct Costs 75 (line 7 of the form)\n"
+    r = check_budget_cap(text, 500_000)
+    assert r["status"] == "warn"   # no real $ figure -> honest warn, not a false 'ok $75'
+
+
 # ---------------------------------------------------------------------------
 # Task 3: page-limit check scoped to the named section, not the whole document
 # ---------------------------------------------------------------------------

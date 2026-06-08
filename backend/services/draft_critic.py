@@ -442,7 +442,7 @@ _BUDGET_TOTAL_RE = re.compile(
     r"|total\s+amount(?:\s+requested)?"
     r"|amount\s+requested"
     r"|budget\s+total)"
-    r"[^\$\d]{0,40}\$?\s*([\d,]+(?:\.\d+)?)\s*"
+    r"[^\$\d]{0,40}\$\s*([\d,]+(?:\.\d+)?)\s*"  # require a real '$' before the figure
     r"(million|billion|thousand|mm|m|b|k)?",
     re.IGNORECASE,
 )
