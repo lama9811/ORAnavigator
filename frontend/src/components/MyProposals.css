@@ -125,6 +125,27 @@ body.dark .proposals-upload-btn {
   border-color: rgba(66, 133, 244, 0.5);
 }
 
+/* Build/Edit budget -- gold tint to set it apart from the blue Critique action. */
+.proposals-budget-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  background: rgba(247, 148, 30, 0.12);
+  color: #b45309;
+  border: 1px solid rgba(247, 148, 30, 0.4);
+}
+.proposals-budget-btn:hover {
+  background: rgba(247, 148, 30, 0.2);
+  border-color: rgba(247, 148, 30, 0.6);
+}
+
 .proposals-error {
   background: rgba(217, 48, 37, 0.08);
   border: 1px solid rgba(217, 48, 37, 0.28);

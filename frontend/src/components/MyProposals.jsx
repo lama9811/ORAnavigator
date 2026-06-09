@@ -4,10 +4,11 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
+import BudgetHelperModal from "./BudgetHelperModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -186,6 +187,7 @@ export default function MyProposals() {
         onBack={() => setActive(null)}
         onToggleTask={toggleTask}
         onDelete={() => deleteSubmission(active.id)}
+        onRefresh={() => openDetail(active.id)}
         busy={busy}
         error={error}
       />
@@ -314,13 +316,14 @@ function ProposalCard({ sub, onOpen }) {
 // DETAIL VIEW (single submission + tasks)
 // ============================================================
 
-function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error }) {
+function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, busy, error }) {
   const tasks = submission.tasks || [];
   const done = tasks.filter((t) => t.status === "done").length;
   const total = tasks.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
   const dleft = daysUntil(submission.deadline);
   const [showCritique, setShowCritique] = useState(false);
+  const [showBudget, setShowBudget] = useState(false);
 
   return (
     <div className="proposals">
@@ -329,6 +332,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
           <ArrowLeft size={12} /> All Proposals
         </button>
         <div className="proposals-header-actions">
+          <button
+            className="proposals-budget-btn"
+            onClick={() => setShowBudget(true)}
+            title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
+          >
+            <Calculator size={13} /> {submission.has_budget ? "Edit budget" : "Build budget"}
+          </button>
           {hasSolicitation(submission) && (
             <button
               className="proposals-critique-btn"
@@ -348,6 +358,14 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, busy, error })
         <DraftCritiqueModal
           submission={submission}
           onClose={() => setShowCritique(false)}
+        />
+      )}
+
+      {showBudget && (
+        <BudgetHelperModal
+          submission={submission}
+          onClose={() => setShowBudget(false)}
+          onSaved={onRefresh}
         />
       )}
 

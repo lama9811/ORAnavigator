@@ -196,6 +196,18 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add citations column: {e}")
 
+        # 5b. Add submissions.budget_json column if missing (Budget Helper).
+        try:
+            conn.execute(text("SELECT budget_json FROM submissions LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'budget_json' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN budget_json MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'budget_json' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add budget_json column: {e}")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -2985,11 +2997,22 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         "deadline": s.deadline.isoformat() if s.deadline else None,
         "status": s.status,
         "notes": s.notes,
+        # Budget Helper: parsed saved inputs (None if no budget saved). Whether a
+        # budget exists is cheap to expose on the list view too (drives the badge).
+        "has_budget": bool(getattr(s, "budget_json", None)),
         "created_at": s.created_at.isoformat() if s.created_at else None,
         "updated_at": s.updated_at.isoformat() if s.updated_at else None,
     }
     if include_tasks:
         out["tasks"] = [_submission_task_to_dict(t) for t in s.tasks]
+        raw = getattr(s, "budget_json", None)
+        if raw:
+            try:
+                out["budget"] = json.loads(raw)
+            except (ValueError, TypeError):
+                out["budget"] = None
+        else:
+            out["budget"] = None
     return out
 
 
@@ -3118,6 +3141,105 @@ async def get_my_submission(
     if sub is None:
         raise HTTPException(404, "Submission not found")
     return _submission_to_dict(sub, include_tasks=True)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Budget Helper — deterministic grant-budget math + AI-drafted justification.
+# Numbers come ONLY from services/budget_helper.compute_budget (never the LLM).
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/budget/rates")
+async def budget_rate_options(user: dict = Depends(get_current_user)):
+    """F&A + fringe rate tables that populate the Budget Helper selectors."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.budget_helper import rate_options
+    return rate_options()
+
+
+@app.post("/api/budget/compute")
+async def budget_compute(payload: dict, user: dict = Depends(get_current_user)):
+    """Stateless: compute a full budget breakdown from line-item inputs. Drives
+    the Budget Helper's live summary. Every figure is deterministic."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.budget_helper import compute_budget
+    return compute_budget(payload or {})
+
+
+@app.post("/api/budget/justification")
+async def budget_justification(payload: dict, user: dict = Depends(get_current_user)):
+    """Draft the budget-justification narrative. AI-polished when available, with
+    a HARD fallback to the deterministic template. The figures come from the
+    deterministic compute -- the AI is told to never change a number."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.budget_helper import compute_budget, draft_justification
+    inputs = payload.get("inputs", payload) or {}
+    budget = compute_budget(inputs)
+    template = draft_justification(budget)
+    if not payload.get("use_ai", True):
+        return {"justification": template, "ai": False}
+    try:
+        from services import gemini_client
+        prompt = (
+            "You are a grants budget specialist at Morgan State University. Rewrite the "
+            "budget justification below into clear, professional, sponsor-ready prose. "
+            "RULES: Do NOT change, add, or remove ANY dollar figure, percentage, name, or "
+            "rate -- reproduce them EXACTLY. Do not invent line items. Keep it concise.\n\n"
+            f"{template}"
+        )
+        text_out = (gemini_client.generate_text(prompt, temperature=0.2, max_output_tokens=900) or "").strip()
+        if text_out:
+            return {"justification": text_out, "ai": True, "template": template}
+    except Exception as e:
+        print(f"[BUDGET] AI justification failed, using deterministic template: {e}")
+    return {"justification": template, "ai": False}
+
+
+@app.get("/api/me/submissions/{submission_id}/budget")
+async def get_submission_budget(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Load a submission's saved budget inputs + a fresh deterministic compute."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services.budget_helper import compute_budget
+    raw = getattr(sub, "budget_json", None)
+    inputs = {}
+    if raw:
+        try:
+            inputs = json.loads(raw)
+        except (ValueError, TypeError):
+            inputs = {}
+    return {"inputs": inputs, "computed": compute_budget(inputs)}
+
+
+@app.put("/api/me/submissions/{submission_id}/budget")
+async def save_submission_budget(
+    submission_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save budget inputs onto the submission (recomputed deterministically on load)."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services.budget_helper import compute_budget
+    inputs = payload.get("inputs", payload) or {}
+    computed = compute_budget(inputs)          # validate it computes cleanly
+    sub.budget_json = json.dumps(inputs)
+    db.commit()
+    db.refresh(sub)
+    return {"inputs": inputs, "computed": computed}
 
 
 @app.patch("/api/me/submissions/{submission_id}")

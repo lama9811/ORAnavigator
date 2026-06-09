@@ -186,6 +186,10 @@ class Submission(Base):
     deadline = Column(DateTime, nullable=True)
     status = Column(String(32), nullable=False, default="active")  # active, submitted, withdrawn
     notes = Column(Text, nullable=True)
+    # Budget Helper: JSON string of the saved budget inputs (line items + F&A
+    # selection + cap). Recomputed deterministically on load. Nullable — most
+    # submissions have no budget yet.
+    budget_json = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
