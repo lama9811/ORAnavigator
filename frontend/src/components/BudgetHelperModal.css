@@ -117,6 +117,26 @@
   box-shadow: 0 0 0 3px rgba(43, 78, 134, 0.15);
 }
 
+/* Keep ALL field text dark + clearly readable. Overrides the global faint
+   --text-tertiary placeholder, forces a light color-scheme (so dark-mode
+   browsers don't render light-on-light), and sets -webkit-text-fill-color
+   (iOS/Safari paints the VALUE with text-fill, not color -- without this the
+   typed digits can come out invisible). */
+.bh-modal { color-scheme: light; }
+.bh-modal input,
+.bh-modal select,
+.bh-modal textarea {
+  color: #0B2545;
+  -webkit-text-fill-color: #0B2545;
+  opacity: 1;
+}
+.bh-modal input::placeholder,
+.bh-modal textarea::placeholder {
+  color: #64748b;
+  -webkit-text-fill-color: #64748b;
+  opacity: 1;
+}
+
 .bh-row-del {
   background: transparent;
   border: none;
