@@ -44,9 +44,56 @@ function parseJwt(token) {
 }
 
 function RequireAuth({ children }) {
-  return localStorage.getItem("token") 
-    ? children 
+  return localStorage.getItem("token")
+    ? children
     : <Navigate to="/login" replace />;
+}
+
+// A lazy page chunk can fail to download when a returning (PWA-cached) visitor
+// still has a stale service-worker bundle whose hashed filenames 404 after a
+// redeploy. Without a boundary that left a silent blank/dark screen (the Suspense
+// fallback) on mobile. This catches that failure and grabs a fresh copy ONCE
+// (a 10s timestamp guard prevents a reload loop if the chunk is genuinely gone),
+// falling back to a visible "Reload" card instead of a dead dark screen.
+class ChunkErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError(error) {
+    const msg = (error && (error.message || String(error))) || "";
+    const isChunkError =
+      /dynamically imported module|importing a module script|loading chunk|chunkloaderror|failed to fetch|unable to preload/i.test(msg);
+    if (isChunkError) {
+      const last = Number(sessionStorage.getItem("ora_chunk_reload_at") || 0);
+      if (Date.now() - last > 10000) {
+        sessionStorage.setItem("ora_chunk_reload_at", String(Date.now()));
+        window.location.reload();
+        return { failed: false };
+      }
+    }
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="route-error" role="alert">
+          <h2>Something went wrong</h2>
+          <p>The app couldn't finish loading. A refresh usually clears it.</p>
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.removeItem("ora_chunk_reload_at");
+              window.location.reload();
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function ChatLayout({
@@ -398,7 +445,8 @@ export default function App() {
         onToggleSidebar={toggleSidebar}
       />
 
-      <Suspense fallback={<div className="route-loading" aria-busy="true" />}>
+      <ChunkErrorBoundary>
+      <Suspense fallback={<div className="route-loading" aria-busy="true" aria-label="Loading…" />}>
       <Routes>
         {/* public */}
         <Route
@@ -555,6 +603,7 @@ export default function App() {
         />
       </Routes>
       </Suspense>
+      </ChunkErrorBoundary>
     </>
   );
 }

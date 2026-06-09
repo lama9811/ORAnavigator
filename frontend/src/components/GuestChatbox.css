@@ -433,9 +433,12 @@
 .guest-message.bot .guest-message-bubble {
   background: linear-gradient(135deg, rgba(66,133,244,0.03) 0%, rgba(66,133,244,0.06) 100%);
   color: var(--text-main);
+  /* Square the LEFT edge so the accent "road" runs the full bubble height as
+     one clean, uniform vertical line (rounded corners used to chop it short). */
+  border-top-left-radius: 4px;
   border-bottom-left-radius: 4px;
   border: none;
-  border-left: 2px solid rgba(66,133,244,0.2);
+  border-left: 3px solid rgba(66,133,244,0.45);
   box-shadow: 0 1px 6px rgba(60,64,67,0.06), 0 1px 2px rgba(60,64,67,0.04);
 }
 
@@ -780,6 +783,24 @@
 
   .guest-chat-messages {
     padding: 24px 16px 16px;
+    gap: 16px;
+  }
+
+  /* Smaller, tighter message text on phones (desktop kept at 0.95rem) */
+  .guest-message {
+    gap: 8px;
+  }
+  .guest-avatar-img {
+    width: 30px;
+    height: 30px;
+  }
+  .guest-message-content {
+    max-width: calc(100% - 44px);
+  }
+  .guest-message-bubble {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    padding: 12px 14px;
   }
 
   .guest-chat-input-container {
@@ -827,6 +848,21 @@
 
   .timer-label {
     display: none;
+  }
+}
+
+/* Extra-small phones — nudge the bot/user text down one more notch */
+@media (max-width: 480px) {
+  .guest-message-bubble {
+    font-size: 0.85rem;
+    padding: 11px 13px;
+  }
+  .guest-avatar-img {
+    width: 28px;
+    height: 28px;
+  }
+  .guest-message-content {
+    max-width: calc(100% - 40px);
   }
 }
 
