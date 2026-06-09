@@ -186,7 +186,11 @@ export default function App() {
 
   const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [role, setRole]   = useState(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // On phones the sidebar is a slide-over panel, so start it CLOSED (login
+  // lands on the welcome screen). On desktop it's a persistent column → open.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches
+  );
   const [cmdkOpen, setCmdkOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false); // disabled
 
@@ -321,6 +325,15 @@ export default function App() {
     loadHistory();
   }, [token]); // Run once when token changes (login)
 
+  // On phones the sidebar is an overlay covering the chat — close it after a
+  // navigation action so the user actually SEES the fresh/selected chat.
+  // (No-op on desktop, where the sidebar is a persistent column.)
+  const collapseSidebarOnMobile = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 768px)").matches) {
+      setSidebarCollapsed(true);
+    }
+  };
+
   // FIXED: session handlers
   const handleNew = () => {
     const id = Date.now().toString();
@@ -328,11 +341,13 @@ export default function App() {
     setSessions((prev) => [...prev, newChat]); // Append to end
     setActiveId(id);
     navigate("/chat");
+    collapseSidebarOnMobile();
   };
 
   const handleSelect = (id) => {
     setActiveId(id);
     navigate("/chat");
+    collapseSidebarOnMobile();
   };
   
   const handleDelete = async (id) => {
