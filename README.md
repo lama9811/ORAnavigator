@@ -26,7 +26,7 @@ Deployed on Google Cloud Run with multi-instance scaling, Cloud SQL session pers
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/landing.png" alt="ORA Navigator landing page — guest trial chat with suggested research-administration questions" width="100%">
+  <img src="docs/screenshots/landing.png" alt="ORA Navigator landing page — free guest chat with suggested research-administration questions" width="100%">
 </p>
 
 <p align="center">
@@ -58,6 +58,7 @@ ORA Navigator is more than a chatbot. It also gives PIs a place to *run* a propo
 | **Calendar export** | Deadlines export to any calendar app via a scoped, replay-safe token feed — **download `.ics`** or subscribe over `webcal://` (`GET /api/me/deadlines.ics`). |
 | **Solicitation Ingestion** (AI) | Drop a sponsor PDF → Gemini extracts deadline, page limits, and required attachments (with source-quote verification) → review → seed a tracked submission. |
 | **Draft Critic** (AI) | Pre-submission check of a draft PDF against the reconstructed solicitation rules — deterministic verdict plus an evidence-verified advisory AI review. |
+| **Budget Helper** (AI) | Split-view grant-budget builder: enter people/effort, equipment, travel, supplies, subawards → a live **Direct → MTDC → F&A → Total** summary with a sponsor-cap badge. All math is **deterministic** (real Morgan F&A/fringe rates, MTDC exclusions); the LLM only drafts the justification prose (figures injected, never invented). The cap auto-prefills from the solicitation. |
 | **Deadline Watcher** (AI) | Emails PIs at 14/7/3/1/0 days out (idempotent per submission+threshold), with an AI-personalized body and a hard fallback to a deterministic template. |
 
 ---
