@@ -612,3 +612,46 @@ body.dark .navbar-forms-btn:hover {
     height: 32px;
   }
 }
+
+/* ── Mobile floating "Menu" button (chat history) ──────────────────────────
+   Sits just below the Morgan State logo so the chat-history sidebar is easy to
+   discover. Phones only — on desktop the sidebar is already a visible column. */
+.mobile-history-fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-history-fab {
+    position: fixed;
+    top: 68px;            /* just below the ~60–65px mobile navbar */
+    left: 10px;
+    z-index: 450;         /* above page content, below the open sidebar (500) */
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px 7px 10px;
+    background: var(--msu-blue, #002D72);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-history-fab:active {
+    transform: scale(0.96);
+  }
+
+  .mobile-history-fab-label {
+    line-height: 1;
+  }
+
+  /* Hide it while the sidebar is open — the sidebar has its own close button. */
+  body:not(.sidebar-collapsed) .mobile-history-fab {
+    display: none;
+  }
+}

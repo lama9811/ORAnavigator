@@ -64,6 +64,7 @@ export default function NavBar({ role, onToggleSidebar }) {
   const isAuthed = useMemo(() => Boolean(role), [role]);
 
   return (
+    <>
     <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
       <div className="nav-container">
         {/* Left side - logo and title - CLICKABLE */}
@@ -159,7 +160,7 @@ export default function NavBar({ role, onToggleSidebar }) {
         {!isAuthed && (
           <div className="nav-links" aria-label="Primary navigation">
             <NavLink to="/trychat" className="nav-link try-free-link">
-              Try Free
+              Ask ORA
             </NavLink>
 
             <NavLink to="/login" className={linkClass}>
@@ -173,5 +174,22 @@ export default function NavBar({ role, onToggleSidebar }) {
         )}
       </div>
     </nav>
+
+      {/* Mobile-only floating menu button, just BELOW the logo, so chat history
+          is easy to find (it used to be hidden on the logo itself). Toggles the
+          sidebar; hidden on desktop and while the sidebar is already open. */}
+      {isAuthed && (
+        <button
+          type="button"
+          className="mobile-history-fab"
+          onClick={onToggleSidebar}
+          title="Open menu & chat history"
+          aria-label="Open menu and chat history"
+        >
+          <Menu size={20} />
+          <span className="mobile-history-fab-label">Menu</span>
+        </button>
+      )}
+    </>
   );
 }

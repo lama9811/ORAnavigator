@@ -485,7 +485,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* public: guest trial chat */}
+        {/* public: open guest chat (free, no trial/limit) */}
         <Route
           path="/trychat"
           element={<LandingPage />}

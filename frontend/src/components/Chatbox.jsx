@@ -120,26 +120,10 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("idle"); // idle, listening, processing, speaking
 
-  // Model selector state
-  const [selectedModel, setSelectedModel] = useState("inav-1.1");
-  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
-  const modelDropdownRef = useRef(null);
-
-  const MODEL_OPTIONS = [
-    { id: "inav-1.1", name: "iNav", desc: "Fast & accurate" },
-    { id: "inav-2.0", name: "iNav Pro", desc: "Deeper thinking, may take longer" },
-  ];
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target)) {
-        setModelDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // The chat always uses the standard fast model. The old iNav / iNav Pro
+  // dropdown was removed — "Pro" mapped to the same model (no real difference)
+  // and the "Pro" label read like a paid upgrade. ORA Navigator is free.
+  const selectedModel = "inav-1.1";
 
   // 🔥 Feedback State
   const [feedbackMenuOpen, setFeedbackMenuOpen] = useState(null); // index of message with open menu
@@ -1180,43 +1164,6 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Model selector dropdown */}
-      <div className="model-selector-header" ref={modelDropdownRef}>
-        <button
-          className="model-selector-trigger"
-          onClick={() => setModelDropdownOpen(prev => !prev)}
-          disabled={isLoading}
-        >
-          <span className="model-selector-name">
-            {MODEL_OPTIONS.find(m => m.id === selectedModel)?.name || "iNav"}
-          </span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.5, marginLeft: 4 }}>
-            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-        {modelDropdownOpen && (
-          <div className="model-dropdown">
-            {MODEL_OPTIONS.map(model => (
-              <button
-                key={model.id}
-                className={`model-dropdown-item ${selectedModel === model.id ? 'active' : ''}`}
-                onClick={() => { setSelectedModel(model.id); setModelDropdownOpen(false); }}
-              >
-                <div className="model-dropdown-info">
-                  <span className="model-dropdown-name">{model.name}</span>
-                  <span className="model-dropdown-desc">{model.desc}</span>
-                </div>
-                {selectedModel === model.id && (
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="model-dropdown-check">
-                    <path d="M6.5 12.5L2 8l1.5-1.5L6.5 9.5 12.5 3.5 14 5z"/>
-                  </svg>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Hidden audio element for TTS playback */}
       <audio ref={audioRef} style={{ display: 'none' }} />
 

@@ -530,7 +530,7 @@ export default function ChatSidebar({
           </div>
           <div className="user-info">
             <div className="user-email">{userProfile?.email || userEmail || "User"}</div>
-            <div className="user-status">Free Plan</div>
+            <div className="user-status">Morgan State University</div>
           </div>
           <button
             className="logout-icon-btn"

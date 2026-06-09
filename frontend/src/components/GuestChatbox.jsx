@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useNavigate } from "react-router-dom";
-import { ArrowUpCircle, CheckCircle, Clock, X } from "lucide-react";
+import { ArrowUpCircle } from "lucide-react";
 import "./GuestChatbox.css";
 
 // Default suggestions — ORA faculty/PI/admin audience
@@ -18,8 +17,6 @@ const GUEST_SUGGESTIONS = [
 import { getApiBase } from "../lib/apiBase";
 const API_BASE = getApiBase();
 
-// Session duration: 15 minutes in milliseconds
-const GUEST_SESSION_DURATION = 15 * 60 * 1000;
 const MAX_INPUT_LENGTH = 500;
 
 // Guest profile - no fake academic data to prevent false answers
@@ -28,26 +25,12 @@ const generateGuestProfile = () => {
   return { name: "Guest User" };
 };
 
-// Format time remaining as MM:SS
-const formatTimeRemaining = (ms) => {
-  if (ms <= 0) return "00:00";
-  const totalSeconds = Math.ceil(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
-// Get timer urgency state
-const getTimerUrgency = (ms) => {
-  if (ms <= 0) return "expired";
-  if (ms <= 2 * 60 * 1000) return "critical"; // 2 minutes
-  if (ms <= 5 * 60 * 1000) return "warning";  // 5 minutes
-  return "normal";
-};
-
+// ORA Navigator is free for everyone. The guest chat is fully open — no trial
+// timer, no message cap, no "create an account" nagging. (Signing in is still
+// available, but only to SAVE chat history — never required to ask questions.)
+// A light per-minute rate limit lives on the server (GUEST_RATE_LIMIT) purely
+// to stop abuse/runaway cost; normal use never sees it.
 export default function GuestChatbox() {
-  const navigate = useNavigate();
-
   // State
   const [messages, setMessages] = useState(() => {
     try {
@@ -61,31 +44,19 @@ export default function GuestChatbox() {
   const [isLoading, setIsLoading] = useState(false);
   const [guestProfile] = useState(generateGuestProfile);
 
-  // Timer state
-  const [sessionStartTime, setSessionStartTime] = useState(() => {
-    const saved = localStorage.getItem("guest_session_start");
-    return saved ? parseInt(saved, 10) : null;
-  });
-  const [timeRemaining, setTimeRemaining] = useState(GUEST_SESSION_DURATION);
-  const [showSignUpModal, setShowSignUpModal] = useState(false);
-  const [bonusUsed, setBonusUsed] = useState(() => localStorage.getItem("guest_bonus_used") === "true");
-
   // Refs
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-
-  // Computed state
-  const isSessionExpired = timeRemaining <= 0;
-  const timerUrgency = getTimerUrgency(timeRemaining);
-  const hasSessionStarted = sessionStartTime !== null;
 
   // Focus input on load
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom as the conversation grows. Skip on the empty welcome
+  // screen so the heading + question suggestions stay in view on landing.
   useEffect(() => {
+    if (messages.length === 0) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -99,36 +70,6 @@ export default function GuestChatbox() {
     }
   }, [messages]);
 
-  // Timer countdown effect
-  useEffect(() => {
-    if (!sessionStartTime) return;
-
-    const updateTimer = () => {
-      const elapsed = Date.now() - sessionStartTime;
-      const remaining = Math.max(0, GUEST_SESSION_DURATION - elapsed);
-      setTimeRemaining(remaining);
-
-      // Auto-show modal when expired
-      if (remaining <= 0 && !showSignUpModal) {
-        setShowSignUpModal(true);
-      }
-    };
-
-    updateTimer(); // Initial update
-    const interval = setInterval(updateTimer, 1000);
-
-    return () => clearInterval(interval);
-  }, [sessionStartTime, showSignUpModal]);
-
-  // Start session (called on first message)
-  const startSession = () => {
-    if (!sessionStartTime) {
-      const now = Date.now();
-      setSessionStartTime(now);
-      localStorage.setItem("guest_session_start", now.toString());
-    }
-  };
-
   // Helper to add message
   const addMessage = (text, sender) => {
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -137,41 +78,39 @@ export default function GuestChatbox() {
 
   // Handle suggestion click
   const handleSuggestion = (text) => {
-    if (!isLoading && !isSessionExpired) {
-      // Directly send instead of just filling input
-      setInput('');
-      startSession();
+    if (isLoading) return;
+    setInput('');
 
-      const userMessage = text.trim();
-      setMessages(prev => [...prev, { text: userMessage, sender: "user", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-      setIsLoading(true);
+    const userMessage = text.trim();
+    setMessages(prev => [...prev, { text: userMessage, sender: "user", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+    setIsLoading(true);
 
-      (async () => {
-        try {
-          const res = await fetch(`${API_BASE}/chat/guest`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ query: userMessage, guestProfile: guestProfile || {} }),
-          });
-          const data = await res.json();
-          const botReply = data.response || "I couldn't process that. Please try again.";
-          setMessages(prev => [...prev, { text: botReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), citations: data.citations || [] }]);
-        } catch {
-          setMessages(prev => [...prev, { text: "Something went wrong. Please try again.", sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-        } finally {
-          setIsLoading(false);
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/chat/guest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: userMessage, guestProfile: guestProfile || {} }),
+        });
+        if (res.status === 429) {
+          setMessages(prev => [...prev, { text: "I'm getting a lot of questions right now — please wait a moment and try again.", sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+          return;
         }
-      })();
-    }
+        const data = await res.json();
+        const botReply = data.response || "I couldn't process that. Please try again.";
+        setMessages(prev => [...prev, { text: botReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), citations: data.citations || [] }]);
+      } catch {
+        setMessages(prev => [...prev, { text: "Something went wrong. Please try again.", sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   };
 
   // Main send handler
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || isSessionExpired) return;
-
-    // Start session on first message
-    startSession();
+    if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
     setIsLoading(true);
@@ -190,7 +129,7 @@ export default function GuestChatbox() {
       });
 
       if (res.status === 429) {
-        addMessage("You've reached the rate limit. Please wait a moment or sign up for unlimited access!", "bot");
+        addMessage("I'm getting a lot of questions right now — please wait a moment and try again.", "bot");
         return;
       }
 
@@ -211,42 +150,6 @@ export default function GuestChatbox() {
 
   return (
     <div className="guest-chat-main">
-      {/* Trial timer bar - always visible at top */}
-      <div className={`guest-trial-bar ${timerUrgency} ${isSessionExpired ? 'expired' : ''}`}>
-        <div className="trial-bar-content">
-          {isSessionExpired ? (
-            <>
-              <span className="trial-text">Your free trial has ended</span>
-              <button onClick={() => setShowSignUpModal(true)} className="trial-cta">
-                Create Free Account for Unlimited
-              </button>
-            </>
-          ) : hasSessionStarted ? (
-            <>
-              <div className="timer-display">
-                <Clock className="timer-icon" />
-                <span className="timer-countdown">{formatTimeRemaining(timeRemaining)}</span>
-                <span className="timer-label">remaining</span>
-              </div>
-              <span className="trial-divider">|</span>
-              <button onClick={() => navigate("/signup")} className="trial-link">
-                Create an account for unlimited access
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="trial-text">
-                <strong>15:00</strong> free trial • Timer starts on your first message
-              </span>
-              <span className="trial-divider">|</span>
-              <button onClick={() => navigate("/signup")} className="trial-link">
-                Create an account for unlimited access
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
       <div className="guest-chat-messages">
         {messages.length === 0 ? (
           <div className="guest-welcome-container">
@@ -260,7 +163,7 @@ export default function GuestChatbox() {
                   key={i}
                   className="guest-suggestion-btn"
                   onClick={() => handleSuggestion(s)}
-                  disabled={isLoading || isSessionExpired}
+                  disabled={isLoading}
                 >
                   {s}
                 </button>
@@ -339,15 +242,15 @@ export default function GuestChatbox() {
             className="guest-chat-input-field"
             value={input}
             onChange={(e) => setInput(e.target.value.slice(0, MAX_INPUT_LENGTH))}
-            placeholder={isSessionExpired ? "Sign up for unlimited messages..." : "Type your message..."}
-            disabled={isLoading || isSessionExpired}
+            placeholder="Type your message..."
+            disabled={isLoading}
             maxLength={MAX_INPUT_LENGTH}
           />
           <button
             type="submit"
             className="guest-action-btn-icon guest-send-btn"
             title="Send message"
-            disabled={isLoading || !input.trim() || isSessionExpired}
+            disabled={isLoading || !input.trim()}
           >
             <ArrowUpCircle size={24} />
           </button>
@@ -362,76 +265,6 @@ export default function GuestChatbox() {
       <div style={{ textAlign: 'center', padding: '6px 0 10px', fontSize: '0.7rem', color: 'var(--text-tertiary, #94a3b8)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
         ORA Navigator · {new Date().getFullYear()} · Morgan State University Office of Research Administration
       </div>
-
-      {/* Sign-up Modal */}
-      {showSignUpModal && (
-        <div className="signup-modal-overlay" onClick={() => setShowSignUpModal(false)}>
-          <div className="signup-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="signup-modal-close" onClick={() => setShowSignUpModal(false)}>
-              <X size={24} />
-            </button>
-
-            <div className="signup-modal-header">
-              <div className="signup-modal-icon">
-                <Clock size={32} />
-              </div>
-              <h2 className="signup-modal-title">Your Free Trial Has Ended</h2>
-              <p className="signup-modal-subtitle">
-                Create a free account to continue using ORA Navigator
-              </p>
-            </div>
-
-            <div className="signup-modal-benefits">
-              <h3 className="benefits-title">With a free account, you get:</h3>
-              <ul className="benefits-list">
-                <li>
-                  <CheckCircle className="benefit-icon" />
-                  <span>Unlimited research-administration questions</span>
-                </li>
-                <li>
-                  <CheckCircle className="benefit-icon" />
-                  <span>Saved chat history across grants and projects</span>
-                </li>
-                <li>
-                  <CheckCircle className="benefit-icon" />
-                  <span>Direct links to ORA forms, policies, and PI Handbooks</span>
-                </li>
-                <li>
-                  <CheckCircle className="benefit-icon" />
-                  <span>Routing to the right ORA staff member for your question</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="signup-modal-footer">
-              <button
-                className="signup-modal-btn secondary"
-                onClick={() => {
-                  if (!bonusUsed) {
-                    // Grant 5 bonus minutes by pushing session start forward
-                    const bonus = 5 * 60 * 1000;
-                    const newStart = Date.now() - (GUEST_SESSION_DURATION - bonus);
-                    setSessionStartTime(newStart);
-                    localStorage.setItem("guest_session_start", newStart.toString());
-                    setTimeRemaining(bonus);
-                    setBonusUsed(true);
-                    localStorage.setItem("guest_bonus_used", "true");
-                  }
-                  setShowSignUpModal(false);
-                }}
-              >
-                {bonusUsed ? "Close" : "5 More Minutes"}
-              </button>
-              <button
-                className="signup-modal-btn primary"
-                onClick={() => navigate("/signup")}
-              >
-                Create Free Account
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
