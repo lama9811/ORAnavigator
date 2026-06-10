@@ -116,6 +116,23 @@ def test_add_tasks_creates_required_only_and_is_idempotent(ctx):
     assert again.json()["created"] == []
 
 
+def test_add_tasks_with_answers_persists_compliance(ctx):
+    # Adding tasks with a fresh answer set should ALSO save the answers, so the
+    # proposal reads as having a compliance check (has_compliance) without a
+    # separate Save click. (Fix 2026-06-10.)
+    c, sub_id = ctx
+    before = c.get("/api/me/submissions").json()["submissions"][0]
+    assert before["has_compliance"] is False
+    r = c.post(f"/api/me/submissions/{sub_id}/compliance/tasks",
+               json={"answers": {"human_subjects": "yes"}})
+    assert r.status_code == 200
+    after = c.get("/api/me/submissions").json()["submissions"][0]
+    assert after["has_compliance"] is True
+    # and the saved answers round-trip
+    load = c.get(f"/api/me/submissions/{sub_id}/compliance").json()
+    assert load["answers"]["human_subjects"] == "yes"
+
+
 def test_other_users_submission_is_404(ctx):
     c, _ = ctx
     r = c.get("/api/me/submissions/99999/compliance")

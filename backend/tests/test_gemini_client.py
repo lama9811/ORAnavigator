@@ -93,3 +93,55 @@ def test_build_config_includes_system_instruction():
     # absent when not provided
     cfg2 = gc._build_config(0.0, 100, False, None, None)
     assert "system_instruction" not in cfg2
+
+
+# ---------- 429 retry-with-backoff (Fix 2026-06-10) -------------------------
+
+class _Resp:
+    def __init__(self, text):
+        self.text = text
+
+
+class _FakeModels:
+    def __init__(self, fail_times, error_text="429 RESOURCE_EXHAUSTED"):
+        self.calls = 0
+        self.fail_times = fail_times
+        self.error_text = error_text
+
+    def generate_content(self, **kwargs):
+        self.calls += 1
+        if self.calls <= self.fail_times:
+            raise Exception(self.error_text)
+        return _Resp("OK")
+
+
+class _FakeClient:
+    def __init__(self, models):
+        self.models = models
+
+
+def _patch_client(monkeypatch, fake):
+    monkeypatch.setattr(gc, "get_client", lambda: fake)
+    monkeypatch.setattr(gc, "_RETRY_BACKOFFS", (0, 0))  # no real delay in tests
+
+
+def test_retries_on_429_then_succeeds(monkeypatch):
+    models = _FakeModels(fail_times=2)            # fail twice, succeed on 3rd
+    _patch_client(monkeypatch, _FakeClient(models))
+    out = gc.generate_text("p")
+    assert out == "OK"
+    assert models.calls == 3                      # 1 attempt + 2 retries
+
+
+def test_429_exhausts_retries_returns_none(monkeypatch):
+    models = _FakeModels(fail_times=99)           # always 429
+    _patch_client(monkeypatch, _FakeClient(models))
+    assert gc.generate_text("p") is None
+    assert models.calls == 3                       # capped at 1 + len(backoffs)
+
+
+def test_non_retryable_error_fails_fast(monkeypatch):
+    models = _FakeModels(fail_times=99, error_text="403 PERMISSION_DENIED")
+    _patch_client(monkeypatch, _FakeClient(models))
+    assert gc.generate_text("p") is None
+    assert models.calls == 1                        # no retry on non-429

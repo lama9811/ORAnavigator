@@ -3345,6 +3345,7 @@ async def add_compliance_tasks(
     from services.compliance_sentinel import assess_compliance, suggested_tasks
     # Use saved answers unless the caller passes a fresh set.
     answers = (payload or {}).get("answers")
+    answers_from_payload = answers is not None
     if answers is None:
         raw = getattr(sub, "compliance_json", None)
         try:
@@ -3352,6 +3353,10 @@ async def add_compliance_tasks(
         except (ValueError, TypeError):
             answers = {}
     result = assess_compliance(answers or {}, sponsor=sub.sponsor)
+    # Persist the answers if the caller supplied them, so the compliance check
+    # shows as saved (has_compliance) without needing a separate Save click.
+    if answers_from_payload:
+        sub.compliance_json = json.dumps({"answers": answers or {}})
     existing = {(t.title or "").strip().lower() for t in (sub.tasks or [])}
     created = []
     for t in suggested_tasks(result):
@@ -3364,6 +3369,7 @@ async def add_compliance_tasks(
         if task is not None:
             created.append(_submission_task_to_dict(task))
             existing.add(t["title"].strip().lower())
+    db.commit()
     return {"created": created, "result": result}
 
 

@@ -21,11 +21,24 @@ sponsor coercion are tightly coupled); it could later delegate to this module.
 
 import json
 import os
+import time
 from typing import Optional
 
 _genai = None
 _client = None
 _init_attempted = False
+
+# Transient rate-limit / quota errors are retryable; other errors fail fast to
+# the caller's deterministic fallback. Backoffs are the per-retry sleeps (so
+# len() == number of retries after the first attempt). Tests monkeypatch this
+# to () for a no-delay single attempt.
+_RETRY_MARKERS = ("429", "resource_exhausted", "too many requests", "rate limit")
+_RETRY_BACKOFFS = (1.0, 2.0)
+
+
+def _is_retryable(err: Exception) -> bool:
+    msg = str(err).lower()
+    return any(m in msg for m in _RETRY_MARKERS)
 
 
 def get_client():
@@ -84,26 +97,35 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
     client = get_client()
     if client is None:
         return None
-    try:
+    # One attempt, plus a bounded retry-with-backoff on transient 429 /
+    # RESOURCE_EXHAUSTED errors (common under burst load). Non-retryable errors
+    # return None immediately so the caller falls back to its deterministic path.
+    for attempt in range(len(_RETRY_BACKOFFS) + 1):
         try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=_build_config(temperature, max_output_tokens, json_mode,
-                                     timeout_s, system_instruction),
-            )
-        except TypeError:
-            # SDK rejected the http_options timeout key — retry without it.
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=_build_config(temperature, max_output_tokens, json_mode,
-                                     None, system_instruction),
-            )
-        return (response.text or "").strip() or None
-    except Exception as e:
-        print(f"   [GEMINI] generate failed: {e}")
-        return None
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=_build_config(temperature, max_output_tokens, json_mode,
+                                         timeout_s, system_instruction),
+                )
+            except TypeError:
+                # SDK rejected the http_options timeout key — retry without it.
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=_build_config(temperature, max_output_tokens, json_mode,
+                                         None, system_instruction),
+                )
+            return (response.text or "").strip() or None
+        except Exception as e:
+            if _is_retryable(e) and attempt < len(_RETRY_BACKOFFS):
+                delay = _RETRY_BACKOFFS[attempt]
+                print(f"   [GEMINI] rate-limited (attempt {attempt + 1}); retrying in {delay}s")
+                time.sleep(delay)
+                continue
+            print(f"   [GEMINI] generate failed: {e}")
+            return None
 
 
 def generate_text(prompt: str, *, temperature: float = 0.0,
