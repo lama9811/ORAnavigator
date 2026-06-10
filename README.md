@@ -59,6 +59,7 @@ ORA Navigator is more than a chatbot. It also gives PIs a place to *run* a propo
 | **Solicitation Ingestion** (AI) | Drop a sponsor PDF → Gemini extracts deadline, page limits, and required attachments (with source-quote verification) → review → seed a tracked submission. |
 | **Draft Critic** (AI) | Pre-submission check of a draft PDF against the reconstructed solicitation rules — deterministic verdict plus an evidence-verified advisory AI review. |
 | **Budget Helper** (AI) | Split-view grant-budget builder: enter people/effort, equipment, travel, supplies, subawards → a live **Direct → MTDC → F&A → Total** summary with a sponsor-cap badge. All math is **deterministic** (real Morgan F&A/fringe rates, MTDC exclusions); the LLM only drafts the justification prose (figures injected, never invented). The cap auto-prefills from the solicitation. |
+| **Compliance Sentinel** (deterministic) | "Which approvals do I need?" — a short yes/no questionnaire plus the proposal's sponsor drive a **deterministic** checklist (IRB · IACUC · COI · RCR · Export Control / Research Security), each item marked **Required / Review / Not required** with a plain-English why, a timing note, and a verified KB form link. No LLM decides anything; required items can be one-click added to the proposal as tasks. |
 | **Deadline Watcher** (AI) | Emails PIs at 14/7/3/1/0 days out (idempotent per submission+threshold), with an AI-personalized body and a hard fallback to a deterministic template. |
 
 ---
@@ -230,7 +231,7 @@ CI (`.github/workflows/ci.yml`) runs on every push: lint, tests, health-check ag
 
 ## Documentation
 
-A complete, plain-English technical guide to the whole system — every feature, the chat/RAG pipeline, the memory system, the self-healing research pipeline, the three AI agents (Solicitation Ingestion, Draft Critic, Deadline Watcher), all database tables, every cron job, and a "where is each artifact saved" reference — lives in `docs/`:
+A complete, plain-English technical guide to the whole system — every feature, the chat/RAG pipeline, the memory system, the self-healing research pipeline, the proposal-workflow agents and tools (Solicitation Ingestion, Draft Critic, Budget Helper, Compliance Sentinel, Deadline Watcher), all database tables, every cron job, and a "where is each artifact saved" reference — lives in `docs/`:
 
 - `docs/ORA_Navigator_Complete_Guide.html` — the assembled 11-chapter guide (open in a browser)
 - `docs/sections/` — the per-chapter HTML sources
