@@ -4,11 +4,12 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
+import ComplianceSentinelModal from "./ComplianceSentinelModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -324,6 +325,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const dleft = daysUntil(submission.deadline);
   const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
 
   return (
     <div className="proposals">
@@ -338,6 +340,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
             title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
           >
             <Calculator size={13} /> {submission.has_budget ? "Edit budget" : "Build budget"}
+          </button>
+          <button
+            className="proposals-compliance-btn"
+            onClick={() => setShowCompliance(true)}
+            title="Check which approvals your project needs — IRB, IACUC, COI, RCR, export control."
+          >
+            <ShieldCheck size={13} /> Check compliance
           </button>
           {hasSolicitation(submission) && (
             <button
@@ -365,6 +374,14 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         <BudgetHelperModal
           submission={submission}
           onClose={() => setShowBudget(false)}
+          onSaved={onRefresh}
+        />
+      )}
+
+      {showCompliance && (
+        <ComplianceSentinelModal
+          submission={submission}
+          onClose={() => setShowCompliance(false)}
           onSaved={onRefresh}
         />
       )}

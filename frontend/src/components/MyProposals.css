@@ -146,6 +146,26 @@ body.dark .proposals-upload-btn {
   border-color: rgba(247, 148, 30, 0.6);
 }
 
+.proposals-compliance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  background: rgba(27, 58, 107, 0.1);
+  color: #1B3A6B;
+  border: 1px solid rgba(27, 58, 107, 0.35);
+}
+.proposals-compliance-btn:hover {
+  background: rgba(27, 58, 107, 0.18);
+  border-color: rgba(27, 58, 107, 0.55);
+}
+
 .proposals-error {
   background: rgba(217, 48, 37, 0.08);
   border: 1px solid rgba(217, 48, 37, 0.28);
