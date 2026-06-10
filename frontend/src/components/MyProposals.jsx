@@ -166,18 +166,33 @@ export default function MyProposals() {
   };
 
   const addToCalendar = async () => {
-    const token = localStorage.getItem("token");
-    const r = await fetch(`${API_BASE}/api/me/deadlines-token`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!r.ok) return;
-    const { ics_url } = await r.json();
-    const a = document.createElement("a");
-    a.href = ics_url;
-    a.download = "ora-deadlines.ics";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    setError("");
+    try {
+      const token = localStorage.getItem("token");
+      const r = await fetch(`${API_BASE}/api/me/deadlines-token`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!r.ok) throw new Error("couldn't get your calendar link");
+      const { ics_url } = await r.json();
+      // The .ics file lives on the BACKEND origin, not the app origin. A plain
+      // `<a href=ics_url download>` is ignored for cross-origin hrefs, so the
+      // browser navigates away instead of downloading. Fetch the file and save
+      // it as a same-origin blob — reliable in every browser, and the user
+      // stays on the page.
+      const fileResp = await fetch(ics_url);
+      if (!fileResp.ok) throw new Error("couldn't fetch the calendar file");
+      const blob = await fileResp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ora-deadlines.ics";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError("Couldn't export deadlines to calendar: " + e.message);
+    }
   };
 
   // ---------- DETAIL VIEW ----------
