@@ -93,7 +93,22 @@
   margin-bottom: 8px;
   align-items: center;
 }
-.bh-person { grid-template-columns: 1.4fr 1fr 0.7fr 1.3fr auto; }
+/* Two rows so every field has room for its placeholder/value (a single row
+   crammed all 4 inputs + delete into ~110px each, clipping "Base salary",
+   "% effort", and the fringe select). Name spans the top row; salary / effort /
+   fringe sit on a roomy second row. */
+.bh-person {
+  grid-template-columns: 1fr 1fr 2fr auto;
+  grid-template-areas:
+    "name   name   name   del"
+    "salary effort fringe fringe";
+  row-gap: 6px;
+}
+.bh-person > .bh-name       { grid-area: name; }
+.bh-person > *:nth-child(2) { grid-area: salary; }
+.bh-person > *:nth-child(3) { grid-area: effort; }
+.bh-person > select         { grid-area: fringe; }
+.bh-person > .bh-row-del    { grid-area: del; }
 .bh-subaward { grid-template-columns: 1fr auto; }
 
 .bh-person input, .bh-person select,
@@ -296,8 +311,12 @@
   .bh-body { flex-direction: column; overflow-y: auto; }
   .bh-form { flex: none; overflow: visible; }
   .bh-summary { min-width: 0; }
-  .bh-person { grid-template-columns: 1fr 1fr; }
-  .bh-person .bh-name { grid-column: 1 / -1; }
-  .bh-person select { grid-column: 1 / 2; }
+  .bh-person {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "name   del"
+      "salary effort"
+      "fringe fringe";
+  }
   .bh-grid { grid-template-columns: 1fr; }
 }
