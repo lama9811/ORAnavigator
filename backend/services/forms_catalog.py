@@ -184,9 +184,57 @@ def _catalog_by_id() -> dict:
 def get_form(doc_id: Optional[str]) -> Optional[dict]:
     """Return the catalog row for a single doc_id, or None if the id is
     falsy or not a form-like doc. Used to resolve a proposal task's
-    kb_doc_id to an openable URL."""
+    kb_doc_id to an openable URL.
+
+    Falls back to the full KB document index for non-form docs (e.g. the
+    Compliance Sentinel links to compliance hub pages and the CITI training
+    doc, which aren't form-like and so aren't in the forms catalog) -- this
+    keeps every linked task openable instead of silently dead."""
     if not doc_id:
         return None
     # Shallow-copy so callers can't mutate the lru-cached catalog row.
     row = _catalog_by_id().get(doc_id)
+    if row:
+        return dict(row)
+    return resolve_kb_doc(doc_id)
+
+
+@lru_cache(maxsize=1)
+def _all_docs_by_id() -> dict:
+    """doc_id -> {doc_id, title, url, source_url} for EVERY doc in the KB
+    manifest (not just forms). Read once. Powers resolve_kb_doc()."""
+    out: dict = {}
+    if not _MANIFEST_PATH.exists():
+        return out
+    with _MANIFEST_PATH.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                doc = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            did = doc.get("doc_id")
+            if not did:
+                continue
+            title = doc.get("display_label") or doc.get("title") or ""
+            source = doc.get("source_url") or ""
+            url = doc.get("procedure_url") or source
+            out[did] = {
+                "doc_id": did,
+                "title": title,
+                "url": url,
+                "source_url": source,
+            }
+    return out
+
+
+def resolve_kb_doc(doc_id: Optional[str]) -> Optional[dict]:
+    """Resolve ANY KB doc_id (form or not) to {doc_id, title, url, source_url},
+    or None. Unlike get_form(), this is not restricted to form-like docs, so it
+    can resolve compliance hub pages / training docs to a live URL."""
+    if not doc_id:
+        return None
+    row = _all_docs_by_id().get(doc_id)
     return dict(row) if row else None

@@ -190,6 +190,10 @@ class Submission(Base):
     # selection + cap). Recomputed deterministically on load. Nullable — most
     # submissions have no budget yet.
     budget_json = Column(Text, nullable=True)
+    # Compliance Sentinel: JSON string of the saved questionnaire answers
+    # ({"answers": {...}}). The checklist is recomputed deterministically on
+    # load. Nullable — most submissions have no compliance check yet.
+    compliance_json = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

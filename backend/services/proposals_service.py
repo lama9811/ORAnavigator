@@ -305,9 +305,12 @@ def add_task(
     title: str,
     description: Optional[str] = None,
     due_offset_days: Optional[int] = None,
+    kb_doc_id: Optional[str] = None,
 ) -> Optional[SubmissionTask]:
     """Append a custom task to the submission. Returns None if the
-    submission doesn't exist or belongs to another user."""
+    submission doesn't exist or belongs to another user. An optional
+    kb_doc_id links the task to a KB form/page (resolved to an 'Open form'
+    link by _submission_task_to_dict)."""
     sub = get_submission(db, submission_id, user_id)
     if sub is None:
         return None
@@ -321,6 +324,7 @@ def add_task(
         title=title.strip(),
         description=description,
         due_offset_days=due_offset_days,
+        kb_doc_id=kb_doc_id,
         status="pending",
         sort_order=next_order,
     )

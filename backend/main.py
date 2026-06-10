@@ -208,6 +208,18 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add budget_json column: {e}")
 
+        # 5c. Add submissions.compliance_json column if missing (Compliance Sentinel).
+        try:
+            conn.execute(text("SELECT compliance_json FROM submissions LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'compliance_json' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN compliance_json MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'compliance_json' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add compliance_json column: {e}")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -3000,6 +3012,8 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         # Budget Helper: parsed saved inputs (None if no budget saved). Whether a
         # budget exists is cheap to expose on the list view too (drives the badge).
         "has_budget": bool(getattr(s, "budget_json", None)),
+        # Compliance Sentinel: whether a compliance check has been saved (badge).
+        "has_compliance": bool(getattr(s, "compliance_json", None)),
         "created_at": s.created_at.isoformat() if s.created_at else None,
         "updated_at": s.updated_at.isoformat() if s.updated_at else None,
     }
@@ -3240,6 +3254,117 @@ async def save_submission_budget(
     db.commit()
     db.refresh(sub)
     return {"inputs": inputs, "computed": computed}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Compliance Sentinel — deterministic "which approvals do I need?" checklist.
+# WHICH approvals are required is decided ONLY by code rules in
+# services/compliance_sentinel (never the LLM). No AI in this feature.
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/compliance/questions")
+async def compliance_questions(user: dict = Depends(get_current_user)):
+    """The yes/no questionnaire + the sponsor-derived-triggers note."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.compliance_sentinel import questionnaire
+    return questionnaire()
+
+
+@app.post("/api/compliance/assess")
+async def compliance_assess(payload: dict, user: dict = Depends(get_current_user)):
+    """Stateless: assess a checklist from {answers, sponsor}. Drives the live
+    Sentinel panel. Every status is deterministic."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.compliance_sentinel import assess_compliance
+    payload = payload or {}
+    return assess_compliance(payload.get("answers") or {}, sponsor=payload.get("sponsor"))
+
+
+@app.get("/api/me/submissions/{submission_id}/compliance")
+async def get_submission_compliance(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Load a submission's saved answers + a fresh deterministic assessment
+    (using the submission's own sponsor)."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services.compliance_sentinel import assess_compliance
+    raw = getattr(sub, "compliance_json", None)
+    answers = {}
+    if raw:
+        try:
+            answers = (json.loads(raw) or {}).get("answers", {})
+        except (ValueError, TypeError):
+            answers = {}
+    return {"answers": answers, "result": assess_compliance(answers, sponsor=sub.sponsor)}
+
+
+@app.put("/api/me/submissions/{submission_id}/compliance")
+async def save_submission_compliance(
+    submission_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save questionnaire answers onto the submission (re-assessed on load)."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services.compliance_sentinel import assess_compliance
+    answers = (payload or {}).get("answers", payload) or {}
+    result = assess_compliance(answers, sponsor=sub.sponsor)   # validate it computes
+    sub.compliance_json = json.dumps({"answers": answers})
+    db.commit()
+    db.refresh(sub)
+    return {"answers": answers, "result": result}
+
+
+@app.post("/api/me/submissions/{submission_id}/compliance/tasks")
+async def add_compliance_tasks(
+    submission_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Create SubmissionTasks for the REQUIRED compliance items. Idempotent:
+    skips any task whose title already exists on the submission."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services.compliance_sentinel import assess_compliance, suggested_tasks
+    # Use saved answers unless the caller passes a fresh set.
+    answers = (payload or {}).get("answers")
+    if answers is None:
+        raw = getattr(sub, "compliance_json", None)
+        try:
+            answers = (json.loads(raw) or {}).get("answers", {}) if raw else {}
+        except (ValueError, TypeError):
+            answers = {}
+    result = assess_compliance(answers or {}, sponsor=sub.sponsor)
+    existing = {(t.title or "").strip().lower() for t in (sub.tasks or [])}
+    created = []
+    for t in suggested_tasks(result):
+        if t["title"].strip().lower() in existing:
+            continue
+        task = _proposals_service.add_task(
+            db, submission_id=submission_id, user_id=user["user_id"],
+            title=t["title"], description=t["description"], kb_doc_id=t.get("kb_doc_id"),
+        )
+        if task is not None:
+            created.append(_submission_task_to_dict(task))
+            existing.add(t["title"].strip().lower())
+    return {"created": created, "result": result}
 
 
 @app.patch("/api/me/submissions/{submission_id}")
