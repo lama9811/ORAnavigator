@@ -17,118 +17,83 @@
 
 ORA Navigator is an AI assistant for Morgan State University's Office of Research Administration (ORA). It serves **faculty, principal investigators, research staff, and department administrators** — not students. Users ask questions about grants, compliance, pre-award, post-award, forms, and ORA staff contacts in plain English and get answers grounded in 382 official documents scraped from `morgan.edu/office-of-research-administration` and its subpages.
 
-Built with Google ADK (Agent Development Kit), Gemini 2.5 Flash, and Vertex AI Search. A **Retrieval-Enforced Generation (REG)** pipeline grounds answers at three layers: KB prefetch (TF-IDF), tool-based retrieval (VertexAiSearchTool), and a post-generation grounding gate + staff-name faithfulness check.
+Built with **Google ADK, Gemini 2.5 Flash, and Vertex AI Search**. The core idea: the AI may only answer from Morgan's documents. Before replying, it searches the knowledge base, drafts an answer, and a final check confirms the answer is actually backed by what it found — if not, it refuses rather than guessing. That's what makes the answers trustworthy.
 
-Deployed on Google Cloud Run with multi-instance scaling, Cloud SQL session persistence, and a layered cache (L1 in-memory + L2 Redis + L3 semantic).
+Runs on **Google Cloud Run** with a layered cache so common questions come back instantly, and Cloud SQL for accounts, chat history, and proposals.
 
 ---
 
 ## Screenshots
 
-<p align="center">
-  <img src="docs/screenshots/landing.png" alt="ORA Navigator landing page — free guest chat with suggested research-administration questions" width="100%">
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/mobile-chat.png" alt="ORA Navigator on mobile — responsive guest chat" width="300">
-</p>
+| Ask anything — grounded, no login needed | Real answers, with the morgan.edu source |
+|---|---|
+| ![Home screen](docs/screenshots/landing.png) | ![Chat answering an F&A-rate question](docs/screenshots/chat.png) |
+| **Compliance Sentinel** — which approvals your project needs | **Budget Helper** — the F&A (overhead) math, done right |
+| ![Compliance Sentinel checklist](docs/screenshots/compliance-sentinel.png) | ![Budget Helper live summary](docs/screenshots/budget-helper.png) |
 
 ---
 
-## What ORA Navigator answers
+## What you can ask
 
-| Area | Examples |
-|---|---|
-| **Pre-Award** | F&A and fringe rates · institutional IDs (UEI, EIN, FWA, IRB number) · proposal submission steps · sponsor opportunity databases |
-| **Compliance** | IRB approval timeline + meeting schedule · IACUC SOPs (50 documents) · COI disclosure flow · RCR training · Research Security |
-| **Post-Award** | NCE (No-Cost Extension) 60-day rule · subaward setup · effort reporting (14-day Searchlight) · final reports (90-day) |
-| **Forms & Policies** | PI Handbook policies · 271 forms (PDFs, DocuSign, IACUC SOPs, RACC, D-RED slides) · request templates |
-| **Staff routing** | Function-to-staff lookup · ORA staff directory (14 people) · ask.ora@morgan.edu mailing list |
+Ask in plain English. Every answer comes from Morgan's **official ORA documents** and links back to the source page — so you can trust it and verify it. For example:
+
+- **Grants & money** — *"What's Morgan's F&A (indirect cost) rate?"* · *"What's our UEI / EIN / FWA number?"*
+- **Compliance** — *"How long does IRB approval take, and when does the IRB meet?"* · *"Where are the IACUC SOPs?"* · *"How do I disclose a conflict of interest?"*
+- **After the award** — *"What's the No-Cost Extension deadline?"* · *"How do I set up a subaward?"* · *"How does effort reporting work?"*
+- **Forms & people** — *"What form do I need to add a co-investigator?"* · *"Who do I contact about an NIH submission?"*
+
+Behind the scenes it searches **382 documents** scraped from `morgan.edu/office-of-research-administration` — policies, forms, IRB/IACUC procedures, funding sources, and the ORA staff directory.
 
 ---
 
-## Beyond chat — proposal workflow & tools
+## More than a chatbot — tools to *run* a proposal
 
-ORA Navigator is more than a chatbot. It also gives PIs a place to *run* a proposal:
+ORA Navigator also helps faculty manage a grant from idea to award:
 
-| Tool | What it does |
+| Tool | What it does, in plain words |
 |---|---|
-| **Forms catalog** (`/forms`) | One-click browse of every ORA form / template / DocuSign PDF, filterable by category, sponsor, and role — no LLM call, no hallucinated links. |
-| **Proposals tracker** (`/my-proposals`) | Per-submission task checklists seeded from sponsor templates. Each task with a known form shows an **"Open form"** link resolved from its `kb_doc_id`. |
-| **Calendar export** | Deadlines export to any calendar app via a scoped, replay-safe token feed — **download `.ics`** or subscribe over `webcal://` (`GET /api/me/deadlines.ics`). |
-| **Solicitation Ingestion** (AI) | Drop a sponsor PDF → Gemini extracts deadline, page limits, and required attachments (with source-quote verification) → review → seed a tracked submission. |
-| **Draft Critic** (AI) | Pre-submission check of a draft PDF against the reconstructed solicitation rules — deterministic verdict plus an evidence-verified advisory AI review. |
-| **Budget Helper** (AI) | Split-view grant-budget builder: enter people/effort, equipment, travel, supplies, subawards → a live **Direct → MTDC → F&A → Total** summary with a sponsor-cap badge. All math is **deterministic** (real Morgan F&A/fringe rates, MTDC exclusions); the LLM only drafts the justification prose (figures injected, never invented). The cap auto-prefills from the solicitation. |
-| **Compliance Sentinel** (deterministic) | "Which approvals do I need?" — a short yes/no questionnaire plus the proposal's sponsor drive a **deterministic** checklist (IRB · IACUC · COI · RCR · Export Control / Research Security), each item marked **Required / Review / Not required** with a plain-English why, a timing note, and a verified KB form link. No LLM decides anything; required items can be one-click added to the proposal as tasks. |
-| **Deadline Watcher** (AI) | Emails PIs at 14/7/3/1/0 days out (idempotent per submission+threshold), with an AI-personalized body and a hard fallback to a deterministic template. |
+| **Forms catalog** | Browse and open every ORA form in one click — filter by category, sponsor, or role. No chatbot, no made-up links. |
+| **Proposals tracker** | Keep each grant proposal with a checklist of what's due and a countdown to the deadline. |
+| **Solicitation reader** (AI) | Upload the sponsor's PDF and the AI pulls out the deadline, page limits, and required documents — then builds your checklist. You review every field before it's saved. |
+| **Draft Critic** (AI) | Upload your draft and it checks page limits, required sections, and budget against the rules — *before* you submit. |
+| **Budget Helper** | Build a grant budget with the tricky **F&A (overhead) math done correctly** — the one rule PIs most often get wrong. Every number is computed by code, not the AI. |
+| **Compliance Sentinel** | Answer a few yes/no questions and it tells you exactly which approvals you need — **IRB, animal care (IACUC), conflict-of-interest, ethics training, export control** — with the right Morgan form for each. |
+| **Deadline reminders** | Automatic emails as each deadline gets close, plus a one-click **calendar (`.ics`) export** so deadlines show up in your own calendar app. |
+
+> **Why you can trust the numbers:** for anything that has to be exact — budget math, which compliance approvals apply — the answer is produced by **plain code, not the AI**. The AI only writes prose (like a budget justification) using figures the code already computed. It never invents a number.
 
 ---
 
 ## Architecture
 
-The diagram below shows the **full** request topology — not just chat. Every browser-side component (signup, login, profile, admin, chat) talks only to the REST API, which is the sole entry point. Cache and ADK Agent are dependencies of the REST API, not peers — they never talk to the browser directly. Solid arrows are request paths; dashed arrows are the return paths the REST API serves back over the same HTTP/SSE connection.
+Here's the whole system in one picture. You ask a question on the website; one backend handles everything; new questions go to the AI agent, which **only answers from the knowledge base** and streams the reply back with its sources.
 
 ```mermaid
-flowchart TB
-    subgraph Client["Frontend (React 19 + Vite) — served by nginx"]
-        Auth[Signup / Login / Verify]
-        Profile[Profile · Admin Dashboard · Tickets]
-        Chat[Chatbox + SSE reader]
-    end
+flowchart TD
+    User([Faculty · PI · Staff])
+    FE["Website<br/>(React + Vite)"]
+    BE["Backend API<br/>(FastAPI)"]
+    Cache[("Cache<br/>instant repeat answers")]
+    DB[("Database<br/>accounts · chats · proposals")]
+    Agent["AI Agent<br/>(Google ADK + Gemini 2.5 Flash)"]
+    KB[("Knowledge Base<br/>Vertex AI Search · 382 ORA docs")]
 
-    subgraph Backend["Backend (FastAPI on Cloud Run)"]
-        API[REST API · 60+ endpoints<br/>JWT auth · request orchestration]
-        Cache["Cache<br/>L1 in-memory · L2 Redis · L3 semantic"]
-        GG[Grounding Gate]
-        FF[Staff-name Faithfulness Check]
-    end
-
-    subgraph ADK["ADK Agent (Cloud Run · private)"]
-        PF["KB Prefetch · REG Layer 1<br/>TF-IDF over 382 docs"]
-        Gemini[Gemini 2.5 Flash]
-        VAS["VertexAiSearchTool · REG Layer 2<br/>semantic search tool"]
-    end
-
-    KB[("Vertex AI Search<br/>382 docs")]
-    DB[("Cloud SQL MySQL 8.4<br/>users · sessions · chat_history<br/>tickets · feedback")]
-    Secrets[Secret Manager]
-
-    %% Frontend entry points — all go through REST API only
-    Auth -->|HTTPS JSON| API
-    Profile -->|HTTPS JSON| API
-    Chat -->|HTTPS POST /chat/stream| API
-
-    %% REST API handles state
-    API <-->|"CRUD: users, history, tickets"| DB
-    API -.->|fetch at container boot| Secrets
-
-    %% Chat-only path: cache → ADK fallback
-    API -->|1 . check first| Cache
-    Cache -.->|hit · short-circuit| API
-    API -->|2 . on cache miss| PF
-    PF --> Gemini
-    Gemini --> VAS
-    VAS --> KB
-    KB -.->|grounded passages| Gemini
-    Gemini -.->|streamed tokens via SSE| API
-
-    %% Output validation before responding
-    API --> GG
-    GG --> FF
-    FF -.->|validated answer| API
-
-    %% Single return path to all frontend components
-    API -.->|JSON / SSE response| Auth
-    API -.->|JSON response| Profile
-    API -.->|SSE stream| Chat
+    User -->|asks a question| FE
+    FE -->|HTTPS| BE
+    BE -->|"1 · seen this before?"| Cache
+    BE -->|accounts & history| DB
+    BE -->|"2 · new question"| Agent
+    Agent -->|searches| KB
+    KB -.->|matching passages| Agent
+    Agent -.->|grounded answer| BE
+    BE -.->|"reply + sources (streamed)"| FE
 ```
 
-**Why the diagram looks this way:**
+**How to read it:**
 
-- The frontend has many components (auth, profile, admin, chat) — **only chat hits the cache + ADK path**. Signup, login, profile updates, ticket CRUD, and admin actions are plain REST → SQL.
-- Every HTTP response physically travels back through the REST API to the browser over the same connection. The Grounding Gate and Faithfulness Check do **not** talk to the browser directly — they hand validated output back to the REST API, which streams it.
-- The cache is checked **before** calling Gemini. On a hit, the request never reaches ADK Agent — saving a full LLM round-trip.
-- "REG Layer 1/2" (retrieval inside ADK) and "L1/L2/L3" (cache layers in the backend) are unrelated concepts that happen to share the word "layer." Cache prevents calling the LLM; REG layers feed the LLM with KB context once it's called.
+1. Every screen (login, chat, proposals, admin) talks to **one** backend — the single front door.
+2. The backend checks the **cache first** — if that question was answered recently, it replies instantly without calling the AI.
+3. A new question goes to the **AI agent**, which **searches the knowledge base and answers only from what it finds** (this is what keeps answers grounded and prevents made-up facts). The reply streams back to your screen with links to the source pages.
 
 ### Three services on Cloud Run
 
