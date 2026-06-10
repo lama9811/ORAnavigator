@@ -698,18 +698,18 @@ def _finalize_answer(text: str, grounded_corpus: str) -> str:
     if hallucinated and _FAITHFULNESS_DISCLAIMER not in text:
         print(f"   [FAITHFULNESS] Unverified staff names: {hallucinated}")
         text = text + _FAITHFULNESS_DISCLAIMER
-    # Identifier disclaimer RE-ENABLED 2026-06-02 with a SMARTER check. It was
-    # disabled because it false-positived on refutations (a planted "99%" F&A
-    # rate the bot correctly rejected). _check_identifier_faithfulness is now
-    # negation-aware (_in_negation_context skips values the answer is denying),
-    # so the footer only fires on genuine unverified specifics. It also now
-    # catches the fabrication classes that previously slipped through: invented
-    # years ("approved in 2017"), page/section numbers ("page 36"), and file
-    # names ("FringeRate-2018.pdf").
+    # Identifier check: we still RUN it (and log) for monitoring, but the
+    # user-facing footer is DISABLED (2026-06-10, at the user's request). The
+    # verbatim check structurally false-positives whenever a correct answer is
+    # richer than the single retrieved passage -- e.g. an F&A answer that also
+    # cites the prior fiscal year's rate, which isn't in the current-year chunk.
+    # That cautionary footer was undermining trust in answers that were actually
+    # correct, so it no longer ships. Correctness is still guarded upstream by
+    # the grounding gate + KB-only strict regeneration; the staff-name
+    # faithfulness disclaimer above stays active.
     unverified_ids = _check_identifier_faithfulness(text, grounded_corpus)
-    if unverified_ids and _IDENTIFIER_DISCLAIMER not in text:
-        print(f"   [FAITHFULNESS] Unverified identifiers: {unverified_ids}")
-        text = text + _IDENTIFIER_DISCLAIMER
+    if unverified_ids:
+        print(f"   [FAITHFULNESS] Unverified identifiers (footer disabled): {unverified_ids}")
     return _inject_procedure_links(text)
 
 

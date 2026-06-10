@@ -306,8 +306,9 @@ def test_empty_first_pass_with_no_chunks_refuses_gracefully(monkeypatch):
 # _check_identifier_faithfulness -- soft guardrail that flags specific
 # identifiers (SOP/FWA/EIN/UEI numbers, dates, dollar amounts, emails, phones,
 # and F&A rates) that the bot stated but that don't appear verbatim in the
-# retrieved KB chunks. The caller appends the _IDENTIFIER_DISCLAIMER footer;
-# this function never blocks delivery.
+# retrieved KB chunks. As of 2026-06-10 the result is LOGGED only -- the
+# user-facing footer is disabled (it false-positived on correct answers). This
+# function never blocks delivery; these tests pin its detection behavior.
 # ===========================================================================
 
 from vertex_agent import _check_identifier_faithfulness
@@ -494,6 +495,21 @@ def test_identifier_check_negation_skips_refuted_year():
     text = "The policy was not approved in 2017."
     result = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
     assert not any("2017" in r for r in result), result
+
+
+def test_finalize_answer_does_not_append_identifier_footer():
+    """Regression (2026-06-10): even when the check flags an unverified figure,
+    _finalize_answer must NOT append the user-facing 'couldn't verify' footer.
+    It was removed because it false-positived on correct answers richer than the
+    retrieved passage. The detection still runs (for logging) but is silent."""
+    # A rate the corpus does NOT contain verbatim -> detection flags it...
+    text = "The F&A indirect cost rate is 77%."
+    flagged = _check_identifier_faithfulness(text, _FAKE_KB_CORPUS)
+    assert flagged, "precondition: the check should still detect the unverified rate"
+    # ...but the finalized answer carries no footer.
+    out = vertex_agent._finalize_answer(text, _FAKE_KB_CORPUS)
+    assert "couldn't verify" not in out
+    assert "before relying on it" not in out
 
 
 # ===========================================================================
