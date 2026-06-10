@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ORA Navigator — Project Pitch</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    color: #1a2433; font-size: 10.3pt; line-height: 1.5; margin: 0;
+  }
+  h1 { font-size: 22pt; color: #0B2545; margin: 0 0 2px; letter-spacing: -0.3px; }
+  .sub { color: #5b6b82; font-size: 11pt; margin: 0 0 2px; }
+  .meta { color: #94a3b8; font-size: 8.6pt; margin: 0; }
+  .rule { height: 3px; background: linear-gradient(90deg,#0B2545,#F7941E); border: 0; margin: 10px 0 16px; border-radius: 2px; }
+  h2 {
+    font-size: 12.2pt; color: #0B2545; margin: 16px 0 6px; padding-bottom: 3px;
+    border-bottom: 1.5px solid #e2e8f0;
+  }
+  h2 .n { color: #F7941E; font-weight: 800; margin-right: 7px; }
+  h3 { font-size: 10.4pt; color: #1B3A6B; margin: 9px 0 3px; }
+  p { margin: 4px 0; }
+  ul { margin: 4px 0 4px 0; padding-left: 18px; }
+  li { margin: 2.5px 0; }
+  .lead { color: #33425a; }
+  .pill { display:inline-block; background:#eef3fb; color:#1B3A6B; border:1px solid #d7e3f4;
+    border-radius: 6px; padding: 1px 7px; font-size: 8.4pt; font-weight: 700; margin: 1px 3px 1px 0; white-space: nowrap; }
+  .stats { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .stat { flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-left:3px solid #1B3A6B;
+    border-radius: 8px; padding: 7px 9px; }
+  .stat b { display:block; font-size: 14pt; color:#0B2545; line-height:1.1; }
+  .stat span { font-size: 8.2pt; color:#64748b; }
+  table { width:100%; border-collapse: collapse; margin: 5px 0; font-size: 9.4pt; }
+  th { background:#0B2545; color:#fff; text-align:left; padding: 5px 7px; font-size:8.8pt; }
+  td { border-bottom:1px solid #e8edf3; padding: 4px 7px; vertical-align: top; }
+  tr:nth-child(even) td { background:#f8fafc; }
+  .tag { font-weight:700; color:#0B2545; }
+  .det { color:#15803d; font-weight:700; font-size:8.4pt; }
+  .ai { color:#b45309; font-weight:700; font-size:8.4pt; }
+  .flow { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:9px 12px; margin:6px 0; font-size:9.3pt; }
+  .flow b { color:#0B2545; }
+  .arrow { color:#F7941E; font-weight:800; }
+  .note { background:#fffaf2; border:1px solid #f5dcb8; border-radius:8px; padding:7px 10px; font-size:9pt; color:#7a5a25; margin:7px 0; }
+  .two { display:flex; gap:14px; }
+  .two > div { flex:1; }
+  footer { margin-top: 14px; border-top:1px solid #e2e8f0; padding-top:6px; color:#94a3b8; font-size:8pt; }
+  .keep { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+  <h1>ORA Navigator</h1>
+  <p class="sub">An AI Research-Administration Assistant for Morgan State University</p>
+  <p class="meta">Project Pitch &middot; Office of Research Administration (ORA) &middot; Live at ora.inavigator.ai</p>
+  <hr class="rule">
+
+  <p class="lead"><b>What it is.</b> ORA Navigator is a full-stack AI assistant for Morgan State faculty, principal
+  investigators, research staff, and department administrators. They ask questions about grants, compliance,
+  forms, and post-award management in plain English and get answers grounded in <b>382 official ORA documents</b> —
+  every answer cites its <i>morgan.edu</i> source. Beyond chat, it provides a suite of tools to actually
+  <i>run</i> a grant proposal from idea to award.</p>
+
+  <div class="stats">
+    <div class="stat"><b>382</b><span>KB documents indexed</span></div>
+    <div class="stat"><b>6</b><span>AI agents &amp; tools</span></div>
+    <div class="stat"><b>3</b><span>cloud services</span></div>
+    <div class="stat"><b>437</b><span>automated tests passing</span></div>
+  </div>
+
+  <h2><span class="n">1</span>Architecture &amp; Tech Stack</h2>
+  <p>Three independently deployed services on <b>Google Cloud Run</b>, each with one job:</p>
+  <table>
+    <tr><th>Service</th><th>Stack</th><th>Role</th></tr>
+    <tr><td class="tag">Frontend</td><td>React 19 + Vite (PWA)</td><td>The website / UI, served at ora.inavigator.ai</td></tr>
+    <tr><td class="tag">Backend</td><td>FastAPI + SQLAlchemy</td><td>REST API: auth, orchestration, business logic, all tools</td></tr>
+    <tr><td class="tag">AI Agent</td><td>Google ADK + Gemini 2.5 Flash</td><td>The LLM agent with the knowledge-base search tool</td></tr>
+  </table>
+  <p style="margin-top:6px;">
+    <span class="pill">Gemini 2.5 Flash — generation</span>
+    <span class="pill">text-embedding-004 — embeddings</span>
+    <span class="pill">Vertex AI Search — retrieval</span>
+    <span class="pill">Cloud SQL (MySQL 8.4)</span>
+    <span class="pill">Redis</span>
+    <span class="pill">Secret Manager</span>
+    <span class="pill">Cloud Build + Artifact Registry</span>
+    <span class="pill">JWT + bcrypt auth</span>
+  </p>
+
+  <h2><span class="n">2</span>How an Answer Is Produced — the RAG Pipeline</h2>
+  <p>The core engineering challenge is <b>trust</b>: the AI may only answer from Morgan's documents, never guess.
+  This is enforced at three layers, not just by asking the model nicely.</p>
+  <div class="flow keep">
+    <p style="margin:2px 0;"><b>Your question</b> <span class="arrow">&rarr;</span> quick checks (greeting? asked before &rarr; cache? "list X" &rarr; instant menu)</p>
+    <p style="margin:2px 0;"><b>Layer 1 — head start:</b> a fast keyword (TF-IDF) prefetch grabs the top-5 likely docs and injects them into the AI's instructions (~30&nbsp;ms, no AI cost).</p>
+    <p style="margin:2px 0;"><b>Layer 2 — the real retriever:</b> the agent calls <b>Vertex AI Search</b> as a tool to find passages by <i>meaning</i>, drafts an answer, and the matching morgan.edu URLs become the "Sources" block.</p>
+    <p style="margin:2px 0;"><b>Layer 3 — the fact-checker (the guarantee):</b> a grounding gate <i>checks</i> the result. If it's weak, it forces a strict "KB-only" rewrite; if still nothing, it <b>refuses</b> and routes the user to ORA. It doesn't trust the model's confidence — it verifies the output.</p>
+    <p style="margin:2px 0;"><b>Save to cache</b> <span class="arrow">&rarr;</span> <b>send the answer + Sources.</b></p>
+  </div>
+
+  <h2><span class="n">3</span>AI Agents &amp; Tools</h2>
+  <p>Specialized agents that coordinate through a shared proposal record. Where numbers or compliance must be
+  exact, the logic is <span class="det">deterministic (code)</span>; the AI only writes prose — it never invents a figure.</p>
+  <table>
+    <tr><th>Agent / Tool</th><th>What it does</th></tr>
+    <tr><td class="tag">Chatbot <span class="ai">AI</span></td><td>Grounded Q&amp;A over the 382-doc KB with cited sources (the RAG pipeline above).</td></tr>
+    <tr><td class="tag">Solicitation Ingestion <span class="ai">AI</span></td><td>Upload a sponsor PDF &rarr; Gemini extracts the deadline, page limits, budget cap &amp; required attachments (with source-quote verification) &rarr; review &rarr; seed a tracked proposal + checklist.</td></tr>
+    <tr><td class="tag">Draft Critic <span class="det">deterministic</span> <span class="ai">+AI</span></td><td>Pre-submission check of a draft PDF vs. the solicitation rules (page limit, required sections, budget) — code-authoritative verdict plus an evidence-verified AI advisory.</td></tr>
+    <tr><td class="tag">Budget Helper <span class="det">deterministic</span></td><td>Builds a grant budget with the correct federal <b>F&amp;A (overhead) math</b> — Direct &rarr; MTDC &rarr; F&amp;A &rarr; Total, with the real Morgan rates and a sponsor-cap check. The AI only drafts the justification prose.</td></tr>
+    <tr><td class="tag">Compliance Sentinel <span class="det">deterministic</span></td><td>A short questionnaire + the sponsor decide which approvals a project needs — <b>IRB, IACUC, COI, RCR, Export Control</b> — each Required / Review / Not&nbsp;required with the right form; one-click adds them as tasks.</td></tr>
+    <tr><td class="tag">Deadline Watcher <span class="ai">AI</span></td><td>Emails PIs at 14/7/3/1/0 days before a deadline (idempotent), with an AI-personalized body and a hard fallback to a deterministic template.</td></tr>
+  </table>
+  <p style="margin-top:5px;">Plus user-facing tools: a <b>Forms catalog</b> (74 forms, one-click open), a <b>Proposals tracker</b>
+  with deadline countdowns, and <b>calendar (.ics) export</b> of deadlines.</p>
+
+  <h2><span class="n">4</span>Memory — Personalization Across Sessions</h2>
+  <p>The assistant remembers a user's research-admin context (role, department, active grant, IRB protocol, …) so
+  answers get more personal over time:</p>
+  <ul>
+    <li><b>Rolling session summary</b> + <b>embedding-based semantic recall</b> over a <span class="pill">user_memories</span> table — it surfaces relevant past facts even across different conversations.</li>
+    <li><b>Real-time extraction</b> every few turns, plus an <b>idle-sweep</b> (every 5&nbsp;min) so mid-session facts aren't lost.</li>
+    <li>A nightly <b>3&nbsp;a.m. consolidation</b> job distills durable one-line facts from the day's chats (PII/financial details excluded), de-duplicates, and caps at 5 memories per type. It reads chat history only — it never deletes it.</li>
+    <li>Profile fields (Department / Title / Role / Interests) are mirrored into memory, so they feed the agents with no extra code.</li>
+  </ul>
+
+  <h2><span class="n">5</span>Automation — Scheduled Jobs (Cron)</h2>
+  <table>
+    <tr><th>Job</th><th>Schedule</th><th>What it does</th></tr>
+    <tr><td class="tag">Deadline Watcher</td><td>Daily 7&nbsp;a.m. ET</td><td>Sends due-date reminder emails to PIs.</td></tr>
+    <tr><td class="tag">Memory Consolidation</td><td>Daily 3&nbsp;a.m. ET</td><td>Distills + caps each user's durable memory facts.</td></tr>
+    <tr><td class="tag">Idle Sweep</td><td>Every 5&nbsp;min</td><td>Extracts facts for users who just went idle.</td></tr>
+  </table>
+  <p style="font-size:9pt;color:#64748b;">Run via Google Cloud Scheduler, authenticated with a rotating shared secret (<code>X-Research-Secret</code>).</p>
+
+  <h2><span class="n">6</span>Caching &amp; Knowledge Base</h2>
+  <div class="two">
+    <div>
+      <h3>3-layer cache (speed + cost)</h3>
+      <ul>
+        <li><b>L1</b> — in-memory per instance (24&nbsp;h)</li>
+        <li><b>L2</b> — Redis, shared (7&nbsp;days)</li>
+        <li><b>L3 semantic</b> — embeds the question; a 0.95-cosine match returns a prior answer even if reworded</li>
+      </ul>
+      <p style="font-size:8.8pt;color:#64748b;">A cache hit skips the LLM entirely — instant, free.</p>
+    </div>
+    <div>
+      <h3>Knowledge base</h3>
+      <ul>
+        <li><b>382 documents</b> scraped from the live ORA website, kept in a hierarchical tree (compliance, pre/post-award, forms, trainings…).</li>
+        <li>Indexed into a <b>Vertex AI Search</b> datastore the agent queries at runtime.</li>
+        <li>Mirrors the real site nav, so answers map to pages users can actually find.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2><span class="n">7</span>Data, Auth &amp; Engineering Quality</h2>
+  <ul>
+    <li><b>Database (Cloud SQL MySQL 8.4):</b> users, chat history, proposals &amp; tasks, memories, suggested questions, feedback, support tickets, deadline-reminder log.</li>
+    <li><b>Auth:</b> sign-up restricted to <code>@morgan.edu</code> with email verification; JWT sessions + bcrypt; user / admin roles with an admin dashboard.</li>
+    <li><b>Trust by design:</b> anything that must be exact (budget math, compliance) is produced by code, not the LLM; the grounding gate + KB-only regeneration prevent fabricated facts.</li>
+    <li><b>Quality:</b> <b>437 automated backend tests</b>, a 108-case faithfulness/hallucination evaluation harness, and a safe CI/CD deploy pipeline to Cloud Run.</li>
+  </ul>
+
+  <div class="note keep"><b>The headline idea to pitch:</b> ORA Navigator isn't "a chatbot." It's a trustworthy
+  research-administration platform where the AI is deliberately kept on a short leash — it answers only from
+  Morgan's own documents and never decides money or compliance on its own. That design is what makes it safe
+  for faculty to actually rely on.</div>
+
+  <footer>ORA Navigator &middot; Morgan State University Office of Research Administration &middot; ora.inavigator.ai &middot; Built with Google Cloud Run, Gemini 2.5 Flash &amp; Vertex AI Search</footer>
+
+</body>
+</html>
