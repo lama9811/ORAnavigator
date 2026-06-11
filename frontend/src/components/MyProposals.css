@@ -166,6 +166,27 @@ body.dark .proposals-upload-btn {
   border-color: rgba(27, 58, 107, 0.55);
 }
 
+/* "Add to Google Calendar" — detail view action button (Google blue) */
+.proposals-gcal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+  background: rgba(26, 115, 232, 0.1);
+  color: #1a73e8;
+  border: 1px solid rgba(26, 115, 232, 0.4);
+}
+.proposals-gcal-btn:hover {
+  background: rgba(26, 115, 232, 0.18);
+  border-color: rgba(26, 115, 232, 0.6);
+}
+
 .proposals-error {
   background: rgba(217, 48, 37, 0.08);
   border: 1px solid rgba(217, 48, 37, 0.28);
@@ -711,6 +732,61 @@ body.dark .proposal-progress-bar {
 .calendar-export:hover {
   background: var(--accent, #1d4ed8);
   color: #fff;
+}
+
+/* Top calendar export row: hint + .ics download (Google is now per-proposal) */
+.calendar-export-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 8px 0 16px;
+}
+.calendar-export-group .calendar-export {
+  margin: 0; /* the group owns the spacing now */
+}
+.calendar-export-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #64748b);
+}
+
+/* Per-proposal "Add to Google Calendar" button on each card (Google blue) */
+.proposal-card-gcal {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1a73e8;
+  background: rgba(26, 115, 232, 0.08);
+  border: 1px solid rgba(26, 115, 232, 0.35);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.proposal-card-gcal:hover {
+  background: rgba(26, 115, 232, 0.16);
+  border-color: rgba(26, 115, 232, 0.55);
+}
+.calendar-export-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary, #64748b);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.calendar-export-secondary:hover {
+  color: var(--accent, #1d4ed8);
 }
 
 /* Mobile */

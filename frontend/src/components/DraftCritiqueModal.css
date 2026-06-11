@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1200; /* above the sticky navbar (z-index 1000) so the header isn't clipped */
   padding: 20px;
   animation: critique-fade-in 0.15s;
 }
@@ -229,25 +229,26 @@
 }
 .critique-check-name {
   font-weight: 600;
+  font-size: 0.92rem;
 }
 
 .critique-check-value {
   margin-top: 4px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--text-primary);
 }
 
 .critique-check-detail {
   margin-top: 4px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   line-height: 1.4;
 }
 
 .critique-check-lists {
   margin-top: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   display: flex;
   flex-direction: column;
   gap: 4px;

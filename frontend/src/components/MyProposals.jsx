@@ -4,7 +4,7 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, ExternalLink, FileText, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
@@ -55,6 +55,37 @@ function formatDeadline(iso) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "Invalid date";
   return d.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}
+
+// Build a Google Calendar "create event" link pre-filled with one proposal's
+// deadline, as an all-day event. Opening it lands the user on Google's
+// "Save event?" screen (one click to save). No backend, token, or login needed.
+// The day is taken straight from the date part of the stored ISO string (NOT
+// new Date(), which can shift the day across timezones) so it matches the .ics.
+function googleCalUrl(sub) {
+  if (!sub?.deadline) return null;
+  const datePart = String(sub.deadline).slice(0, 10); // "YYYY-MM-DD"
+  const [y, m, d] = datePart.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const start = `${y}${String(m).padStart(2, "0")}${String(d).padStart(2, "0")}`;
+  // Google treats an all-day event's end date as exclusive -> use the next day.
+  const next = new Date(Date.UTC(y, m - 1, d + 1));
+  const end =
+    `${next.getUTCFullYear()}${String(next.getUTCMonth() + 1).padStart(2, "0")}` +
+    `${String(next.getUTCDate()).padStart(2, "0")}`;
+  const text = `${sub.title} — proposal deadline (${sub.sponsor})`;
+  const details = "Proposal deadline tracked in ORA Navigator.";
+  return (
+    "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+    "&text=" + encodeURIComponent(text) +
+    "&dates=" + start + "/" + end +
+    "&details=" + encodeURIComponent(details)
+  );
+}
+
+function openGoogleCal(sub) {
+  const url = googleCalUrl(sub);
+  if (url) window.open(url, "_blank", "noopener");
 }
 
 function authHeaders() {
@@ -165,20 +196,24 @@ export default function MyProposals() {
     }
   };
 
-  const addToCalendar = async () => {
+  // Fetch the user's personal calendar feed URL (https, non-expiring token).
+  const fetchIcsUrl = async () => {
+    const token = localStorage.getItem("token");
+    const r = await fetch(`${API_BASE}/api/me/deadlines-token`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!r.ok) throw new Error("couldn't get your calendar link");
+    const { ics_url } = await r.json();
+    return ics_url;
+  };
+
+  // Fallback for Apple Calendar / Outlook: download the .ics file. The feed
+  // lives on the BACKEND origin, so a plain `<a download>` is ignored for a
+  // cross-origin href; fetch it and save as a same-origin blob instead.
+  const downloadIcs = async () => {
     setError("");
     try {
-      const token = localStorage.getItem("token");
-      const r = await fetch(`${API_BASE}/api/me/deadlines-token`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!r.ok) throw new Error("couldn't get your calendar link");
-      const { ics_url } = await r.json();
-      // The .ics file lives on the BACKEND origin, not the app origin. A plain
-      // `<a href=ics_url download>` is ignored for cross-origin hrefs, so the
-      // browser navigates away instead of downloading. Fetch the file and save
-      // it as a same-origin blob — reliable in every browser, and the user
-      // stays on the page.
+      const ics_url = await fetchIcsUrl();
       const fileResp = await fetch(ics_url);
       if (!fileResp.ok) throw new Error("couldn't fetch the calendar file");
       const blob = await fileResp.blob();
@@ -191,7 +226,7 @@ export default function MyProposals() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError("Couldn't export deadlines to calendar: " + e.message);
+      setError("Couldn't download the calendar file: " + e.message);
     }
   };
 
@@ -258,10 +293,15 @@ export default function MyProposals() {
       ) : (
         <>
           {submissions.some((s) => s.deadline) && (
-            <button className="calendar-export" onClick={addToCalendar}>
-              <CalendarPlus size={16} />
-              <span>Add deadlines to calendar</span>
-            </button>
+            <div className="calendar-export-group">
+              <span className="calendar-export-hint">
+                Add a deadline to Google Calendar from any proposal below, or
+              </span>
+              <button className="calendar-export-secondary" onClick={downloadIcs}>
+                <Download size={14} />
+                <span>Download all deadlines as .ics (Apple Calendar / Outlook)</span>
+              </button>
+            </div>
           )}
           <ul className="proposals-list">
             {submissions.map((s) => (
@@ -324,6 +364,16 @@ function ProposalCard({ sub, onOpen }) {
           </span>
         )}
       </div>
+      {sub.deadline && (
+        <button
+          className="proposal-card-gcal"
+          title="Add this deadline to your Google Calendar"
+          onClick={(e) => { e.stopPropagation(); openGoogleCal(sub); }}
+        >
+          <CalendarPlus size={12} />
+          <span>Add to Google Calendar</span>
+        </button>
+      )}
     </li>
   );
 }
@@ -370,6 +420,15 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               title="Upload a draft PDF and check it against this proposal's solicitation requirements."
             >
               <ClipboardCheck size={13} /> Critique Draft
+            </button>
+          )}
+          {submission.deadline && (
+            <button
+              className="proposals-gcal-btn"
+              onClick={() => openGoogleCal(submission)}
+              title="Add this proposal's deadline to your Google Calendar."
+            >
+              <CalendarPlus size={13} /> Add to Google Calendar
             </button>
           )}
           <button className="proposals-delete-btn" onClick={onDelete}>
