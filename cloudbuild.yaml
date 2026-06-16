@@ -134,7 +134,7 @@ steps:
           --allow-unauthenticated \
           --service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
           --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://ora.inavigator.ai,API_URL=https://api-ora.inavigator.ai,ALLOW_TEST_EMAILS=false,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false" \
-          --set-secrets="DATABASE_URL=DATABASE_URL:latest,JWT_SECRET=JWT_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,ADMIN_EMAIL=ADMIN_EMAIL:latest,ADMIN_PASSWORD=ADMIN_PASSWORD:latest"
+          --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest"
         # NOTE: SMTP_USER, SMTP_PASS, and RESEARCH_SECRET must be set manually on the
         # Cloud Run service via console or: gcloud run services update oranavigator-backend
         #   --set-env-vars="SMTP_USER=noreplyinavigator@gmail.com,SMTP_PASS=<app-password>,RESEARCH_SECRET=<secret>"
