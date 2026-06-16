@@ -105,7 +105,7 @@ steps:
       - '--concurrency=80'
       - '--no-allow-unauthenticated'
       - '--service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com'
-      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID}'
+      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,ADK_APP_NAME=ora_navigator_unified,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,KB_PREFETCH_DATASTORE_ID=oranavigator-kb-v8'
     waitFor: ['push-adk']
 
   # =============================================================================
@@ -133,7 +133,7 @@ steps:
           --concurrency=100 \
           --allow-unauthenticated \
           --service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
-          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://ora.inavigator.ai,API_URL=https://api-ora.inavigator.ai,ALLOW_TEST_EMAILS=false,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false" \
+          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,ALGORITHM=HS256,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://ora.inavigator.ai,API_URL=https://api-ora.inavigator.ai,ALLOW_TEST_EMAILS=false,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false" \
           --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest"
         # NOTE: SMTP_USER, SMTP_PASS, and RESEARCH_SECRET must be set manually on the
         # Cloud Run service via console or: gcloud run services update oranavigator-backend
