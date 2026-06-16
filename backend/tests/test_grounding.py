@@ -574,3 +574,83 @@ def test_citations_never_blank_when_cited_chunk_unresolvable():
     supports = [{"segment": {}, "groundingChunkIndices": [0]}]
     titles = [c["title"] for c in _extract_citations(chunks, supports)]
     assert titles == ["Main Contact"], titles  # fell back; not empty
+
+
+# ===========================================================================
+# Rate-limit handling -- a transient Vertex/Gemini 429 RESOURCE_EXHAUSTED comes
+# back as response *text*, so _do_agent_pass detects it, retries with backoff,
+# and surfaces an outage (not a laundered "system is busy" answer) if it
+# persists -- so _run_verified short-circuits instead of firing Pass 2.
+# ===========================================================================
+import json as _json
+
+_RATE_LIMIT_TEXT = ("Error: 429 RESOURCE_EXHAUSTED. Quota exceeded for "
+                    "aiplatform.googleapis.com generate_content_requests_per_minute.")
+
+
+def test_is_rate_limited_detects_429_resource_exhausted():
+    assert vertex_agent._is_rate_limited(_RATE_LIMIT_TEXT)
+    assert not vertex_agent._is_rate_limited("Pre-award proposals route through ORA.")
+    # Needs BOTH markers -- a stray "429" in a normal answer must not match.
+    assert not vertex_agent._is_rate_limited("Call 429-555-0000 for help.")
+    assert not vertex_agent._is_rate_limited("")
+
+
+class _FakeResp:
+    """Minimal stand-in for a streaming requests.Response."""
+    def __init__(self, lines, status_code=200):
+        self._lines, self.status_code = lines, status_code
+
+    def raise_for_status(self):
+        pass
+
+    def iter_lines(self):
+        for ln in self._lines:
+            yield ln.encode("utf-8")
+
+
+def _sse_model_text(text):
+    """One SSE 'data:' line carrying a final model text part."""
+    return ["data: " + _json.dumps({"content": {"role": "model",
+                                                 "parts": [{"text": text}]}})]
+
+
+def _drive_pass(monkeypatch, responses):
+    """Run the real _do_agent_pass with requests.post faked to return each entry
+    of `responses` on successive calls. Returns (result_dict, num_post_calls)."""
+    calls = {"n": 0}
+
+    def fake_post(url, **kwargs):
+        i = min(calls["n"], len(responses) - 1)
+        calls["n"] += 1
+        return _FakeResp(responses[i])
+
+    monkeypatch.setattr(vertex_agent, "_RATE_LIMIT_BACKOFFS", (0.0, 0.0))
+    monkeypatch.setattr(vertex_agent.requests, "post", fake_post)
+    monkeypatch.setattr(vertex_agent, "_get_auth_headers", lambda: {})
+    monkeypatch.setattr(vertex_agent.time_module, "sleep", lambda *_: None)
+    events = list(vertex_agent._do_agent_pass("q", "u", "s"))
+    result = next(e["data"] for e in events if e["type"] == "_result")
+    return result, calls["n"]
+
+
+def test_transient_rate_limit_retries_then_succeeds(monkeypatch):
+    """A 429 on the first attempt is retried; the good answer is returned."""
+    good = "The F&A rate is 48% MTDC."
+    result, n_calls = _drive_pass(monkeypatch, [
+        _sse_model_text(_RATE_LIMIT_TEXT),   # attempt 1: throttled
+        _sse_model_text(good),               # retry: succeeds
+    ])
+    assert result["text"] == good
+    assert result["outage"] is False
+    assert n_calls == 2  # retried exactly once
+
+
+def test_persistent_rate_limit_surfaces_outage_not_busy_text(monkeypatch):
+    """A 429 that survives every retry becomes an outage with empty text -- it is
+    NOT laundered into a "system is busy" answer, so _run_verified won't fire
+    Pass 2 against an already-throttled backend."""
+    result, n_calls = _drive_pass(monkeypatch, [_sse_model_text(_RATE_LIMIT_TEXT)])
+    assert result["outage"] is True
+    assert result["text"] == ""
+    assert n_calls == 3  # initial attempt + len(_RATE_LIMIT_BACKOFFS) retries
