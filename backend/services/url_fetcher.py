@@ -9,10 +9,15 @@ Fetches a user-supplied solicitation URL and returns plain text ready for
     * a server-rendered HTML page -> visible text via lxml
 
 This module is security-critical: it performs server-side requests to a URL the
-*user* controls, so it includes an SSRF guard. Every host (including each
-redirect hop) is resolved and rejected if it maps to a private / loopback /
-link-local / reserved IP -- this blocks localhost, internal ranges, and the
-cloud metadata endpoint 169.254.169.254.
+*user* controls, so it includes an SSRF guard.
+
+DNS-rebinding / TOCTOU defense: we resolve each host (and every redirect hop)
+ourselves, reject any private / loopback / link-local / reserved address, and
+then **pin the connection to that exact validated IP** via a custom transport
+adapter -- so requests does NOT perform a second, unchecked DNS lookup that an
+attacker could point at an internal address. The original hostname is preserved
+for the Host header, TLS SNI, and certificate verification. This blocks
+localhost, internal ranges, and the cloud metadata endpoint 169.254.169.254.
 
 JavaScript-only pages are out of scope: a simple fetch sees no rendered content
 and the extractor will return nothing, surfaced as a clear FetchError.
@@ -21,10 +26,10 @@ and the extractor will return nothing, surfaced as a clear FetchError.
 import ipaddress
 import re
 import socket
-from io import BytesIO
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin, urlunparse
 
 import requests
+from requests.adapters import HTTPAdapter
 
 # 25 MB, matching the PDF upload cap in main.py.
 _DEFAULT_MAX_BYTES = 25 * 1024 * 1024
@@ -47,32 +52,39 @@ class FetchError(Exception):
         self.status = status
 
 
-def _assert_public_host(hostname: str) -> None:
-    """Resolve ``hostname`` and raise FetchError if ANY resolved address is not
-    a normal public IP. Conservative by design: if resolution fails or any
-    address looks internal, we refuse."""
+def _ip_is_public(ip_str: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return not (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
+
+
+def _resolve_public_ip(hostname: str) -> str:
+    """Resolve ``hostname`` and return ONE validated public IP. Raises
+    FetchError if resolution fails or ANY resolved address is non-public
+    (an attacker returning a mix of public+internal IPs is rejected outright)."""
     if not hostname:
         raise FetchError("That URL has no host.", 400)
     try:
         infos = socket.getaddrinfo(hostname, None)
     except socket.gaierror:
         raise FetchError("Couldn't resolve that website's address.", 502)
-    for info in infos:
-        ip_str = info[4][0]
-        try:
-            ip = ipaddress.ip_address(ip_str)
-        except ValueError:
-            raise FetchError("That URL resolved to an invalid address.", 400)
-        if (ip.is_private or ip.is_loopback or ip.is_link_local
-                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+    ips = [info[4][0] for info in infos]
+    if not ips:
+        raise FetchError("Couldn't resolve that website's address.", 502)
+    for ip_str in ips:
+        if not _ip_is_public(ip_str):
             raise FetchError(
                 "That URL points to a non-public address and can't be fetched.",
                 400,
             )
+    return ips[0]
 
 
-def _validate_url(url: str) -> str:
-    """Scheme/host sanity check + SSRF guard. Returns the normalized URL."""
+def _parse_http_url(url: str):
+    """Scheme/host sanity check. Returns the parsed URL (does NOT resolve DNS)."""
     url = (url or "").strip()
     if not url:
         raise FetchError("Please enter a URL.", 400)
@@ -81,8 +93,44 @@ def _validate_url(url: str) -> str:
         raise FetchError("Only http and https URLs are supported.", 400)
     if not parsed.hostname:
         raise FetchError("That doesn't look like a valid URL.", 400)
-    _assert_public_host(parsed.hostname)
-    return url
+    return parsed
+
+
+class _PinnedIPAdapter(HTTPAdapter):
+    """Transport adapter that connects to a pre-validated IP instead of letting
+    urllib3 re-resolve the hostname (closing the DNS-rebinding TOCTOU window),
+    while keeping the real hostname for the Host header, TLS SNI, and cert
+    verification."""
+
+    def __init__(self, dest_ip: str, **kwargs):
+        self._dest_ip = dest_ip
+        super().__init__(**kwargs)
+
+    def send(self, request, **kwargs):
+        parsed = urlparse(request.url)
+        hostname = parsed.hostname
+        port = parsed.port
+        if parsed.scheme == "https":
+            # Verify the cert against the real hostname and send correct SNI,
+            # even though we connect to the pinned IP.
+            self.poolmanager.connection_pool_kw["server_hostname"] = hostname
+            self.poolmanager.connection_pool_kw["assert_hostname"] = hostname
+        ip_host = f"[{self._dest_ip}]" if ":" in self._dest_ip else self._dest_ip
+        new_netloc = f"{ip_host}:{port}" if port else ip_host
+        request.url = urlunparse(parsed._replace(netloc=new_netloc))
+        request.headers["Host"] = f"{hostname}:{port}" if port else hostname
+        return super().send(request, **kwargs)
+
+
+def _open(url: str, dest_ip: str, headers: dict) -> requests.Response:
+    """One pinned GET (no auto-redirects, streamed). Factored out so tests can
+    stub the network while the SSRF/redirect logic above stays real."""
+    session = requests.Session()
+    adapter = _PinnedIPAdapter(dest_ip)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session.get(url, headers=headers, timeout=_TIMEOUT,
+                       allow_redirects=False, stream=True)
 
 
 def _read_capped(resp: requests.Response, max_bytes: int) -> bytes:
@@ -105,7 +153,7 @@ def _html_to_text(html_bytes: bytes) -> str:
     """Visible text from an HTML page via lxml: drop script/style/noscript, then
     collapse whitespace."""
     try:
-        import lxml.html  # transitive dep via python-docx; pinned in requirements
+        import lxml.html  # explicit dep in requirements (was transitive)
     except ImportError:  # pragma: no cover - lxml is always installed
         raise FetchError("Can't read web pages right now (missing parser).", 500)
     try:
@@ -131,30 +179,23 @@ def _looks_like_pdf(url: str, content_type: str, body: bytes) -> bool:
 
 
 def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
-    """Fetch ``url`` (following redirects, with the SSRF guard re-applied on each
-    hop) and return plain text. Raises FetchError on any failure."""
-    current = _validate_url(url)
-
-    session = requests.Session()
+    """Fetch ``url`` (following redirects, re-resolving + re-validating + re-pinning
+    on each hop) and return plain text. Raises FetchError on any failure."""
+    current = url
     headers = {"User-Agent": _USER_AGENT, "Accept": "*/*"}
     resp = None
     try:
         for _ in range(_MAX_REDIRECTS + 1):
-            resp = session.get(
-                current,
-                headers=headers,
-                timeout=_TIMEOUT,
-                allow_redirects=False,
-                stream=True,
-            )
+            parsed = _parse_http_url(current)
+            dest_ip = _resolve_public_ip(parsed.hostname)  # validate + pin target
+            resp = _open(current, dest_ip, headers)
             if resp.is_redirect or resp.status_code in (301, 302, 303, 307, 308):
                 location = resp.headers.get("Location")
                 resp.close()
+                resp = None
                 if not location:
                     raise FetchError("That page redirected without a target.", 502)
-                # Resolve relative redirects, then re-validate the new host.
-                current = urljoin(current, location)
-                _validate_url(current)
+                current = urljoin(current, location)  # re-validated next loop
                 continue
             break
         else:
