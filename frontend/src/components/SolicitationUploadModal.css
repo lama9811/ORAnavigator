@@ -146,6 +146,67 @@
   line-height: 1.45;
 }
 
+/* "or" divider between the dropzone and the URL input */
+.solicitation-or {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 14px 0;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.solicitation-or::before,
+.solicitation-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.solicitation-or span {
+  padding: 0 10px;
+}
+
+/* URL input + fetch button */
+.solicitation-url-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.solicitation-url-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--surface, #fff);
+}
+
+.solicitation-url-input:focus {
+  outline: none;
+  border-color: var(--msu-blue);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.15);
+}
+
+.solicitation-url-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.solicitation-url-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ============================================================
    EXTRACTING step
    ============================================================ */

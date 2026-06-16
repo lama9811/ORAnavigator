@@ -3530,6 +3530,39 @@ async def extract_solicitation(
     return {"extracted": extracted}
 
 
+class SolicitationUrlRequest(BaseModel):
+    url: str
+
+
+@app.post("/api/me/submissions/from-solicitation/url")
+async def extract_solicitation_from_url(
+    payload: SolicitationUrlRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Step 1 (URL variant): fetch a sponsor solicitation URL (an HTML page or a
+    linked PDF), extract the same structured JSON the PDF flow returns. Does NOT
+    create a Submission -- the user reviews/edits, then calls the confirm
+    endpoint. Same response shape as /from-solicitation so the UI is shared."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    from services import url_fetcher, solicitation_extractor as _sx
+    try:
+        text = url_fetcher.fetch_solicitation_text(payload.url)
+    except url_fetcher.FetchError as e:
+        raise HTTPException(e.status, e.message)
+
+    extracted = _sx.extract_from_text(text)
+    if extracted is None:
+        raise HTTPException(
+            422,
+            "Couldn't pull a solicitation out of that page -- it may not be a "
+            "solicitation, or the content is image-only. Try the PDF upload, or "
+            "create the proposal manually.",
+        )
+    return {"extracted": extracted}
+
+
 @app.post("/api/me/submissions/from-solicitation/confirm")
 async def confirm_solicitation_submission(
     payload: dict,
