@@ -116,6 +116,24 @@ def test_refusal_responses_are_not_stored():
             f"refusal response must not be cached: {refusal!r}"
 
 
+def test_transient_busy_responses_are_not_stored():
+    """Transient 'try again' messages (rate-limit / busy / initializing) must not
+    be cached. REGRESSION: 'The system is busy right now' slipped past the old
+    guard, got cached in Redis (7-day TTL), and kept being served after the
+    backend was fixed -- the cache answered before the fixed code ever ran."""
+    c = _fresh_cache()
+    transient = [
+        "The system is busy right now. Please try again in a moment.",
+        "I'm temporarily having trouble connecting to my knowledge base. "
+        "This is a system issue, not a gap in my knowledge. Please try again in a minute.",
+        "AI system is initializing. Please try again in a moment.",
+    ]
+    institutional_q = "What is the federal F&A rate for sponsored research at Morgan State"
+    for msg in transient:
+        stored = c.set(institutional_q, msg, context_hash=CTX)
+        assert stored is False, f"transient message must not be cached: {msg!r}"
+
+
 def test_institutional_questions_still_cache():
     """Regression guard: the bypass must not block legitimate cacheable
     queries. KB-grounded institutional questions still go through cache."""
