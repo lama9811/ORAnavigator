@@ -128,6 +128,14 @@ _SKIP_GROUNDING_RE = re.compile(
 # Detects when Gemini self-reports a KB access failure (transient Vertex AI Search issue)
 _KB_FAIL_RE = re.compile(r"having trouble (accessing|connecting to) my knowledge base", re.IGNORECASE)
 
+# Transient Vertex/Gemini quota errors (HTTP 429 / gRPC RESOURCE_EXHAUSTED) come
+# back as response *text*, not exceptions, so they must be detected by substring.
+# They are retried with backoff before being surfaced as an outage.
+_RATE_LIMIT_BACKOFFS = (2.0, 4.0)  # per-retry sleeps; len() == number of retries
+
+def _is_rate_limited(text: str) -> bool:
+    return bool(text) and "429" in text and "RESOURCE_EXHAUSTED" in text
+
 # Questions that ask the bot to recall something the user said about THEMSELVES
 # earlier in the conversation (their department, role, sponsor, deadline...).
 # Those facts live in the chat history, not the KB, so Layer 3 must NOT
@@ -714,7 +722,8 @@ def _finalize_answer(text: str, grounded_corpus: str) -> str:
 
 
 def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "",
-                   model: str = "", memory_context: str = "", retried: bool = False):
+                   model: str = "", memory_context: str = "", retried: bool = False,
+                   rate_limit_attempt: int = 0):
     """One round-trip to the ADK agent.
 
     A generator: yields {"type": "status", ...} events as the agent calls tools,
@@ -835,6 +844,31 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
             time_module.sleep(2)
             yield from _do_agent_pass(message, user_id, session_id, context,
                                       model, memory_context, retried=True)
+            return
+
+        # Retry with backoff on a transient Vertex/Gemini quota error. It arrives
+        # as response *text*, so it bypasses the except handlers below; without
+        # this it would be laundered into the "system is busy" string by
+        # _clean_answer_text AND grade as "weak", triggering a Pass-2
+        # regeneration that doubles the load on an already-throttled backend. We
+        # absorb transient blips here; if still throttled after the bounded
+        # retries, flag an outage so _run_verified short-circuits cleanly with
+        # the standard fallback instead of amplifying the problem with Pass 2.
+        if _is_rate_limited(final_text):
+            raw = final_text.strip()[:300]
+            if rate_limit_attempt < len(_RATE_LIMIT_BACKOFFS):
+                delay = _RATE_LIMIT_BACKOFFS[rate_limit_attempt]
+                print(f"   [RATE-LIMIT] Vertex/Gemini quota hit (attempt "
+                      f"{rate_limit_attempt + 1}); retrying in {delay}s. Raw: {raw}")
+                time_module.sleep(delay)
+                yield from _do_agent_pass(message, user_id, session_id, context,
+                                          model, memory_context, retried=retried,
+                                          rate_limit_attempt=rate_limit_attempt + 1)
+                return
+            print(f"   [RATE-LIMIT] Still throttled after {len(_RATE_LIMIT_BACKOFFS)} "
+                  f"retries; surfacing outage. Raw: {raw}")
+            result["outage"] = True
+            yield {"type": "_result", "data": result}
             return
 
         result["text"] = final_text
