@@ -3032,6 +3032,7 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
 
 def _submission_task_to_dict(t) -> dict:
     from services.forms_catalog import get_form
+    from services.task_guidance import guidance_for
     form = get_form(t.kb_doc_id)
     return {
         "id": t.id,
@@ -3046,6 +3047,8 @@ def _submission_task_to_dict(t) -> dict:
         "status": t.status,
         "notes": t.notes,
         "sort_order": t.sort_order,
+        # Phase 4: short how-to + sample for known tasks (None if no match).
+        "guidance": guidance_for(t.title),
     }
 
 
@@ -3700,6 +3703,89 @@ async def section_coach(
     if result is None:
         raise HTTPException(400, "Unknown proposal section.")
     return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
+
+
+# ----------------------------------------------------------------------------
+# Fundability / Reviewer Lens + eligibility go/no-go (Phase 3). Advisory only --
+# never a funding guarantee and never the compliance gate.
+
+def _eligibility_text_from_notes(notes: Optional[str]) -> Optional[str]:
+    """Pull the 'Eligibility: ...' line out of a submission's solicitation notes."""
+    if not notes:
+        return None
+    import re as _re
+    m = _re.search(r"^Eligibility:\s*(.+)$", notes, _re.MULTILINE)
+    return m.group(1).strip() if m else None
+
+
+@app.get("/api/me/submissions/{submission_id}/fundability/criteria")
+async def fundability_criteria(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Review criteria + eligibility questions for this submission's sponsor, so
+    the UI can render the checklist before the PI runs anything."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services import fundability as _fund, eligibility as _elig
+    return {
+        "sponsor": sub.sponsor,
+        "criteria": _fund.review_criteria(sub.sponsor),
+        "eligibility_questions": _elig.QUESTIONS,
+        "eligibility_text": _eligibility_text_from_notes(sub.notes),
+    }
+
+
+class EligibilityRequest(BaseModel):
+    answers: dict = {}
+
+
+@app.post("/api/me/submissions/{submission_id}/eligibility")
+async def check_eligibility(
+    submission_id: int,
+    payload: EligibilityRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Deterministic go/no-go self-check against the solicitation's eligibility."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services import eligibility as _elig
+    result = _elig.assess_eligibility(
+        payload.answers, sponsor=sub.sponsor,
+        eligibility_text=_eligibility_text_from_notes(sub.notes),
+    )
+    return {"submission_id": submission_id, "result": result}
+
+
+class FundabilityRequest(BaseModel):
+    draft_text: str = ""
+
+
+@app.post("/api/me/submissions/{submission_id}/fundability")
+async def fundability_review(
+    submission_id: int,
+    payload: FundabilityRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Advisory reviewer-style read of the PI's draft against sponsor criteria."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services import fundability as _fund
+    context = _proposals_service.reconstruct_solicitation_context(sub)
+    result = _fund.reviewer_assessment(sub.sponsor, payload.draft_text, context)
+    return {"submission_id": submission_id, "result": result}
 
 
 # ----------------------------------------------------------------------------

@@ -4,13 +4,14 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, PenLine, Plus, ShieldCheck, Target, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
 import SectionCoachModal from "./SectionCoachModal";
+import FundabilityModal from "./FundabilityModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -393,6 +394,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
+  const [showFund, setShowFund] = useState(false);
 
   return (
     <div className="proposals">
@@ -421,6 +423,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
             title="Get an outline for a proposal section, or paste your draft for advisory feedback."
           >
             <PenLine size={13} /> Drafting coach
+          </button>
+          <button
+            className="proposals-coach-btn"
+            onClick={() => setShowFund(true)}
+            title="Check eligibility (go/no-go) and get reviewer-style feedback against the sponsor's criteria."
+          >
+            <Target size={13} /> Fundability
           </button>
           {hasSolicitation(submission) && (
             <button
@@ -476,6 +485,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         />
       )}
 
+      {showFund && (
+        <FundabilityModal
+          submission={submission}
+          onClose={() => setShowFund(false)}
+        />
+      )}
+
       <section className="proposal-detail-summary">
         <div className="proposal-detail-title-row">
           <div className="proposal-detail-sponsor">{submission.sponsor}</div>
@@ -520,7 +536,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         <h2>Checklist</h2>
         <ul className="task-list">
           {tasks.map((t) => (
-            <TaskRow key={t.id} task={t} onToggle={onToggleTask} />
+            <TaskRow key={t.id} task={t} onToggle={onToggleTask} deadline={submission.deadline} />
           ))}
         </ul>
       </section>
@@ -528,9 +544,27 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   );
 }
 
-function TaskRow({ task, onToggle }) {
+// Google Calendar link for a single task, dated (deadline - due_offset_days).
+function taskCalUrl(task, deadline) {
+  if (!deadline || task.due_offset_days == null) return null;
+  const due = new Date(deadline);
+  if (isNaN(due)) return null;
+  due.setDate(due.getDate() - task.due_offset_days);
+  const ymd = due.toISOString().slice(0, 10).replace(/-/g, "");
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `[Proposal] ${task.title}`,
+    details: task.description || "ORA Navigator proposal task.",
+    dates: `${ymd}/${ymd}`,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function TaskRow({ task, onToggle, deadline }) {
   const isDone = task.status === "done";
   const toggle = () => onToggle(task.id, isDone ? "pending" : "done");
+  const [showHow, setShowHow] = useState(false);
+  const calUrl = taskCalUrl(task, deadline);
   return (
     <li className={`task-row ${isDone ? "task-done" : ""}`}>
       <button
@@ -549,10 +583,30 @@ function TaskRow({ task, onToggle }) {
         {task.description && (
           <div className="task-description">{task.description}</div>
         )}
-        {task.due_offset_days != null && (
-          <div className="task-meta">
-            <Calendar size={9} />
-            <span>{task.due_offset_days} days before deadline</span>
+        <div className="task-meta-row">
+          {task.due_offset_days != null && (
+            <div className="task-meta">
+              <Calendar size={9} />
+              <span>{task.due_offset_days} days before deadline</span>
+            </div>
+          )}
+          {calUrl && (
+            <a className="task-cal-link" href={calUrl} target="_blank" rel="noopener noreferrer">
+              <CalendarPlus size={11} /> Add to calendar
+            </a>
+          )}
+          {task.guidance && (
+            <button className="task-how-toggle" onClick={() => setShowHow((s) => !s)}>
+              <HelpCircle size={11} /> {showHow ? "Hide help" : "How do I do this?"}
+            </button>
+          )}
+        </div>
+        {showHow && task.guidance && (
+          <div className="task-how">
+            <div className="task-how-text">{task.guidance.how_to}</div>
+            {task.guidance.sample && (
+              <div className="task-how-sample"><b>Example:</b> {task.guidance.sample}</div>
+            )}
           </div>
         )}
         {task.kb_doc_url && (
