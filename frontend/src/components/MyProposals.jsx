@@ -4,12 +4,13 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
+import SectionCoachModal from "./SectionCoachModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -391,6 +392,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
 
   return (
     <div className="proposals">
@@ -412,6 +414,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
             title="Check which approvals your project needs — IRB, IACUC, COI, RCR, export control."
           >
             <ShieldCheck size={13} /> Check compliance
+          </button>
+          <button
+            className="proposals-coach-btn"
+            onClick={() => setShowCoach(true)}
+            title="Get an outline for a proposal section, or paste your draft for advisory feedback."
+          >
+            <PenLine size={13} /> Drafting coach
           </button>
           {hasSolicitation(submission) && (
             <button
@@ -457,6 +466,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           submission={submission}
           onClose={() => setShowCompliance(false)}
           onSaved={onRefresh}
+        />
+      )}
+
+      {showCoach && (
+        <SectionCoachModal
+          submission={submission}
+          onClose={() => setShowCoach(false)}
         />
       )}
 
