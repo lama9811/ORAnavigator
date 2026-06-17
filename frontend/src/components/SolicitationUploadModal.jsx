@@ -361,6 +361,19 @@ function ReviewStep({
         </Field>
       </FieldRow>
 
+      {extracted.deadline_details && (
+        <Field
+          label="All deadlines (by category)"
+          hint="This solicitation lists more than one deadline. The Deadline above is the earliest (most restrictive); the full list is saved to your proposal notes. If you're applying to a different category, set the Deadline to match."
+        >
+          <textarea
+            value={extracted.deadline_details}
+            onChange={(e) => onChange("deadline_details", e.target.value)}
+            rows={2}
+          />
+        </Field>
+      )}
+
       <Field
         label="Eligibility"
         sourceQuote={sq.eligibility}

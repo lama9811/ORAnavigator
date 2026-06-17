@@ -59,10 +59,20 @@ def test_coerce_fills_missing_fields_with_none():
     type the value in."""
     bare = {"sponsor": "NSF"}
     out = sx._coerce_extracted(bare)
-    for key in ("sponsor", "deadline", "page_limits", "required_attachments",
-                "eligibility", "budget_cap", "submission_portal",
-                "program_id", "program_name", "source_quotes"):
+    for key in ("sponsor", "deadline", "deadline_details", "page_limits",
+                "required_attachments", "eligibility", "budget_cap",
+                "submission_portal", "program_id", "program_name",
+                "source_quotes"):
         assert key in out, f"contract key missing: {key}"
+
+
+def test_coerce_deadline_details_passthrough_and_blank_to_none():
+    """deadline_details (multi-category deadline summary) survives coercion;
+    a blank string is normalized to None."""
+    out = sx._coerce_extracted({"deadline_details": "Cat II: July 28, 2026"})
+    assert out["deadline_details"] == "Cat II: July 28, 2026"
+    assert sx._coerce_extracted({"deadline_details": "   "})["deadline_details"] is None
+    assert sx._coerce_extracted({})["deadline_details"] is None
 
 
 def test_coerce_normalizes_required_attachments_to_list():

@@ -124,6 +124,12 @@ def create_submission_from_solicitation(
     notes_lines = []
     if extracted.get("program_id"):
         notes_lines.append(f"Program ID: {extracted['program_id']}")
+    # Multi-category / recurring solicitations have several deadlines; the
+    # `deadline` field above carries only the earliest (most restrictive). Surface
+    # the full breakdown here so the human sees every category's date.
+    if extracted.get("deadline_details"):
+        dd = " ".join(str(extracted["deadline_details"]).split())
+        notes_lines.append(f"Deadlines: {dd}")
     if extracted.get("eligibility"):
         notes_lines.append(f"Eligibility: {extracted['eligibility']}")
     if extracted.get("budget_cap"):
