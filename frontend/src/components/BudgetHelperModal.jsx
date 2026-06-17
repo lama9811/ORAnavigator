@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, Trash2, Calculator, FileText, Save, AlertTriangle, CheckCircle2, Lightbulb, Info, HelpCircle } from "lucide-react";
+import { X, Plus, Trash2, Calculator, FileText, Save, AlertTriangle, CheckCircle2, Lightbulb, Info, HelpCircle, Download } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./BudgetHelperModal.css";
 
@@ -17,6 +17,7 @@ const EMPTY = {
   subawards: [],
   fa_year: "fy_2025_2026", fa_rate_key: "organized_research_on_campus",
   cap: "",
+  project_years: 1, escalation_pct: "",
 };
 
 // Pull a "Budget cap: $500,000" out of the proposal's solicitation notes, if present.
@@ -34,6 +35,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState("");
   const [justification, setJustification] = useState("");
+  const [perLine, setPerLine] = useState([]);
   const [justifying, setJustifying] = useState(false);
   const debounceRef = useRef(null);
 
@@ -116,8 +118,28 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
       const r = await fetch(`${API_BASE}/api/budget/justification`, {
         method: "POST", headers: authHeaders(), body: JSON.stringify({ inputs, use_ai: true }),
       });
-      if (r.ok) setJustification((await r.json()).justification || "");
+      if (r.ok) {
+        const data = await r.json();
+        setJustification(data.justification || "");
+        setPerLine(data.per_line || []);
+      }
     } finally { setJustifying(false); }
+  };
+
+  const downloadCsv = async () => {
+    // Save current inputs first so the export reflects what's on screen.
+    await fetch(`${API_BASE}/api/me/submissions/${submission.id}/budget`, {
+      method: "PUT", headers: authHeaders(), body: JSON.stringify({ inputs }),
+    }).catch(() => {});
+    const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/budget.csv`,
+      { headers: authHeaders() });
+    if (!r.ok) return;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `budget-${submission.id}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const cap = computed?.cap_status;
@@ -202,6 +224,20 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                 </label>
                 {numField("Sponsor cap", "cap", "(optional)")}
               </div>
+
+              <h4>Project length</h4>
+              <div className="bh-grid">
+                <label className="bh-field"><span>Years</span>
+                  <select value={inputs.project_years}
+                    onChange={(e) => set({ project_years: Number(e.target.value) })}>
+                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+                {inputs.project_years > 1 &&
+                  numField("Annual escalation %", "escalation_pct", "(e.g. 3)")}
+              </div>
+
+              <EffortHelper />
             </div>
 
             {/* RIGHT — live summary */}
@@ -213,15 +249,38 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                 <span>F&amp;A {computed ? `${Math.round(computed.fa_rate * 100)}%` : ""}</span>
                 <span>{fmt(computed?.fa_amount)}</span>
               </div>
-              <div className="bh-line bh-total"><span>TOTAL</span><b>{fmt(computed?.total)}</b></div>
+              <div className="bh-line bh-total">
+                <span>{computed?.multi_year ? "TOTAL (Year 1)" : "TOTAL"}</span><b>{fmt(computed?.total)}</b>
+              </div>
 
-              {cap === "ok" && (
+              {computed?.multi_year && (
+                <div className="bh-multiyear">
+                  <div className="bh-multiyear-head">
+                    {computed.multi_year.project_years}-year projection
+                    {computed.multi_year.escalation_pct ? ` · ${computed.multi_year.escalation_pct}%/yr` : ""}
+                  </div>
+                  {computed.multi_year.years.map((y) => (
+                    <div className="bh-line bh-muted" key={y.year}>
+                      <span>Year {y.year}</span><span>{fmt(y.total)}</span>
+                    </div>
+                  ))}
+                  <div className="bh-line bh-total"><span>All years</span><b>{fmt(computed.multi_year.cumulative.total)}</b></div>
+                  {computed.multi_year.cap_status === "over" && (
+                    <div className="bh-cap bh-cap-over"><AlertTriangle size={14} /> Over the {fmt(computed.multi_year.cap)} project cap by {fmt(computed.multi_year.cap_overage)}</div>
+                  )}
+                  {computed.multi_year.cap_status === "ok" && (
+                    <div className="bh-cap bh-cap-ok"><CheckCircle2 size={14} /> Under the {fmt(computed.multi_year.cap)} project cap</div>
+                  )}
+                </div>
+              )}
+
+              {!computed?.multi_year && cap === "ok" && (
                 <div className="bh-cap bh-cap-ok"><CheckCircle2 size={14} /> Under the {fmt(computed.cap)} cap</div>
               )}
-              {cap === "over" && (
+              {!computed?.multi_year && cap === "over" && (
                 <div className="bh-cap bh-cap-over"><AlertTriangle size={14} /> Over cap by {fmt(computed.cap_overage)}</div>
               )}
-              {cap === "none" && <div className="bh-cap bh-cap-none">No sponsor cap set</div>}
+              {!computed?.multi_year && cap === "none" && <div className="bh-cap bh-cap-none">No sponsor cap set</div>}
 
               {computed?.warnings?.length > 0 && (
                 <ul className="bh-warnings">
@@ -266,6 +325,9 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                 <button className="bh-btn" onClick={draft} disabled={justifying}>
                   <FileText size={14} /> {justifying ? "Drafting…" : "Draft justification"}
                 </button>
+                <button className="bh-btn" onClick={downloadCsv} title="Download the budget as a CSV (opens in Excel/Sheets).">
+                  <Download size={14} /> Export CSV
+                </button>
               </div>
               {savedMsg && <div className="bh-saved">{savedMsg}</div>}
             </aside>
@@ -279,10 +341,53 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
               <button onClick={() => navigator.clipboard?.writeText(justification)}>Copy</button>
             </div>
             <textarea readOnly value={justification} rows={10} />
+            {perLine.length > 0 && (
+              <div className="bh-perline">
+                <div className="bh-perline-head">Line-by-line</div>
+                <ul>
+                  {perLine.map((l, i) => (
+                    <li key={i}><b>{l.line}</b> — {l.text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>
     </div>,
     document.body
+  );
+}
+
+// Small effort %% <-> person-months converter (academic 9-mo, summer 3-mo,
+// calendar 12-mo). UI-only — does not feed the budget math.
+function EffortHelper() {
+  const [open, setOpen] = useState(false);
+  const [pct, setPct] = useState("");
+  const months = (base) => {
+    const p = Number(pct);
+    if (!p || p < 0) return "—";
+    return (base * p / 100).toFixed(2);
+  };
+  return (
+    <div className="bh-effort">
+      <button type="button" className="bh-effort-toggle" onClick={() => setOpen((o) => !o)}>
+        <HelpCircle size={12} /> {open ? "Hide" : "Effort ↔ months helper"}
+      </button>
+      {open && (
+        <div className="bh-effort-body">
+          <label className="bh-field"><span>% effort</span>
+            <input type="number" min="0" max="100" value={pct}
+              onChange={(e) => setPct(e.target.value)} placeholder="e.g. 25" />
+          </label>
+          <div className="bh-effort-out">
+            <span>Academic (9 mo): <b>{months(9)}</b></span>
+            <span>Summer (3 mo): <b>{months(3)}</b></span>
+            <span>Calendar (12 mo): <b>{months(12)}</b></span>
+          </div>
+          <small>person-months = appointment months × % effort</small>
+        </div>
+      )}
+    </div>
   );
 }

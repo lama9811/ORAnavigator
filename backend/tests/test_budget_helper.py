@@ -269,3 +269,56 @@ def test_compute_output_keys_unchanged_plus_new():
     assert r["warnings"] == []          # clean inputs -> no warnings, as before
     assert "advisories" in r and "trim_suggestions" in r
     assert r["total"] == 161_556.0      # math identical to the existing worked example
+
+
+# ---------------------------------------------------------------------------
+# Budget Helper v2: multi-year (backward-compatible), CSV export, per-line.
+# ---------------------------------------------------------------------------
+from services.budget_helper import (
+    compute_budget as _cb, budget_to_csv, per_line_justifications,
+)
+
+
+def test_single_year_unchanged_and_no_multi_year_key():
+    base = {"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}]}
+    r = _cb(base)
+    assert "multi_year" not in r                 # single-year shape is untouched
+    assert r["total"] == 218_680.0               # (100k + 42k fringe) * 1.54
+    # project_years=1 behaves identically to omitting it.
+    assert _cb({**base, "project_years": 1})["total"] == r["total"]
+
+
+def test_multi_year_projection_and_cumulative():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}],
+             "project_years": 3, "escalation_pct": 0})
+    my = r["multi_year"]
+    assert my["project_years"] == 3 and len(my["years"]) == 3
+    # No escalation -> every year equal; cumulative = 3x year 1.
+    assert my["years"][0]["total"] == 218_680.0
+    assert my["cumulative"]["total"] == round(218_680.0 * 3, 2)
+
+
+def test_multi_year_escalation_raises_later_years():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}],
+             "project_years": 2, "escalation_pct": 10})
+    yrs = r["multi_year"]["years"]
+    assert yrs[1]["total"] > yrs[0]["total"]     # year 2 escalated
+
+
+def test_multi_year_cap_checks_cumulative():
+    r = _cb({"supplies": 100_000, "project_years": 2, "cap": 150_000})  # ~308k cumulative
+    assert r["multi_year"]["cap_status"] == "over"
+
+
+def test_per_line_justifications():
+    b = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 50, "fringe": "faculty_ay"}],
+             "equipment": 5_000})
+    lines = per_line_justifications(b)
+    assert any(l["line"] == "Dr. X" for l in lines)
+    assert any(l["line"] == "Equipment" and l["amount"] == 5_000 for l in lines)
+
+
+def test_budget_to_csv_has_totals():
+    b = _cb({"supplies": 10_000})
+    csv_text = budget_to_csv(b)
+    assert "TOTAL PROJECT COST" in csv_text and "Category" in csv_text
