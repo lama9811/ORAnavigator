@@ -268,6 +268,50 @@ def test_create_from_solicitation_seeds_sponsor_tasks_plus_extras(db):
     assert "Research.gov" in sub.notes
 
 
+def test_create_from_solicitation_surfaces_all_deadlines_in_notes(db):
+    """For a multi-category solicitation, the `deadline` field carries the
+    earliest date, but EVERY category deadline is surfaced in the notes."""
+    extracted = {
+        "sponsor": "NSF",
+        "program_id": "NSF 26-509",
+        "program_name": "Integrated Data Systems & Services",
+        "deadline": "2026-07-28",
+        "deadline_details": ("Category II: July 28, 2026; "
+                             "Category I & III: July 27, 2027"),
+        "page_limits": {},
+        "required_attachments": [],
+        "eligibility": "US institutions",
+        "budget_cap": 500000,
+        "submission_portal": "Research.gov",
+        "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    # Earliest date drives the actual deadline...
+    assert sub.deadline.year == 2026 and sub.deadline.month == 7
+    # ...but the full breakdown is in the notes for the human.
+    assert sub.notes is not None
+    assert "Deadlines:" in sub.notes
+    assert "Category II: July 28, 2026" in sub.notes
+    assert "Category I & III: July 27, 2027" in sub.notes
+
+
+def test_create_from_solicitation_omits_deadlines_line_when_single(db):
+    """A single-deadline solicitation (deadline_details null) gets no
+    'Deadlines:' notes line."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 23-1", "program_name": "X",
+        "deadline": "2026-06-12", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": None, "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    assert "Deadlines:" not in (sub.notes or "")
+
+
 def test_create_from_solicitation_falls_back_when_minimal(db):
     """An extractor result with very little data still produces a valid
     submission -- the user can edit later. Title falls back gracefully."""
