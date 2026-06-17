@@ -172,7 +172,93 @@ _GENERIC_ORDER = ["abstract", "narrative", "data_management_plan"]
 def available_sections(sponsor: Optional[str]) -> list[dict]:
     """The sections offered for a sponsor, as [{key, label}] in display order."""
     keys = _SPONSOR_ORDER.get((sponsor or "").upper(), _GENERIC_ORDER)
-    return [{"key": k, "label": SECTIONS[k]["label"]} for k in keys]
+    out = []
+    for k in keys:
+        tmin, tmax = WORD_TARGETS.get(k, (None, None))
+        out.append({"key": k, "label": SECTIONS[k]["label"],
+                    "target_min": tmin, "target_max": tmax})
+    return out
+
+
+# Numeric word targets for the live length meter (min, max). None = open-ended
+# (page-limited sections vary by solicitation, so we don't guess a word cap).
+WORD_TARGETS = {
+    "project_summary": (200, 500),
+    "project_description": (None, None),
+    "broader_impacts": (250, 700),
+    "specific_aims": (350, 650),       # ~1 page
+    "research_strategy": (None, None),
+    "data_management_plan": (None, 1000),   # ~2 pages
+    "abstract": (150, 300),
+    "narrative": (None, None),
+}
+
+
+def _targets(section_key: str):
+    return WORD_TARGETS.get(section_key, (None, None))
+
+
+# ── Clarity check (deterministic, no AI) ───────────────────────────────────
+import re as _re
+
+_PASSIVE_RE = _re.compile(r"\b(?:is|are|was|were|be|been|being)\s+\w+ed\b", _re.IGNORECASE)
+_ACRONYM_RE = _re.compile(r"\b[A-Z]{2,6}s?\b")
+_COMMON_ACRONYMS = {
+    "PI", "PIS", "NSF", "NIH", "DOD", "DOE", "NASA", "USDA", "EPA", "USA", "US",
+    "DNA", "RNA", "AI", "ML", "PHD", "USA", "FAQ", "OK", "DMP", "RCR", "IRB",
+    "IACUC", "COI", "STEM", "K12", "K", "PD", "CO", "MSU",
+}
+_VAGUE_WORDS = ["very", "really", "clearly", "obviously", "a number of",
+                "various", "several", "some", "many", "significantly", "novel"]
+
+
+def _sentences(text: str):
+    return [s.strip() for s in _re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+
+
+def clarity_check(text: str) -> list[dict]:
+    """Deterministic writing-clarity flags (no AI). Returns a list of
+    {type, severity, message}. Empty list = nothing flagged."""
+    text = (text or "").strip()
+    out: list[dict] = []
+    if not text:
+        return out
+
+    # Long sentences (hard for reviewers to parse).
+    long_sents = [s for s in _sentences(text) if len(s.split()) > 40]
+    if long_sents:
+        out.append({"type": "long_sentences", "severity": "warn",
+                    "message": f"{len(long_sents)} sentence(s) run over 40 words — split them so reviewers can follow."})
+
+    # Passive voice (overuse buries who does what).
+    passive = len(_PASSIVE_RE.findall(text))
+    if passive >= 4:
+        out.append({"type": "passive_voice", "severity": "info",
+                    "message": f"{passive} likely passive-voice phrases — prefer active voice ('we measured', not 'was measured')."})
+
+    # Acronyms used before being defined as 'Term (ACRONYM)'.
+    undefined = []
+    for m in _ACRONYM_RE.finditer(text):
+        ac = m.group(0).rstrip("s").upper()
+        if ac in _COMMON_ACRONYMS or len(ac) < 2:
+            continue
+        if f"({m.group(0)})" in text or f"({ac})" in text.upper():
+            continue
+        undefined.append(ac)
+    undefined = sorted(set(undefined))
+    if undefined:
+        out.append({"type": "acronyms", "severity": "warn",
+                    "message": "Acronyms used without being spelled out first: "
+                               + ", ".join(undefined[:8]) + ". Define each on first use."})
+
+    # Vague / weasel words.
+    low = text.lower()
+    found_vague = [w for w in _VAGUE_WORDS if _re.search(r"\b" + _re.escape(w) + r"\b", low)]
+    if len(found_vague) >= 3:
+        out.append({"type": "vague", "severity": "info",
+                    "message": "Vague words weaken claims: " + ", ".join(found_vague[:6])
+                               + ". Be specific (numbers, named methods)."})
+    return out
 
 
 def _context_line(context: Optional[dict]) -> str:
@@ -185,7 +271,28 @@ def _context_line(context: Optional[dict]) -> str:
     pl = context.get("page_limits") or {}
     if pl:
         bits.append("page limits " + ", ".join(f"{k}: {v}p" for k, v in pl.items()))
+    ra = context.get("required_attachments") or []
+    if ra:
+        bits.append("required attachments: " + ", ".join(str(a) for a in ra[:8]))
+    elig = (context.get("eligibility") or "").strip()
+    if elig:
+        bits.append(f"eligibility: {elig[:200]}")
     return "; ".join(bits)
+
+
+def _solicitation_constraints(context: Optional[dict]) -> dict:
+    """The solicitation facts worth showing next to the section (for the
+    'match THIS solicitation' panel). Empty values omitted."""
+    if not context:
+        return {}
+    out = {}
+    if context.get("page_limits"):
+        out["page_limits"] = context["page_limits"]
+    if context.get("required_attachments"):
+        out["required_attachments"] = context["required_attachments"]
+    if (context.get("eligibility") or "").strip():
+        out["eligibility"] = context["eligibility"].strip()
+    return out
 
 
 # ── OUTLINE ────────────────────────────────────────────────────────────────
@@ -198,6 +305,7 @@ def outline_section(sponsor: Optional[str], section_key: str,
     if not sec:
         return None
     outline = [{"heading": mh["item"], "guidance": ""} for mh in sec["must_haves"]]
+    tmin, tmax = _targets(section_key)
     result = {
         "section": section_key,
         "label": sec["label"],
@@ -207,6 +315,8 @@ def outline_section(sponsor: Optional[str], section_key: str,
         "outline": outline,
         "pitfalls": list(sec["pitfalls"]),
         "target_words": sec["target_words"],
+        "target_min": tmin,
+        "target_max": tmax,
         "kb_hint": sec["kb_hint"],
     }
     topic = (topic or "").strip()
@@ -305,15 +415,28 @@ def review_section(sponsor: Optional[str], section_key: str, draft_text: str,
     if not sec:
         return None
     draft_text = (draft_text or "").strip()
+    tmin, tmax = _targets(section_key)
     base = {
         "section": section_key,
         "label": sec["label"],
         "mode": "review",
         "target_words": sec["target_words"],
+        "target_min": tmin,
+        "target_max": tmax,
+        "solicitation_constraints": _solicitation_constraints(context),
     }
     if not draft_text:
         return {**base, "ai": False, "summary": "Paste your draft of this section to get feedback.",
-                "checklist": [], "suggestions": [], "word_count": 0}
+                "checklist": [], "suggestions": [], "word_count": 0, "clarity": [], "length_status": "none"}
+
+    words = len(draft_text.split())
+    if tmax and words > tmax * 1.1:
+        length_status = "long"
+    elif tmin and words < tmin * 0.5:
+        length_status = "short"
+    else:
+        length_status = "ok"
+    extra = {"clarity": clarity_check(draft_text), "length_status": length_status}
 
     ctx = _context_line(context)
     expected = [mh["item"] for mh in sec["must_haves"]]
@@ -331,7 +454,7 @@ def review_section(sponsor: Optional[str], section_key: str, draft_text: str,
     ai = gemini_client.generate_json(prompt, temperature=0.2, max_output_tokens=1400,
                                      system_instruction=_REVIEW_SYSTEM)
     if not ai or not isinstance(ai.get("checklist"), list):
-        return {**base, **_keyword_review(sec, draft_text)}
+        return {**base, **_keyword_review(sec, draft_text), **extra}
 
     checklist = _verify_evidence(ai["checklist"], draft_text)
     suggestions = [str(s) for s in (ai.get("suggestions") or []) if str(s).strip()][:6]
@@ -341,5 +464,6 @@ def review_section(sponsor: Optional[str], section_key: str, draft_text: str,
         "summary": str(ai.get("summary", "")).strip() or "Feedback below.",
         "checklist": checklist,
         "suggestions": suggestions,
-        "word_count": len(draft_text.split()),
+        "word_count": words,
+        **extra,
     }

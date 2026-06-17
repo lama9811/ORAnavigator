@@ -220,6 +220,18 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add compliance_json column: {e}")
 
+        # 5d. Add submissions.sections_json column if missing (Section Drafting Coach).
+        try:
+            conn.execute(text("SELECT sections_json FROM submissions LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'sections_json' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN sections_json MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'sections_json' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add sections_json column: {e}")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -3726,6 +3738,7 @@ async def section_coach(
 
     from services import section_coach as _sc
     context = _proposals_service.reconstruct_solicitation_context(sub)
+    context["eligibility"] = _eligibility_text_from_notes(sub.notes)   # 'match THIS solicitation'
     if payload.mode == "review":
         result = _sc.review_section(sub.sponsor, payload.section_key, payload.draft_text, context)
     else:
@@ -3733,6 +3746,66 @@ async def section_coach(
     if result is None:
         raise HTTPException(400, "Unknown proposal section.")
     return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
+
+
+@app.get("/api/me/submissions/{submission_id}/sections/drafts")
+async def get_section_drafts(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The PI's saved per-section draft text for this submission."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    raw = getattr(sub, "sections_json", None)
+    drafts = {}
+    if raw:
+        try:
+            drafts = json.loads(raw)
+        except (ValueError, TypeError):
+            drafts = {}
+    return {"drafts": drafts if isinstance(drafts, dict) else {}}
+
+
+class SectionDraftRequest(BaseModel):
+    section_key: str
+    text: str = ""
+
+
+@app.put("/api/me/submissions/{submission_id}/sections/drafts")
+async def save_section_draft(
+    submission_id: int,
+    payload: SectionDraftRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save (or clear) the PI's draft text for one section. Coaching only -- this
+    is the PI's own writing; we store it so they can come back to it."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    raw = getattr(sub, "sections_json", None)
+    drafts = {}
+    if raw:
+        try:
+            drafts = json.loads(raw)
+        except (ValueError, TypeError):
+            drafts = {}
+    if not isinstance(drafts, dict):
+        drafts = {}
+    text = (payload.text or "").strip()
+    if text:
+        drafts[payload.section_key] = text
+    else:
+        drafts.pop(payload.section_key, None)   # empty -> clear
+    sub.sections_json = json.dumps(drafts)
+    db.commit()
+    return {"drafts": drafts}
 
 
 # ----------------------------------------------------------------------------
