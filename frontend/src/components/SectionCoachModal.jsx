@@ -26,23 +26,48 @@ export default function SectionCoachModal({ submission, onClose }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [drafts, setDrafts] = useState({});      // saved per-section drafts
+  const [savedMsg, setSavedMsg] = useState("");
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/sections`,
-          { headers: authHeaders() });
-        const data = r.ok ? await r.json() : { sections: [] };
+        const [rS, rD] = await Promise.all([
+          fetch(`${API_BASE}/api/me/submissions/${submission.id}/sections`, { headers: authHeaders() }),
+          fetch(`${API_BASE}/api/me/submissions/${submission.id}/sections/drafts`, { headers: authHeaders() }),
+        ]);
+        const data = rS.ok ? await rS.json() : { sections: [] };
+        const dd = rD.ok ? await rD.json() : { drafts: {} };
         if (!alive) return;
         setSections(data.sections || []);
-        setSectionKey(data.sections?.[0]?.key || "");
+        const first = data.sections?.[0]?.key || "";
+        setSectionKey(first);
+        setDrafts(dd.drafts || {});
+        if (first && dd.drafts?.[first]) setDraft(dd.drafts[first]);
       } finally {
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
   }, [submission.id]);
+
+  const curSection = sections.find((s) => s.key === sectionKey) || {};
+  const wordCount = draft.trim() ? draft.trim().split(/\s+/).length : 0;
+
+  const saveDraft = async () => {
+    setSavedMsg("");
+    try {
+      const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/sections/drafts`, {
+        method: "PUT", headers: authHeaders(),
+        body: JSON.stringify({ section_key: sectionKey, text: draft }),
+      });
+      if (r.ok) {
+        setDrafts((await r.json()).drafts || {});
+        setSavedMsg("Draft saved.");
+      }
+    } catch { /* ignore */ }
+  };
 
   const run = async () => {
     if (!sectionKey) return;
@@ -57,7 +82,10 @@ export default function SectionCoachModal({ submission, onClose }) {
   };
 
   // Re-run is explicit (button); switching section/mode clears the old result.
-  const pickSection = (k) => { setSectionKey(k); setResult(null); };
+  const pickSection = (k) => {
+    setSectionKey(k); setResult(null); setSavedMsg("");
+    setDraft(drafts[k] || "");   // restore the saved draft for this section
+  };
   const pickMode = (m) => { setMode(m); setResult(null); };
 
   return createPortal(
@@ -106,15 +134,22 @@ export default function SectionCoachModal({ submission, onClose }) {
 
             {mode === "review" && (
               <label className="sc-topic">
-                <span>Paste your draft of this section</span>
-                <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={8}
-                  placeholder="Paste the text you've written for this section…" />
+                <span>Your draft of this section</span>
+                <textarea value={draft} onChange={(e) => { setDraft(e.target.value); setSavedMsg(""); }} rows={8}
+                  placeholder="Paste or write the text for this section…" />
+                <LengthMeter words={wordCount} min={curSection.target_min} max={curSection.target_max} />
               </label>
             )}
 
-            <button className="sc-run" onClick={run} disabled={busy || (mode === "review" && !draft.trim())}>
-              {busy ? "Thinking…" : mode === "outline" ? "Get outline" : "Get feedback"}
-            </button>
+            <div className="sc-run-row">
+              <button className="sc-run" onClick={run} disabled={busy || (mode === "review" && !draft.trim())}>
+                {busy ? "Thinking…" : mode === "outline" ? "Get outline" : "Get feedback"}
+              </button>
+              {mode === "review" && (
+                <button className="sc-save" onClick={saveDraft} disabled={!draft.trim()}>Save draft</button>
+              )}
+              {savedMsg && <span className="sc-saved">{savedMsg}</span>}
+            </div>
 
             {result && result.mode === "outline" && <OutlineView r={result} />}
             {result && result.mode === "review" && <ReviewView r={result} />}
@@ -123,6 +158,39 @@ export default function SectionCoachModal({ submission, onClose }) {
       </div>
     </div>,
     document.body
+  );
+}
+
+function LengthMeter({ words, min, max }) {
+  if (!min && !max) {
+    return <div className="sc-meter sc-meter-open">{words} words · target: per the solicitation's page limit</div>;
+  }
+  const over = max && words > max * 1.1;
+  const short = min && words < min * 0.5 && words > 0;
+  const cls = over ? "sc-meter-over" : short ? "sc-meter-short" : "sc-meter-ok";
+  const range = min && max ? `${min}–${max}` : max ? `≤ ${max}` : `≥ ${min}`;
+  const pct = max ? Math.min(100, Math.round((words / max) * 100)) : 0;
+  return (
+    <div className={`sc-meter ${cls}`}>
+      <div className="sc-meter-bar"><div className="sc-meter-fill" style={{ width: `${pct}%` }} /></div>
+      <span>{words} words · target {range}{over ? " · too long" : short ? " · quite short" : ""}</span>
+    </div>
+  );
+}
+
+function Constraints({ c }) {
+  if (!c || (!c.required_attachments && !c.eligibility && !c.page_limits)) return null;
+  return (
+    <div className="sc-constraints">
+      <div className="sc-block-head"><ListChecks size={13} /> What this solicitation requires</div>
+      {c.eligibility && <div className="sc-con-line"><b>Eligibility:</b> {c.eligibility}</div>}
+      {c.page_limits && Object.keys(c.page_limits).length > 0 && (
+        <div className="sc-con-line"><b>Page limits:</b> {Object.entries(c.page_limits).map(([k, v]) => `${k}: ${v}p`).join(", ")}</div>
+      )}
+      {c.required_attachments?.length > 0 && (
+        <div className="sc-con-line"><b>Required attachments:</b> {c.required_attachments.join("; ")}</div>
+      )}
+    </div>
   );
 }
 
@@ -153,9 +221,20 @@ function OutlineView({ r }) {
 function ReviewView({ r }) {
   return (
     <div className="sc-result">
+      <Constraints c={r.solicitation_constraints} />
       <div className="sc-summary">{r.summary}</div>
       {typeof r.word_count === "number" && r.word_count > 0 && (
-        <div className="sc-meta">~{r.word_count} words · target: {r.target_words}</div>
+        <div className="sc-meta">
+          ~{r.word_count} words · target: {r.target_words}
+          {r.length_status === "long" && <span className="sc-len-bad"> · too long</span>}
+          {r.length_status === "short" && <span className="sc-len-bad"> · quite short</span>}
+        </div>
+      )}
+      {r.clarity?.length > 0 && (
+        <div className="sc-clarity">
+          <div className="sc-block-head"><MessageSquare size={13} /> Clarity</div>
+          <ul>{r.clarity.map((c, i) => <li key={i}>{c.message}</li>)}</ul>
+        </div>
       )}
       <ul className="sc-checklist">
         {r.checklist.map((c, i) => {

@@ -67,6 +67,56 @@ def test_review_unknown_section_is_none():
 
 # ── anti-hallucination: drop 'covered' claims not quotable in the draft ─────
 
+def test_outline_includes_word_targets():
+    o = sc.outline_section("NSF", "project_summary")
+    assert o["target_min"] == 200 and o["target_max"] == 500
+
+
+def test_review_includes_targets_length_and_clarity():
+    draft = "Overview of the work. Intellectual Merit: it advances theory. Broader Impacts: trains students."
+    r = sc.review_section("NSF", "project_summary", draft)
+    assert "target_min" in r and "length_status" in r and "clarity" in r
+    assert r["length_status"] in ("ok", "short", "long")
+
+
+def test_review_flags_too_long():
+    long_draft = "word " * 700  # well over project_summary's 500 max
+    r = sc.review_section("NSF", "project_summary", long_draft)
+    assert r["length_status"] == "long"
+
+
+def test_review_surfaces_solicitation_constraints():
+    ctx = {"required_attachments": ["Data Management Plan"], "eligibility": "Tenure-track only",
+           "page_limits": {"project_description": 15}}
+    r = sc.review_section("NSF", "project_description", "Some draft text here.", ctx)
+    sc_block = r["solicitation_constraints"]
+    assert sc_block.get("required_attachments") == ["Data Management Plan"]
+    assert sc_block.get("eligibility") == "Tenure-track only"
+
+
+# ── clarity check (deterministic) ──────────────────────────────────────────
+
+def test_clarity_flags_long_sentence():
+    text = "This " + "very long ".join(["clause"] * 45) + " end."
+    issues = [i["type"] for i in sc.clarity_check(text)]
+    assert "long_sentences" in issues
+
+
+def test_clarity_flags_undefined_acronym():
+    issues = sc.clarity_check("We used the QWERTY method to study things.")
+    assert any(i["type"] == "acronyms" for i in issues)
+
+
+def test_clarity_ignores_defined_acronym_and_common_ones():
+    # CRISPR is defined inline; NSF/PI are common -> no acronym flag.
+    issues = sc.clarity_check("The NSF PI used Clustered Regularly Interspaced (CRISPR) tools.")
+    assert not any(i["type"] == "acronyms" for i in issues)
+
+
+def test_clarity_clean_text_is_empty():
+    assert sc.clarity_check("We measured growth. Results were clear. The team will share data.") == []
+
+
 def test_verify_evidence_demotes_unquotable_covered_claims():
     checklist = [
         {"item": "X", "status": "covered", "evidence": "phrase not in the draft", "note": ""},
