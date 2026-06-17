@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, Trash2, Calculator, FileText, Save, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, Plus, Trash2, Calculator, FileText, Save, AlertTriangle, CheckCircle2, Lightbulb, Info, HelpCircle } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./BudgetHelperModal.css";
 
@@ -121,9 +121,12 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
   };
 
   const cap = computed?.cap_status;
-  const numField = (label, key, hint) => (
+  const guide = rates || {};
+  const Tip = ({ text }) =>
+    text ? <span className="bh-tip" title={text} aria-label={text}><HelpCircle size={12} /></span> : null;
+  const numField = (label, key, hint, tipKey) => (
     <label className="bh-field">
-      <span>{label}{hint && <em className="bh-hint"> {hint}</em>}</span>
+      <span>{label}{hint && <em className="bh-hint"> {hint}</em>}<Tip text={guide.category_guidance?.[tipKey]} /></span>
       <input type="number" min="0" inputMode="decimal" value={inputs[key]}
         onChange={(e) => set({ [key]: e.target.value })} placeholder="$0" />
     </label>
@@ -144,7 +147,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           <div className="bh-body">
             {/* LEFT — line items */}
             <div className="bh-form">
-              <h4>People &amp; effort</h4>
+              <h4>People &amp; effort <Tip text={guide.fringe_guidance} /></h4>
               {inputs.people.map((p, i) => (
                 <div className="bh-person" key={i}>
                   <input className="bh-name" placeholder="Name / role" value={p.name}
@@ -165,11 +168,11 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
 
               <h4>Other direct costs</h4>
               <div className="bh-grid">
-                {numField("Equipment", "equipment", "(F&A-exempt)")}
-                {numField("Travel", "travel")}
-                {numField("Materials & supplies", "supplies")}
-                {numField("Participant support", "participant_support", "(F&A-exempt)")}
-                {numField("Other", "other")}
+                {numField("Equipment", "equipment", "(F&A-exempt)", "equipment")}
+                {numField("Travel", "travel", null, "travel")}
+                {numField("Materials & supplies", "supplies", null, "supplies")}
+                {numField("Participant support", "participant_support", "(F&A-exempt)", "participant_support")}
+                {numField("Other", "other", null, "other")}
               </div>
 
               <h4>Subawards <em className="bh-hint">(only first $25k of each is F&amp;A-eligible)</em></h4>
@@ -190,7 +193,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                     <option value="fy_2024_2025">FY 2024–2025</option>
                   </select>
                 </label>
-                <label className="bh-field"><span>Rate type</span>
+                <label className="bh-field"><span>Rate type<Tip text={guide.fa_guidance} /></span>
                   <select value={inputs.fa_rate_key} onChange={(e) => set({ fa_rate_key: e.target.value })}>
                     {faOptions.map((o) => (
                       <option key={o.key} value={o.key}>{o.label} ({Math.round(o.rate * 100)}%)</option>
@@ -224,6 +227,36 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                 <ul className="bh-warnings">
                   {computed.warnings.map((w, i) => <li key={i}><AlertTriangle size={12} /> {w}</li>)}
                 </ul>
+              )}
+
+              {/* Coaching: things to double-check (advisory, never blocks) */}
+              {computed?.advisories?.length > 0 && (
+                <div className="bh-coach">
+                  <div className="bh-coach-head"><Info size={13} /> Things to double-check</div>
+                  <ul className="bh-coach-list">
+                    {computed.advisories.map((a, i) => (
+                      <li key={i} className={`bh-advisory bh-advisory-${a.severity}`}>
+                        <div className="bh-advisory-msg">{a.message}</div>
+                        {a.fix && <div className="bh-advisory-fix">{a.fix}</div>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Coaching: how to get under the cap (only when over) */}
+              {computed?.trim_suggestions?.length > 0 && (
+                <div className="bh-coach bh-coach-trim">
+                  <div className="bh-coach-head"><Lightbulb size={13} /> Ideas to get under the cap</div>
+                  <ul className="bh-coach-list">
+                    {computed.trim_suggestions.map((t, i) => (
+                      <li key={i} className="bh-trim">
+                        <div className="bh-trim-line"><b>{t.line}</b> — reduce by {fmt(t.reduce_by)}</div>
+                        <div className="bh-advisory-fix">{t.rationale}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
 
               <div className="bh-actions">
