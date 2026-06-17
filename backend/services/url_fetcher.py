@@ -26,6 +26,7 @@ and the extractor will return nothing, surfaced as a clear FetchError.
 import ipaddress
 import re
 import socket
+from typing import Optional
 from urllib.parse import urlparse, urljoin, urlunparse
 
 import requests
@@ -40,6 +41,14 @@ _USER_AGENT = (
     "Mozilla/5.0 (compatible; ORANavigatorBot/1.0; +https://ora.inavigator.ai) "
     "solicitation-importer"
 )
+# Some funder sites (e.g. NSF / Akamai) return 403/404 to requests from cloud
+# datacenter IPs even though the page is public in a browser. When a direct
+# fetch is blocked, we retry through a read-only reader service that fetches the
+# page from its own IP and returns clean text. Only PUBLIC user URLs reach it
+# (the SSRF guard runs first), and the reader host is a fixed constant.
+_READER_PREFIX = "https://r.jina.ai/"
+# HTTP statuses that look like a block / soft failure worth a reader retry.
+_BLOCKED_STATUSES = (403, 404, 406, 410, 429, 451, 500, 502, 503, 504)
 
 
 class FetchError(Exception):
@@ -178,9 +187,11 @@ def _looks_like_pdf(url: str, content_type: str, body: bytes) -> bool:
     return path.endswith(".pdf")
 
 
-def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
-    """Fetch ``url`` (following redirects, re-resolving + re-validating + re-pinning
-    on each hop) and return plain text. Raises FetchError on any failure."""
+def _fetch_direct(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
+    """Direct fetch: follow redirects (re-resolving + re-validating + re-pinning
+    each hop) and return plain text. Raises FetchError on failure; the upstream
+    HTTP status is preserved on the error so the caller can decide to retry via
+    the reader fallback."""
     current = url
     headers = {"User-Agent": _USER_AGENT, "Accept": "*/*"}
     resp = None
@@ -204,7 +215,7 @@ def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> st
         if resp.status_code >= 400:
             raise FetchError(
                 f"The site returned an error ({resp.status_code}) for that URL.",
-                502,
+                resp.status_code,
             )
 
         content_type = resp.headers.get("Content-Type", "")
@@ -236,3 +247,51 @@ def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> st
             422,
         )
     return text
+
+
+def _fetch_via_reader(url: str, max_bytes: int) -> Optional[str]:
+    """Fallback: fetch the page through a read-only reader proxy (fetches from
+    its own IP and returns clean text/markdown, including for PDF links and
+    JS-rendered pages). The user URL has ALREADY passed the SSRF guard; the
+    reader host is a fixed constant. Returns text, or None if it didn't help."""
+    try:
+        resp = requests.get(
+            _READER_PREFIX + url,
+            headers={"User-Agent": _USER_AGENT, "Accept": "text/plain, text/markdown, */*"},
+            timeout=_TIMEOUT, stream=True,
+        )
+    except requests.exceptions.RequestException:
+        return None
+    try:
+        if resp.status_code >= 400:
+            return None
+        try:
+            body = _read_capped(resp, max_bytes)
+        except FetchError:
+            return None
+    finally:
+        resp.close()
+    text = body.decode("utf-8", "replace")
+    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
+    return text or None
+
+
+def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
+    """Fetch a solicitation URL and return plain text for the extractor. Tries a
+    direct (IP-pinned, SSRF-guarded) fetch first; if the site blocks our server
+    (403/404/etc.) or returns no readable text, retries once through a read-only
+    reader proxy. Raises FetchError if both fail."""
+    # SSRF gate on the ORIGINAL user URL up front: only public http(s) hosts may
+    # be fetched, whether directly OR handed to the reader proxy.
+    parsed = _parse_http_url(url)
+    _resolve_public_ip(parsed.hostname)
+    try:
+        return _fetch_direct(url, max_bytes)
+    except FetchError as e:
+        retryable = e.status in _BLOCKED_STATUSES or "readable text" in e.message or "empty" in e.message
+        if not retryable:
+            raise
+        text = _fetch_via_reader(url, max_bytes)
+        if text:
+            return text
+        raise

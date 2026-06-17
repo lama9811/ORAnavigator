@@ -215,22 +215,48 @@ def test_size_cap_aborts(monkeypatch):
     assert ei.value.status == 413
 
 
-def test_http_error_status_is_surfaced(monkeypatch):
+def test_http_error_surfaces_when_reader_also_fails(monkeypatch):
     _map_dns(monkeypatch, {"funder.example": "93.184.216.34"})
     _patch_open(monkeypatch, [
         _FakeResp(404, headers={"Content-Type": "text/html"}, chunks=[b"nope"]),
     ])
+    monkeypatch.setattr(uf, "_fetch_via_reader", lambda url, mb: None)   # reader can't help either
     with pytest.raises(uf.FetchError) as ei:
         uf.fetch_solicitation_text("http://funder.example/missing")
-    assert ei.value.status == 502
+    assert ei.value.status == 404   # upstream status now preserved
 
 
-def test_empty_text_page_is_422(monkeypatch):
+def test_empty_text_page_is_422_when_reader_also_fails(monkeypatch):
     _map_dns(monkeypatch, {"funder.example": "93.184.216.34"})
     _patch_open(monkeypatch, [
         _FakeResp(200, headers={"Content-Type": "text/html"},
                   chunks=[b"<html><body></body></html>"]),
     ])
+    monkeypatch.setattr(uf, "_fetch_via_reader", lambda url, mb: None)
     with pytest.raises(uf.FetchError) as ei:
         uf.fetch_solicitation_text("http://funder.example/blank")
     assert ei.value.status == 422
+
+
+def test_reader_fallback_used_when_site_blocks_server(monkeypatch):
+    # NSF-style: direct fetch is blocked (404 from a cloud IP), but the reader
+    # proxy returns the real page text -> we succeed.
+    _map_dns(monkeypatch, {"nsf.example": "93.184.216.34"})
+    _patch_open(monkeypatch, [
+        _FakeResp(404, headers={"Content-Type": "text/html"}, chunks=[b"blocked"]),
+    ])
+    monkeypatch.setattr(uf, "_fetch_via_reader",
+                        lambda url, mb: "Full Proposal Deadline: October 15, 2026. Eligibility: ...")
+    text = uf.fetch_solicitation_text("http://nsf.example/solicitation")
+    assert "Eligibility" in text
+
+
+def test_reader_not_tried_for_private_url(monkeypatch):
+    # SSRF gate runs BEFORE any reader call -> internal URLs never reach the proxy.
+    _map_dns(monkeypatch, {"evil.example": "10.0.0.5"})
+    called = {"reader": False}
+    monkeypatch.setattr(uf, "_fetch_via_reader",
+                        lambda url, mb: called.__setitem__("reader", True) or "x")
+    with pytest.raises(uf.FetchError):
+        uf.fetch_solicitation_text("http://evil.example/x")
+    assert called["reader"] is False
