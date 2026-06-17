@@ -735,6 +735,43 @@ body.dark .proposal-progress-bar {
   text-decoration: underline;
 }
 
+/* Phase 4: per-task calendar link, how-to toggle, and guidance disclosure */
+.task-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.task-cal-link, .task-how-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: #1B3A6B;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.task-cal-link:hover, .task-how-toggle:hover { text-decoration: underline; }
+.task-how {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #f1f5f9;
+  border-left: 3px solid #1B3A6B;
+  border-radius: 6px;
+}
+.task-how-text { font-size: 0.82rem; color: #334155; line-height: 1.5; }
+.task-how-sample {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #475569;
+  font-style: italic;
+}
+.task-how-sample b { font-style: normal; color: #0B2545; }
+
 .calendar-export {
   display: inline-flex;
   align-items: center;
