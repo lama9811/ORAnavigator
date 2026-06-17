@@ -3191,12 +3191,13 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
     deterministic compute -- the AI is told to never change a number."""
     if not user:
         raise HTTPException(401, "Unauthorized")
-    from services.budget_helper import compute_budget, draft_justification
+    from services.budget_helper import compute_budget, draft_justification, per_line_justifications
     inputs = payload.get("inputs", payload) or {}
     budget = compute_budget(inputs)
     template = draft_justification(budget)
+    per_line = per_line_justifications(budget)   # deterministic, additive
     if not payload.get("use_ai", True):
-        return {"justification": template, "ai": False}
+        return {"justification": template, "ai": False, "per_line": per_line}
     try:
         from services import gemini_client
         prompt = (
@@ -3208,10 +3209,10 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
         )
         text_out = (gemini_client.generate_text(prompt, temperature=0.2, max_output_tokens=900) or "").strip()
         if text_out:
-            return {"justification": text_out, "ai": True, "template": template}
+            return {"justification": text_out, "ai": True, "template": template, "per_line": per_line}
     except Exception as e:
         print(f"[BUDGET] AI justification failed, using deterministic template: {e}")
-    return {"justification": template, "ai": False}
+    return {"justification": template, "ai": False, "per_line": per_line}
 
 
 @app.get("/api/me/submissions/{submission_id}/budget")
@@ -3257,6 +3258,35 @@ async def save_submission_budget(
     db.commit()
     db.refresh(sub)
     return {"inputs": inputs, "computed": computed}
+
+
+@app.get("/api/me/submissions/{submission_id}/budget.csv")
+async def export_submission_budget_csv(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download the saved budget as CSV (opens in Excel / Sheets)."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from fastapi.responses import Response
+    from services.budget_helper import compute_budget, budget_to_csv
+    raw = getattr(sub, "budget_json", None)
+    inputs = {}
+    if raw:
+        try:
+            inputs = json.loads(raw)
+        except (ValueError, TypeError):
+            inputs = {}
+    csv_text = budget_to_csv(compute_budget(inputs))
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="budget-{submission_id}.csv"'},
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────

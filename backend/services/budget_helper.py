@@ -106,6 +106,69 @@ def _effort(v, warnings):
 
 
 def compute_budget(inputs: dict) -> dict:
+    """Compute a grant budget. Single-year by default (unchanged); when
+    `project_years` > 1, project the Year-1 line items across the project with
+    `escalation_pct` applied to salaries and return per-year + cumulative totals
+    under a `multi_year` key. Single-year output is byte-for-byte unchanged so
+    every existing caller/test is unaffected."""
+    inputs = inputs or {}
+    try:
+        years = int(inputs.get("project_years") or 1)
+    except (TypeError, ValueError):
+        years = 1
+    if years <= 1:
+        return _compute_single(inputs)
+
+    try:
+        esc = float(inputs.get("escalation_pct") or 0) / 100.0
+    except (TypeError, ValueError):
+        esc = 0.0
+    years = min(years, 10)  # sanity cap
+
+    # Year 1 drives the familiar top-level fields (with NO cap at this level --
+    # the sponsor cap on a multi-year award is a PROJECT total, checked below).
+    base = _compute_single({**inputs, "cap": None, "project_years": None})
+
+    per_year, cum = [], {"direct_costs": 0.0, "fa_amount": 0.0, "total": 0.0}
+    for i in range(years):
+        people = []
+        for p in (inputs.get("people") or []):
+            p2 = dict(p or {})
+            try:
+                p2["base_salary"] = round(float(p.get("base_salary") or 0) * ((1.0 + esc) ** i), 2)
+            except (TypeError, ValueError):
+                pass
+            people.append(p2)
+        cy = _compute_single({**inputs, "people": people, "cap": None, "project_years": None})
+        per_year.append({"year": i + 1, "direct_costs": cy["direct_costs"],
+                         "fa_amount": cy["fa_amount"], "total": cy["total"]})
+        for k in cum:
+            cum[k] = round(cum[k] + cy[k], 2)
+
+    try:
+        cap = float(inputs.get("cap")) if inputs.get("cap") not in (None, "") else 0.0
+    except (TypeError, ValueError):
+        cap = 0.0
+    if not cap:
+        cap_status, cap_overage, cap_out = "none", 0.0, None
+    elif cum["total"] > cap:
+        cap_status, cap_overage, cap_out = "over", round(cum["total"] - cap, 2), cap
+    else:
+        cap_status, cap_overage, cap_out = "ok", 0.0, cap
+
+    base["multi_year"] = {
+        "project_years": years,
+        "escalation_pct": round(esc * 100, 2),
+        "years": per_year,
+        "cumulative": cum,
+        "cap": cap_out,
+        "cap_status": cap_status,
+        "cap_overage": cap_overage,
+    }
+    return base
+
+
+def _compute_single(inputs: dict) -> dict:
     """Compute a full grant-budget breakdown from raw line-item inputs.
 
     inputs (all optional):
@@ -283,6 +346,70 @@ def draft_justification(budget: dict) -> str:
         f"The total project cost is {_fmt(budget['total'])}."
     )
     return "\n".join(lines)
+
+
+def per_line_justifications(budget: dict) -> list[dict]:
+    """One short, deterministic narrative per budget line (numbers from the
+    computed budget, never invented). Returns [{line, amount, text}]."""
+    out: list[dict] = []
+    for p in budget.get("personnel") or []:
+        out.append({
+            "line": p["name"],
+            "amount": p["subtotal"],
+            "text": (f"{p['name']} is budgeted at {p['effort_pct']:.0f}% effort on a "
+                     f"{_fmt(p['base_salary'])} base ({_fmt(p['salary'])} salary), plus "
+                     f"{p['fringe_label']} fringe at {p['fringe_rate']*100:.0f}% "
+                     f"({_fmt(p['fringe'])}), for {_fmt(p['subtotal'])}."),
+        })
+    for key, label, why in [
+        ("equipment", "Equipment", "needed to carry out the proposed work"),
+        ("travel", "Travel", "for project-related travel (conferences, fieldwork, collaboration)"),
+        ("supplies", "Materials & Supplies", "consumables required for the project"),
+        ("participant_support", "Participant Support", "stipends/travel paid to participants (F&A-exempt)"),
+        ("other", "Other Direct Costs", "additional direct costs of the project"),
+    ]:
+        amt = budget.get(key) or 0
+        if amt:
+            out.append({"line": label, "amount": amt,
+                        "text": f"{label}: {_fmt(amt)} {why}."})
+    if budget.get("subawards_total"):
+        out.append({"line": "Subawards", "amount": budget["subawards_total"],
+                    "text": (f"Subawards total {_fmt(budget['subawards_total'])}; F&A applies only "
+                             f"to the first $25,000 of each.")})
+    return out
+
+
+def budget_to_csv(budget: dict) -> str:
+    """Render a computed budget as CSV (opens in Excel/Sheets). Deterministic."""
+    import csv
+    from io import StringIO
+    buf = StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Category", "Detail", "Amount (USD)"])
+    for p in budget.get("personnel") or []:
+        w.writerow(["Personnel", f"{p['name']} ({p['effort_pct']:.0f}% effort)", f"{p['salary']:.2f}"])
+        w.writerow(["Fringe", f"{p['name']} ({p['fringe_label']}, {p['fringe_rate']*100:.0f}%)", f"{p['fringe']:.2f}"])
+    for key, label in [("equipment", "Equipment"), ("travel", "Travel"),
+                       ("supplies", "Materials & Supplies"),
+                       ("participant_support", "Participant Support"), ("other", "Other")]:
+        if budget.get(key):
+            w.writerow([label, "", f"{budget[key]:.2f}"])
+    for i, s in enumerate(budget.get("subawards") or [], 1):
+        if s:
+            w.writerow(["Subaward", f"#{i}", f"{s:.2f}"])
+    w.writerow([])
+    w.writerow(["Total direct costs", "", f"{budget.get('direct_costs', 0):.2f}"])
+    w.writerow([f"F&A ({budget.get('fa_rate_label', '')}, {budget.get('fa_rate', 0)*100:.0f}%)",
+                f"on MTDC base {budget.get('mtdc_base', 0):.2f}", f"{budget.get('fa_amount', 0):.2f}"])
+    w.writerow(["TOTAL PROJECT COST", "", f"{budget.get('total', 0):.2f}"])
+    my = budget.get("multi_year")
+    if my:
+        w.writerow([])
+        w.writerow([f"Multi-year ({my['project_years']} yrs, {my['escalation_pct']:.0f}% escalation)", "", ""])
+        for yr in my["years"]:
+            w.writerow([f"Year {yr['year']}", "total", f"{yr['total']:.2f}"])
+        w.writerow(["Cumulative total", "", f"{my['cumulative']['total']:.2f}"])
+    return buf.getvalue()
 
 
 # ── Phase 1: Budget Coaching (advisory, deterministic) ─────────────────────

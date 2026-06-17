@@ -361,3 +361,20 @@
   vertical-align: middle;
 }
 .bh-tip:hover { color: #1B3A6B; }
+
+/* v2: multi-year projection (in dark summary), effort helper (light form),
+   per-line justification (light bottom) */
+.bh-multiyear { margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 10px; }
+.bh-multiyear-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; margin-bottom: 6px; }
+
+.bh-effort { margin-top: 16px; }
+.bh-effort-toggle { display: inline-flex; align-items: center; gap: 5px; background: none; border: none; padding: 0; color: #1B3A6B; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.bh-effort-toggle:hover { text-decoration: underline; }
+.bh-effort-body { margin-top: 8px; padding: 10px 12px; background: #f1f5f9; border-radius: 8px; }
+.bh-effort-out { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 0.8rem; color: #334155; }
+.bh-effort-body small { display: block; margin-top: 8px; color: #94a3b8; font-size: 0.72rem; }
+
+.bh-perline { margin-top: 12px; }
+.bh-perline-head { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px; }
+.bh-perline ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.bh-perline li { font-size: 0.82rem; color: #334155; line-height: 1.45; }
