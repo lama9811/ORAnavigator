@@ -24,8 +24,10 @@ and the extractor will return nothing, surfaced as a clear FetchError.
 """
 
 import ipaddress
+import os
 import re
 import socket
+import time
 from typing import Optional
 from urllib.parse import urlparse, urljoin, urlunparse
 
@@ -41,12 +43,30 @@ _USER_AGENT = (
     "Mozilla/5.0 (compatible; ORANavigatorBot/1.0; +https://ora.inavigator.ai) "
     "solicitation-importer"
 )
+# A realistic browser identity + headers. Many CDNs serve a normal page to a
+# browser-looking client but 404/403 an obvious bot. Used for both the direct
+# fetch and the reader request.
+_BROWSER_HEADERS = {
+    "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/pdf,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Upgrade-Insecure-Requests": "1",
+}
 # Some funder sites (e.g. NSF / Akamai) return 403/404 to requests from cloud
 # datacenter IPs even though the page is public in a browser. When a direct
 # fetch is blocked, we retry through a read-only reader service that fetches the
 # page from its own IP and returns clean text. Only PUBLIC user URLs reach it
 # (the SSRF guard runs first), and the reader host is a fixed constant.
 _READER_PREFIX = "https://r.jina.ai/"
+# Secondary, no-key proxy that returns the raw page (we convert it ourselves).
+_PROXY_PREFIX = "https://api.allorigins.win/raw?url="
+# Per-attempt sleeps for the reader (len() + 1 = number of attempts). The free
+# reader is IP rate-limited, so a couple of backed-off retries matter. Setting a
+# JINA_API_KEY env var (free tier at jina.ai) lifts the limit and makes it solid.
+_READER_BACKOFFS = (1.5, 4.0)
+# A real solicitation page is large; anything tiny is a throttle/placeholder.
+_READER_MIN_CHARS = 400
 # HTTP statuses that look like a block / soft failure worth a reader retry.
 _BLOCKED_STATUSES = (403, 404, 406, 410, 429, 451, 500, 502, 503, 504)
 
@@ -193,7 +213,7 @@ def _fetch_direct(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
     HTTP status is preserved on the error so the caller can decide to retry via
     the reader fallback."""
     current = url
-    headers = {"User-Agent": _USER_AGENT, "Accept": "*/*"}
+    headers = dict(_BROWSER_HEADERS)
     resp = None
     try:
         for _ in range(_MAX_REDIRECTS + 1):
@@ -253,27 +273,82 @@ def _fetch_via_reader(url: str, max_bytes: int) -> Optional[str]:
     """Fallback: fetch the page through a read-only reader proxy (fetches from
     its own IP and returns clean text/markdown, including for PDF links and
     JS-rendered pages). The user URL has ALREADY passed the SSRF guard; the
-    reader host is a fixed constant. Returns text, or None if it didn't help."""
+    reader host is a fixed constant.
+
+    Retries with backoff on rate-limit / thin responses (the free tier is IP
+    rate-limited). If JINA_API_KEY is set, it's sent as a Bearer token, which
+    raises the limit and makes this reliable from a server. Returns usable text,
+    or None if every attempt failed."""
+    headers = dict(_BROWSER_HEADERS)
+    headers["Accept"] = "text/plain, text/markdown, */*"
+    headers["X-Return-Format"] = "text"
+    key = (os.getenv("JINA_API_KEY") or "").strip()
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
+    for attempt in range(len(_READER_BACKOFFS) + 1):
+        if attempt:
+            time.sleep(_READER_BACKOFFS[attempt - 1])
+        try:
+            resp = requests.get(_READER_PREFIX + url, headers=headers,
+                                timeout=_TIMEOUT, stream=True)
+        except requests.exceptions.RequestException:
+            continue
+        try:
+            status = resp.status_code
+            if status == 429 or status >= 500:
+                continue                      # transient -> back off and retry
+            if status >= 400:
+                return None                   # hard failure, won't improve
+            try:
+                body = _read_capped(resp, max_bytes)
+            except FetchError:
+                return None
+        finally:
+            resp.close()
+        text = body.decode("utf-8", "replace")
+        text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
+        if len(text) >= _READER_MIN_CHARS:    # got real content
+            print(f"   [URL-READER] reader returned {len(text)} chars (attempt {attempt + 1})")
+            return text
+        # too thin (throttle/placeholder) -> retry
+    print("   [URL-READER] reader produced no usable content after retries")
+    return None
+
+
+def _fetch_via_proxy(url: str, max_bytes: int) -> Optional[str]:
+    """Secondary no-key proxy (allorigins) that returns the RAW page; we convert
+    HTML->text or PDF->text ourselves. Backup for when the reader is throttled."""
+    from urllib.parse import quote
     try:
-        resp = requests.get(
-            _READER_PREFIX + url,
-            headers={"User-Agent": _USER_AGENT, "Accept": "text/plain, text/markdown, */*"},
-            timeout=_TIMEOUT, stream=True,
-        )
+        resp = requests.get(_PROXY_PREFIX + quote(url, safe=""),
+                            headers=_BROWSER_HEADERS, timeout=_TIMEOUT, stream=True)
     except requests.exceptions.RequestException:
         return None
     try:
         if resp.status_code >= 400:
             return None
+        content_type = resp.headers.get("Content-Type", "")
         try:
             body = _read_capped(resp, max_bytes)
         except FetchError:
             return None
     finally:
         resp.close()
-    text = body.decode("utf-8", "replace")
-    text = re.sub(r"\n\s*\n\s*\n+", "\n\n", text).strip()
-    return text or None
+    if not body:
+        return None
+    try:
+        if _looks_like_pdf(url, content_type, body):
+            from services import solicitation_extractor as _sx
+            text = _sx.extract_text_from_pdf(body)
+        else:
+            text = _html_to_text(body)
+    except FetchError:
+        return None
+    if text and len(text.strip()) >= _READER_MIN_CHARS:
+        print(f"   [URL-READER] proxy returned {len(text)} chars")
+        return text.strip()
+    return None
 
 
 def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
@@ -291,7 +366,10 @@ def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> st
         retryable = e.status in _BLOCKED_STATUSES or "readable text" in e.message or "empty" in e.message
         if not retryable:
             raise
-        text = _fetch_via_reader(url, max_bytes)
-        if text:
-            return text
+        # Site blocks our server IP -> try read-only proxies that fetch from
+        # their own IPs (Jina first; allorigins as a no-key backup).
+        for strategy in (_fetch_via_reader, _fetch_via_proxy):
+            text = strategy(url, max_bytes)
+            if text:
+                return text
         raise
