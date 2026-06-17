@@ -3650,6 +3650,59 @@ async def critique_draft(
 
 
 # ----------------------------------------------------------------------------
+# Section Drafting Coach (Phase 2): outline a proposal section, or give advisory
+# feedback on the PI's own draft of it. Coaching only -- never writes the prose.
+
+@app.get("/api/me/submissions/{submission_id}/sections")
+async def list_coach_sections(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The proposal sections the coach can help with, for this submission's sponsor."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services import section_coach as _sc
+    return {"sponsor": sub.sponsor, "sections": _sc.available_sections(sub.sponsor)}
+
+
+class SectionCoachRequest(BaseModel):
+    section_key: str
+    mode: str = "outline"          # "outline" | "review"
+    topic: str = ""                # optional: tailors the outline tips
+    draft_text: str = ""           # required for "review"
+
+
+@app.post("/api/me/submissions/{submission_id}/section-coach")
+async def section_coach(
+    submission_id: int,
+    payload: SectionCoachRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Outline a section or review the PI's draft of it. Uses the submission's
+    sponsor + reconstructed solicitation context. Advisory; never authoritative."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    from services import section_coach as _sc
+    context = _proposals_service.reconstruct_solicitation_context(sub)
+    if payload.mode == "review":
+        result = _sc.review_section(sub.sponsor, payload.section_key, payload.draft_text, context)
+    else:
+        result = _sc.outline_section(sub.sponsor, payload.section_key, payload.topic, context)
+    if result is None:
+        raise HTTPException(400, "Unknown proposal section.")
+    return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
+
+
+# ----------------------------------------------------------------------------
 # Admins can see (but NOT edit) any user's memory state. Per GDPR, only the
 # user themselves can modify or delete their memories. This endpoint exists
 # for support and debugging.

@@ -1,0 +1,183 @@
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { getApiBase } from "../lib/apiBase";
+import "./SectionCoachModal.css";
+
+const API_BASE = getApiBase();
+const authHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${localStorage.getItem("token")}`,
+});
+
+const STATUS = {
+  covered: { cls: "sc-ok", icon: <CheckCircle2 size={13} />, label: "covered" },
+  partial: { cls: "sc-warn", icon: <AlertTriangle size={13} />, label: "partial" },
+  missing: { cls: "sc-bad", icon: <AlertTriangle size={13} />, label: "missing" },
+  unclear: { cls: "sc-bad", icon: <HelpCircle size={13} />, label: "not found" },
+};
+
+export default function SectionCoachModal({ submission, onClose }) {
+  const [sections, setSections] = useState([]);
+  const [sectionKey, setSectionKey] = useState("");
+  const [mode, setMode] = useState("outline");   // "outline" | "review"
+  const [topic, setTopic] = useState("");
+  const [draft, setDraft] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/sections`,
+          { headers: authHeaders() });
+        const data = r.ok ? await r.json() : { sections: [] };
+        if (!alive) return;
+        setSections(data.sections || []);
+        setSectionKey(data.sections?.[0]?.key || "");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => { alive = false; };
+  }, [submission.id]);
+
+  const run = async () => {
+    if (!sectionKey) return;
+    setBusy(true); setResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/section-coach`, {
+        method: "POST", headers: authHeaders(),
+        body: JSON.stringify({ section_key: sectionKey, mode, topic, draft_text: draft }),
+      });
+      if (r.ok) setResult((await r.json()).result);
+    } finally { setBusy(false); }
+  };
+
+  // Re-run is explicit (button); switching section/mode clears the old result.
+  const pickSection = (k) => { setSectionKey(k); setResult(null); };
+  const pickMode = (m) => { setMode(m); setResult(null); };
+
+  return createPortal(
+    <div className="sc-overlay" onClick={onClose}>
+      <div className="sc-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="sc-header">
+          <div className="sc-title"><PenLine size={18} /> Drafting Coach
+            <span className="sc-sub">{submission.title}</span></div>
+          <button className="sc-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
+        </header>
+
+        <p className="sc-intro">
+          Pick a section. <b>Outline it</b> shows what it should contain for {submission.sponsor || "your sponsor"};
+          <b> Feedback</b> reviews a draft you paste. The coach guides and reviews — it never writes the section for you.
+        </p>
+
+        {loading ? (
+          <div className="sc-loading">Loading sections…</div>
+        ) : (
+          <div className="sc-body">
+            <div className="sc-controls">
+              <label className="sc-select">
+                <span>Section</span>
+                <select value={sectionKey} onChange={(e) => pickSection(e.target.value)}>
+                  {sections.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              </label>
+
+              <div className="sc-tabs">
+                <button className={mode === "outline" ? "active" : ""} onClick={() => pickMode("outline")}>
+                  <ListChecks size={13} /> Outline it
+                </button>
+                <button className={mode === "review" ? "active" : ""} onClick={() => pickMode("review")}>
+                  <MessageSquare size={13} /> Feedback on my draft
+                </button>
+              </div>
+            </div>
+
+            {mode === "outline" && (
+              <label className="sc-topic">
+                <span>Project topic <em>(optional — tailors the tips)</em></span>
+                <input value={topic} onChange={(e) => setTopic(e.target.value)}
+                  placeholder="e.g. microbial bioremediation of urban soils" />
+              </label>
+            )}
+
+            {mode === "review" && (
+              <label className="sc-topic">
+                <span>Paste your draft of this section</span>
+                <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={8}
+                  placeholder="Paste the text you've written for this section…" />
+              </label>
+            )}
+
+            <button className="sc-run" onClick={run} disabled={busy || (mode === "review" && !draft.trim())}>
+              {busy ? "Thinking…" : mode === "outline" ? "Get outline" : "Get feedback"}
+            </button>
+
+            {result && result.mode === "outline" && <OutlineView r={result} />}
+            {result && result.mode === "review" && <ReviewView r={result} />}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function OutlineView({ r }) {
+  return (
+    <div className="sc-result">
+      <div className="sc-purpose">{r.purpose}</div>
+      <div className="sc-meta">Target length: {r.target_words}</div>
+      <ol className="sc-outline">
+        {r.outline.map((o, i) => (
+          <li key={i}>
+            <b>{o.heading}</b>
+            {o.guidance && <div className="sc-guidance">{o.guidance}</div>}
+          </li>
+        ))}
+      </ol>
+      {r.pitfalls?.length > 0 && (
+        <div className="sc-pitfalls">
+          <div className="sc-block-head"><AlertTriangle size={13} /> Common pitfalls</div>
+          <ul>{r.pitfalls.map((p, i) => <li key={i}>{p}</li>)}</ul>
+        </div>
+      )}
+      {r.kb_hint && <div className="sc-kbhint"><Lightbulb size={12} /> {r.kb_hint}</div>}
+    </div>
+  );
+}
+
+function ReviewView({ r }) {
+  return (
+    <div className="sc-result">
+      <div className="sc-summary">{r.summary}</div>
+      {typeof r.word_count === "number" && r.word_count > 0 && (
+        <div className="sc-meta">~{r.word_count} words · target: {r.target_words}</div>
+      )}
+      <ul className="sc-checklist">
+        {r.checklist.map((c, i) => {
+          const s = STATUS[c.status] || STATUS.unclear;
+          return (
+            <li key={i} className={`sc-check ${s.cls}`}>
+              <div className="sc-check-head">{s.icon} <b>{c.item}</b> <span className="sc-status">{s.label}</span></div>
+              {c.note && <div className="sc-note">{c.note}</div>}
+              {c.evidence && <div className="sc-evidence">“{c.evidence}”</div>}
+            </li>
+          );
+        })}
+      </ul>
+      {r.suggestions?.length > 0 && (
+        <div className="sc-suggestions">
+          <div className="sc-block-head"><Lightbulb size={13} /> Suggestions</div>
+          <ul>{r.suggestions.map((sug, i) => <li key={i}>{sug}</li>)}</ul>
+        </div>
+      )}
+      {!r.ai && (
+        <div className="sc-fallback">Quick keyword check (AI offline) — clear, labeled headings help most.</div>
+      )}
+    </div>
+  );
+}
