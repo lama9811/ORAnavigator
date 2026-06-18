@@ -3203,7 +3203,9 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
     deterministic compute -- the AI is told to never change a number."""
     if not user:
         raise HTTPException(401, "Unauthorized")
-    from services.budget_helper import compute_budget, draft_justification, per_line_justifications
+    from services.budget_helper import (
+        compute_budget, draft_justification, per_line_justifications, _fmt,
+    )
     inputs = payload.get("inputs", payload) or {}
     budget = compute_budget(inputs)
     template = draft_justification(budget)
@@ -3220,8 +3222,16 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
             f"{template}"
         )
         text_out = (gemini_client.generate_text(prompt, temperature=0.2, max_output_tokens=900) or "").strip()
-        if text_out:
+        # Completeness guard: Gemini can return a TRUNCATED fragment (e.g. it
+        # stops mid-sentence under load). A non-empty fragment would otherwise
+        # be shown in place of the full justification. A complete justification
+        # always states the total project cost, so require that figure to be
+        # present; otherwise fall back to the complete deterministic template.
+        total_fmt = _fmt(budget.get("total") or 0)
+        if text_out and total_fmt in text_out:
             return {"justification": text_out, "ai": True, "template": template, "per_line": per_line}
+        if text_out:
+            print(f"[BUDGET] AI justification truncated (missing {total_fmt}) -- using template")
     except Exception as e:
         print(f"[BUDGET] AI justification failed, using deterministic template: {e}")
     return {"justification": template, "ai": False, "per_line": per_line}

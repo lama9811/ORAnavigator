@@ -101,6 +101,38 @@ def test_justification_template_contains_the_figures(ctx):
     assert "Dr. Smith" in text
 
 
+def test_truncated_ai_justification_falls_back_to_template(ctx, monkeypatch):
+    """Gemini under load can return a non-empty but TRUNCATED fragment. The
+    endpoint must detect it (missing total figure) and serve the complete
+    deterministic template instead of the half-sentence."""
+    from services import gemini_client
+    monkeypatch.setattr(
+        gemini_client, "generate_text",
+        lambda *a, **k: "Personnel: Dr. Smith will commit 25% effort. The requested salary is",
+    )
+    c, _ = ctx
+    r = c.post("/api/budget/justification", json={**WORKED, "use_ai": True})
+    assert r.status_code == 200
+    body = r.json()
+    # Truncated fragment rejected -> deterministic template served.
+    assert body["ai"] is False
+    assert "$161,556" in body["justification"]   # complete: states the total
+
+
+def test_complete_ai_justification_is_kept(ctx, monkeypatch):
+    """A complete AI rewrite (contains the total) is served as-is."""
+    from services import gemini_client
+    good = ("Dr. Smith commits 25% effort... F&A at 54%... "
+            "The total project cost is $161,556.")
+    monkeypatch.setattr(gemini_client, "generate_text", lambda *a, **k: good)
+    c, _ = ctx
+    r = c.post("/api/budget/justification", json={**WORKED, "use_ai": True})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ai"] is True
+    assert body["justification"] == good
+
+
 def test_save_then_load_budget_roundtrip(ctx):
     c, sub_id = ctx
     # Save
