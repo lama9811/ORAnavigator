@@ -372,6 +372,9 @@
 .bh-effort-toggle:hover { text-decoration: underline; }
 .bh-effort-body { margin-top: 8px; padding: 10px 12px; background: #f1f5f9; border-radius: 8px; }
 .bh-effort-out { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 0.8rem; color: #334155; }
+.bh-effort-row { padding: 6px 0; border-bottom: 1px solid #e2e8f0; }
+.bh-effort-row:last-of-type { border-bottom: none; }
+.bh-effort-name { font-size: 0.8rem; font-weight: 600; color: #1B3A6B; }
 .bh-effort-body small { display: block; margin-top: 8px; color: #94a3b8; font-size: 0.72rem; }
 
 .bh-perline { margin-top: 12px; }
