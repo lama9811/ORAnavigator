@@ -278,7 +278,9 @@ def _fetch_via_firecrawl(url: str, max_bytes: int) -> Optional[str]:
     markdown. The user URL has ALREADY passed the SSRF guard; Firecrawl's host is
     a fixed constant. Returns markdown text, or None (no key / failure / thin)."""
     key = (os.getenv("FIRECRAWL_API_KEY") or "").strip()
-    if not key:
+    # "unset" is the placeholder the deploy creates when no real key exists yet
+    # (see cloudbuild.yaml self-heal) -- treat it as no key so we skip the call.
+    if not key or key.lower() == "unset":
         return None
     try:
         resp = requests.post(
