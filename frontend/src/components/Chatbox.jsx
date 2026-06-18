@@ -120,10 +120,12 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("idle"); // idle, listening, processing, speaking
 
-  // The chat always uses the standard fast model. The old iNav / iNav Pro
-  // dropdown was removed — "Pro" mapped to the same model (no real difference)
-  // and the "Pro" label read like a paid upgrade. ORA Navigator is free.
-  const selectedModel = "inav-1.1";
+  // The chat uses the fast model (inav-1.0 -> gemini-2.0-flash) for low latency
+  // and more quota headroom. inav-1.1 mapped to gemini-2.5-flash, which is
+  // noticeably slower per token for no real quality gain on KB-grounded answers.
+  // The old iNav / iNav Pro dropdown was removed (no real difference, and "Pro"
+  // read like a paid upgrade — ORA Navigator is free).
+  const selectedModel = "inav-1.0";
 
   // 🔥 Feedback State
   const [feedbackMenuOpen, setFeedbackMenuOpen] = useState(null); // index of message with open menu
