@@ -174,6 +174,33 @@ def _is_personal_recall(question: str) -> bool:
         return False
     return bool(_PERSONAL_RECALL_RE.search(question))
 
+# Greetings / pleasantries / small talk. A friendly reply to these is correct and
+# needs no KB grounding, so Layer 3 must NOT grade it "weak" and regenerate it
+# under the strict KB prompt (which turns "I'm doing well!" into a refusal).
+# Matched on the question and kept tight: only fires on a short message that is
+# essentially just a greeting, so real ORA questions never match.
+_SMALLTALK_RE = re.compile(
+    r"^\W*(?:(?:"
+    r"hi|hey+|hello|yo|sup|howdy|hiya|greetings"
+    r"|good\s+(?:morning|afternoon|evening|day)"
+    r"|how\s+(?:are|r)\s+(?:you|u|ya)(?:\s+doing)?|how'?s\s+it\s+going|how\s+you\s+doing"
+    r"|what'?s\s+up|whats\s+up"
+    r"|thanks?(?:\s+you)?|thank\s+you|thx|ty|cheers|appreciate\s+it"
+    r"|ok(?:ay)?|cool|nice|great|awesome|got\s+it"
+    r"|bye+|goodbye|see\s+(?:ya|you)|take\s+care"
+    r"|today|now|there|friend|buddy"
+    r")\b[\s,!.?'-]*)+$",
+    re.IGNORECASE,
+)
+
+def _is_smalltalk(question: str) -> bool:
+    """True if the message is just a greeting / pleasantry (no ORA content).
+    Such messages get a warm, KB-free reply that Layer 3 must deliver as-is
+    rather than regenerate under the strict prompt and refuse."""
+    if not question:
+        return False
+    return bool(_SMALLTALK_RE.match(question.strip()))
+
 # =============================================================================
 # FAITHFULNESS GATE: ORA Staff Entity Whitelist
 # =============================================================================
@@ -995,6 +1022,9 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     # the gate -- deliver Pass 1 as-is even with zero KB grounding.
     if verdict == "weak" and _is_personal_recall(message):
         verdict = "ok"
+    # Greetings / small talk get a warm KB-free reply -- never regenerate it.
+    if verdict == "weak" and _is_smalltalk(message):
+        verdict = "ok"
 
     # ---- PASS 2: regenerate when the first answer is weakly grounded -----
     if verdict == "weak":
@@ -1084,6 +1114,8 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
 
     verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], bool(context))
     if verdict == "weak" and _is_personal_recall(message):
+        verdict = "ok"
+    if verdict == "weak" and _is_smalltalk(message):
         verdict = "ok"
 
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
