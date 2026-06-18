@@ -55,14 +55,17 @@ UNIFIED_KB_ID = os.getenv(
     f'{DS_PREFIX}/oranavigator-kb-v8',
 )
 
-# Default model (fallback when no preference set)
-AGENT_MODEL = os.getenv('AGENT_MODEL', 'gemini-2.0-flash-lite-001')
+# Default model (fallback when no preference set).
+# IMPORTANT: gemini-2.0-flash / -lite are NOT enabled for this Vertex project in
+# us-central1 (they 404: "Publisher Model ... not found or no access"), so every
+# entry below resolves to gemini-2.5-flash -- the only model this project can
+# call. This also protects against a cached PWA still sending the old "inav-1.0"
+# preference. Re-introduce a 2.0 model ONLY after enabling it in the project.
+AGENT_MODEL = os.getenv('AGENT_MODEL', 'gemini-2.5-flash')
 
 # Model selector: maps frontend choice to Gemini model ID
-# Note: Gemini 3 models only available in 'global' region, not us-central1 (where our datastore is)
-# Will switch to Gemini 3 when Google rolls it out to us-central1
 MODEL_MAP = {
-    "inav-1.0": "gemini-2.0-flash",
+    "inav-1.0": "gemini-2.5-flash",
     "inav-1.1": "gemini-2.5-flash",
     "inav-2.0": "gemini-2.5-flash",
 }
