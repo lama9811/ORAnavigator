@@ -90,6 +90,16 @@ _REFUSAL_MSG = (
     "for accurate, up-to-date guidance."
 )
 
+# Streaming (Layer-3 fast path): hold back this many chars before emitting the
+# first chunk, so a leaked error (429 / KB-access failure) is caught and NOT
+# streamed. Appended when a streamed answer comes back weakly grounded (the
+# streamed path can't regenerate, so it cautions instead).
+_STREAM_GUARD_CHARS = 60
+_WEAK_NOTE = (
+    "\n\n_Heads up: I couldn't fully verify this against the ORA knowledge base — "
+    "please confirm with ORA (443-885-4044) before relying on it._"
+)
+
 # Prepended to the user's question on the regeneration pass.
 _STRICT_PREFIX = (
     "IMPORTANT: Answer strictly from the ORA knowledge base. The knowledge base "
@@ -723,11 +733,17 @@ def _finalize_answer(text: str, grounded_corpus: str) -> str:
 
 def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "",
                    model: str = "", memory_context: str = "", retried: bool = False,
-                   rate_limit_attempt: int = 0):
+                   rate_limit_attempt: int = 0, stream: bool = False):
     """One round-trip to the ADK agent.
 
     A generator: yields {"type": "status", ...} events as the agent calls tools,
     then finally yields exactly one {"type": "_result", "data": {...}} event.
+
+    When ``stream`` is True, also yields {"type": "chunk", "content": <delta>}
+    events as the model's answer text grows -- BUT only after a short prefix
+    guard confirms the text isn't a leaked error (429 / KB-access failure), so an
+    error is never streamed to the user. ``result["streamed"]`` records whether
+    any chunk was emitted.
 
     The result dict has: text, chunks, coverage, citations, grounded_corpus,
     kb_fail (bool), outage (bool), error (str or None). It is the *raw* pass --
@@ -768,7 +784,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
             new_session_id = _ensure_session(user_id, context, model, memory_context)
             if new_session_id:
                 yield from _do_agent_pass(message, user_id, new_session_id, context,
-                                          model, memory_context, retried=True)
+                                          model, memory_context, retried=True, stream=stream)
                 return
             result["outage"] = True
             yield {"type": "_result", "data": result}
@@ -783,6 +799,9 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
         }
 
         final_text = ""
+        _stream_started = False     # have we begun emitting chunks?
+        _stream_suppressed = False  # did the prefix look like a leaked error?
+        _emitted = 0                # chars already streamed
         for line in resp.iter_lines():
             if not line:
                 continue
@@ -832,18 +851,37 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                         status = TOOL_STATUS_MAP.get(func_name, f"Processing {func_name.replace('_', ' ')}")
                     yield {"type": "status", "content": status}
 
-            # Keep the last model text part (the final answer)
+            # Keep the last model text part (the final answer). The ADK sends the
+            # text cumulatively (each event carries the full text so far).
             if role == "model":
                 for part in parts:
                     if isinstance(part, dict) and "text" in part and part["text"].strip():
                         final_text = part["text"]
+                        if stream and not _stream_suppressed:
+                            if not _stream_started:
+                                # Wait until we have enough text to tell a real
+                                # answer from a leaked error before showing anything.
+                                if len(final_text) < _STREAM_GUARD_CHARS:
+                                    continue
+                                if ("resource_exhausted" in final_text.lower()
+                                        or _KB_FAIL_RE.search(final_text)):
+                                    _stream_suppressed = True   # let post-loop handling deal with it
+                                    continue
+                                _stream_started = True
+                                yield {"type": "chunk", "content": final_text}
+                                _emitted = len(final_text)
+                            else:
+                                delta = final_text[_emitted:]
+                                if delta:
+                                    yield {"type": "chunk", "content": delta}
+                                    _emitted = len(final_text)
 
         # Retry once if Gemini self-reported a (transient) KB access failure
         if _KB_FAIL_RE.search(final_text) and not retried:
             print("   [RETRY] Gemini reported KB access failure, retrying once...")
             time_module.sleep(2)
             yield from _do_agent_pass(message, user_id, session_id, context,
-                                      model, memory_context, retried=True)
+                                      model, memory_context, retried=True, stream=stream)
             return
 
         # Retry with backoff on a transient Vertex/Gemini quota error. It arrives
@@ -863,7 +901,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                 time_module.sleep(delay)
                 yield from _do_agent_pass(message, user_id, session_id, context,
                                           model, memory_context, retried=retried,
-                                          rate_limit_attempt=rate_limit_attempt + 1)
+                                          rate_limit_attempt=rate_limit_attempt + 1, stream=stream)
                 return
             print(f"   [RATE-LIMIT] Still throttled after {len(_RATE_LIMIT_BACKOFFS)} "
                   f"retries; surfacing outage. Raw: {raw}")
@@ -873,6 +911,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
 
         result["text"] = final_text
         result["kb_fail"] = bool(_KB_FAIL_RE.search(final_text))
+        result["streamed"] = _stream_started
         yield {"type": "_result", "data": result}
 
     except requests.exceptions.ConnectionError:
@@ -1004,6 +1043,58 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     yield {"type": "done", "content": final}
 
 
+def _run_verified_stream(message: str, user_id: str, session_id: str, context: str = "",
+                         model: str = "", memory_context: str = ""):
+    """Streaming Layer-3 (the fast path for /chat/stream).
+
+    Streams Pass-1's answer token-by-token as a live preview -- but a prefix guard
+    in _do_agent_pass keeps a leaked 429 / KB-access error from ever being shown.
+    After the answer completes it runs the SAME grounding check, then sends the
+    authoritative finalized answer in the terminal 'done' event (which the UI uses
+    to replace the preview -- so faithfulness links/disclaimers still apply).
+
+    Difference from _run_verified: it does NOT regenerate a weakly grounded answer
+    (it's already on screen) -- it appends an honest caution note instead. Errors,
+    outages, and empty/zero-chunk answers are never streamed (guarded), so those
+    still degrade to the outage/refusal messages exactly as before.
+    """
+    _set_grounding(False, 0, 0.0)
+    yield {"type": "status", "content": "Searching knowledge base"}
+
+    result = None
+    for ev in _do_agent_pass(message, user_id, session_id, context, model,
+                             memory_context, stream=True):
+        if ev["type"] == "_result":
+            result = ev["data"]
+        else:
+            yield ev   # status + chunk events pass straight through to the client
+
+    if result is None or result.get("outage") or result.get("kb_fail"):
+        yield {"type": "error", "content": _OUTAGE_MSG}
+        return
+    if result.get("error"):
+        yield {"type": "error", "content": result["error"]}
+        return
+
+    text = _clean_answer_text(result["text"])
+    if not text:
+        # Empty answer -> nothing was streamed; refuse honestly (routes to ORA).
+        yield {"type": "done", "content": _REFUSAL_MSG}
+        return
+
+    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], bool(context))
+    if verdict == "weak" and _is_personal_recall(message):
+        verdict = "ok"
+
+    _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
+                   citations=result["citations"])
+    final = _finalize_answer(text, result["grounded_corpus"])
+    if verdict == "weak":
+        final = final + _WEAK_NOTE   # streamed already -> caution instead of regenerate
+    if result["citations"]:
+        yield {"type": "citations", "content": result["citations"]}
+    yield {"type": "done", "content": final}
+
 
 def get_last_grounding() -> dict:
     """Return grounding metadata from the most recent query on this thread.
@@ -1047,18 +1138,19 @@ def reset_session(user_id: str) -> None:
 def query_agent_stream(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = ""):
     """Send a query to the ORA Navigator agent and yield SSE-style events.
 
-    Layer 3: the answer is buffered and verified before delivery -- it is
-    regenerated once if weakly grounded and refused if still weak, so an
-    ungrounded answer is never shown. Because verification needs the complete
-    answer (Gemini reports grounding only at the end), the answer is delivered in
-    one 'done' event rather than streamed token-by-token; 'status' events keep
-    the UI's progress indicator alive while the answer is produced.
+    Layer 3 (streaming fast path): the answer is streamed token-by-token as
+    'chunk' events for low perceived latency, with a prefix guard that prevents a
+    leaked 429 / KB-access error from being shown. After it completes, grounding
+    is checked and the authoritative finalized answer is sent as the terminal
+    'done' event (which replaces the preview). A weakly grounded streamed answer
+    gets an honest caution note appended rather than a hidden regeneration.
+    Errors / outages / empty answers are never streamed.
 
-    Yields dicts: {"type": "status" | "citations" | "done" | "error", "content": ...}.
+    Yields dicts: {"type": "status" | "chunk" | "citations" | "done" | "error", "content": ...}.
     """
     session_id = _ensure_session(user_id, context, model, memory_context)
     if not session_id:
         yield {"type": "error", "content": _OUTAGE_MSG}
         return
-    yield from _run_verified(query, user_id, session_id, context=context,
-                             model=model, memory_context=memory_context)
+    yield from _run_verified_stream(query, user_id, session_id, context=context,
+                                    model=model, memory_context=memory_context)
