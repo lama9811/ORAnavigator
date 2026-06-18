@@ -120,12 +120,13 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("idle"); // idle, listening, processing, speaking
 
-  // The chat uses the fast model (inav-1.0 -> gemini-2.0-flash) for low latency
-  // and more quota headroom. inav-1.1 mapped to gemini-2.5-flash, which is
-  // noticeably slower per token for no real quality gain on KB-grounded answers.
-  // The old iNav / iNav Pro dropdown was removed (no real difference, and "Pro"
-  // read like a paid upgrade — ORA Navigator is free).
-  const selectedModel = "inav-1.0";
+  // Uses inav-1.1 -> gemini-2.5-flash. We tried inav-1.0 -> gemini-2.0-flash for
+  // speed, but that model is NOT enabled for this Vertex project in us-central1
+  // (it 404s: "Publisher Model gemini-2.0-flash ... not found or no access").
+  // 2.5-flash is the model this project can access; speed comes from warm
+  // instances + token streaming instead. (If 2.0-flash is enabled later, switch
+  // back to "inav-1.0".) The old iNav / iNav Pro dropdown was removed.
+  const selectedModel = "inav-1.1";
 
   // 🔥 Feedback State
   const [feedbackMenuOpen, setFeedbackMenuOpen] = useState(null); // index of message with open menu
