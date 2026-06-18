@@ -385,15 +385,20 @@ def _keyword_review(sec: dict, draft_text: str) -> dict:
 def _verify_evidence(checklist: list, draft_text: str) -> list:
     """Drop 'covered' claims whose evidence isn't actually in the draft (anti-
     hallucination, mirrors draft_critic). Demote them to 'unclear'."""
-    low = draft_text.lower()
+    # Collapse ALL whitespace runs (newlines included) on BOTH sides before
+    # matching: a pasted draft is often hard-wrapped, so the draft contains
+    # "health,\nand" while Gemini quotes "health, and". A raw substring check
+    # then fails and (wrongly) demotes every covered element to NOT FOUND.
+    low = " ".join(draft_text.lower().split())
     out = []
     for c in checklist:
         if not isinstance(c, dict):
             continue
         status = c.get("status")
         ev = (c.get("evidence") or "").strip()
+        ev_norm = " ".join(ev.lower().split())
         if status == "covered":
-            if not ev or ev.lower() not in low:
+            if not ev_norm or ev_norm not in low:
                 c["status"] = "unclear"
                 c["evidence"] = ""
                 if not c.get("note"):
