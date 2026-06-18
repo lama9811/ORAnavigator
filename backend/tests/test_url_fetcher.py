@@ -220,6 +220,7 @@ def test_http_error_surfaces_when_reader_also_fails(monkeypatch):
     _patch_open(monkeypatch, [
         _FakeResp(404, headers={"Content-Type": "text/html"}, chunks=[b"nope"]),
     ])
+    monkeypatch.setattr(uf, "_fetch_via_firecrawl", lambda url, mb: None)
     monkeypatch.setattr(uf, "_fetch_via_reader", lambda url, mb: None)   # reader can't help either
     monkeypatch.setattr(uf, "_fetch_via_proxy", lambda url, mb: None)    # nor the backup proxy
     with pytest.raises(uf.FetchError) as ei:
@@ -233,6 +234,7 @@ def test_empty_text_page_is_422_when_reader_also_fails(monkeypatch):
         _FakeResp(200, headers={"Content-Type": "text/html"},
                   chunks=[b"<html><body></body></html>"]),
     ])
+    monkeypatch.setattr(uf, "_fetch_via_firecrawl", lambda url, mb: None)
     monkeypatch.setattr(uf, "_fetch_via_reader", lambda url, mb: None)
     monkeypatch.setattr(uf, "_fetch_via_proxy", lambda url, mb: None)
     with pytest.raises(uf.FetchError) as ei:
@@ -247,6 +249,7 @@ def test_reader_fallback_used_when_site_blocks_server(monkeypatch):
     _patch_open(monkeypatch, [
         _FakeResp(404, headers={"Content-Type": "text/html"}, chunks=[b"blocked"]),
     ])
+    monkeypatch.setattr(uf, "_fetch_via_firecrawl", lambda url, mb: None)
     monkeypatch.setattr(uf, "_fetch_via_reader",
                         lambda url, mb: "Full Proposal Deadline: October 15, 2026. Eligibility: ...")
     text = uf.fetch_solicitation_text("http://nsf.example/solicitation")
@@ -259,11 +262,36 @@ def test_proxy_backup_used_when_reader_fails(monkeypatch):
     _patch_open(monkeypatch, [
         _FakeResp(404, headers={"Content-Type": "text/html"}, chunks=[b"blocked"]),
     ])
+    monkeypatch.setattr(uf, "_fetch_via_firecrawl", lambda url, mb: None)
     monkeypatch.setattr(uf, "_fetch_via_reader", lambda url, mb: None)
     monkeypatch.setattr(uf, "_fetch_via_proxy",
                         lambda url, mb: "Full Proposal Deadline: October 15, 2026. Eligibility: US IHEs.")
     text = uf.fetch_solicitation_text("http://nsf.example/solicitation")
     assert "Deadline" in text
+
+
+def test_firecrawl_returns_none_without_key(monkeypatch):
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    assert uf._fetch_via_firecrawl("http://x.example/y", 1000) is None
+
+
+def test_firecrawl_used_first_when_key_set(monkeypatch):
+    _map_dns(monkeypatch, {"nsf.example": "93.184.216.34"})
+    _patch_open(monkeypatch, [
+        _FakeResp(404, headers={"Content-Type": "text/html"}, chunks=[b"blocked"]),
+    ])
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test-key")
+    md = ("Full Proposal Deadline: October 15, 2026. Eligibility: US IHEs only. "
+          "Budget cap $500,000. Required: Project Summary, DMP. ") * 8  # > 400 chars
+
+    class _FCResp:
+        status_code = 200
+        def json(self):
+            return {"success": True, "data": {"markdown": md}}
+
+    monkeypatch.setattr(uf.requests, "post", lambda *a, **k: _FCResp())
+    text = uf.fetch_solicitation_text("http://nsf.example/solicitation")
+    assert "Eligibility" in text and "October 15, 2026" in text
 
 
 def test_reader_not_tried_for_private_url(monkeypatch):

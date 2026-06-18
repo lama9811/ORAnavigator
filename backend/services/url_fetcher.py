@@ -58,6 +58,9 @@ _BROWSER_HEADERS = {
 # fetch is blocked, we retry through a read-only reader service that fetches the
 # page from its own IP and returns clean text. Only PUBLIC user URLs reach it
 # (the SSRF guard runs first), and the reader host is a fixed constant.
+# Firecrawl: a hosted scraper (real browser, non-blocked IPs, handles JS) that
+# returns clean markdown. Preferred when FIRECRAWL_API_KEY is set. v2 scrape API.
+_FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape"
 _READER_PREFIX = "https://r.jina.ai/"
 # Secondary, no-key proxy that returns the raw page (we convert it ourselves).
 _PROXY_PREFIX = "https://api.allorigins.win/raw?url="
@@ -269,6 +272,37 @@ def _fetch_direct(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> str:
     return text
 
 
+def _fetch_via_firecrawl(url: str, max_bytes: int) -> Optional[str]:
+    """Preferred scraper when FIRECRAWL_API_KEY is set: Firecrawl runs a real
+    browser from non-blocked IPs (handles JS, bot walls, PDFs) and returns clean
+    markdown. The user URL has ALREADY passed the SSRF guard; Firecrawl's host is
+    a fixed constant. Returns markdown text, or None (no key / failure / thin)."""
+    key = (os.getenv("FIRECRAWL_API_KEY") or "").strip()
+    if not key:
+        return None
+    try:
+        resp = requests.post(
+            _FIRECRAWL_URL,
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json={"url": url, "formats": ["markdown"], "onlyMainContent": True},
+            timeout=(5, 45),   # Firecrawl renders the page, so allow longer
+        )
+    except requests.exceptions.RequestException:
+        return None
+    if resp.status_code >= 400:
+        print(f"   [URL-FIRECRAWL] status {resp.status_code}")
+        return None
+    try:
+        data = resp.json()
+    except ValueError:
+        return None
+    md = (((data or {}).get("data") or {}).get("markdown") or "").strip()
+    if len(md) >= _READER_MIN_CHARS:
+        print(f"   [URL-FIRECRAWL] returned {len(md)} chars")
+        return md[:max_bytes]
+    return None
+
+
 def _fetch_via_reader(url: str, max_bytes: int) -> Optional[str]:
     """Fallback: fetch the page through a read-only reader proxy (fetches from
     its own IP and returns clean text/markdown, including for PDF links and
@@ -366,9 +400,10 @@ def fetch_solicitation_text(url: str, max_bytes: int = _DEFAULT_MAX_BYTES) -> st
         retryable = e.status in _BLOCKED_STATUSES or "readable text" in e.message or "empty" in e.message
         if not retryable:
             raise
-        # Site blocks our server IP -> try read-only proxies that fetch from
-        # their own IPs (Jina first; allorigins as a no-key backup).
-        for strategy in (_fetch_via_reader, _fetch_via_proxy):
+        # Site blocks our server IP -> try scrapers that fetch from their own
+        # IPs: Firecrawl first (best, when a key is set), then the Jina reader,
+        # then allorigins as a no-key backup.
+        for strategy in (_fetch_via_firecrawl, _fetch_via_reader, _fetch_via_proxy):
             text = strategy(url, max_bytes)
             if text:
                 return text
