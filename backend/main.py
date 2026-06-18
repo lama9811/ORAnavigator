@@ -3809,8 +3809,10 @@ async def save_section_draft(
 
 
 # ----------------------------------------------------------------------------
-# Fundability / Reviewer Lens + eligibility go/no-go (Phase 3). Advisory only --
-# never a funding guarantee and never the compliance gate.
+# Eligibility-text helper. Pulls the "Eligibility: ..." line out of a
+# submission's solicitation notes; used by the section-coach ("match THIS
+# solicitation"). The interactive Fundability / Eligibility self-check feature
+# was removed, but the extracted eligibility TEXT is still part of ingestion.
 
 def _eligibility_text_from_notes(notes: Optional[str]) -> Optional[str]:
     """Pull the 'Eligibility: ...' line out of a submission's solicitation notes."""
@@ -3819,76 +3821,6 @@ def _eligibility_text_from_notes(notes: Optional[str]) -> Optional[str]:
     import re as _re
     m = _re.search(r"^Eligibility:\s*(.+)$", notes, _re.MULTILINE)
     return m.group(1).strip() if m else None
-
-
-@app.get("/api/me/submissions/{submission_id}/fundability/criteria")
-async def fundability_criteria(
-    submission_id: int,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Review criteria + eligibility questions for this submission's sponsor, so
-    the UI can render the checklist before the PI runs anything."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-    from services import fundability as _fund, eligibility as _elig
-    return {
-        "sponsor": sub.sponsor,
-        "criteria": _fund.review_criteria(sub.sponsor),
-        "eligibility_questions": _elig.QUESTIONS,
-        "eligibility_text": _eligibility_text_from_notes(sub.notes),
-    }
-
-
-class EligibilityRequest(BaseModel):
-    answers: dict = {}
-
-
-@app.post("/api/me/submissions/{submission_id}/eligibility")
-async def check_eligibility(
-    submission_id: int,
-    payload: EligibilityRequest,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Deterministic go/no-go self-check against the solicitation's eligibility."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-    from services import eligibility as _elig
-    result = _elig.assess_eligibility(
-        payload.answers, sponsor=sub.sponsor,
-        eligibility_text=_eligibility_text_from_notes(sub.notes),
-    )
-    return {"submission_id": submission_id, "result": result}
-
-
-class FundabilityRequest(BaseModel):
-    draft_text: str = ""
-
-
-@app.post("/api/me/submissions/{submission_id}/fundability")
-async def fundability_review(
-    submission_id: int,
-    payload: FundabilityRequest,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Advisory reviewer-style read of the PI's draft against sponsor criteria."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-    from services import fundability as _fund
-    context = _proposals_service.reconstruct_solicitation_context(sub)
-    result = _fund.reviewer_assessment(sub.sponsor, payload.draft_text, context)
-    return {"submission_id": submission_id, "result": result}
 
 
 # ----------------------------------------------------------------------------

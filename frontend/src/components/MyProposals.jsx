@@ -4,14 +4,13 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, PenLine, Plus, ShieldCheck, Target, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
 import SectionCoachModal from "./SectionCoachModal";
-import FundabilityModal from "./FundabilityModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -394,7 +393,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
-  const [showFund, setShowFund] = useState(false);
 
   return (
     <div className="proposals">
@@ -423,13 +421,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
             title="Get an outline for a proposal section, or paste your draft for advisory feedback."
           >
             <PenLine size={13} /> Drafting coach
-          </button>
-          <button
-            className="proposals-coach-btn"
-            onClick={() => setShowFund(true)}
-            title="Check eligibility (go/no-go) and get reviewer-style feedback against the sponsor's criteria."
-          >
-            <Target size={13} /> Fundability
           </button>
           {hasSolicitation(submission) && (
             <button
@@ -482,13 +473,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         <SectionCoachModal
           submission={submission}
           onClose={() => setShowCoach(false)}
-        />
-      )}
-
-      {showFund && (
-        <FundabilityModal
-          submission={submission}
-          onClose={() => setShowFund(false)}
         />
       )}
 
