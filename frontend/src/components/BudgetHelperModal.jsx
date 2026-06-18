@@ -237,7 +237,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                   numField("Annual escalation %", "escalation_pct", "(e.g. 3)")}
               </div>
 
-              <EffortHelper />
+              <EffortHelper people={inputs.people} />
             </div>
 
             {/* RIGHT — live summary */}
@@ -359,33 +359,38 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
   );
 }
 
-// Small effort %% <-> person-months converter (academic 9-mo, summer 3-mo,
-// calendar 12-mo). UI-only — does not feed the budget math.
-function EffortHelper() {
+// Effort -> person-months readout (academic 9-mo, summer 3-mo, calendar
+// 12-mo). READ-ONLY: the % effort comes straight from each person in the
+// People rows above, so this can never disagree with the budget. To change
+// effort, edit the person's "% effort" field — not here.
+function EffortHelper({ people }) {
   const [open, setOpen] = useState(false);
-  const [pct, setPct] = useState("");
-  const months = (base) => {
-    const p = Number(pct);
-    if (!p || p < 0) return "—";
-    return (base * p / 100).toFixed(2);
-  };
+  const months = (pct, base) => (base * pct / 100).toFixed(2);
+  const rows = (people || [])
+    .map((p, i) => ({ name: (p.name || "").trim() || `Person ${i + 1}`, pct: Number(p.effort_pct) }))
+    .filter((r) => r.pct > 0);
   return (
     <div className="bh-effort">
       <button type="button" className="bh-effort-toggle" onClick={() => setOpen((o) => !o)}>
-        <HelpCircle size={12} /> {open ? "Hide" : "Effort ↔ months helper"}
+        <HelpCircle size={12} /> {open ? "Hide" : "Effort → person-months"}
       </button>
       {open && (
         <div className="bh-effort-body">
-          <label className="bh-field"><span>% effort</span>
-            <input type="number" min="0" max="100" value={pct}
-              onChange={(e) => setPct(e.target.value)} placeholder="e.g. 25" />
-          </label>
-          <div className="bh-effort-out">
-            <span>Academic (9 mo): <b>{months(9)}</b></span>
-            <span>Summer (3 mo): <b>{months(3)}</b></span>
-            <span>Calendar (12 mo): <b>{months(12)}</b></span>
-          </div>
-          <small>person-months = appointment months × % effort</small>
+          {rows.length === 0 ? (
+            <small>Enter a % effort for someone in “People &amp; effort” above to see their person-months.</small>
+          ) : (
+            rows.map((r, i) => (
+              <div className="bh-effort-row" key={i}>
+                <span className="bh-effort-name">{r.name} — {r.pct}% effort</span>
+                <div className="bh-effort-out">
+                  <span>Academic (9 mo): <b>{months(r.pct, 9)}</b></span>
+                  <span>Summer (3 mo): <b>{months(r.pct, 3)}</b></span>
+                  <span>Calendar (12 mo): <b>{months(r.pct, 12)}</b></span>
+                </div>
+              </div>
+            ))
+          )}
+          <small>person-months = appointment months × % effort (read from the People rows above)</small>
         </div>
       )}
     </div>

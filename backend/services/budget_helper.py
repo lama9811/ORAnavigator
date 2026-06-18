@@ -311,41 +311,74 @@ def _fmt(amount: float) -> str:
 
 
 def draft_justification(budget: dict) -> str:
-    """Deterministic budget-justification template built from the computed figures.
+    """Deterministic budget-justification narrative in sponsor-ready PROSE
+    (labeled paragraphs, full sentences) -- reads like what a PI pastes into a
+    real proposal, not a terse bullet list.
 
-    Numbers come straight from `budget` (never invented). The AI-polished version
-    is layered on at the endpoint with a HARD fallback to this template, so a
-    justification always returns even if the LLM is unavailable.
+    Every figure comes straight from `budget` (never invented). The AI-polish
+    layer only refines wording and is forbidden to change a number; this
+    template is the HARD fallback, so a complete justification always returns
+    even when the LLM is unavailable or truncates.
     """
-    lines = ["BUDGET JUSTIFICATION", ""]
-    if budget.get("personnel"):
-        lines.append("Personnel")
-        for p in budget["personnel"]:
-            lines.append(
-                f"  • {p['name']}: {p['effort_pct']:.0f}% effort at a base salary of "
-                f"{_fmt(p['base_salary'])} = {_fmt(p['salary'])} requested salary, plus "
-                f"{p['fringe_label']} fringe at {p['fringe_rate']*100:.0f}% = {_fmt(p['fringe'])}."
+    paras = ["BUDGET JUSTIFICATION", ""]
+
+    people = budget.get("personnel") or []
+    if people:
+        sents = []
+        for p in people:
+            sents.append(
+                f"{p['name']} will devote {p['effort_pct']:.0f}% effort to the project. "
+                f"Based on an annual base salary of {_fmt(p['base_salary'])}, the requested "
+                f"salary is {_fmt(p['salary'])}. Fringe benefits are calculated at the "
+                f"{p['fringe_label']} rate of {p['fringe_rate']*100:.0f}%, totaling "
+                f"{_fmt(p['fringe'])}."
             )
-        lines.append(f"  Personnel subtotal: {_fmt(budget['personnel_total'])}.")
-        lines.append("")
-    for key, label in [
-        ("equipment", "Equipment"), ("travel", "Travel"), ("supplies", "Materials & Supplies"),
-        ("participant_support", "Participant Support"), ("other", "Other Direct Costs"),
+        sents.append(
+            f"Total personnel costs, including salary and fringe benefits, are "
+            f"{_fmt(budget['personnel_total'])}."
+        )
+        paras.append("Personnel. " + " ".join(sents))
+        paras.append("")
+
+    cat_sents = []
+    for key, label, note in [
+        ("equipment", "Equipment", " This equipment is essential to the proposed work and, "
+         "as equipment, is excluded from the F&A base."),
+        ("travel", "Travel", " Travel supports project meetings and dissemination of results."),
+        ("supplies", "Materials and supplies", " These cover consumables required for the "
+         "proposed activities."),
+        ("participant_support", "Participant support", " These costs support project "
+         "participants and are excluded from the F&A base."),
+        ("other", "Other direct costs", " These cover additional direct costs required to "
+         "carry out the project."),
     ]:
-        if budget.get(key):
-            lines.append(f"{label}: {_fmt(budget[key])} requested.")
+        amt = budget.get(key)
+        if amt:
+            cat_sents.append(f"{label}: {_fmt(amt)} is requested.{note}")
     if budget.get("subawards_total"):
-        lines.append(f"Subawards: {_fmt(budget['subawards_total'])} total.")
-    lines.append("")
-    lines.append(
-        f"Total direct costs are {_fmt(budget['direct_costs'])}. Facilities & "
-        f"Administrative costs are applied at the {budget['fa_rate_label']} rate of "
-        f"{budget['fa_rate']*100:.0f}% on the modified total direct cost base of "
-        f"{_fmt(budget['mtdc_base'])} (excluding equipment, participant support, and the "
-        f"portion of each subaward over $25,000), yielding {_fmt(budget['fa_amount'])}. "
-        f"The total project cost is {_fmt(budget['total'])}."
+        cat_sents.append(
+            f"Subawards: {_fmt(budget['subawards_total'])} total is requested; consistent with "
+            f"federal policy, only the first $25,000 of each subaward is included in the "
+            f"modified total direct cost base."
+        )
+    if cat_sents:
+        paras.append("Other direct costs. " + " ".join(cat_sents))
+        paras.append("")
+
+    paras.append(
+        "Facilities and administrative (F&A) costs. F&A is applied at the "
+        f"{budget['fa_rate_label']} rate of {budget['fa_rate']*100:.0f}% to the modified total "
+        f"direct cost (MTDC) base of {_fmt(budget['mtdc_base'])}, which excludes equipment, "
+        f"participant support, and the portion of each subaward over $25,000, yielding "
+        f"{_fmt(budget['fa_amount'])} in F&A costs."
     )
-    return "\n".join(lines)
+    paras.append("")
+    paras.append(
+        f"Total project cost. Total direct costs are {_fmt(budget['direct_costs'])} and F&A "
+        f"costs are {_fmt(budget['fa_amount'])}, for a total project cost of "
+        f"{_fmt(budget['total'])}."
+    )
+    return "\n".join(paras)
 
 
 def per_line_justifications(budget: dict) -> list[dict]:
