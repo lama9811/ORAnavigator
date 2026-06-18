@@ -120,6 +120,21 @@ steps:
         ADK_URL=$(gcloud run services describe ${_ADK_SERVICE} --region=${_REGION} --format='value(status.url)')
         echo "ADK URL: $$ADK_URL"
 
+        # Self-heal: the deploy mounts ora-firecrawl-api-key as a secret. If it does
+        # not exist yet (or was created in the wrong project), create it with a
+        # placeholder so the deploy never fails on a missing secret. URL scraping
+        # degrades gracefully to Jina/proxy until a real key is set via:
+        #   printf 'fc-...' | gcloud secrets versions add ora-firecrawl-api-key --data-file=-
+        if ! gcloud secrets describe ora-firecrawl-api-key --project=${PROJECT_ID} >/dev/null 2>&1; then
+          echo "ora-firecrawl-api-key missing -> creating placeholder"
+          printf 'unset' | gcloud secrets create ora-firecrawl-api-key \
+            --project=${PROJECT_ID} --replication-policy=automatic --data-file=- || true
+        fi
+        gcloud secrets add-iam-policy-binding ora-firecrawl-api-key \
+          --project=${PROJECT_ID} \
+          --member="serviceAccount:oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
+          --role="roles/secretmanager.secretAccessor" >/dev/null 2>&1 || true
+
         gcloud run deploy ${_BACKEND_SERVICE} \
           --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/backend:${SHORT_SHA} \
           --region=${_REGION} \
