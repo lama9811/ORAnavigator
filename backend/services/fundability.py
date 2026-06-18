@@ -68,14 +68,18 @@ _SYSTEM = (
 
 
 def _verify(criteria_results: list, draft_text: str) -> list:
-    low = draft_text.lower()
+    # Collapse all whitespace (newlines included) on BOTH sides: a pasted draft
+    # is often hard-wrapped, so it contains "data,\nand" while Gemini quotes
+    # "data, and". A raw substring check then fails and wrongly demotes every
+    # strong/adequate rating to 'unclear'. (Mirrors the section_coach fix.)
+    low = " ".join(draft_text.lower().split())
     out = []
     for c in criteria_results:
         if not isinstance(c, dict):
             continue
         rating = c.get("rating")
-        ev = (c.get("evidence") or "").strip()
-        if rating in ("strong", "adequate") and (not ev or ev.lower() not in low):
+        ev = " ".join((c.get("evidence") or "").lower().split())
+        if rating in ("strong", "adequate") and (not ev or ev not in low):
             c["rating"] = "unclear"
             c["evidence"] = ""
         out.append({
