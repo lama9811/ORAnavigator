@@ -14,7 +14,7 @@ no guidance (the field is simply absent/None).
 # lowercased title wins. Keep keywords specific enough not to cross-match.
 _RULES = [
     (("eligibility",), {
-        "how_to": "Check your appointment type and Morgan State's status against the solicitation's 'Who May Submit' / eligibility section. Use Fundability → Eligibility for a quick go/no-go. If anything is unclear, email ORA pre-award BEFORE you start writing.",
+        "how_to": "Check your appointment type and Morgan State's status against the solicitation's 'Who May Submit' / eligibility section. If anything is unclear, email ORA pre-award BEFORE you start writing.",
         "sample": "",
     }),
     (("budget", "justification"), {
