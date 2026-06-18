@@ -1182,6 +1182,35 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # when both are empty.
     if conversation_context:
         memory_context = conversation_context + (memory_context or "")
+
+    # Always inject the user's SAVED PROFILE (department / title / role) as
+    # authoritative context, independent of memory selection. The profile is
+    # the source of truth for "what department am I in?"-type questions; relying
+    # only on the mirrored memory failed when the department row got crowded out
+    # of the top-N memory fetch, so the bot wrongly claimed it had no access.
+    try:
+        _pu = db.query(User).filter(User.id == user["user_id"]).first()
+        _pbits = []
+        if _pu is not None:
+            if getattr(_pu, "name", None):
+                _pbits.append(f"name: {_pu.name}")
+            if getattr(_pu, "department", None):
+                _pbits.append(f"department: {_pu.department}")
+            if getattr(_pu, "title", None):
+                _pbits.append(f"title: {_pu.title}")
+            if getattr(_pu, "primary_role", None):
+                _pbits.append(f"role: {_pu.primary_role}")
+        if _pbits:
+            profile_block = (
+                "\nUSER PROFILE (authoritative facts the user saved about themselves; "
+                "use these to answer questions like 'what department am I in?' or "
+                "'what is my role?' -- never claim you don't have access to them):\n"
+                + "\n".join(f"  {b}" for b in _pbits) + "\n"
+            )
+            memory_context = profile_block + (memory_context or "")
+    except Exception as _e:
+        print(f"[MEMORY] profile injection skipped: {_e}")
+
     print(
         f"[MEMORY] user={user['user_id']} session={session_id} "
         f"facts={len(memory_dicts)} relevant_facts={len(relevant_memories)} "
