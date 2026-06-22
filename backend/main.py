@@ -1108,13 +1108,12 @@ def _schedule_touch_last_chat(user_id: int) -> None:
 
 
 def _schedule_regenerate_suggestions(user_id: int) -> None:
-    """Refresh the user's home-screen suggestions in the background.
-    Internally throttled by source_signature + 10-min window."""
-    try:
-        from services.suggestion_generator import regenerate_for_user
-        asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
-    except RuntimeError:
-        pass  # No event loop — caller is outside an async context.
+    """No-op: home-screen suggestions are now a single GLOBAL "Top 10 most-asked"
+    list (same for every user), computed from ChatHistory by services/
+    popular_questions.py and refreshed by the daily cron. Per-user AI
+    personalization was removed, so we no longer burn a Gemini call per chat turn
+    regenerating it. Kept as a stub so the post-commit task list is untouched."""
+    return
 
 
 def _schedule_post_commit_memory_tasks(
@@ -1832,12 +1831,18 @@ DEFAULT_QUESTION_POOL = [
 
 
 @app.get("/api/popular-questions")
-async def get_popular_questions():
-    """Returns 10 randomly selected ORA-themed questions from the curated pool.
-    Used by the home-screen on the guest (unauthenticated) path. Authenticated
-    users get personalized suggestions via GET /api/me/suggested-questions."""
-    import random
-    return {"questions": random.sample(DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL)))}
+async def get_popular_questions(db: Session = Depends(get_db)):
+    """Global Top-10 most-asked ORA questions: the curated pool ranked by how
+    many DISTINCT users have asked about each (services/popular_questions.py).
+    The SAME list for everyone (guests and authenticated users). Cached + daily
+    cron; degrades to the curated pool order when history is thin."""
+    from services.popular_questions import get_top_questions
+    try:
+        questions = get_top_questions(db, DEFAULT_QUESTION_POOL, 10)
+    except Exception as e:
+        print(f"[POPULAR] get_popular_questions failed: {e}")
+        questions = DEFAULT_QUESTION_POOL[:10]
+    return {"questions": questions, "source": "popular"}
 
 @app.get("/health")
 def health():
@@ -2831,6 +2836,28 @@ async def internal_deadline_check(request: Request):
     return result
 
 
+@app.post("/api/internal/popular-questions/recompute")
+async def internal_recompute_popular_questions(request: Request):
+    """Recompute the global "Top 10 most-asked" landing-page questions from
+    ChatHistory and refresh the cache. Meant for a daily Cloud Scheduler cron so
+    the serving endpoints never run the scan inline. Idempotent.
+
+    Auth via X-Research-Secret (same shared secret as the other internal crons)."""
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+
+    from services.popular_questions import recompute
+
+    def _run():
+        with SessionLocal() as db:
+            return recompute(db, DEFAULT_QUESTION_POOL, 10)
+
+    questions = await asyncio.to_thread(_run)
+    return {"status": "ok", "count": len(questions), "questions": questions}
+
+
 # ==============================================================================
 # Phase 5 — Per-User Memory Management API (Memory tab in ProfilePage)
 # ==============================================================================
@@ -2869,61 +2896,19 @@ async def me_get_suggested_questions(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Personalized home-screen suggestions, precomputed in the post-commit
-    memory hook. Pure read — ~5ms. Always returns 200; on any error or
-    missing row, falls back to a shuffled sample of DEFAULT_QUESTION_POOL."""
+    """Same GLOBAL Top-10 most-asked questions as /api/popular-questions -- every
+    user now sees the identical list (per-user personalization was removed by
+    product decision). Kept as a separate route so the authenticated frontend
+    path is unchanged. Pure read; degrades to the curated pool on any error."""
     if not user:
         raise HTTPException(401, "Unauthorized")
-
-    from models import UserSuggestedQuestions
-    import random as _random
-
-    user_id = user["user_id"]
+    from services.popular_questions import get_top_questions
     try:
-        row = db.query(UserSuggestedQuestions)\
-            .filter(UserSuggestedQuestions.user_id == user_id).first()
-        if row is None:
-            # First visit — no row yet. Return the default pool synchronously,
-            # kick off a background regen so next visit shows personalized.
-            try:
-                from services.suggestion_generator import regenerate_for_user
-                asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
-            except RuntimeError:
-                pass
-            return {
-                "questions": _random.sample(
-                    DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
-                ),
-                "generated_at": None,
-                "source": "default",
-            }
-
-        try:
-            questions = json.loads(row.questions or "[]")
-            if not isinstance(questions, list):
-                questions = []
-        except Exception:
-            questions = []
-
-        if not questions:
-            questions = _random.sample(
-                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
-            )
-
-        return {
-            "questions": questions,
-            "generated_at": row.generated_at.isoformat() if row.generated_at else None,
-            "source": row.source or "default",
-        }
+        questions = get_top_questions(db, DEFAULT_QUESTION_POOL, 10)
     except Exception as e:
-        print(f"[SUGGEST] me_get_suggested_questions failed for user={user_id}: {e}")
-        return {
-            "questions": _random.sample(
-                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
-            ),
-            "generated_at": None,
-            "source": "default",
-        }
+        print(f"[POPULAR] me_get_suggested_questions failed for user={user.get('user_id')}: {e}")
+        questions = DEFAULT_QUESTION_POOL[:10]
+    return {"questions": questions, "generated_at": None, "source": "popular"}
 
 
 @app.get("/api/me/memories")
