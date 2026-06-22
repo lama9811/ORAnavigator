@@ -11,18 +11,26 @@ Run from backend/:
 """
 from services.sample_proposals import (
     SAMPLE_PROPOSALS, CATEGORIES, list_samples, categories,
+    get_sample, pdf_path,
 )
 
-_REQUIRED_KEYS = {"id", "title", "source", "url", "categories", "kind", "access", "why"}
+# Keys every entry carries, regardless of type.
+_COMMON_KEYS = {"id", "type", "title", "source", "categories", "kind", "access", "why"}
 _VALID_ACCESS = {"free", "partial"}
+_VALID_TYPES = {"pdf", "link"}
 
 
 # --- curation invariants ----------------------------------------------------
 
 def test_every_entry_has_required_keys():
     for s in SAMPLE_PROPOSALS:
-        missing = _REQUIRED_KEYS - set(s)
+        missing = _COMMON_KEYS - set(s)
         assert not missing, f"{s.get('id')} missing keys: {missing}"
+
+
+def test_types_are_known():
+    for s in SAMPLE_PROPOSALS:
+        assert s["type"] in _VALID_TYPES, f"{s['id']} has bad type {s['type']!r}"
 
 
 def test_ids_are_unique():
@@ -30,9 +38,20 @@ def test_ids_are_unique():
     assert len(ids) == len(set(ids)), "duplicate id in SAMPLE_PROPOSALS"
 
 
-def test_all_urls_are_https():
-    for s in SAMPLE_PROPOSALS:
+def test_link_entries_have_https_urls():
+    links = [s for s in SAMPLE_PROPOSALS if s["type"] == "link"]
+    assert links, "expected at least one link entry"
+    for s in links:
         assert s["url"].startswith("https://"), f"{s['id']} url is not https"
+
+
+def test_pdf_entries_have_an_existing_file():
+    pdfs = [s for s in SAMPLE_PROPOSALS if s["type"] == "pdf"]
+    assert pdfs, "expected at least one authored PDF entry"
+    for s in pdfs:
+        assert s.get("pdf", "").endswith(".pdf"), f"{s['id']} missing .pdf filename"
+        path = pdf_path(s["id"])
+        assert path is not None, f"{s['id']} PDF file is missing on disk: {s.get('pdf')}"
 
 
 def test_categories_are_valid_and_nonempty():
@@ -99,3 +118,51 @@ def test_endpoint_filters_by_category():
         body = r.json()
         assert body["count"] > 0
         assert all("NIH" in p["categories"] for p in body["proposals"])
+
+
+# --- download helper + endpoint ---------------------------------------------
+
+def test_pdf_path_none_for_link_entry():
+    link = next(s for s in SAMPLE_PROPOSALS if s["type"] == "link")
+    assert pdf_path(link["id"]) is None
+
+
+def test_pdf_path_none_for_unknown_id():
+    assert pdf_path("does-not-exist") is None
+    assert pdf_path(None) is None
+
+
+def test_get_sample_returns_copy():
+    sid = SAMPLE_PROPOSALS[0]["id"]
+    s = get_sample(sid)
+    s["title"] = "MUTATED"
+    assert SAMPLE_PROPOSALS[0]["title"] != "MUTATED"
+    assert get_sample("nope") is None
+
+
+def test_download_endpoint_serves_pdf():
+    from fastapi.testclient import TestClient
+    import main
+    pdf_entry = next(s for s in SAMPLE_PROPOSALS if s["type"] == "pdf")
+    with TestClient(main.app) as client:
+        r = client.get(f"/api/sample-proposals/{pdf_entry['id']}/download")
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "application/pdf"
+        assert r.content[:4] == b"%PDF"
+
+
+def test_download_endpoint_404_for_link_entry():
+    from fastapi.testclient import TestClient
+    import main
+    link_entry = next(s for s in SAMPLE_PROPOSALS if s["type"] == "link")
+    with TestClient(main.app) as client:
+        r = client.get(f"/api/sample-proposals/{link_entry['id']}/download")
+        assert r.status_code == 404
+
+
+def test_download_endpoint_404_for_unknown_id():
+    from fastapi.testclient import TestClient
+    import main
+    with TestClient(main.app) as client:
+        r = client.get("/api/sample-proposals/nope/download")
+        assert r.status_code == 404

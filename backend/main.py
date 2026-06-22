@@ -1717,6 +1717,22 @@ async def get_sample_proposals(category: str = ""):
     }
 
 
+@app.get("/api/sample-proposals/{sample_id}/download")
+async def download_sample_proposal(sample_id: str):
+    """Stream the hosted PDF for an authored ("pdf"-type) sample proposal as a
+    download. 404 if the id is unknown, the entry is a link (not a hosted PDF),
+    or the file is missing. No auth -- the content is our own public sample."""
+    from fastapi.responses import FileResponse
+    from services.sample_proposals import get_sample, pdf_path
+    path = pdf_path(sample_id)
+    if not path:
+        raise HTTPException(status_code=404, detail="Sample PDF not found")
+    sample = get_sample(sample_id) or {}
+    # A clean, human filename for the browser's Save dialog.
+    download_name = f"{sample.get('id', 'sample-proposal')}.pdf"
+    return FileResponse(path, media_type="application/pdf", filename=download_name)
+
+
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch chat history for the logged-in user."""
