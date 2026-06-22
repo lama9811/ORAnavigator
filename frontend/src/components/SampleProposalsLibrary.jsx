@@ -4,7 +4,7 @@
 // card links OUT to the source; we never host third-party proposals.
 
 import React, { useState, useEffect, useMemo } from "react";
-import { BookOpen, ExternalLink, Lock } from "lucide-react";
+import { BookOpen, Download, ExternalLink, Lock } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SampleProposalsLibrary.css";
 
@@ -48,13 +48,15 @@ export default function SampleProposalsLibrary() {
           Sample Proposals
         </h1>
         <p className="samples-subtitle">
-          Real, funded proposals you can read end-to-end — see how a strong
-          Project Description, budget, and broader-impacts section actually read
-          before you write your own.
+          See how a strong proposal actually reads before you write your own.
+          <strong> Download</strong> our annotated sample proposals to read
+          offline, or <strong>browse</strong> authoritative external libraries of
+          real funded proposals.
         </p>
         <p className="samples-disclaimer">
-          These are external resources maintained by third parties. Links open in
-          a new tab.
+          The downloadable PDFs are original samples written by ORA Navigator for
+          reference. External links open in a new tab and are maintained by third
+          parties.
         </p>
       </header>
 
@@ -98,41 +100,65 @@ export default function SampleProposalsLibrary() {
             No examples in this category yet. Try the “All” filter.
           </li>
         )}
-        {visible.map((p) => (
-          <li key={p.id} className="sample-card">
-            <a
-              className="sample-card-link"
-              href={p.url}
-              target="_blank"
-              rel="noopener noreferrer"
+        {visible.map((p) => {
+          const isPdf = p.type === "pdf";
+          // Authored PDFs download from our backend; links open the source.
+          const href = isPdf
+            ? `${API_BASE}/api/sample-proposals/${p.id}/download`
+            : p.url;
+          return (
+            <li
+              key={p.id}
+              className={"sample-card" + (isPdf ? " sample-card-pdf" : "")}
             >
-              <div className="sample-card-body">
-                <div className="sample-card-titlerow">
-                  <span className="sample-card-title">{p.title}</span>
-                  {p.access === "partial" && (
-                    <span
-                      className="sample-card-badge"
-                      title="Some content needs a free account or is partly paywalled"
-                    >
-                      <Lock size={11} /> Partly paywalled
-                    </span>
+              <a
+                className="sample-card-link"
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                {...(isPdf ? { download: "" } : {})}
+              >
+                <div className="sample-card-body">
+                  <div className="sample-card-titlerow">
+                    <span className="sample-card-title">{p.title}</span>
+                    {isPdf && (
+                      <span className="sample-card-badge sample-badge-pdf">
+                        PDF
+                      </span>
+                    )}
+                    {p.access === "partial" && (
+                      <span
+                        className="sample-card-badge"
+                        title="Some content needs a free account or is partly paywalled"
+                      >
+                        <Lock size={11} /> Partly paywalled
+                      </span>
+                    )}
+                  </div>
+                  <div className="sample-card-source">{p.source}</div>
+                  {p.kind && <div className="sample-card-kind">{p.kind}</div>}
+                  {p.why && <div className="sample-card-why">{p.why}</div>}
+                  <div className="sample-card-tags">
+                    {(p.categories || []).map((c) => (
+                      <span key={c} className="sample-tag">{c}</span>
+                    ))}
+                  </div>
+                </div>
+                <span className="sample-card-open">
+                  {isPdf ? (
+                    <>
+                      Download PDF <Download size={14} />
+                    </>
+                  ) : (
+                    <>
+                      Open <ExternalLink size={14} />
+                    </>
                   )}
-                </div>
-                <div className="sample-card-source">{p.source}</div>
-                {p.kind && <div className="sample-card-kind">{p.kind}</div>}
-                {p.why && <div className="sample-card-why">{p.why}</div>}
-                <div className="sample-card-tags">
-                  {(p.categories || []).map((c) => (
-                    <span key={c} className="sample-tag">{c}</span>
-                  ))}
-                </div>
-              </div>
-              <span className="sample-card-open">
-                Open <ExternalLink size={14} />
-              </span>
-            </a>
-          </li>
-        ))}
+                </span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

@@ -163,6 +163,18 @@
   white-space: nowrap;
 }
 
+/* "PDF" badge on our authored, downloadable samples. */
+.sample-badge-pdf {
+  background: rgba(33, 115, 70, 0.12);
+  color: #1a7a4a;
+  letter-spacing: 0.04em;
+}
+
+/* Authored downloads get a left accent so they read as the "host" entries. */
+.sample-card-pdf {
+  border-left: 3px solid var(--msu-blue);
+}
+
 .sample-card-source {
   font-size: 0.78rem;
   color: var(--text-tertiary);

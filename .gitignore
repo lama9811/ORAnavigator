@@ -73,6 +73,9 @@ backend/backend/
 
 # PDFs (reports, student data)
 *.pdf
+# ...except the authored sample proposals served by the Sample Proposals
+# Library -- these must be committed so they ship in the backend Docker image.
+!backend/sample_proposals/*.pdf
 
 # Test / temp scripts
 generate_report.py
