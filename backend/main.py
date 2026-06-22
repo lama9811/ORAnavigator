@@ -1702,6 +1702,21 @@ async def get_forms_catalog(
     return {"forms": forms, "count": len(forms)}
 
 
+@app.get("/api/sample-proposals")
+async def get_sample_proposals(category: str = ""):
+    """Curated shelf of real, public example/funded proposals a PI can read for
+    reference. Static, read-only, no LLM and no auth (the content is entirely
+    public links). Optional ?category= narrows to one filter bucket; an empty or
+    unknown value returns the full list."""
+    from services.sample_proposals import list_samples, categories
+    proposals = list_samples(category or None)
+    return {
+        "proposals": proposals,
+        "categories": categories(),
+        "count": len(proposals),
+    }
+
+
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch chat history for the logged-in user."""
