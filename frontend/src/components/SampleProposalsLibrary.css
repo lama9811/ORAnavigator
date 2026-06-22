@@ -1,0 +1,223 @@
+/* Sample Proposals Library -- shares the Forms Catalog design language:
+   card surfaces on the app background, MSU-blue accent on hover/active,
+   minimal chrome. */
+
+.samples-library {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 32px 60px;
+  color: var(--text-primary);
+}
+
+.samples-header {
+  margin-bottom: 20px;
+}
+
+.samples-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.samples-header-icon {
+  color: var(--msu-blue);
+  flex-shrink: 0;
+}
+
+.samples-subtitle {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  max-width: 720px;
+}
+
+.samples-disclaimer {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  font-style: italic;
+  max-width: 720px;
+}
+
+/* Category filter chips */
+.samples-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 14px;
+}
+
+.samples-chip {
+  appearance: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.samples-chip:hover {
+  border-color: var(--msu-blue);
+  color: var(--msu-blue);
+}
+
+.samples-chip.active {
+  background: var(--msu-blue);
+  border-color: var(--msu-blue);
+  color: #fff;
+}
+
+/* Result-count line */
+.samples-result-meta {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+/* Grid of cards */
+.samples-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px;
+}
+
+.samples-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+}
+
+.sample-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.sample-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--msu-blue);
+  box-shadow: 0 4px 16px rgba(66, 133, 244, 0.12);
+}
+
+.sample-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  color: inherit;
+  text-decoration: none;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.sample-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+
+.sample-card-titlerow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sample-card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.sample-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(217, 48, 37, 0.1);
+  color: #b3261e;
+  white-space: nowrap;
+}
+
+.sample-card-source {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.sample-card-kind {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.sample-card-why {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.sample-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.sample-tag {
+  font-size: 0.7rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  background: rgba(66, 133, 244, 0.12);
+  color: var(--msu-blue);
+}
+
+.sample-card-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  transition: color 0.15s;
+}
+
+.sample-card:hover .sample-card-open {
+  color: var(--msu-blue);
+}
+
+/* Compact mobile */
+@media (max-width: 700px) {
+  .samples-library { padding: 18px 16px 40px; }
+  .samples-header h1 { font-size: 1.4rem; }
+  .samples-grid { grid-template-columns: 1fr; }
+}

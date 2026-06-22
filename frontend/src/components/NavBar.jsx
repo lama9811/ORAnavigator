@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FileText, ListChecks, Menu, User } from "lucide-react";
+import { BookOpen, FileText, ListChecks, Menu, User } from "lucide-react";
 import "../index.css";
 import "./NavBar.css";
 
@@ -131,6 +131,15 @@ export default function NavBar({ role, onToggleSidebar }) {
             >
               <FileText size={16} />
               <span className="navbar-forms-label">Forms</span>
+            </button>
+            <button
+              className="navbar-forms-btn"
+              onClick={() => navigate("/sample-proposals")}
+              title="Read real, funded example proposals for reference"
+              aria-label="Open Sample Proposals library"
+            >
+              <BookOpen size={16} />
+              <span className="navbar-forms-label">Samples</span>
             </button>
             <button
               className="profile-icon-btn"
