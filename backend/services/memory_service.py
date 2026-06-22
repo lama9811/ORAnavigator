@@ -679,12 +679,17 @@ def retrieve_relevant_memories(
     query: str,
     k: int = 5,
     threshold: float = 0.55,
+    query_vec: Optional[list[float]] = None,
 ) -> list[dict]:
     """Rank a user's UserMemory rows by semantic similarity to the query.
 
     Returns up to k rows above threshold (descending sim). Skips paused rows
     and rows missing an embedding. Always returns a list — failures degrade
     silently to no-recall.
+
+    `query_vec` lets the caller pass a pre-computed embedding of `query` so the
+    chat path can embed once and share it across both recall functions instead
+    of embedding the same query twice per turn.
     """
     from models import UserMemory
     from services.embedding_util import embed_text, cosine_sim
@@ -692,7 +697,7 @@ def retrieve_relevant_memories(
     if not _semantic_recall_enabled() or not query or not query.strip():
         return []
 
-    q_vec = embed_text(query)
+    q_vec = query_vec if query_vec is not None else embed_text(query)
     if not q_vec:
         return []
 
@@ -759,12 +764,17 @@ def retrieve_relevant_turns(
     threshold: float = 0.62,
     exclude_session_id: Optional[str] = None,
     scan_limit: int = 1000,
+    query_vec: Optional[list[float]] = None,
 ) -> list[dict]:
     """Return the user's top-k most-similar past turns (excluding current session).
 
     The current session is excluded because its recent turns are already in
     the prompt's PRIOR CONVERSATION window. Scan is bounded to the most
     recent scan_limit embedded turns to keep cosine ranking sub-10ms.
+
+    `query_vec` lets the caller pass a pre-computed embedding of `query` so the
+    chat path can embed once and share it across both recall functions instead
+    of embedding the same query twice per turn.
     """
     from models import ChatHistory
     from services.embedding_util import embed_text, cosine_sim
@@ -772,7 +782,7 @@ def retrieve_relevant_turns(
     if not _verbatim_recall_enabled() or not query or not query.strip():
         return []
 
-    q_vec = embed_text(query)
+    q_vec = query_vec if query_vec is not None else embed_text(query)
     if not q_vec:
         return []
 

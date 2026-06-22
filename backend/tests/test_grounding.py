@@ -24,14 +24,18 @@ def test_no_sources_and_no_coverage_is_weak():
     assert _evaluate_grounding("Pre-award proposals are due Friday.", 0, 0.0, False) == "weak"
 
 
-def test_two_chunks_is_ok():
-    """Two or more cited KB chunks clears the grounding bar."""
-    assert _evaluate_grounding("Pre-award proposals are due Friday.", 2, 0.0, False) == "ok"
+def test_chunks_alone_no_longer_clears_the_bar():
+    """The chunk count is no longer a pass condition -- Gemini reports it
+    unreliably. 2 chunks with 0% coverage is now 'weak' (it routes to surgical
+    re-grounding, not delivery-as-is)."""
+    assert _evaluate_grounding("Pre-award proposals are due Friday.", 2, 0.0, False) == "weak"
 
 
-def test_high_coverage_is_ok():
-    """Enough of the answer backed by KB text clears the bar even with 1 chunk."""
-    assert _evaluate_grounding("Pre-award proposals are due Friday.", 1, 0.45, False) == "ok"
+def test_coverage_bar_is_fifty_percent():
+    """Coverage is the sole numeric gate, and the bar is now 50% (was 30%).
+    Chunk count is irrelevant."""
+    assert _evaluate_grounding("Pre-award proposals are due Friday.", 0, 0.55, False) == "ok"
+    assert _evaluate_grounding("Pre-award proposals are due Friday.", 9, 0.45, False) == "weak"
 
 
 def test_attached_context_is_ok():
@@ -67,11 +71,16 @@ def test_refusal_message_reads_as_ok():
 # ===========================================================================
 
 def _result(text="", chunks=0, coverage=0.0, citations=None, grounded_corpus="",
-            kb_fail=False, outage=False, error=None):
-    """Build the result dict that _do_agent_pass yields for one agent round-trip."""
+            kb_fail=False, outage=False, error=None, grounded_spans=None):
+    """Build the result dict that _do_agent_pass yields for one agent round-trip.
+
+    grounded_spans defaults to None/[] so existing Pass-2 tests (which don't set
+    it) make _unsupported_sentences return None -> the surgical path is skipped
+    and the strict Pass-2 fallback fires, exactly as before."""
     return {"text": text, "chunks": chunks, "coverage": coverage,
             "citations": citations or [], "grounded_corpus": grounded_corpus,
-            "kb_fail": kb_fail, "outage": outage, "error": error}
+            "kb_fail": kb_fail, "outage": outage, "error": error,
+            "grounded_spans": grounded_spans or []}
 
 
 def _fake_passes(pass1, pass2=None):
@@ -654,3 +663,160 @@ def test_persistent_rate_limit_surfaces_outage_not_busy_text(monkeypatch):
     assert result["outage"] is True
     assert result["text"] == ""
     assert n_calls == 3  # initial attempt + len(_RATE_LIMIT_BACKOFFS) retries
+
+
+# ===========================================================================
+# Surgical re-grounding -- when an answer is < 50% backed, rewrite ONLY the
+# unsupported sentences (reusing the retrieved KB text), instead of a full
+# second KB search. _unsupported_sentences maps Gemini's grounded char-spans to
+# sentences; _surgical_reground rewrites/honest-gaps them via one Gemini call.
+# ===========================================================================
+from vertex_agent import _unsupported_sentences, _surgical_reground
+
+# Two sentences; the first is ~30 chars so a span of (0,30) backs it, the second
+# ("The budget cap is two million dollars.") is left unsupported.
+_TWO_SENTENCES = "Pre-award routes through ORA. The budget cap is two million dollars."
+_FIRST_SENTENCE_SPAN = [(0, len("Pre-award routes through ORA."))]
+
+
+def test_unsupported_sentences_maps_spans():
+    """A sentence with no overlapping grounded span is returned as unsupported."""
+    out = _unsupported_sentences(_TWO_SENTENCES, _FIRST_SENTENCE_SPAN)
+    assert out == ["The budget cap is two million dollars."]
+
+
+def test_unsupported_sentences_all_backed_returns_empty():
+    """When grounded spans cover every sentence, returns [] -> deliver as-is."""
+    full = [(0, len(_TWO_SENTENCES))]
+    assert _unsupported_sentences(_TWO_SENTENCES, full) == []
+
+
+def test_unsupported_sentences_none_when_spans_missing():
+    """No spans -> None (signals 'fall back to full Pass-2 regeneration')."""
+    assert _unsupported_sentences(_TWO_SENTENCES, []) is None
+
+
+def test_unsupported_sentences_none_when_spans_inconsistent():
+    """Span indices running well past the text (UTF-8 byte/char drift) -> None."""
+    bogus = [(0, len(_TWO_SENTENCES) * 3)]
+    assert _unsupported_sentences(_TWO_SENTENCES, bogus) is None
+
+
+def test_unsupported_sentences_exempts_filler_and_deflection():
+    """Contact/filler and honest-deflection sentences are never flagged, even
+    with no covering span."""
+    text = ("The F&A rate is 53.5%. Please contact ORA at 443-885-4044. "
+            "Based on the information I have, I don't have that figure.")
+    # Only span backs sentence 1; sentences 2 (filler) and 3 (deflection) are exempt.
+    out = _unsupported_sentences(text, [(0, len("The F&A rate is 53.5%."))])
+    assert out == []
+
+
+def test_unsupported_sentences_all_exempt_when_personal_recall():
+    """For a personal-recall question every sentence is exempt (answered from
+    chat history, not the KB)."""
+    assert _unsupported_sentences(_TWO_SENTENCES, _FIRST_SENTENCE_SPAN,
+                                  is_personal_recall=True) == []
+
+
+_KB_CORPUS = (
+    "The Office of Research Administration reviews all pre-award budgets. "
+    "Proposals route through ORA for institutional sign-off before submission."
+)
+
+
+def test_surgical_reground_merges_rewrite(monkeypatch):
+    """A supportable rewrite replaces the unsupported sentence; the good sentence
+    is untouched."""
+    monkeypatch.setattr(vertex_agent.gemini_client, "generate_json",
+        lambda *a, **k: {"rewrites": [{
+            "original": "The budget cap is two million dollars.",
+            "fixed": "Pre-award budgets are reviewed by ORA.",
+            "supportable": True, "topic": "budget review"}]})
+    merged = _surgical_reground("q", _TWO_SENTENCES,
+                                ["The budget cap is two million dollars."], _KB_CORPUS)
+    assert "Pre-award budgets are reviewed by ORA." in merged
+    assert "two million dollars" not in merged
+    assert "Pre-award routes through ORA." in merged  # untouched
+
+
+def test_surgical_reground_inserts_honest_gap(monkeypatch):
+    """An unsupportable sentence becomes the deterministic honest-gap line."""
+    monkeypatch.setattr(vertex_agent.gemini_client, "generate_json",
+        lambda *a, **k: {"rewrites": [{
+            "original": "The budget cap is two million dollars.",
+            "fixed": "", "supportable": False, "topic": "the budget cap"}]})
+    merged = _surgical_reground("q", _TWO_SENTENCES,
+                                ["The budget cap is two million dollars."], _KB_CORPUS)
+    assert "I don't have source-backed details on the budget cap" in merged
+    assert "two million dollars" not in merged
+    assert "443-885-4044" in merged
+
+
+def test_surgical_reground_reverts_rewrite_that_adds_unverified_identifier(monkeypatch):
+    """A rewrite that introduces a NEW identifier not in the corpus is reverted
+    to the original (never ship a fabricated figure)."""
+    monkeypatch.setattr(vertex_agent.gemini_client, "generate_json",
+        lambda *a, **k: {"rewrites": [{
+            "original": "The budget cap is two million dollars.",
+            "fixed": "The budget cap is $750,000.",  # $750,000 not in corpus
+            "supportable": True, "topic": "budget cap"}]})
+    merged = _surgical_reground("q", _TWO_SENTENCES,
+                                ["The budget cap is two million dollars."], _KB_CORPUS)
+    # Reverted: original kept, fabricated figure not introduced.
+    assert "$750,000" not in (merged or "")
+
+
+def test_surgical_reground_none_when_gemini_unavailable(monkeypatch):
+    """generate_json returns None (Gemini down/CI) -> _surgical_reground None."""
+    monkeypatch.setattr(vertex_agent.gemini_client, "generate_json",
+                        lambda *a, **k: None)
+    assert _surgical_reground("q", _TWO_SENTENCES,
+                              ["The budget cap is two million dollars."], _KB_CORPUS) is None
+
+
+def _count_passes(monkeypatch, pass1, generate_json, pass2=None):
+    """Drive _run_verified counting _do_agent_pass invocations + monkeypatching
+    the surgical Gemini call. Returns (events, n_pass_calls)."""
+    calls = {"n": 0}
+
+    def fake(message, user_id, session_id, context="", model="",
+             memory_context="", retried=False):
+        calls["n"] += 1
+        data = pass2 if message.startswith(vertex_agent._STRICT_PREFIX) else pass1
+        yield {"type": "_result", "data": data}
+
+    monkeypatch.setattr(vertex_agent, "_do_agent_pass", fake)
+    monkeypatch.setattr(vertex_agent, "_create_session", lambda *a, **k: "regen-session")
+    monkeypatch.setattr(vertex_agent.gemini_client, "generate_json", generate_json)
+    events = list(vertex_agent._run_verified("What is the budget cap?", "u", "s"))
+    return events, calls["n"]
+
+
+def test_run_verified_uses_surgical_not_pass2(monkeypatch):
+    """The core win: a weak Pass-1 WITH usable spans is surgically re-grounded and
+    _do_agent_pass is NOT called a second time (no fresh KB search)."""
+    pass1 = _result(_TWO_SENTENCES, chunks=1, coverage=0.2,  # <0.5 -> weak
+                    grounded_corpus=_KB_CORPUS, grounded_spans=_FIRST_SENTENCE_SPAN)
+    gj = lambda *a, **k: {"rewrites": [{
+        "original": "The budget cap is two million dollars.",
+        "fixed": "Pre-award budgets are reviewed by ORA.",
+        "supportable": True, "topic": "budget review"}]}
+    events, n = _count_passes(monkeypatch, pass1, gj)
+    final = _final(events)
+    assert "Pre-award budgets are reviewed by ORA." in final
+    assert "two million dollars" not in final
+    assert n == 1, "Pass 2 must NOT run when surgical re-grounding succeeds"
+
+
+def test_run_verified_falls_back_to_pass2_when_surgical_fails(monkeypatch):
+    """Spans usable but Gemini unavailable for the surgical rewrite -> fall back
+    to the full strict Pass-2 regeneration (called a 2nd time)."""
+    pass1 = _result(_TWO_SENTENCES, chunks=1, coverage=0.2,
+                    grounded_corpus=_KB_CORPUS, grounded_spans=_FIRST_SENTENCE_SPAN)
+    pass2 = _result("Pre-award budgets are reviewed by ORA per policy.",
+                    chunks=4, coverage=0.8)
+    events, n = _count_passes(monkeypatch, pass1, lambda *a, **k: None, pass2=pass2)
+    final = _final(events)
+    assert "per policy" in final
+    assert n == 2, "Pass 2 must run when the surgical rewrite can't proceed"
