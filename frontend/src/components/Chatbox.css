@@ -1048,6 +1048,61 @@ body.dark .send-btn:hover:not(:disabled) {
   padding-left: 8px;
 }
 
+/* ---- Magnifier-sweep "scanning the knowledge base" indicator ---------------
+   A search glyph glides across a faint track while the bot looks things up.
+   Replaces the stepped checklist; the label still shows the real pipeline
+   stage (thinkingMessages[thinkingStepIndex]). */
+.ora-sweep-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.ora-sweep {
+  position: relative;
+  width: 92px;
+  height: 18px;
+  flex: none;
+}
+
+.ora-sweep-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, transparent, rgba(138, 180, 248, 0.9), transparent);
+  opacity: 0.6;
+}
+
+.ora-sweep-lens {
+  position: absolute;
+  top: 50%;
+  left: 8%;
+  color: var(--msu-blue, #4285F4);
+  transform: translate(-50%, -50%);
+  animation: oraSweepX 1.7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.ora-sweep-lens svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+@keyframes oraSweepX {
+  0%   { left: 8%; }
+  50%  { left: 92%; }
+  100% { left: 8%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ora-sweep-lens { animation: none; left: 50%; }
+}
+
 /* Streaming cursor - blinking bar like a text editor */
 .streaming-cursor {
   display: inline;
