@@ -1147,16 +1147,21 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # Detect file upload early
     file_match = re.search(r'uploads/chat_files/([^\)]+)', user_q)
 
+    # Embed the query ONCE and share the vector across both semantic-recall
+    # functions. Previously each (retrieve_relevant_memories + retrieve_relevant_turns)
+    # embedded the same query independently -> two Vertex embed calls per turn.
+    from services.embedding_util import embed_text as _embed_text
+    q_vec = await asyncio.to_thread(_embed_text, user_q)
+
     # Parallel fetch: history (for rewriting) + long-term memory
     #   + Phase 2 semantic-fact recall + Phase 4 verbatim-turn recall.
-    # All 4 run concurrently to keep added latency near zero (~50-80ms total
-    # for the slowest = single Vertex embed call shared across both retrievals
-    # via lazy client memoization).
+    # The two recall tasks reuse the pre-computed q_vec, so no embedding happens
+    # inside the gather (one shared embed call above instead of two).
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user["user_id"], session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user["user_id"], 10),
-        asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55),
-        asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id),
+        asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55, q_vec),
+        asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id, query_vec=q_vec),
     ]
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
     if isinstance(results[0], Exception):
@@ -1174,6 +1179,30 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # Tier 1: Rewrite follow-up queries to be self-contained
     if USE_VERTEX_AGENT and history_dicts and is_likely_followup(user_q):
         user_q = await asyncio.to_thread(rewrite_query, user_q, history_dicts)
+
+    # Cache check (mirrors /chat/stream). Skip for file uploads (unique content).
+    # query_cache.get() internally refuses to serve personal-recall queries
+    # ("what's my deadline?") from the shared cache, so this is leak-safe.
+    if USE_VERTEX_AGENT and not file_match and not getattr(req, "skip_cache", False):
+        _cache_ctx = get_context_hash(user["user_id"], model=req.model)
+        _cached = query_cache.get(user_q, _cache_ctx)
+        if _cached:
+            print(f"[CACHE] HIT (/chat) for query: {user_q[:50]}...")
+            _cached_cites = query_cache.get_citations(user_q, _cache_ctx)
+            try:
+                new_chat = ChatHistory(
+                    user_id=user["user_id"],
+                    session_id=session_id,
+                    user_query=original_q,
+                    bot_response=_cached,
+                    citations=json.dumps(_cached_cites) if _cached_cites else None,
+                )
+                db.add(new_chat)
+                db.commit()
+                _schedule_post_commit_memory_tasks(user["user_id"], session_id, new_chat.id)
+            except Exception as e:
+                print(f"[ERROR] Failed to save cached chat history: {e}")
+            return {"response": _cached, "citations": _cached_cites or []}
 
     memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
     conversation_context = _build_conversation_context(history_dicts, session_summary)
@@ -1269,9 +1298,27 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     else:
         answer = "AI system is initializing. Please try again in a moment."
 
+    # Store the answer in the cache for future identical questions. The
+    # _should_cache() gate inside set() refuses personal-recall queries and
+    # error/outage text, so this is leak-safe and won't poison on failures.
+    _chat_citations = get_last_grounding().get("citations", [])
+    _looks_err = (
+        not answer
+        or "trouble" in answer.lower()[:40]
+        or "error" in answer.lower()[:50]
+        or "initializing" in answer.lower()[:40]
+    )
+    if USE_VERTEX_AGENT and not file_match and not _looks_err:
+        try:
+            _cache_ctx = get_context_hash(user["user_id"], model=req.model)
+            query_cache.set(user_q, answer, _cache_ctx)
+            if _chat_citations:
+                query_cache.set_citations(user_q, _chat_citations, _cache_ctx)
+        except Exception as e:
+            print(f"[CACHE] store skipped: {e}")
+
     # Persist user-specific chat record
     try:
-        _chat_citations = get_last_grounding().get("citations", [])
         new_chat = ChatHistory(
             user_id=user["user_id"],
             session_id=session_id,
@@ -1312,12 +1359,17 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     session_id = req.session_id or "default"
     user_id = user["user_id"]
 
+    # Embed the query ONCE and share the vector across both recall functions
+    # (was two independent embed calls per turn -- one for memories, one for turns).
+    from services.embedding_util import embed_text as _embed_text
+    q_vec = await asyncio.to_thread(_embed_text, user_q)
+
     # Parallel fetch: history + memory + Phase 2 semantic facts + Phase 4 verbatim turns
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user_id, session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user_id, 10),
-        asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55),
-        asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id),
+        asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55, q_vec),
+        asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id, query_vec=q_vec),
     ]
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
     if isinstance(results[0], Exception):
