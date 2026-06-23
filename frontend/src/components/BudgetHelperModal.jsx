@@ -27,6 +27,23 @@ function capFromNotes(notes) {
   return m ? m[1].replace(/,/g, "") : "";
 }
 
+// Pull the per-category caps out of a "Category caps: Category I — $30,000,000; …"
+// notes line, if present. Returns [{category, cap}] with cap as a numeric string
+// (to match the <input> value type), or [] when there's no such line.
+function categoryCapsFromNotes(notes) {
+  if (!notes) return [];
+  const line = String(notes).match(/^Category caps:\s*(.+)$/m);
+  if (!line) return [];
+  return line[1]
+    .split(";")
+    .map((part) => {
+      const m = part.match(/^\s*(.+?)\s*—\s*\$?([\d,]+)/);
+      if (!m) return null;
+      return { category: m[1].trim(), cap: m[2].replace(/,/g, "") };
+    })
+    .filter(Boolean);
+}
+
 export default function BudgetHelperModal({ submission, onClose, onSaved }) {
   const [inputs, setInputs] = useState(EMPTY);
   const [computed, setComputed] = useState(null);
@@ -57,8 +74,14 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           setInputs({ ...EMPTY, ...saved, people: saved.people?.length ? saved.people : EMPTY.people });
           setComputed(budgetData.computed);
         } else {
-          // fresh — prefill the cap from the solicitation if we can find one
-          setInputs((p) => ({ ...p, cap: capFromNotes(submission.notes) }));
+          // fresh — if the solicitation has multiple category caps, leave the
+          // cap blank so the PI must pick a category; otherwise prefill the
+          // single cap as before.
+          const cats = categoryCapsFromNotes(submission.notes);
+          setInputs((p) => ({
+            ...p,
+            cap: cats.length >= 2 ? "" : capFromNotes(submission.notes),
+          }));
         }
       } finally {
         if (alive) setLoading(false);
@@ -94,6 +117,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
 
   const faOptions = rates?.fa_rates?.[inputs.fa_year] || [];
   const fringeOptions = rates?.fringe_rates || [];
+  const categoryCaps = categoryCapsFromNotes(submission.notes);
 
   const save = async () => {
     setSaving(true); setSavedMsg("");
@@ -222,6 +246,23 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                     ))}
                   </select>
                 </label>
+                {categoryCaps.length >= 2 && (
+                  <label className="bh-field"><span>Funding category</span>
+                    <select
+                      value={categoryCaps.find((c) => c.cap === String(inputs.cap))?.category || ""}
+                      onChange={(e) => {
+                        const picked = categoryCaps.find((c) => c.category === e.target.value);
+                        set({ cap: picked ? picked.cap : "" });
+                      }}>
+                      <option value="">Select your category…</option>
+                      {categoryCaps.map((c) => (
+                        <option key={c.category} value={c.category}>
+                          {c.category} — {fmt(c.cap)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 {numField("Sponsor cap", "cap", "(optional)")}
               </div>
 
