@@ -471,6 +471,13 @@ body.dark .proposal-card-status.status-withdrawn {
   margin-top: 2px;
 }
 
+.meta-internal {
+  font-size: 0.74rem;
+  color: var(--text-tertiary, #94a3b8);
+  margin-top: 2px;
+  cursor: help;
+}
+
 .status-pill {
   display: inline-block;
   padding: 3px 10px;

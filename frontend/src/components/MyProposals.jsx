@@ -657,6 +657,12 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
                     : `in ${dleft} days`}
               </span>
             )}
+            {submission.internal_deadline && (
+              <span className="meta-internal"
+                title="Morgan ORA needs proposals routed internally before the sponsor's deadline — about 5 business days earlier.">
+                Internal ORA deadline: {formatDeadline(submission.internal_deadline)}
+              </span>
+            )}
           </div>
           <div className="proposal-detail-meta-item">
             <span className="meta-label">Status</span>

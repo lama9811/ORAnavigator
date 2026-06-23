@@ -3116,6 +3116,10 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         "title": s.title,
         "sponsor": s.sponsor,
         "deadline": s.deadline.isoformat() if s.deadline else None,
+        # Morgan's internal routing deadline: 5 business days before the sponsor
+        # date, so a first-timer plans backward from the real institutional cutoff.
+        "internal_deadline": (_proposals_service.internal_routing_deadline(s.deadline).isoformat()
+                              if s.deadline else None),
         "status": s.status,
         "notes": s.notes,
         # Budget Helper: parsed saved inputs (None if no budget saved). Whether a

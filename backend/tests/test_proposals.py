@@ -558,3 +558,29 @@ def test_create_from_solicitation_sanitizes_category_name_with_separator(db):
     assert any("Track A" in c and ";" not in c for c in cats), (
         f"Sanitized Track A category must not contain ';': {cats}"
     )
+
+
+# ── internal routing deadline (reverse-timeline helper) ─────────────────────
+
+def test_internal_routing_deadline_none_when_no_deadline():
+    assert ps.internal_routing_deadline(None) is None
+
+
+def test_internal_routing_deadline_counts_five_weekdays():
+    """5 business days earlier, landing on a weekday, skipping Sat/Sun."""
+    deadline = datetime(2026, 7, 20, 17, 0)   # arbitrary date with a time
+    out = ps.internal_routing_deadline(deadline, business_days=5)
+    assert out < deadline
+    assert out.weekday() < 5                  # lands on Mon–Fri
+    # exactly 5 weekdays strictly after `out`, up to and including `deadline`
+    count, d = 0, out
+    while d < deadline:
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            count += 1
+    assert count == 5
+
+
+def test_internal_routing_deadline_zero_days_is_identity():
+    deadline = datetime(2026, 7, 20)
+    assert ps.internal_routing_deadline(deadline, business_days=0) == deadline
