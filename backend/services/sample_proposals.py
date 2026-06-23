@@ -206,20 +206,6 @@ SAMPLE_PROPOSALS: list[dict] = [
         "why": "The largest single open catalog of real proposals across funders; "
                "the unfunded entries are instructive in their own right.",
     },
-    {
-        "id": "candid-sample-documents",
-        "type": "link",
-        "title": "Candid — Sample Documents",
-        "source": "Candid (formerly Foundation Center)",
-        "url": "https://learning.candid.org/page/sample-documents",
-        "categories": ["Foundations"],
-        "kind": "Winning foundation/nonprofit proposals, letters of inquiry, cover "
-                "letters, and proposal budgets",
-        "access": "partial",
-        "why": "The go-to for FOUNDATION (non-federal) proposal style and LOIs — "
-               "verify what's free before relying on it.",
-    },
-
     # === Morgan State / early-career (link) =================================
     {
         "id": "morgan-ora-early-career",
