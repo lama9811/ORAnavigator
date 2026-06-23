@@ -381,3 +381,24 @@
 .bh-perline-head { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px; }
 .bh-perline ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 .bh-perline li { font-size: 0.82rem; color: #334155; line-height: 1.45; }
+
+/* Read-only spreadsheet (grid) view of the computed budget. */
+.bh-grid-wrap { margin-top: 18px; }
+.bh-grid-head {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: #64748b; margin-bottom: 8px;
+}
+.bh-grid-scroll { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
+.bh-grid { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.bh-grid th, .bh-grid td { padding: 7px 12px; text-align: left; white-space: nowrap; }
+.bh-grid thead th {
+  background: #f1f5f9; color: #475569; font-weight: 700;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
+  border-bottom: 1px solid #e2e8f0;
+}
+.bh-grid td.bh-grid-num, .bh-grid th.bh-grid-num { text-align: right; font-variant-numeric: tabular-nums; }
+.bh-grid td.bh-grid-detail { color: #64748b; }
+.bh-grid tbody tr { border-bottom: 1px solid #f1f5f9; }
+.bh-grid-subtotal td { font-weight: 600; background: #f8fafc; }
+.bh-grid-total td { font-weight: 800; background: #eef2ff; color: #0b2545; border-top: 2px solid #cbd5e1; }

@@ -105,19 +105,87 @@ def _effort(v, warnings):
     return x
 
 
+def _budget_table(year_results: list, multi: bool) -> dict:
+    """Render-ready spreadsheet model built from one or more per-year computed
+    budgets. Pure function of numbers the math core already produced -- it never
+    computes a figure itself. Row order mirrors `budget_to_csv` so the on-screen
+    grid and the CSV export stay consistent.
+
+      single-year -> columns ["Amount"], one value per row.
+      multi-year  -> columns ["Year 1", ..., "Year N", "Total"]; each row's
+                     trailing cell is the sum of its year cells.
+
+    Each row: {label, detail, values: [float, ...], kind: line|subtotal|total}.
+    """
+    yrs = year_results or []
+    n = len(yrs)
+    columns = ([f"Year {i + 1}" for i in range(n)] + ["Total"]) if multi else ["Amount"]
+    rows: list = []
+    if n == 0:
+        return {"columns": columns, "rows": rows}
+
+    def add(label: str, detail: str, values: list, kind: str = "line") -> None:
+        vals = [round(float(v or 0), 2) for v in values]
+        cells = (vals + [round(sum(vals), 2)]) if multi else vals
+        rows.append({"label": label, "detail": detail, "values": cells, "kind": kind})
+
+    first = yrs[0]
+
+    # Personnel: salary + fringe per person, aligned by list index across years
+    # (same people each year, only salaries escalate).
+    for idx, p0 in enumerate(first.get("personnel") or []):
+        def _person_cell(yr, field, i=idx):
+            pl = yr.get("personnel") or []
+            return pl[i][field] if i < len(pl) else 0
+        name = p0.get("name") or f"Person {idx + 1}"
+        add("Salary", f"{name} ({float(p0.get('effort_pct') or 0):.0f}% effort)",
+            [_person_cell(yr, "salary") for yr in yrs])
+        add("Fringe", f"{name} ({p0.get('fringe_label', '')}, {round(float(p0.get('fringe_rate') or 0) * 100)}%)",
+            [_person_cell(yr, "fringe") for yr in yrs])
+
+    # Other direct-cost categories (omit a category that's zero in every year).
+    for key, label in (("equipment", "Equipment"), ("travel", "Travel"),
+                       ("supplies", "Materials & supplies"),
+                       ("participant_support", "Participant support"),
+                       ("other", "Other")):
+        vals = [yr.get(key) or 0 for yr in yrs]
+        if any(vals):
+            add(label, "", vals)
+
+    # Subawards, aligned by index.
+    for i in range(len(first.get("subawards") or [])):
+        vals = []
+        for yr in yrs:
+            sl = yr.get("subawards") or []
+            vals.append(sl[i] if i < len(sl) else 0)
+        if any(vals):
+            add("Subaward", f"#{i + 1}", vals)
+
+    # Subtotals / total.
+    add("Total direct costs", "", [yr.get("direct_costs", 0) for yr in yrs], kind="subtotal")
+    fa_pct = round(float(first.get("fa_rate") or 0) * 100)
+    add(f"F&A ({first.get('fa_rate_label', '')}, {fa_pct}%)", "",
+        [yr.get("fa_amount", 0) for yr in yrs], kind="subtotal")
+    add("TOTAL", "", [yr.get("total", 0) for yr in yrs], kind="total")
+
+    return {"columns": columns, "rows": rows}
+
+
 def compute_budget(inputs: dict) -> dict:
-    """Compute a grant budget. Single-year by default (unchanged); when
-    `project_years` > 1, project the Year-1 line items across the project with
-    `escalation_pct` applied to salaries and return per-year + cumulative totals
-    under a `multi_year` key. Single-year output is byte-for-byte unchanged so
-    every existing caller/test is unaffected."""
+    """Compute a grant budget. Single-year by default; when `project_years` > 1,
+    project the Year-1 line items across the project with `escalation_pct`
+    applied to salaries and return per-year + cumulative totals under a
+    `multi_year` key. All existing fields are unchanged; a render-ready `table`
+    (spreadsheet model) is added on top for the UI's grid view."""
     inputs = inputs or {}
     try:
         years = int(inputs.get("project_years") or 1)
     except (TypeError, ValueError):
         years = 1
     if years <= 1:
-        return _compute_single(inputs)
+        r = _compute_single(inputs)
+        r["table"] = _budget_table([r], multi=False)
+        return r
 
     try:
         esc = float(inputs.get("escalation_pct") or 0) / 100.0
@@ -130,6 +198,7 @@ def compute_budget(inputs: dict) -> dict:
     base = _compute_single({**inputs, "cap": None, "project_years": None})
 
     per_year, cum = [], {"direct_costs": 0.0, "fa_amount": 0.0, "total": 0.0}
+    year_results = []   # full per-year breakdowns, retained for the spreadsheet grid
     for i in range(years):
         people = []
         for p in (inputs.get("people") or []):
@@ -140,6 +209,7 @@ def compute_budget(inputs: dict) -> dict:
                 pass
             people.append(p2)
         cy = _compute_single({**inputs, "people": people, "cap": None, "project_years": None})
+        year_results.append(cy)
         per_year.append({"year": i + 1, "direct_costs": cy["direct_costs"],
                          "fa_amount": cy["fa_amount"], "total": cy["total"]})
         for k in cum:
@@ -165,6 +235,7 @@ def compute_budget(inputs: dict) -> dict:
         "cap_status": cap_status,
         "cap_overage": cap_overage,
     }
+    base["table"] = _budget_table(year_results, multi=True)
     return base
 
 

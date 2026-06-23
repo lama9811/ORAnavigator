@@ -375,6 +375,8 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           </div>
         )}
 
+        {computed?.table?.rows?.length > 0 && <BudgetTable table={computed.table} />}
+
         {justification && (
           <div className="bh-justification">
             <div className="bh-justification-head">
@@ -397,6 +399,42 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
       </div>
     </div>,
     document.body
+  );
+}
+
+// Read-only spreadsheet view of the computed budget: every line as a row and,
+// for a multi-year project, each year as a column. Binds straight to the
+// backend's render-ready `table` model ({columns, rows}) — it formats numbers
+// but computes none, so it can never disagree with the summary or the CSV.
+function BudgetTable({ table }) {
+  if (!table?.rows?.length) return null;
+  const { columns, rows } = table;
+  return (
+    <div className="bh-grid-wrap">
+      <div className="bh-grid-head"><Calculator size={14} /> Budget table</div>
+      <div className="bh-grid-scroll">
+        <table className="bh-grid">
+          <thead>
+            <tr>
+              <th className="bh-grid-cat">Category</th>
+              <th className="bh-grid-detail">Detail</th>
+              {columns.map((c) => <th key={c} className="bh-grid-num">{c}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className={`bh-grid-${r.kind}`}>
+                <td className="bh-grid-cat">{r.label}</td>
+                <td className="bh-grid-detail">{r.detail}</td>
+                {r.values.map((v, j) => (
+                  <td key={j} className="bh-grid-num">{fmt(v)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
