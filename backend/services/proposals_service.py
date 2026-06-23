@@ -144,7 +144,12 @@ def create_submission_from_solicitation(
         if isinstance(c, dict) and c.get("category") and c.get("cap")
     ]
     if len(cap_details) >= 2:
-        cap_parts = [f"{c['category']} — ${int(c['cap']):,}" for c in cap_details]
+        cap_parts = []
+        for c in cap_details:
+            cat = _re.sub(r"[;—]+", " ", str(c["category"]))
+            cat = _re.sub(r"\s+", " ", cat).strip()
+            if cat:
+                cap_parts.append(f"{cat} — ${int(c['cap']):,}")
         notes_lines.append(f"Category caps: {'; '.join(cap_parts)}")
     if extracted.get("submission_portal"):
         notes_lines.append(f"Submission portal: {extracted['submission_portal']}")
