@@ -134,6 +134,18 @@ def create_submission_from_solicitation(
         notes_lines.append(f"Eligibility: {extracted['eligibility']}")
     if extracted.get("budget_cap"):
         notes_lines.append(f"Budget cap: ${extracted['budget_cap']:,}")
+    # Multi-category solicitations (NSF/NIH Category I/II/III, tracks) carry a
+    # different award max per category; `budget_cap` above is only the smallest.
+    # Surface every category cap as a parseable line so the Budget Helper can
+    # offer the PI a "Funding category" picker. Em-dash separated; "; " between
+    # entries. Only written when there are 2+ categories.
+    cap_details = [
+        c for c in (extracted.get("budget_cap_details") or [])
+        if isinstance(c, dict) and c.get("category") and c.get("cap")
+    ]
+    if len(cap_details) >= 2:
+        cap_parts = [f"{c['category']} — ${int(c['cap']):,}" for c in cap_details]
+        notes_lines.append(f"Category caps: {'; '.join(cap_parts)}")
     if extracted.get("submission_portal"):
         notes_lines.append(f"Submission portal: {extracted['submission_portal']}")
     # Sanitize keys (strip the ',;:' that would corrupt the comma-separated
@@ -388,6 +400,7 @@ import re as _re
 # phrase embedded mid-sentence in another notes field (e.g. Eligibility) can't
 # win over the real, line-leading entry.
 _BUDGET_NOTE_RE = _re.compile(r"^Budget cap:\s*\$?([\d,]+)", _re.MULTILINE)
+_CATEGORY_CAPS_NOTE_RE = _re.compile(r"^Category caps:\s*(.+)", _re.MULTILINE)
 _PAGE_LIMITS_NOTE_RE = _re.compile(r"^Page limits:\s*(.+)", _re.MULTILINE)
 _REQUIRED_ATTACHMENTS_NOTE_RE = _re.compile(r"^Required attachments:\s*(.+)", _re.MULTILINE)
 _REQUIRED_ATTACHMENT_TASK_PREFIX = "Prepare required attachment:"
@@ -410,6 +423,7 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
     field is empty/None and Draft Critic falls back to sponsor defaults."""
     out: dict = {
         "budget_cap": None,
+        "budget_cap_details": [],
         "page_limits": {},
         "required_attachments": [],
     }
@@ -422,6 +436,19 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
                 out["budget_cap"] = int(m.group(1).replace(",", ""))
             except ValueError:
                 pass
+        cc = _CATEGORY_CAPS_NOTE_RE.search(notes)
+        if cc:
+            # "Category I — $30,000,000; Category III — $500,000"
+            caps = []
+            for part in cc.group(1).split(";"):
+                seg = part.split("—", 1)          # split on the em dash
+                if len(seg) != 2:
+                    continue
+                cat = seg[0].strip()
+                amt = _re.sub(r"[^\d]", "", seg[1])
+                if cat and amt:
+                    caps.append({"category": cat, "cap": int(amt)})
+            out["budget_cap_details"] = caps
         pm = _PAGE_LIMITS_NOTE_RE.search(notes)
         if pm:
             # Format: "project_description: 15p, data_management_plan: 2p"

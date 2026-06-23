@@ -421,3 +421,80 @@ def test_manual_nsf_submission_seeds_no_eir_task(db):
     sub = ps.create_submission(db, user_id=db.user_id, title="Reef sensors",
                                sponsor="NSF", deadline=None)
     assert not any("EIR" in t.title for t in sub.tasks)
+
+
+# =====================================================================
+# Per-category funding caps (Task 2)
+# =====================================================================
+
+def test_create_from_solicitation_surfaces_category_caps_in_notes(db):
+    """A multi-category solicitation writes a parseable 'Category caps:' line;
+    the single budget_cap (smallest) is still written separately."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 26-509",
+        "program_name": "Integrated Data Systems & Services",
+        "deadline": "2026-07-28", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [],
+        "eligibility": "US institutions", "budget_cap": 500000,
+        "budget_cap_details": [
+            {"category": "Category I", "cap": 30000000},
+            {"category": "Category II", "cap": 9000000},
+            {"category": "Category III", "cap": 500000},
+        ],
+        "submission_portal": "Research.gov", "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    assert sub.notes is not None
+    assert "Budget cap: $500,000" in sub.notes          # single cap unchanged
+    assert "Category caps:" in sub.notes
+    assert "Category I — $30,000,000" in sub.notes
+    assert "Category II — $9,000,000" in sub.notes
+    assert "Category III — $500,000" in sub.notes
+
+
+def test_create_from_solicitation_omits_category_caps_when_single(db):
+    """A solicitation with 0/1 category caps gets no 'Category caps:' line."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 23-1", "program_name": "X",
+        "deadline": "2026-06-12", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": 500000, "budget_cap_details": [],
+        "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    assert "Category caps:" not in (sub.notes or "")
+
+
+def test_reconstruct_round_trips_category_caps(db):
+    """reconstruct_solicitation_context parses the caps back out of notes."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 26-509", "program_name": "IDSS",
+        "deadline": "2026-07-28", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": 500000,
+        "budget_cap_details": [
+            {"category": "Category I", "cap": 30000000},
+            {"category": "Category III", "cap": 500000},
+        ],
+        "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap_details"] == [
+        {"category": "Category I", "cap": 30000000},
+        {"category": "Category III", "cap": 500000},
+    ]
+
+
+def test_reconstruct_category_caps_empty_for_manual_submission(db):
+    """A submission with no 'Category caps:' line yields an empty list."""
+    sub = ps.create_submission(db, user_id=db.user_id, title="Manual", sponsor="NSF",
+                               deadline=None)
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap_details"] == []
