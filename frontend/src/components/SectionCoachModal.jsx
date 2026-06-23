@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle } from "lucide-react";
+import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle, FileText } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SectionCoachModal.css";
 
@@ -194,11 +194,25 @@ function Constraints({ c }) {
   );
 }
 
+// A link to a hosted, authored sample proposal showing what a strong version of
+// this section reads like. Opens the public download endpoint in a new tab.
+function SampleLink({ sample }) {
+  if (!sample?.id) return null;
+  return (
+    <a className="sc-sample" href={`${API_BASE}/api/sample-proposals/${sample.id}/download`}
+       target="_blank" rel="noopener noreferrer">
+      <FileText size={12} /> See a worked example{sample.title ? `: ${sample.title}` : ""}
+    </a>
+  );
+}
+
 function OutlineView({ r }) {
   return (
     <div className="sc-result">
+      <Constraints c={r.solicitation_constraints} />
       <div className="sc-purpose">{r.purpose}</div>
       <div className="sc-meta">Target length: {r.target_words}</div>
+      <SampleLink sample={r.sample} />
       <ol className="sc-outline">
         {r.outline.map((o, i) => (
           <li key={i}>
@@ -223,6 +237,7 @@ function ReviewView({ r }) {
     <div className="sc-result">
       <Constraints c={r.solicitation_constraints} />
       <div className="sc-summary">{r.summary}</div>
+      <SampleLink sample={r.sample} />
       {typeof r.word_count === "number" && r.word_count > 0 && (
         <div className="sc-meta">
           ~{r.word_count} words · target: {r.target_words}

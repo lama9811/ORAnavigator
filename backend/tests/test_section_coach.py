@@ -127,3 +127,52 @@ def test_verify_evidence_demotes_unquotable_covered_claims():
     assert out[0]["status"] == "unclear" and out[0]["evidence"] == ""   # unquotable -> demoted
     assert out[1]["status"] == "covered"                                # quotable -> kept
     assert out[2]["status"] == "missing"                                # untouched
+
+
+# ── solicitation-aware outline (Phase 1) ────────────────────────────────────
+
+def test_outline_surfaces_solicitation_constraints():
+    """When a solicitation context is passed, the outline carries the same
+    'match THIS solicitation' block the review already returns."""
+    ctx = {"required_attachments": ["Data Management Plan"],
+           "eligibility": "Tenure-track only",
+           "page_limits": {"project_description": 15}}
+    o = sc.outline_section("NSF", "project_description", "", ctx)
+    block = o["solicitation_constraints"]
+    assert block.get("required_attachments") == ["Data Management Plan"]
+    assert block.get("eligibility") == "Tenure-track only"
+    assert block.get("page_limits") == {"project_description": 15}
+
+
+def test_outline_without_context_has_empty_constraints():
+    o = sc.outline_section("NSF", "project_summary")
+    assert o["solicitation_constraints"] == {}
+
+
+# ── worked-example sample links (Phase 2) ───────────────────────────────────
+
+def test_section_samples_all_resolve_to_real_samples():
+    """Every id in SECTION_SAMPLES must exist in the Sample Proposals Library,
+    so a coach link can never 404."""
+    from services import sample_proposals as samples
+    for section_key, sample_id in sc.SECTION_SAMPLES.items():
+        assert samples.get_sample(sample_id) is not None, \
+            f"{section_key} -> {sample_id} does not resolve"
+
+
+def test_outline_includes_sample_hint():
+    o = sc.outline_section("NIH", "specific_aims")
+    assert o["sample"]["id"] == "nih-specific-aims-research-strategy"
+    assert o["sample"]["title"]                     # carries a human title
+    nsf = sc.outline_section("NSF", "project_summary")
+    assert nsf["sample"]["id"] == "nsf-ej-idss-planning-proposal"
+
+
+def test_review_includes_sample_hint():
+    r = sc.review_section("NIH", "specific_aims", "Some aims draft text.")
+    assert r["sample"]["id"] == "nih-specific-aims-research-strategy"
+
+
+def test_unmapped_section_has_no_sample_hint():
+    o = sc.outline_section("Some Foundation", "abstract")
+    assert o["sample"] is None

@@ -22,6 +22,33 @@ Design rules (same as Draft Critic / Budget Helper):
 from typing import Optional
 
 from services import gemini_client
+from services import sample_proposals as _samples
+
+# Each coach section -> an authored entry in the Sample Proposals Library, so a
+# PI can see a worked example of what a strong version reads like. Validated
+# against get_sample at call time, so a renamed/removed sample yields no link
+# rather than a dead one. Only sections with a genuinely relevant authored
+# sample are mapped; the rest get no hint.
+SECTION_SAMPLES = {
+    "specific_aims": "nih-specific-aims-research-strategy",
+    "research_strategy": "nih-specific-aims-research-strategy",
+    "project_summary": "nsf-ej-idss-planning-proposal",
+    "project_description": "nsf-ej-idss-planning-proposal",
+    "broader_impacts": "nsf-ej-idss-planning-proposal",
+    "data_management_plan": "nsf-ej-idss-planning-proposal",
+}
+
+
+def _sample_hint(section_key: str) -> Optional[dict]:
+    """{"id", "title"} for the worked-example sample mapped to this section, or
+    None when there's no mapping or the sample no longer exists."""
+    sid = SECTION_SAMPLES.get(section_key)
+    if not sid:
+        return None
+    s = _samples.get_sample(sid)
+    if not s:
+        return None
+    return {"id": sid, "title": s.get("title", "")}
 
 # ── Section catalog ────────────────────────────────────────────────────────
 # Each section: label, target length, what it's for, the must-have elements
@@ -318,19 +345,30 @@ def outline_section(sponsor: Optional[str], section_key: str,
         "target_min": tmin,
         "target_max": tmax,
         "kb_hint": sec["kb_hint"],
+        # Surface the funder's rules in outline mode too (review already does),
+        # and a worked-example link when one exists.
+        "solicitation_constraints": _solicitation_constraints(context),
+        "sample": _sample_hint(section_key),
     }
     topic = (topic or "").strip()
-    if not topic:
+    ctx = _context_line(context)
+    # Tailor when the PI gave a topic OR we have this solicitation's constraints —
+    # so a proposal with a solicitation but no typed topic still gets tailored tips.
+    if not topic and not ctx:
         return result
-    # Optional AI: tailor one short tip per outline heading to the PI's topic.
+    # Optional AI: tailor one short tip per outline heading to the PI's topic
+    # and/or THIS solicitation's stated constraints. Coaching tips only.
     headings = [o["heading"] for o in outline]
     prompt = (
-        f"Project topic: {topic}\n"
-        f"Section: {sec['label']} for a {sponsor or 'grant'} proposal.\n"
-        f"For EACH heading below, give ONE short, concrete tip (max 25 words) on what to write "
-        f"for THIS topic. Do NOT write the section text itself — only coaching tips.\n"
-        f"Headings: {headings}\n"
-        'Return JSON: {"tips": [{"heading": "<exact heading>", "tip": "<tip>"}]}'
+        (f"Project topic: {topic}\n" if topic else "")
+        + f"Section: {sec['label']} for a {sponsor or 'grant'} proposal.\n"
+        + (f"This solicitation's constraints: {ctx}\n" if ctx else "")
+        + "For EACH heading below, give ONE short, concrete tip (max 25 words) on what to write "
+        + ("for THIS topic" if topic else "for this section")
+        + (" given the solicitation's constraints" if ctx else "")
+        + ". Do NOT write the section text itself — only coaching tips.\n"
+        + f"Headings: {headings}\n"
+        + 'Return JSON: {"tips": [{"heading": "<exact heading>", "tip": "<tip>"}]}'
     )
     ai = gemini_client.generate_json(prompt, temperature=0.3, max_output_tokens=700)
     if ai and isinstance(ai.get("tips"), list):
@@ -353,6 +391,9 @@ _REVIEW_SYSTEM = (
     "2. For each expected element you mark 'covered', you MUST include an 'evidence' "
     "field: a VERBATIM quote (<=160 chars) from the DRAFT showing it. No quote -> not covered.\n"
     "3. Be specific and constructive. Suggestions say WHAT to add/clarify, never write the prose.\n"
+    "4. If SOLICITATION CONSTRAINTS are given, also check whether the draft addresses the "
+    "requirements they state (eligibility, scope, page limits). Add a checklist item for any "
+    "stated requirement the draft does NOT clearly address, marked 'missing' or 'partial'.\n"
 )
 
 
@@ -429,6 +470,7 @@ def review_section(sponsor: Optional[str], section_key: str, draft_text: str,
         "target_min": tmin,
         "target_max": tmax,
         "solicitation_constraints": _solicitation_constraints(context),
+        "sample": _sample_hint(section_key),
     }
     if not draft_text:
         return {**base, "ai": False, "summary": "Paste your draft of this section to get feedback.",
