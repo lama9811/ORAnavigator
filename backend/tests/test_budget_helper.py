@@ -322,3 +322,40 @@ def test_budget_to_csv_has_totals():
     b = _cb({"supplies": 10_000})
     csv_text = budget_to_csv(b)
     assert "TOTAL PROJECT COST" in csv_text and "Category" in csv_text
+
+
+# ---------------------------------------------------------------------------
+# Spreadsheet (grid) view -- render-ready `table` model
+# ---------------------------------------------------------------------------
+
+def test_table_single_year_one_amount_column_and_total_row():
+    r = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 50}],
+             "supplies": 5_000})
+    t = r["table"]
+    assert t["columns"] == ["Amount"]
+    labels = [row["label"] for row in t["rows"]]
+    assert "Salary" in labels and "Fringe" in labels and "Materials & supplies" in labels
+    total_row = next(row for row in t["rows"] if row["kind"] == "total")
+    assert total_row["values"][0] == r["total"]   # grid total == summary total
+
+
+def test_table_omits_zero_categories():
+    r = _cb({"supplies": 5_000})            # no travel/equipment/etc.
+    labels = [row["label"] for row in r["table"]["rows"]]
+    assert "Travel" not in labels and "Equipment" not in labels
+
+
+def test_table_multi_year_year_columns_and_row_totals():
+    r = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 50, "fringe": "faculty_ay"}],
+             "supplies": 5_000, "project_years": 3, "escalation_pct": 3})
+    t = r["table"]
+    assert t["columns"] == ["Year 1", "Year 2", "Year 3", "Total"]
+    # Every row's trailing cell is the sum of its year cells.
+    for row in t["rows"]:
+        assert row["values"][-1] == round(sum(row["values"][:-1]), 2)
+    # Salaries escalate year over year.
+    salary = next(row for row in t["rows"] if row["label"] == "Salary")
+    assert salary["values"][1] > salary["values"][0] > 0
+    # The grid grand total matches the multi-year cumulative total.
+    total_row = next(row for row in t["rows"] if row["kind"] == "total")
+    assert abs(total_row["values"][-1] - r["multi_year"]["cumulative"]["total"]) < 0.01
