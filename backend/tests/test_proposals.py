@@ -421,3 +421,140 @@ def test_manual_nsf_submission_seeds_no_eir_task(db):
     sub = ps.create_submission(db, user_id=db.user_id, title="Reef sensors",
                                sponsor="NSF", deadline=None)
     assert not any("EIR" in t.title for t in sub.tasks)
+
+
+# =====================================================================
+# Per-category funding caps (Task 2)
+# =====================================================================
+
+def test_create_from_solicitation_surfaces_category_caps_in_notes(db):
+    """A multi-category solicitation writes a parseable 'Category caps:' line;
+    the single budget_cap (smallest) is still written separately."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 26-509",
+        "program_name": "Integrated Data Systems & Services",
+        "deadline": "2026-07-28", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [],
+        "eligibility": "US institutions", "budget_cap": 500000,
+        "budget_cap_details": [
+            {"category": "Category I", "cap": 30000000},
+            {"category": "Category II", "cap": 9000000},
+            {"category": "Category III", "cap": 500000},
+        ],
+        "submission_portal": "Research.gov", "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    assert sub.notes is not None
+    assert "Budget cap: $500,000" in sub.notes          # single cap unchanged
+    assert "Category caps:" in sub.notes
+    assert "Category I — $30,000,000" in sub.notes
+    assert "Category II — $9,000,000" in sub.notes
+    assert "Category III — $500,000" in sub.notes
+
+
+def test_create_from_solicitation_omits_category_caps_when_single(db):
+    """A solicitation with 0/1 category caps gets no 'Category caps:' line."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 23-1", "program_name": "X",
+        "deadline": "2026-06-12", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": 500000, "budget_cap_details": [],
+        "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    assert "Category caps:" not in (sub.notes or "")
+
+
+def test_reconstruct_round_trips_category_caps(db):
+    """reconstruct_solicitation_context parses the caps back out of notes."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 26-509", "program_name": "IDSS",
+        "deadline": "2026-07-28", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": 500000,
+        "budget_cap_details": [
+            {"category": "Category I", "cap": 30000000},
+            {"category": "Category III", "cap": 500000},
+        ],
+        "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap_details"] == [
+        {"category": "Category I", "cap": 30000000},
+        {"category": "Category III", "cap": 500000},
+    ]
+
+
+def test_reconstruct_category_caps_empty_for_manual_submission(db):
+    """A submission with no 'Category caps:' line yields an empty list."""
+    sub = ps.create_submission(db, user_id=db.user_id, title="Manual", sponsor="NSF",
+                               deadline=None)
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap_details"] == []
+
+
+def test_create_from_solicitation_omits_category_caps_when_one_entry(db):
+    """A solicitation with exactly ONE budget_cap_details entry must NOT emit
+    a 'Category caps:' line (the guard is >= 2). Zero entries is already
+    covered above; this closes the boundary: exactly 1."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 23-1", "program_name": "X",
+        "deadline": "2026-06-12", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": 500000,
+        "budget_cap_details": [
+            {"category": "Category I", "cap": 500000},
+        ],
+        "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    assert "Category caps:" not in (sub.notes or "")
+
+
+def test_create_from_solicitation_sanitizes_category_name_with_separator(db):
+    """A category name containing a stray ';' or '—' must be sanitized
+    before being written to the notes line, so the round-trip via
+    reconstruct_solicitation_context returns TWO intact entries (not
+    a corrupt split into extra entries)."""
+    extracted = {
+        "sponsor": "NSF", "program_id": "NSF 26-999", "program_name": "Multi-Track",
+        "deadline": "2026-08-01", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": 500000,
+        "budget_cap_details": [
+            {"category": "Track A; pilot", "cap": 1000000},
+            {"category": "Track B", "cap": 500000},
+        ],
+        "submission_portal": None, "source_quotes": {},
+    }
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=extracted,
+    )
+    # The notes line must exist (2 entries satisfies the >= 2 guard)
+    assert "Category caps:" in (sub.notes or "")
+    # The stray ';' in "Track A; pilot" must be gone from the notes
+    assert "Track A; pilot" not in (sub.notes or "")
+
+    # Round-trip: reconstruct must yield EXACTLY 2 entries, not 3+
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert len(ctx["budget_cap_details"]) == 2, (
+        f"Expected 2 category cap entries but got {len(ctx['budget_cap_details'])}: "
+        f"{ctx['budget_cap_details']}"
+    )
+    caps_by_amount = {e["cap"] for e in ctx["budget_cap_details"]}
+    assert 1000000 in caps_by_amount, "Track A cap must round-trip"
+    assert 500000 in caps_by_amount, "Track B cap must round-trip"
+    # Sanitized category name: ';' replaced with space, collapsed
+    cats = [e["category"] for e in ctx["budget_cap_details"]]
+    assert any("Track A" in c and ";" not in c for c in cats), (
+        f"Sanitized Track A category must not contain ';': {cats}"
+    )

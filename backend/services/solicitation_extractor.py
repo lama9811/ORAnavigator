@@ -75,7 +75,7 @@ def _get_client():
 _CONTRACT_KEYS = (
     "sponsor", "program_id", "program_name", "deadline", "deadline_details",
     "page_limits", "required_attachments", "eligibility",
-    "budget_cap", "submission_portal", "source_quotes",
+    "budget_cap", "budget_cap_details", "submission_portal", "source_quotes",
 )
 
 
@@ -105,6 +105,7 @@ Return ONLY a JSON object with EXACTLY these fields (unknown -> null, or {} / []
   "required_attachments": array of required attachment / element names (e.g. ["Biosketch", "Current & Pending Support", "Data Management Plan"]); include conditionally-required, exclude purely optional; [] if none,
   "eligibility": one or two sentence summary of who may apply, including any alternate path stressed, or null,
   "budget_cap": integer dollar maximum per proposal/award (e.g. 600000), no commas/symbols, or null,
+  "budget_cap_details": when the solicitation defines MULTIPLE proposal categories/tracks with DIFFERENT award maxima, an array of {"category": <name as written, e.g. "Category I">, "cap": <integer dollar maximum for that category, no commas/symbols>}; for a stated RANGE (e.g. "$10 million to $30 million") use the MAXIMUM as cap; [] if there is only one category/cap,
   "submission_portal": the submission system(s); if more than one is accepted list ALL comma-separated (e.g. "Research.gov, Grants.gov"), or null,
   "source_quotes": object mapping each FILLED field name -> a <=200-char VERBATIM quote from the text supporting it. Example: {"deadline": "Proposals are due no later than 5:00 p.m. on June 12, 2026."}
 }
@@ -204,6 +205,24 @@ def _coerce_budget(raw) -> Optional[int]:
     return None
 
 
+def _coerce_cap_details(raw) -> list:
+    """Normalize Gemini's per-category cap list into clean
+    [{"category": str, "cap": int}] entries. Drops any entry without a
+    non-empty category or without a parseable positive integer cap."""
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        cat = item.get("category")
+        cat = cat.strip() if isinstance(cat, str) else ""
+        cap = _coerce_budget(item.get("cap"))
+        if cat and cap and cap > 0:
+            out.append({"category": cat, "cap": cap})
+    return out
+
+
 # Map a full sponsor name back to the canonical short token the rest of the
 # app keys on (get_template + draft_critic._sponsor_default_sections expect
 # exactly "NSF"/"NIH"/"DoD"/"DoE"/...). Gemini may return "National Science
@@ -282,6 +301,10 @@ def _coerce_extracted(raw: dict) -> dict:
 
     # budget_cap to int when possible
     out["budget_cap"] = _coerce_budget(out["budget_cap"])
+
+    # Per-category caps (additive; budget_cap above stays the single
+    # most-restrictive value). Empty list when the solicitation has one cap.
+    out["budget_cap_details"] = _coerce_cap_details(out.get("budget_cap_details"))
 
     # source_quotes must be a dict
     if not isinstance(out["source_quotes"], dict):
