@@ -291,3 +291,57 @@ def test_list_noise_glyphs_ignored_in_match():
         "source_quotes": {"required_attachments": "Required: Biosketch Data Management Plan"},
     }
     assert "required_attachments" not in sx._verify_source_quotes(extracted, text)
+
+
+# ---------- budget_cap_details (per-category caps) --------------------------
+
+def test_coerce_cap_details_normalizes_strings_and_floats():
+    """Category caps arrive as strings/floats with symbols; coerce to int."""
+    raw = {
+        "sponsor": "NSF", "deadline": None, "page_limits": {},
+        "required_attachments": [], "eligibility": None, "budget_cap": 500000,
+        "submission_portal": None, "program_id": None, "program_name": None,
+        "source_quotes": {},
+        "budget_cap_details": [
+            {"category": "Category I", "cap": "$30,000,000"},
+            {"category": "Category II", "cap": 9000000.0},
+            {"category": "Category III", "cap": 500000},
+        ],
+    }
+    out = sx._coerce_extracted(raw)
+    assert out["budget_cap_details"] == [
+        {"category": "Category I", "cap": 30000000},
+        {"category": "Category II", "cap": 9000000},
+        {"category": "Category III", "cap": 500000},
+    ]
+
+
+def test_coerce_cap_details_drops_unusable_entries():
+    """Entries with no category or no parseable cap are dropped, not kept as junk."""
+    raw = {
+        "sponsor": "NSF", "deadline": None, "page_limits": {},
+        "required_attachments": [], "eligibility": None, "budget_cap": None,
+        "submission_portal": None, "program_id": None, "program_name": None,
+        "source_quotes": {},
+        "budget_cap_details": [
+            {"category": "Category I", "cap": "30000000"},
+            {"category": "", "cap": "9000000"},        # no category -> drop
+            {"category": "Category III", "cap": "n/a"}, # no number -> drop
+            {"category": "Category IV"},                # no cap key -> drop
+        ],
+    }
+    out = sx._coerce_extracted(raw)
+    assert out["budget_cap_details"] == [{"category": "Category I", "cap": 30000000}]
+
+
+def test_coerce_cap_details_absent_or_single_is_empty_list():
+    """Missing or non-list budget_cap_details normalizes to []."""
+    raw = {
+        "sponsor": "NSF", "deadline": None, "page_limits": {},
+        "required_attachments": [], "eligibility": None, "budget_cap": 500000,
+        "submission_portal": None, "program_id": None, "program_name": None,
+        "source_quotes": {},
+        # budget_cap_details intentionally absent
+    }
+    out = sx._coerce_extracted(raw)
+    assert out["budget_cap_details"] == []
