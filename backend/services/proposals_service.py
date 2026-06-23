@@ -7,7 +7,7 @@ level so a user can never see or mutate another user's submission, even
 if they construct the URL by hand.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -18,6 +18,29 @@ from services.proposal_templates import get_template
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+# Morgan ORA needs proposals routed internally BEFORE the sponsor's deadline.
+# Surface a derived internal deadline this many business days earlier so an
+# inexperienced PI plans backward from the real (earlier) institutional cutoff
+# rather than the sponsor date and runs out of time.
+INTERNAL_ROUTING_BUSINESS_DAYS = 5
+
+
+def internal_routing_deadline(deadline: Optional[datetime],
+                              business_days: int = INTERNAL_ROUTING_BUSINESS_DAYS) -> Optional[datetime]:
+    """The institutional routing deadline: `business_days` weekdays before the
+    sponsor deadline (skips Sat/Sun; holidays not modeled). Deterministic.
+    Returns None when there is no sponsor deadline."""
+    if deadline is None or business_days <= 0:
+        return deadline
+    d = deadline
+    remaining = business_days
+    while remaining > 0:
+        d = d - timedelta(days=1)
+        if d.weekday() < 5:        # Mon–Fri
+            remaining -= 1
+    return d
 
 
 def _record_active_grant_memory(db: Session, user_id: int,
