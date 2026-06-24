@@ -99,7 +99,10 @@ steps:
       - '--port=8080'
       - '--memory=2Gi'
       - '--cpu=2'
-
+      # Keep one ADK instance always warm: the chat path waits on this service,
+      # and a cold start here is the dominant chunk of ~40-60s first-request
+      # latency. min-instances=1 + cpu-boost keeps the first token under a few s.
+      - '--min-instances=1'
       - '--cpu-boost'
       - '--max-instances=10'
       - '--timeout=300'
@@ -143,7 +146,7 @@ steps:
           --port=5000 \
           --memory=1Gi \
           --cpu=1 \
-          --min-instances=0 \
+          --min-instances=1 \
           --cpu-boost \
           --max-instances=20 \
           --timeout=300 \
