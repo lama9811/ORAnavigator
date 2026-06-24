@@ -14,6 +14,7 @@ const Chatbox        = lazy(() => import("./components/Chatbox"));
 const ProfilePage    = lazy(() => import("./components/ProfilePage"));
 const FormsCatalog   = lazy(() => import("./components/FormsCatalog"));
 const SampleProposalsLibrary = lazy(() => import("./components/SampleProposalsLibrary"));
+const OpportunityFinder = lazy(() => import("./components/OpportunityFinder"));
 const MyProposals    = lazy(() => import("./components/MyProposals"));
 const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
 const LandingPage    = lazy(() => import("./components/LandingPage"));
@@ -597,6 +598,32 @@ export default function App() {
                 onCollapse={toggleSidebar}
               >
                 <SampleProposalsLibrary />
+              </SidebarLayout>
+            </RequireAuth>
+          }
+        />
+
+        {/* protected: opportunity finder */}
+        <Route
+          path="/opportunities"
+          element={
+            <RequireAuth>
+              <SidebarLayout
+                sessions={sessions}
+                activeId={activeId}
+                onNew={handleNew}
+                onSelect={handleSelect}
+                onDelete={handleDelete}
+                onLogout={handleLogout}
+                userEmail={userEmail}
+                onPin={handlePin}
+                onArchive={handleArchive}
+                onRename={handleRename}
+                darkMode={darkMode}
+                onToggleTheme={toggleTheme}
+                onCollapse={toggleSidebar}
+              >
+                <OpportunityFinder />
               </SidebarLayout>
             </RequireAuth>
           }

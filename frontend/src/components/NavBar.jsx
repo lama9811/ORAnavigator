@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { BookOpen, FileText, ListChecks, Menu, User } from "lucide-react";
+import { BookOpen, Compass, FileText, ListChecks, Menu, User } from "lucide-react";
 import "../index.css";
 import "./NavBar.css";
 
@@ -114,6 +114,15 @@ export default function NavBar({ role, onToggleSidebar }) {
         {/* Right side - Proposals + Forms + Profile icon when authenticated */}
         {isAuthed && (
           <div className="navbar-right">
+            <button
+              className="navbar-forms-btn"
+              onClick={() => navigate("/opportunities")}
+              title="Describe your research and find matching federal grants"
+              aria-label="Open Find Funding"
+            >
+              <Compass size={16} />
+              <span className="navbar-forms-label">Find Funding</span>
+            </button>
             <button
               className="navbar-forms-btn"
               onClick={() => navigate("/my-proposals")}

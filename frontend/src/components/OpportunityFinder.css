@@ -1,0 +1,191 @@
+/* Opportunity Finder — matches the Sample Proposals / Forms surfaces. */
+.oppf {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+.oppf-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0b2545;
+  margin: 0 0 8px;
+}
+.oppf-header-icon { color: #f59e0b; }
+.oppf-subtitle {
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0 0 18px;
+}
+
+/* --- search box --- */
+.oppf-searchbox {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 6px 20px rgba(11, 37, 69, 0.06);
+}
+.oppf-textarea {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  line-height: 1.5;
+  color: #1a1f29;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.oppf-textarea:focus {
+  outline: none;
+  border-color: #0b2545;
+  box-shadow: 0 0 0 3px rgba(11, 37, 69, 0.1);
+}
+.oppf-searchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.oppf-hint { color: #94a3b8; font-size: 0.8rem; }
+.oppf-search-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #f59e0b;
+  color: #0b2545;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.oppf-search-btn:hover { filter: brightness(0.95); }
+.oppf-search-btn:disabled { opacity: 0.6; cursor: default; }
+
+.oppf-error {
+  margin-top: 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.88rem;
+}
+.oppf-status, .oppf-empty {
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 18px;
+}
+.oppf-result-meta {
+  margin: 22px 4px 12px;
+  color: #475569;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+/* --- result cards --- */
+.oppf-grid { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+.oppf-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 14px rgba(11, 37, 69, 0.05);
+}
+.oppf-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.oppf-card-title { font-weight: 700; color: #0b2545; font-size: 1.02rem; line-height: 1.35; }
+.oppf-card-agency {
+  display: inline-flex; align-items: center; gap: 4px;
+  color: #64748b; font-size: 0.78rem; white-space: nowrap; flex-shrink: 0;
+}
+
+.oppf-elig {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 10px 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.oppf-elig-ok   { background: #ecfdf5; color: #047857; }
+.oppf-elig-warn { background: #fffbeb; color: #b45309; }
+.oppf-elig-no   { background: #fef2f2; color: #b91c1c; }
+
+.oppf-fit { color: #334155; font-size: 0.9rem; line-height: 1.55; margin: 6px 0; }
+.oppf-quote {
+  margin: 6px 0 0;
+  padding: 6px 0 6px 12px;
+  border-left: 3px solid #cbd5e1;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-style: italic;
+}
+
+.oppf-meta-row {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin: 12px 0 4px;
+  font-size: 0.82rem; color: #475569;
+}
+.oppf-meta { display: inline-flex; align-items: center; gap: 5px; }
+.oppf-meta b { color: #0b2545; }
+.oppf-meta-internal b { color: #b45309; }
+
+.oppf-mechanism {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.83rem;
+  color: #334155;
+}
+
+.oppf-pi-elig { margin-top: 10px; font-size: 0.83rem; }
+.oppf-pi-elig summary { cursor: pointer; color: #64748b; font-weight: 600; }
+.oppf-pi-elig p { color: #475569; margin: 6px 0 0; line-height: 1.5; }
+
+.oppf-card-actions {
+  display: flex; align-items: center; gap: 16px;
+  margin-top: 14px; flex-wrap: wrap;
+}
+.oppf-start-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #0b2545; color: #fff;
+  border: none; border-radius: 9px;
+  padding: 9px 16px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  transition: filter 0.15s;
+}
+.oppf-start-btn:hover { filter: brightness(1.15); }
+.oppf-start-btn:disabled { opacity: 0.5; cursor: default; }
+.oppf-open-link {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: #0b2545; font-size: 0.84rem; font-weight: 600; text-decoration: none;
+}
+.oppf-open-link:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .oppf { padding: 18px 14px 48px; }
+  .oppf-searchrow { flex-direction: column; align-items: stretch; }
+  .oppf-search-btn { justify-content: center; }
+}

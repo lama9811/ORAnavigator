@@ -27,7 +27,7 @@ function authHeaders() {
 const SPONSORS = ["NSF", "NIH", "DoD", "DoE", "NASA", "USDA", "EPA",
                   "Foundation", "State of Maryland", "Internal"];
 
-export default function SolicitationUploadModal({ onClose, onCreated }) {
+export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "" }) {
   // step: "pick" -> "extracting" -> "review" -> "creating"
   const [step, setStep] = useState("pick");
   const [error, setError] = useState("");
@@ -193,7 +193,7 @@ export default function SolicitationUploadModal({ onClose, onCreated }) {
 
 function PickStep({ onFile, onUrl, fileInputRef }) {
   const [dragOver, setDragOver] = useState(false);
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
 
   return (
     <div className="solicitation-pick">

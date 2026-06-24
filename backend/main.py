@@ -1733,6 +1733,40 @@ async def download_sample_proposal(sample_id: str):
     return FileResponse(path, media_type="application/pdf", filename=download_name)
 
 
+class OpportunitySearchRequest(BaseModel):
+    description: str
+
+
+@app.post("/api/opportunities/search")
+async def search_opportunities(
+    req: OpportunitySearchRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Opportunity Finder: a PI's free-text research description -> ranked list of
+    live, OPEN federal opportunities (Grants.gov), each with a grounded fit
+    explanation, a deterministic institution-eligibility verdict, a PI-level
+    eligibility advisory, and a mechanism note. The PI's saved interests enrich
+    the query. Returns [] (not an error) when the federal API is unreachable, so
+    the UI degrades gracefully."""
+    description = (req.description or "").strip()
+    if not description:
+        raise HTTPException(status_code=422, detail="A research description is required.")
+
+    # Enrich the query with the user's saved interests (multi-value, in memories).
+    interest_rows = (
+        db.query(UserMemory)
+        .filter(UserMemory.user_id == user["user_id"], UserMemory.memory_type == "interest")
+        .order_by(UserMemory.id.asc())
+        .all()
+    )
+    interests = ", ".join((r.content or "").strip() for r in interest_rows if (r.content or "").strip())
+
+    from services.opportunity_finder import find_opportunities
+    results = find_opportunities(description, profile={"interests": interests})
+    return {"opportunities": results, "count": len(results)}
+
+
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch chat history for the logged-in user."""
