@@ -27,6 +27,17 @@ from services import gemini_client
 # KB search. Answer quality is handled here by Layer 3 (_run_verified -- grounding
 # verification with regenerate-then-refuse) plus the faithfulness checks.
 
+# Latency budget for a chat turn. When a turn has already spent this long before
+# the Pass-2 regeneration step, skip the (expensive) second full agent pass and
+# deliver Pass-1 with a caution note instead -- so a warm turn stays under the
+# ~10s target rather than stacking a second model round-trip. Env-tunable.
+_LATENCY_BUDGET_S = float(os.getenv("CHAT_LATENCY_BUDGET_S", "7.0"))
+
+
+def _over_latency_budget(elapsed_s: float) -> bool:
+    """True once a turn has spent its latency budget (deterministic predicate)."""
+    return elapsed_s >= _LATENCY_BUDGET_S
+
 # Configuration
 ADK_BASE_URL = os.getenv("ADK_BASE_URL", "http://127.0.0.1:8080")
 ADK_APP_NAME = os.getenv("ADK_APP_NAME", "ora_navigator_unified")
@@ -1309,6 +1320,7 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     consume this. The buffered answer is delivered only after verification, so an
     ungrounded answer is never shown to the user.
     """
+    _t0 = time_module.time()
     _set_grounding(False, 0, 0.0)  # reset; a failed run must not leak stale citations
     yield {"type": "status", "content": "Searching knowledge base"}
 
@@ -1383,6 +1395,17 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
                       f"sentence(s) ({result['coverage']:.0%} coverage) - no 2nd search")
         # unsupported is None -> spans unusable; leave verdict 'weak' for Pass 2.
 
+    # ---- LATENCY GUARD: skip the expensive Pass-2 when over budget -------
+    # If we already have a usable Pass-1 answer but it graded weak, and the turn
+    # has spent its latency budget, deliver Pass-1 with a caution note instead of
+    # paying for a full second agent round-trip. (Empty Pass-1 text still
+    # regenerates -- there's nothing to deliver otherwise.)
+    if verdict == "weak" and text and _over_latency_budget(time_module.time() - _t0):
+        print(f"   [LAYER3] over latency budget ({_LATENCY_BUDGET_S}s) - "
+              f"delivering Pass-1 with caution, skipping Pass-2")
+        text = text + _WEAK_NOTE
+        verdict = "ok"
+
     # ---- PASS 2: regenerate when the first answer is weakly grounded -----
     if verdict == "weak":
         print(f"   [LAYER3] Grounding unverified ({result['chunks']} chunks, "
@@ -1427,6 +1450,8 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     # answer is never sourceless.
     if _wants_fallback_citations(message, result):
         result["citations"] = _fallback_citations(message)
+    print(f"   [LATENCY] chat turn {(time_module.time() - _t0) * 1000:.0f}ms "
+          f"(verdict={verdict}, chunks={result['chunks']})")
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
                    citations=result["citations"])
     final = _finalize_answer(text, result["grounded_corpus"])
@@ -1450,6 +1475,7 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
     outages, and empty/zero-chunk answers are never streamed (guarded), so those
     still degrade to the outage/refusal messages exactly as before.
     """
+    _t0 = time_module.time()
     _set_grounding(False, 0, 0.0)
     yield {"type": "status", "content": "Searching knowledge base"}
 
@@ -1502,6 +1528,8 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
     # already flagged with a caution note.
     if verdict != "weak" and _wants_fallback_citations(message, result):
         result["citations"] = _fallback_citations(message)
+    print(f"   [LATENCY] chat turn (stream) {(time_module.time() - _t0) * 1000:.0f}ms "
+          f"(verdict={verdict}, chunks={result['chunks']})")
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
                    citations=result["citations"])
     final = _finalize_answer(text, result["grounded_corpus"])
