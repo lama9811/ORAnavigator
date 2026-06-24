@@ -61,19 +61,26 @@
 
 .bh-loading { padding: 50px; text-align: center; color: #64748b; }
 
+/* The whole modal body scrolls as ONE region (header stays fixed). Previously
+   the form and summary scrolled independently and the budget table /
+   justification were separate flex children of the modal that fought for
+   vertical space, clipping content. */
+.bh-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
 .bh-body {
   display: flex;
   gap: 0;
-  min-height: 0;
-  flex: 1;
-  overflow: hidden;
 }
 
-/* LEFT — scrollable form */
+/* LEFT — line-item form */
 .bh-form {
   flex: 1.7;
   padding: 16px 18px;
-  overflow-y: auto;
   min-width: 0;
 }
 .bh-form h4 {
@@ -193,8 +200,17 @@
   background: #0B2545;
   color: #fff;
   padding: 18px;
-  overflow-y: auto;
   min-width: 240px;
+  /* Pin the total in view while the taller form scrolls. align-self:flex-start
+     stops the panel from stretching to the form's full height, which is what
+     gives sticky room to move. */
+  align-self: flex-start;
+  position: sticky;
+  top: 0;
+  /* If the summary itself is taller than the viewport (many advisories/trims),
+     scroll it internally so the action buttons stay reachable. */
+  max-height: calc(92vh - 64px);
+  overflow-y: auto;
 }
 .bh-summary h4 {
   margin: 0 0 12px;
@@ -288,9 +304,27 @@
   color: #475569;
   margin-bottom: 6px;
 }
+.bh-justification-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .bh-justification-head button {
   background: #0B2545; color: #fff; border: none; border-radius: 6px;
   padding: 4px 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
+}
+.bh-justification-head .bh-justification-close {
+  background: transparent;
+  color: #475569;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+.bh-justification-head .bh-justification-close:hover {
+  background: #e2e8f0;
+  color: #0B2545;
 }
 .bh-justification textarea {
   width: 100%;
@@ -310,7 +344,7 @@
   .bh-modal { max-width: 100%; max-height: 100vh; height: 100vh; border-radius: 0; }
   .bh-body { flex-direction: column; overflow-y: auto; }
   .bh-form { flex: none; overflow: visible; }
-  .bh-summary { min-width: 0; }
+  .bh-summary { min-width: 0; position: static; max-height: none; align-self: auto; }
   .bh-person {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
@@ -383,22 +417,24 @@
 .bh-perline li { font-size: 0.82rem; color: #334155; line-height: 1.45; }
 
 /* Read-only spreadsheet (grid) view of the computed budget. */
-.bh-grid-wrap { margin-top: 18px; }
+.bh-grid-wrap { margin-top: 18px; padding: 0 18px; }
 .bh-grid-head {
   display: flex; align-items: center; gap: 6px;
   font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em;
   color: #64748b; margin-bottom: 8px;
 }
 .bh-grid-scroll { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 10px; }
-.bh-grid { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
-.bh-grid th, .bh-grid td { padding: 7px 12px; text-align: left; white-space: nowrap; }
-.bh-grid thead th {
+.bh-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.bh-table th, .bh-table td { padding: 7px 12px; text-align: left; white-space: nowrap; }
+.bh-table thead th {
   background: #f1f5f9; color: #475569; font-weight: 700;
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
   border-bottom: 1px solid #e2e8f0;
 }
-.bh-grid td.bh-grid-num, .bh-grid th.bh-grid-num { text-align: right; font-variant-numeric: tabular-nums; }
-.bh-grid td.bh-grid-detail { color: #64748b; }
-.bh-grid tbody tr { border-bottom: 1px solid #f1f5f9; }
+.bh-table td.bh-grid-num, .bh-table th.bh-grid-num { text-align: right; font-variant-numeric: tabular-nums; }
+.bh-table td.bh-grid-detail { color: #64748b; }
+/* Detail column absorbs slack so amounts hug the right edge and never clip. */
+.bh-table td.bh-grid-detail, .bh-table th.bh-grid-detail { width: 100%; }
+.bh-table tbody tr { border-bottom: 1px solid #f1f5f9; }
 .bh-grid-subtotal td { font-weight: 600; background: #f8fafc; }
 .bh-grid-total td { font-weight: 800; background: #eef2ff; color: #0b2545; border-top: 2px solid #cbd5e1; }

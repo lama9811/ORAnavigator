@@ -187,6 +187,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           <button className="bh-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </header>
 
+        <div className="bh-scroll">
         {loading ? (
           <div className="bh-loading">Loading rates…</div>
         ) : (
@@ -381,7 +382,17 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           <div className="bh-justification">
             <div className="bh-justification-head">
               <span>Budget justification (draft — review before use)</span>
-              <button onClick={() => navigator.clipboard?.writeText(justification)}>Copy</button>
+              <div className="bh-justification-actions">
+                <button onClick={() => navigator.clipboard?.writeText(justification)}>Copy</button>
+                <button
+                  className="bh-justification-close"
+                  onClick={() => { setJustification(""); setPerLine([]); }}
+                  aria-label="Close justification draft"
+                  title="Close"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
             <textarea readOnly value={justification} rows={10} />
             {perLine.length > 0 && (
@@ -396,6 +407,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>,
     document.body
@@ -413,7 +425,7 @@ function BudgetTable({ table }) {
     <div className="bh-grid-wrap">
       <div className="bh-grid-head"><Calculator size={14} /> Budget table</div>
       <div className="bh-grid-scroll">
-        <table className="bh-grid">
+        <table className="bh-table">
           <thead>
             <tr>
               <th className="bh-grid-cat">Category</th>
