@@ -4,6 +4,7 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, MoreHorizontal, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
@@ -143,7 +144,21 @@ export default function MyProposals() {
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [prefillUrl, setPrefillUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const location = useLocation();
+
+  // Handoff from the Opportunity Finder: a solicitation URL arrives in router
+  // state -> open the ingestion modal pre-filled with it. Clear the history
+  // state afterward so a refresh doesn't reopen the modal.
+  useEffect(() => {
+    const url = location.state?.solicitationUrl;
+    if (url) {
+      setPrefillUrl(url);
+      setShowUpload(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -364,9 +379,11 @@ export default function MyProposals() {
 
       {showUpload && (
         <SolicitationUploadModal
-          onClose={() => setShowUpload(false)}
+          initialUrl={prefillUrl}
+          onClose={() => { setShowUpload(false); setPrefillUrl(""); }}
           onCreated={(created) => {
             setShowUpload(false);
+            setPrefillUrl("");
             setActive(created);  // jump straight into the new proposal
             loadList();
           }}
