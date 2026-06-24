@@ -22,6 +22,7 @@ import hashlib
 import time as time_module
 import requests
 from typing import Optional
+from services import gemini_client
 # Retrieval is agent-first: the ADK agent's built-in VertexAiSearchTool handles
 # KB search. Answer quality is handled here by Layer 3 (_run_verified -- grounding
 # verification with regenerate-then-refuse) plus the faithfulness checks.
@@ -73,21 +74,39 @@ _OUTAGE_MSG = (
 # =============================================================================
 # LAYER 3: GROUNDING VERIFICATION (regenerate-then-refuse)
 # =============================================================================
-# An answer is treated as verified-grounded when Gemini reports at least
-# _GROUNDING_MIN_CHUNKS cited docs OR _GROUNDING_MIN_COVERAGE coverage. That
-# metadata is unreliable (often empty even for a correct, grounded answer), so
-# when it is absent the answer is NOT refused -- it is regenerated once under a
-# strict KB-only prompt that makes the model either ground its answer or emit an
-# explicit honest deflection, and that regenerated answer is then trusted. Only
-# an empty/errored regeneration is refused. See _evaluate_grounding() / _run_verified().
-_GROUNDING_MIN_CHUNKS = 2          # >= 2 cited KB docs clears the bar
-_GROUNDING_MIN_COVERAGE = 0.3      # OR >= 30% of the answer backed by KB text
+# An answer is delivered as-is when >= _GROUNDING_MIN_COVERAGE of it is backed by
+# retrieved KB text (a backend-computed signal -- the fraction of the answer's
+# characters covered by Gemini's groundingSupports segments). Below that bar the
+# answer is NOT thrown away wholesale: Layer 3 surgically rewrites ONLY the
+# sentences that aren't source-backed (reusing the KB text already retrieved),
+# and falls back to a full strict-KB regeneration only when the per-sentence span
+# data is missing. See _evaluate_grounding() / _unsupported_sentences() /
+# _surgical_reground() / _run_verified().
+#
+# _GROUNDING_MIN_CHUNKS is retained for logging/back-compat but is NO LONGER a
+# pass condition -- Gemini's chunk count is unreliable (often empty even for a
+# correct, grounded answer), so the gate is the coverage score alone.
+_GROUNDING_MIN_CHUNKS = 2          # (legacy) count of cited KB docs; not a gate
+_GROUNDING_MIN_COVERAGE = 0.5      # >= 50% of the answer backed by KB text -> deliver as-is
+# A sentence counts as source-backed when a grounded span overlaps at least this
+# fraction of its characters (or >= 15 chars), tolerating ragged Gemini spans.
+_SENTENCE_GROUNDED_MIN_OVERLAP = 0.4
 
 # Shown instead of an ungrounded answer when regeneration also fails.
 _REFUSAL_MSG = (
     "I don't have reliable information on this in my knowledge base, so I'd "
     "rather not guess. Please contact ORA at 443-885-4044 or ask.ora@morgan.edu "
     "for accurate, up-to-date guidance."
+)
+
+# Streaming (Layer-3 fast path): hold back this many chars before emitting the
+# first chunk, so a leaked error (429 / KB-access failure) is caught and NOT
+# streamed. Appended when a streamed answer comes back weakly grounded (the
+# streamed path can't regenerate, so it cautions instead).
+_STREAM_GUARD_CHARS = 60
+_WEAK_NOTE = (
+    "\n\n_Heads up: I couldn't fully verify this against the ORA knowledge base — "
+    "please confirm with ORA (443-885-4044) before relying on it._"
 )
 
 # Prepended to the user's question on the regeneration pass.
@@ -164,6 +183,33 @@ def _is_personal_recall(question: str) -> bool:
         return False
     return bool(_PERSONAL_RECALL_RE.search(question))
 
+# Greetings / pleasantries / small talk. A friendly reply to these is correct and
+# needs no KB grounding, so Layer 3 must NOT grade it "weak" and regenerate it
+# under the strict KB prompt (which turns "I'm doing well!" into a refusal).
+# Matched on the question and kept tight: only fires on a short message that is
+# essentially just a greeting, so real ORA questions never match.
+_SMALLTALK_RE = re.compile(
+    r"^\W*(?:(?:"
+    r"hi|hey+|hello|yo|sup|howdy|hiya|greetings"
+    r"|good\s+(?:morning|afternoon|evening|day)"
+    r"|how\s+(?:are|r)\s+(?:you|u|ya)(?:\s+doing)?|how'?s\s+it\s+going|how\s+you\s+doing"
+    r"|what'?s\s+up|whats\s+up"
+    r"|thanks?(?:\s+you)?|thank\s+you|thx|ty|cheers|appreciate\s+it"
+    r"|ok(?:ay)?|cool|nice|great|awesome|got\s+it"
+    r"|bye+|goodbye|see\s+(?:ya|you)|take\s+care"
+    r"|today|now|there|friend|buddy"
+    r")\b[\s,!.?'-]*)+$",
+    re.IGNORECASE,
+)
+
+def _is_smalltalk(question: str) -> bool:
+    """True if the message is just a greeting / pleasantry (no ORA content).
+    Such messages get a warm, KB-free reply that Layer 3 must deliver as-is
+    rather than regenerate under the strict prompt and refuse."""
+    if not question:
+        return False
+    return bool(_SMALLTALK_RE.match(question.strip()))
+
 # =============================================================================
 # FAITHFULNESS GATE: ORA Staff Entity Whitelist
 # =============================================================================
@@ -226,8 +272,12 @@ def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_co
       - it is a greeting / security / outage reply (no KB needed),
       - it is already an honest "I don't have this" deflection,
       - it was answered from attached context (uploaded file / profile),
-      - it cites >= _GROUNDING_MIN_CHUNKS KB docs, or
       - >= _GROUNDING_MIN_COVERAGE of it is backed by retrieved KB text.
+
+    NOTE: the chunk count is deliberately NOT a pass condition -- Gemini reports
+    it unreliably. The single "% backed" coverage score is the gate. A 'weak'
+    verdict triggers surgical per-sentence re-grounding in _run_verified, not an
+    outright refusal.
     """
     if not text:
         return "weak"
@@ -236,8 +286,6 @@ def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_co
     if _HONEST_DEFLECTION_RE.search(text):
         return "ok"
     if has_attached_context:
-        return "ok"
-    if chunks >= _GROUNDING_MIN_CHUNKS:
         return "ok"
     if coverage >= _GROUNDING_MIN_COVERAGE:
         return "ok"
@@ -342,6 +390,113 @@ def _extract_citations(chunks: list, supports: Optional[list] = None) -> list:
     if not citations:
         citations = _build(chunks)
     return citations
+
+
+# =============================================================================
+# PART C: DETERMINISTIC CITATION FALLBACK
+# =============================================================================
+# Gemini's native VertexAiSearch grounding returns groundingChunks/Supports
+# unreliably -- a correct, KB-grounded answer frequently comes back with empty
+# metadata, so the Sources block is blank even though the answer IS from the KB.
+# When that happens on a real ORA content answer, we run our own live KB search
+# and attach the matching docs as Sources. This mirrors the precedent in
+# _extract_citations (retrieval-order fallback when supports are absent),
+# extended to the zero-chunk case. Anti-hallucination is unaffected: these are
+# clickable Source links resolved from the KB URL map, not factual claims.
+
+# The unified KB datastore the agent grounds on (same value in cloudbuild.yaml).
+_FALLBACK_DATASTORE_ID = os.getenv(
+    "VERTEX_AI_DATASTORE_ID",
+    "projects/infra-vertex-494621-v1/locations/us/collections/default_collection"
+    "/dataStores/oranavigator-kb-v8",
+)
+
+
+def _search_kb_titles(query: str, top_k: int = 5) -> list:
+    """Live Vertex AI Search over the unified KB datastore; returns the top doc
+    titles. Network boundary -- returns [] on any failure so the answer still
+    delivers (golden rule 3)."""
+    if not query or not query.strip():
+        return []
+    try:
+        from google.cloud import discoveryengine_v1 as discoveryengine
+        from google.api_core.client_options import ClientOptions
+    except Exception:
+        return []
+    try:
+        parts = _FALLBACK_DATASTORE_ID.split("/")
+        location = parts[parts.index("locations") + 1] if "locations" in parts else "us"
+        endpoint = f"{location}-discoveryengine.googleapis.com"
+        client = discoveryengine.SearchServiceClient(
+            client_options=ClientOptions(api_endpoint=endpoint)
+        )
+        serving_config = f"{_FALLBACK_DATASTORE_ID}/servingConfigs/default_search"
+        request = discoveryengine.SearchRequest(
+            serving_config=serving_config,
+            query=query,
+            page_size=top_k,
+        )
+        titles: list = []
+        for result in client.search(request):
+            doc = getattr(result, "document", None)
+            if doc is None:
+                continue
+            title = ""
+            for field in ("struct_data", "derived_struct_data"):
+                data = getattr(doc, field, None)
+                if data and "title" in data:
+                    title = (data.get("title") or "").strip()
+                    if title:
+                        break
+            if title:
+                titles.append(title)
+            if len(titles) >= top_k:
+                break
+        return titles
+    except Exception as e:
+        print(f"   [FALLBACK_CITATIONS] KB search failed: {e}")
+        return []
+
+
+def _fallback_citations(query: str, top_k: int = 5) -> list:
+    """Run a live KB search and resolve the matching doc titles to clickable
+    {title, url} Sources via the KB URL map. Deduped, capped at 5, and only
+    titles with a resolvable URL are kept (an unclickable Source is no Source).
+    Returns [] when nothing matches -- never a blank guess."""
+    try:
+        titles = _search_kb_titles(query, top_k=top_k)
+    except Exception:
+        return []
+    if not titles:
+        return []
+    url_map = _get_kb_url_map()
+    out: list = []
+    seen: set = set()
+    for title in titles:
+        key = _norm_title(title)
+        if key in seen:
+            continue
+        url = url_map.get(key)
+        if not url:
+            continue
+        seen.add(key)
+        out.append({"title": title, "url": url})
+        if len(out) >= 5:
+            break
+    return out
+
+
+def _wants_fallback_citations(question: str, result: dict) -> bool:
+    """True only when fallback Sources should be attached: a real ORA content
+    answer that came back uncited. Skips small talk/greetings (no source), and
+    any refusal/outage/KB-failure path ("I don't have that" has no source)."""
+    if result.get("citations"):
+        return False
+    if result.get("kb_fail") or result.get("outage") or result.get("error"):
+        return False
+    if _is_smalltalk(question):
+        return False
+    return True
 
 
 # =============================================================================
@@ -489,6 +644,213 @@ def _check_identifier_faithfulness(text: str, grounded_corpus: str) -> list:
         for m in _YEAR_RE.finditer(text):
             _consider("year", m.group(0), m.start())
     return unverified[:6]
+
+
+# =============================================================================
+# SURGICAL RE-GROUNDING: when an answer is < _GROUNDING_MIN_COVERAGE backed, fix
+# ONLY the sentences that aren't source-backed (reusing the KB text already
+# retrieved in Pass 1) instead of regenerating the whole answer with a fresh
+# search. See the plan in _run_verified().
+# =============================================================================
+
+# Sentence splitter -- mirrors services.section_coach._sentences (kept local to
+# avoid importing that heavier module into the chat hot-path).
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+
+# Sentences that never need KB backing: contact/transition/filler boilerplate.
+# (Greeting/outage and honest-deflection sentences are handled by the existing
+# _SKIP_GROUNDING_RE / _HONEST_DEFLECTION_RE checks.)
+_FILLER_SENTENCE_RE = re.compile(
+    r"contact ora|443-885-4044|ask\.ora@morgan\.edu|let me know|feel free|"
+    r"happy to help|hope (?:this|that) helps|in summary|to summarize|"
+    r"here'?s|below (?:is|are)|please (?:reach out|confirm)",
+    re.IGNORECASE,
+)
+
+
+def _split_sentences(text: str) -> list:
+    """Split text into trimmed, non-empty sentences (mirror of _sentences)."""
+    return [s.strip() for s in _SENTENCE_SPLIT_RE.split(text) if s.strip()]
+
+
+def _sentence_is_exempt(sentence: str, is_personal_recall: bool) -> bool:
+    """A sentence that never needs KB backing (greeting/deflection/filler, or any
+    sentence when the question is personal recall answered from chat history)."""
+    if is_personal_recall:
+        return True
+    if _SKIP_GROUNDING_RE.match(sentence):
+        return True
+    if _HONEST_DEFLECTION_RE.search(sentence):
+        return True
+    if _FILLER_SENTENCE_RE.search(sentence):
+        return True
+    return False
+
+
+def _unsupported_sentences(raw_text: str, grounded_spans: list,
+                           is_personal_recall: bool = False):
+    """Return the answer's fact-stating sentences that are NOT KB-backed.
+
+    Uses Gemini's grounded char-spans (the same data that drives coverage) to
+    decide which sentences overlap a source-backed span. A sentence is backed
+    when a span covers >= _SENTENCE_GROUNDED_MIN_OVERLAP of its chars (or >= 15
+    chars). Exempt sentences (greeting/deflection/filler/personal-recall) are
+    never flagged.
+
+    Returns:
+      - None  -> the span data is unusable (missing, or inconsistent with the
+                 text -- e.g. UTF-8 byte-vs-char drift); caller should fall back
+                 to the full strict-KB regeneration.
+      - []    -> every fact-stating sentence is backed; deliver as-is.
+      - [str] -> the verbatim unsupported sentences, in order.
+    """
+    if not raw_text or not grounded_spans:
+        return None
+    # Sanity guard: if any span index runs well past the text, the offsets are
+    # not character offsets we can trust (Gemini sometimes returns UTF-8 byte
+    # indices). Bail to the proven fallback rather than mis-map sentences.
+    if max(e for _, e in grounded_spans) > len(raw_text) * 1.5:
+        return None
+
+    unsupported = []
+    cursor = 0
+    for sentence in _split_sentences(raw_text):
+        idx = raw_text.find(sentence, cursor)
+        if idx < 0:
+            # Couldn't locate (cleaning/splitting drift) -- skip, don't guess.
+            continue
+        s_start, s_end = idx, idx + len(sentence)
+        cursor = s_end
+        if _sentence_is_exempt(sentence, is_personal_recall):
+            continue
+        # How many of this sentence's chars are covered by a grounded span?
+        overlap = 0
+        for sp_start, sp_end in grounded_spans:
+            lo, hi = max(s_start, sp_start), min(s_end, sp_end)
+            if hi > lo:
+                overlap += hi - lo
+        s_len = max(1, s_end - s_start)
+        if overlap >= 15 or (overlap / s_len) >= _SENTENCE_GROUNDED_MIN_OVERLAP:
+            continue
+        unsupported.append(sentence)
+    return unsupported
+
+
+def _surgical_reground(message: str, full_answer: str, unsupported: list,
+                       grounded_corpus: str):
+    """Rewrite ONLY the unsupported sentences strictly from grounded_corpus (no
+    new KB search). Each unsupportable sentence is replaced with a deterministic
+    honest-gap line. Returns the merged answer, or None if Gemini is unavailable
+    or nothing usable remains -> caller falls back to full regeneration/refusal.
+    """
+    if not unsupported or not grounded_corpus or len(grounded_corpus) < 50:
+        return None
+
+    numbered = "\n".join(f"{i+1}. {s}" for i, s in enumerate(unsupported))
+    sys_instruction = (
+        "You correct sentences so each is strictly supported by the provided ORA "
+        "knowledge-base passages. Never add a fact that is not in the passages. "
+        "Never change a figure that is already correct. If a sentence cannot be "
+        "supported by the passages, mark it supportable=false and give a short "
+        "topic phrase (3-6 words) naming what it was about."
+    )
+    prompt = (
+        f"QUESTION:\n{message}\n\n"
+        f"KNOWLEDGE BASE PASSAGES:\n{grounded_corpus}\n\n"
+        f"SENTENCES TO FIX (rewrite each strictly from the passages above):\n"
+        f"{numbered}\n\n"
+        "Return JSON exactly as: {\"rewrites\": [{\"original\": \"<the sentence "
+        "verbatim>\", \"fixed\": \"<rewritten sentence, or empty string if "
+        "unsupportable>\", \"supportable\": true|false, \"topic\": \"<short topic "
+        "phrase>\"}]}. Include one entry per sentence, in order."
+    )
+    data = gemini_client.generate_json(
+        prompt, temperature=0.0, max_output_tokens=1024,
+        system_instruction=sys_instruction,
+    )
+    if not data or not isinstance(data.get("rewrites"), list):
+        return None
+
+    answer = full_answer
+    answer_norm = _norm_for_match(answer)
+    any_supported_kept = False
+    gap_inserted = False
+
+    for entry in data["rewrites"]:
+        if not isinstance(entry, dict):
+            continue
+        original = (entry.get("original") or "").strip()
+        fixed = (entry.get("fixed") or "").strip()
+        supportable = bool(entry.get("supportable")) and bool(fixed)
+        topic = (entry.get("topic") or "").strip()
+        if not original:
+            continue
+        # Locate the original sentence with whitespace-collapsed matching so a
+        # hard-wrapped answer still matches (golden rule 2). We need the actual
+        # substring in `answer` to replace, so try a direct find first, then a
+        # normalized fallback that maps back to the raw span.
+        target = _locate_sentence(answer, answer_norm, original)
+        if target is None:
+            continue  # can't locate -> leave as-is, never blind-append
+        if supportable:
+            # Don't ship a rewrite that introduces a NEW unverified identifier.
+            if _check_identifier_faithfulness(fixed, grounded_corpus):
+                continue  # revert: keep the original sentence
+            replacement = fixed
+            any_supported_kept = True
+        else:
+            if gap_inserted:
+                replacement = ""  # collapse repeated gaps into one
+            else:
+                replacement = (
+                    f"I don't have source-backed details on "
+                    f"{topic or 'that point'} — please confirm with ORA "
+                    f"(443-885-4044)."
+                )
+                gap_inserted = True
+        answer = answer.replace(target, replacement, 1)
+        answer_norm = _norm_for_match(answer)
+
+    # Tidy doubled spaces / blank lines left by dropped sentences.
+    answer = re.sub(r"[ \t]{2,}", " ", answer)
+    answer = re.sub(r"\n{3,}", "\n\n", answer).strip()
+
+    # If nothing source-backed survived (answer is only gap/filler), refuse
+    # cleanly rather than ship a wall of "I don't have..." lines.
+    if not any_supported_kept and not _has_substantive_backed_content(
+            answer, full_answer):
+        return None
+    return answer or None
+
+
+def _locate_sentence(answer: str, answer_norm: str, sentence: str):
+    """Return the exact substring of `answer` matching `sentence` (direct match
+    first, then whitespace-collapsed), or None if it can't be located."""
+    if sentence in answer:
+        return sentence
+    # Whitespace-collapsed fallback: find the normalized sentence in the
+    # normalized answer, then walk the raw answer to recover the raw substring.
+    s_norm = _norm_for_match(sentence)
+    if not s_norm or s_norm not in answer_norm:
+        return None
+    # Recover the raw span by matching word-by-word against the raw answer.
+    words = sentence.split()
+    if not words:
+        return None
+    pattern = re.compile(r"\s+".join(re.escape(w) for w in words))
+    m = pattern.search(answer)
+    return m.group(0) if m else None
+
+
+def _has_substantive_backed_content(answer: str, original: str) -> bool:
+    """True if the merged answer still has a real (non-gap, non-filler) sentence."""
+    for s in _split_sentences(answer):
+        if "source-backed details on" in s.lower():
+            continue
+        if _sentence_is_exempt(s, False):
+            continue
+        return True
+    return False
 
 
 # Session reuse settings
@@ -723,11 +1085,17 @@ def _finalize_answer(text: str, grounded_corpus: str) -> str:
 
 def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "",
                    model: str = "", memory_context: str = "", retried: bool = False,
-                   rate_limit_attempt: int = 0):
+                   rate_limit_attempt: int = 0, stream: bool = False):
     """One round-trip to the ADK agent.
 
     A generator: yields {"type": "status", ...} events as the agent calls tools,
     then finally yields exactly one {"type": "_result", "data": {...}} event.
+
+    When ``stream`` is True, also yields {"type": "chunk", "content": <delta>}
+    events as the model's answer text grows -- BUT only after a short prefix
+    guard confirms the text isn't a leaked error (429 / KB-access failure), so an
+    error is never streamed to the user. ``result["streamed"]`` records whether
+    any chunk was emitted.
 
     The result dict has: text, chunks, coverage, citations, grounded_corpus,
     kb_fail (bool), outage (bool), error (str or None). It is the *raw* pass --
@@ -736,6 +1104,10 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
     result = {
         "text": "", "chunks": 0, "coverage": 0.0, "citations": [],
         "grounded_corpus": "", "kb_fail": False, "outage": False, "error": None,
+        # (startIndex, endIndex) char-spans of the answer that Gemini's
+        # groundingSupports marked as KB-backed -- used for surgical per-sentence
+        # re-grounding. Indices reference the RAW answer text (result["text"]).
+        "grounded_spans": [],
     }
     try:
         payload = {
@@ -768,7 +1140,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
             new_session_id = _ensure_session(user_id, context, model, memory_context)
             if new_session_id:
                 yield from _do_agent_pass(message, user_id, new_session_id, context,
-                                          model, memory_context, retried=True)
+                                          model, memory_context, retried=True, stream=stream)
                 return
             result["outage"] = True
             yield {"type": "_result", "data": result}
@@ -783,6 +1155,9 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
         }
 
         final_text = ""
+        _stream_started = False     # have we begun emitting chunks?
+        _stream_suppressed = False  # did the prefix look like a leaked error?
+        _emitted = 0                # chars already streamed
         for line in resp.iter_lines():
             if not line:
                 continue
@@ -805,10 +1180,15 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                     result["grounded_corpus"] = _join_chunk_texts(chunks)
                 if supports and final_text:
                     total_chars = len(final_text)
-                    grounded_chars = sum(
-                        s.get("segment", {}).get("endIndex", 0) - s.get("segment", {}).get("startIndex", 0)
-                        for s in supports
-                    )
+                    spans = []
+                    for s in supports:
+                        seg = s.get("segment", {})
+                        start = seg.get("startIndex", 0)
+                        end = seg.get("endIndex", 0)
+                        if 0 <= start < end <= total_chars:
+                            spans.append((start, end))
+                    result["grounded_spans"] = spans
+                    grounded_chars = sum(e - st for st, e in spans)
                     result["coverage"] = grounded_chars / total_chars if total_chars > 0 else 0.0
                 elif chunks:
                     result["coverage"] = 0.5  # chunks present but no segment data
@@ -832,18 +1212,37 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                         status = TOOL_STATUS_MAP.get(func_name, f"Processing {func_name.replace('_', ' ')}")
                     yield {"type": "status", "content": status}
 
-            # Keep the last model text part (the final answer)
+            # Keep the last model text part (the final answer). The ADK sends the
+            # text cumulatively (each event carries the full text so far).
             if role == "model":
                 for part in parts:
                     if isinstance(part, dict) and "text" in part and part["text"].strip():
                         final_text = part["text"]
+                        if stream and not _stream_suppressed:
+                            if not _stream_started:
+                                # Wait until we have enough text to tell a real
+                                # answer from a leaked error before showing anything.
+                                if len(final_text) < _STREAM_GUARD_CHARS:
+                                    continue
+                                if ("resource_exhausted" in final_text.lower()
+                                        or _KB_FAIL_RE.search(final_text)):
+                                    _stream_suppressed = True   # let post-loop handling deal with it
+                                    continue
+                                _stream_started = True
+                                yield {"type": "chunk", "content": final_text}
+                                _emitted = len(final_text)
+                            else:
+                                delta = final_text[_emitted:]
+                                if delta:
+                                    yield {"type": "chunk", "content": delta}
+                                    _emitted = len(final_text)
 
         # Retry once if Gemini self-reported a (transient) KB access failure
         if _KB_FAIL_RE.search(final_text) and not retried:
             print("   [RETRY] Gemini reported KB access failure, retrying once...")
             time_module.sleep(2)
             yield from _do_agent_pass(message, user_id, session_id, context,
-                                      model, memory_context, retried=True)
+                                      model, memory_context, retried=True, stream=stream)
             return
 
         # Retry with backoff on a transient Vertex/Gemini quota error. It arrives
@@ -863,7 +1262,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                 time_module.sleep(delay)
                 yield from _do_agent_pass(message, user_id, session_id, context,
                                           model, memory_context, retried=retried,
-                                          rate_limit_attempt=rate_limit_attempt + 1)
+                                          rate_limit_attempt=rate_limit_attempt + 1, stream=stream)
                 return
             print(f"   [RATE-LIMIT] Still throttled after {len(_RATE_LIMIT_BACKOFFS)} "
                   f"retries; surfacing outage. Raw: {raw}")
@@ -873,6 +1272,7 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
 
         result["text"] = final_text
         result["kb_fail"] = bool(_KB_FAIL_RE.search(final_text))
+        result["streamed"] = _stream_started
         yield {"type": "_result", "data": result}
 
     except requests.exceptions.ConnectionError:
@@ -956,6 +1356,32 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     # the gate -- deliver Pass 1 as-is even with zero KB grounding.
     if verdict == "weak" and _is_personal_recall(message):
         verdict = "ok"
+    # Greetings / small talk get a warm KB-free reply -- never regenerate it.
+    if verdict == "weak" and _is_smalltalk(message):
+        verdict = "ok"
+
+    # ---- SURGICAL RE-GROUNDING: fix only the unsupported sentences ----------
+    # Reuse Pass-1's already-retrieved KB text to rewrite just the sentences that
+    # aren't source-backed, instead of throwing the whole answer away and running
+    # a second KB search. Falls through to the full Pass-2 regeneration below
+    # when the per-sentence span data is missing/unusable or the surgical rewrite
+    # can't produce a usable answer.
+    if verdict == "weak":
+        unsupported = _unsupported_sentences(
+            result["text"], result.get("grounded_spans") or [],
+            _is_personal_recall(message),
+        )
+        if unsupported == []:
+            verdict = "ok"  # every fact-stating sentence was actually backed
+        elif unsupported:  # non-empty -> attempt the surgical rewrite
+            yield {"type": "status", "content": "Checking sources sentence by sentence"}
+            merged = _surgical_reground(message, result["text"], unsupported,
+                                        result["grounded_corpus"])
+            if merged:
+                text, verdict = _clean_answer_text(merged), "ok"
+                print(f"   [LAYER3] Surgically re-grounded {len(unsupported)} "
+                      f"sentence(s) ({result['coverage']:.0%} coverage) - no 2nd search")
+        # unsupported is None -> spans unusable; leave verdict 'weak' for Pass 2.
 
     # ---- PASS 2: regenerate when the first answer is weakly grounded -----
     if verdict == "weak":
@@ -996,6 +1422,11 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
             return
 
     # ---- DELIVER ---------------------------------------------------------
+    # Part C: a correct ORA answer can come back uncited (Gemini's grounding
+    # metadata is unreliable). Attach Sources from a live KB search so the
+    # answer is never sourceless.
+    if _wants_fallback_citations(message, result):
+        result["citations"] = _fallback_citations(message)
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
                    citations=result["citations"])
     final = _finalize_answer(text, result["grounded_corpus"])
@@ -1003,6 +1434,82 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
         yield {"type": "citations", "content": result["citations"]}
     yield {"type": "done", "content": final}
 
+
+def _run_verified_stream(message: str, user_id: str, session_id: str, context: str = "",
+                         model: str = "", memory_context: str = ""):
+    """Streaming Layer-3 (the fast path for /chat/stream).
+
+    Streams Pass-1's answer token-by-token as a live preview -- but a prefix guard
+    in _do_agent_pass keeps a leaked 429 / KB-access error from ever being shown.
+    After the answer completes it runs the SAME grounding check, then sends the
+    authoritative finalized answer in the terminal 'done' event (which the UI uses
+    to replace the preview -- so faithfulness links/disclaimers still apply).
+
+    Difference from _run_verified: it does NOT regenerate a weakly grounded answer
+    (it's already on screen) -- it appends an honest caution note instead. Errors,
+    outages, and empty/zero-chunk answers are never streamed (guarded), so those
+    still degrade to the outage/refusal messages exactly as before.
+    """
+    _set_grounding(False, 0, 0.0)
+    yield {"type": "status", "content": "Searching knowledge base"}
+
+    result = None
+    for ev in _do_agent_pass(message, user_id, session_id, context, model,
+                             memory_context, stream=True):
+        if ev["type"] == "_result":
+            result = ev["data"]
+        else:
+            yield ev   # status + chunk events pass straight through to the client
+
+    if result is None or result.get("outage") or result.get("kb_fail"):
+        yield {"type": "error", "content": _OUTAGE_MSG}
+        return
+    if result.get("error"):
+        yield {"type": "error", "content": result["error"]}
+        return
+
+    text = _clean_answer_text(result["text"])
+    if not text:
+        # Empty answer -> nothing was streamed; refuse honestly (routes to ORA).
+        yield {"type": "done", "content": _REFUSAL_MSG}
+        return
+
+    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], bool(context))
+    if verdict == "weak" and _is_personal_recall(message):
+        verdict = "ok"
+    if verdict == "weak" and _is_smalltalk(message):
+        verdict = "ok"
+
+    # Surgical re-grounding: the streamed preview is replaced by the terminal
+    # 'done' event, so we can rewrite just the unsupported sentences here too
+    # (rather than only cautioning). When span data is missing or the rewrite
+    # fails we fall back to the caution note -- we can't re-search mid-stream.
+    if verdict == "weak":
+        unsupported = _unsupported_sentences(
+            result["text"], result.get("grounded_spans") or [],
+            _is_personal_recall(message),
+        )
+        if unsupported == []:
+            verdict = "ok"
+        elif unsupported:
+            merged = _surgical_reground(message, result["text"], unsupported,
+                                        result["grounded_corpus"])
+            if merged:
+                text, verdict = _clean_answer_text(merged), "ok"
+
+    # Part C: attach Sources from a live KB search when a TRUSTED answer came
+    # back uncited. Skipped for weak answers -- we don't lend authority to one
+    # already flagged with a caution note.
+    if verdict != "weak" and _wants_fallback_citations(message, result):
+        result["citations"] = _fallback_citations(message)
+    _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
+                   citations=result["citations"])
+    final = _finalize_answer(text, result["grounded_corpus"])
+    if verdict == "weak":
+        final = final + _WEAK_NOTE   # spans unusable / surgical failed -> caution
+    if result["citations"]:
+        yield {"type": "citations", "content": result["citations"]}
+    yield {"type": "done", "content": final}
 
 
 def get_last_grounding() -> dict:
@@ -1047,18 +1554,19 @@ def reset_session(user_id: str) -> None:
 def query_agent_stream(query: str, user_id: str = "default", context: str = "", model: str = "", memory_context: str = ""):
     """Send a query to the ORA Navigator agent and yield SSE-style events.
 
-    Layer 3: the answer is buffered and verified before delivery -- it is
-    regenerated once if weakly grounded and refused if still weak, so an
-    ungrounded answer is never shown. Because verification needs the complete
-    answer (Gemini reports grounding only at the end), the answer is delivered in
-    one 'done' event rather than streamed token-by-token; 'status' events keep
-    the UI's progress indicator alive while the answer is produced.
+    Layer 3 (streaming fast path): the answer is streamed token-by-token as
+    'chunk' events for low perceived latency, with a prefix guard that prevents a
+    leaked 429 / KB-access error from being shown. After it completes, grounding
+    is checked and the authoritative finalized answer is sent as the terminal
+    'done' event (which replaces the preview). A weakly grounded streamed answer
+    gets an honest caution note appended rather than a hidden regeneration.
+    Errors / outages / empty answers are never streamed.
 
-    Yields dicts: {"type": "status" | "citations" | "done" | "error", "content": ...}.
+    Yields dicts: {"type": "status" | "chunk" | "citations" | "done" | "error", "content": ...}.
     """
     session_id = _ensure_session(user_id, context, model, memory_context)
     if not session_id:
         yield {"type": "error", "content": _OUTAGE_MSG}
         return
-    yield from _run_verified(query, user_id, session_id, context=context,
-                             model=model, memory_context=memory_context)
+    yield from _run_verified_stream(query, user_id, session_id, context=context,
+                                    model=model, memory_context=memory_context)

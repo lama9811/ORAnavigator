@@ -194,6 +194,10 @@ class Submission(Base):
     # ({"answers": {...}}). The checklist is recomputed deterministically on
     # load. Nullable — most submissions have no compliance check yet.
     compliance_json = Column(Text, nullable=True)
+    # Section Drafting Coach: JSON string mapping section_key -> draft text the
+    # PI is working on ({"project_summary": "...", ...}). Nullable. The coach
+    # gives feedback on this text; we never auto-write it.
+    sections_json = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

@@ -3,13 +3,15 @@
 // lives in the user's own submissions / submission_tasks rows; nothing
 // is shared across users.
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { ArrowLeft, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, MoreHorizontal, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
+import SectionCoachModal from "./SectionCoachModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -49,6 +51,48 @@ function hasSolicitation(submission) {
     (t.title || "").trim().startsWith("Prepare required attachment:")
   );
 }
+
+// The single recommended next action for a proposal, derived purely from its
+// saved state. Drives the "What's next" card + which tool gets the accent.
+// Solicitation is intentionally NOT a step here: it can only be attached at
+// creation today, so it's surfaced as a status (not an actionable next step).
+function nextStep(submission) {
+  if (!submission.has_budget) return "budget";
+  if (!submission.has_sections) return "coach";
+  if (!submission.has_compliance) return "compliance";
+  if (hasSolicitation(submission)) return "critique";
+  return "done";
+}
+
+// Plain-language guidance for each step — the heart of the first-timer
+// experience. `open` is the modal key the card's action button triggers.
+const STEP_INFO = {
+  budget: {
+    title: "Build your budget",
+    why: "Funders cap how much you can request. Set your numbers first so the rest of the proposal fits within them.",
+    action: "Open Budget Helper", open: "budget",
+  },
+  coach: {
+    title: "Draft your sections",
+    why: "Get a section-by-section outline and advisory feedback on your own writing — one section at a time.",
+    action: "Open Drafting Coach", open: "coach",
+  },
+  compliance: {
+    title: "Check what approvals you need",
+    why: "Approvals like IRB, IACUC, and COI training take time to obtain. Find out early which ones apply to you.",
+    action: "Check compliance", open: "compliance",
+  },
+  critique: {
+    title: "Critique your full draft",
+    why: "Check your assembled draft against this solicitation's requirements — page limits, attachments, budget — before you submit.",
+    action: "Critique draft", open: "critique",
+  },
+  done: {
+    title: "You've covered the core steps",
+    why: "Work through any remaining checklist items, then submit. Nice work getting here.",
+    action: null, open: null,
+  },
+};
 
 function formatDeadline(iso) {
   if (!iso) return "No deadline set";
@@ -100,7 +144,21 @@ export default function MyProposals() {
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [prefillUrl, setPrefillUrl] = useState("");
   const [busy, setBusy] = useState(false);
+  const location = useLocation();
+
+  // Handoff from the Opportunity Finder: a solicitation URL arrives in router
+  // state -> open the ingestion modal pre-filled with it. Clear the history
+  // state afterward so a refresh doesn't reopen the modal.
+  useEffect(() => {
+    const url = location.state?.solicitationUrl;
+    if (url) {
+      setPrefillUrl(url);
+      setShowUpload(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -321,9 +379,11 @@ export default function MyProposals() {
 
       {showUpload && (
         <SolicitationUploadModal
-          onClose={() => setShowUpload(false)}
+          initialUrl={prefillUrl}
+          onClose={() => { setShowUpload(false); setPrefillUrl(""); }}
           onCreated={(created) => {
             setShowUpload(false);
+            setPrefillUrl("");
             setActive(created);  // jump straight into the new proposal
             loadList();
           }}
@@ -379,6 +439,98 @@ function ProposalCard({ sub, onOpen }) {
 }
 
 // ============================================================
+// GUIDED PATHWAY pieces (presentation only — no new tool logic)
+// ============================================================
+
+// One tool in a lifecycle stage. Calm outline by default; `primary` gives it
+// the single "do this next" accent. Optional status badge; optional disabled.
+function ToolButton({ icon, label, status, statusDone, primary, disabled, onClick, title }) {
+  const Icon = icon;   // capitalized local so the lint config recognizes the JSX use
+  return (
+    <button
+      type="button"
+      className={`lc-tool${primary ? " is-primary" : ""}${disabled ? " is-disabled" : ""}`}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={title}
+    >
+      <span className="lc-tool-main"><Icon size={14} /> {label}</span>
+      {status != null && (
+        <span className={`lc-tool-status${statusDone ? " is-done" : ""}`}>
+          {statusDone && <Check size={11} />} {status}
+        </span>
+      )}
+    </button>
+  );
+}
+
+// A labeled group of tools = one phase of the proposal lifecycle.
+function LifecycleStage({ label, children }) {
+  return (
+    <div className="lc-stage">
+      <span className="lc-stage-label">{label}</span>
+      <div className="lc-stage-tools">{children}</div>
+    </div>
+  );
+}
+
+// The "⋯" menu holding non-tool actions (Delete, Add to Calendar) so they don't
+// compete with the real work. Closes on Escape and outside-click.
+function OverflowMenu({ items }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc); };
+  }, [open]);
+  return (
+    <div className="lc-overflow" ref={ref}>
+      <button type="button" className="lc-overflow-btn" aria-haspopup="menu" aria-expanded={open}
+        aria-label="More actions" onClick={() => setOpen((o) => !o)}>
+        <MoreHorizontal size={16} />
+      </button>
+      {open && (
+        <div className="lc-overflow-menu" role="menu">
+          {items.map((it) => (
+            <button key={it.key} type="button" role="menuitem"
+              className={`lc-overflow-item${it.danger ? " is-danger" : ""}`}
+              onClick={() => { setOpen(false); it.onClick(); }}>
+              <it.icon size={13} /> {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Plain-language "what to do next" card — the central first-timer affordance.
+function NextStepCard({ stepKey, solicited, onAction }) {
+  const info = STEP_INFO[stepKey] || STEP_INFO.done;
+  return (
+    <div className="np-card">
+      <div className="np-head"><Lightbulb size={15} /> What to do next</div>
+      <div className="np-title">{info.title}</div>
+      <div className="np-why">{info.why}</div>
+      {!solicited && (
+        <div className="np-tip">
+          Tip: starting a proposal from a solicitation unlocks tailored checks and the draft critique.
+        </div>
+      )}
+      {info.open && (
+        <button type="button" className="np-action" onClick={() => onAction(info.open)}>
+          {info.action} <ArrowRight size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 // DETAIL VIEW (single submission + tasks)
 // ============================================================
 
@@ -391,6 +543,16 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
+
+  const next = nextStep(submission);
+  const solicited = hasSolicitation(submission);
+  const openModal = (key) => {
+    if (key === "budget") setShowBudget(true);
+    else if (key === "coach") setShowCoach(true);
+    else if (key === "compliance") setShowCompliance(true);
+    else if (key === "critique") setShowCritique(true);
+  };
 
   return (
     <div className="proposals">
@@ -399,41 +561,70 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           <ArrowLeft size={12} /> All Proposals
         </button>
         <div className="proposals-header-actions">
-          <button
-            className="proposals-budget-btn"
-            onClick={() => setShowBudget(true)}
-            title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
-          >
-            <Calculator size={13} /> {submission.has_budget ? "Edit budget" : "Build budget"}
-          </button>
-          <button
-            className="proposals-compliance-btn"
-            onClick={() => setShowCompliance(true)}
-            title="Check which approvals your project needs — IRB, IACUC, COI, RCR, export control."
-          >
-            <ShieldCheck size={13} /> Check compliance
-          </button>
-          {hasSolicitation(submission) && (
-            <button
-              className="proposals-critique-btn"
-              onClick={() => setShowCritique(true)}
-              title="Upload a draft PDF and check it against this proposal's solicitation requirements."
-            >
-              <ClipboardCheck size={13} /> Critique Draft
-            </button>
-          )}
-          {submission.deadline && (
-            <button
-              className="proposals-gcal-btn"
-              onClick={() => openGoogleCal(submission)}
-              title="Add this proposal's deadline to your Google Calendar."
-            >
-              <CalendarPlus size={13} /> Add to Google Calendar
-            </button>
-          )}
-          <button className="proposals-delete-btn" onClick={onDelete}>
-            <Trash2 size={12} /> Delete
-          </button>
+          <LifecycleStage label="Set up">
+            <ToolButton
+              icon={FileText}
+              label="Solicitation"
+              status={solicited ? "attached" : "not attached"}
+              statusDone={solicited}
+              disabled
+              title={solicited
+                ? "This proposal has the funder's rules attached (budget cap, page limits, required attachments)."
+                : "Funder rules are attached when you start a proposal from a solicitation."}
+            />
+          </LifecycleStage>
+
+          <LifecycleStage label="Build">
+            <ToolButton
+              icon={Calculator}
+              label={submission.has_budget ? "Edit budget" : "Build budget"}
+              status={submission.has_budget ? "set" : null}
+              statusDone={submission.has_budget}
+              primary={next === "budget"}
+              onClick={() => setShowBudget(true)}
+              title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
+            />
+            <ToolButton
+              icon={PenLine}
+              label="Drafting coach"
+              status={submission.has_sections ? "draft saved" : null}
+              statusDone={submission.has_sections}
+              primary={next === "coach"}
+              onClick={() => setShowCoach(true)}
+              title="Get an outline for a proposal section, or paste your draft for advisory feedback."
+            />
+          </LifecycleStage>
+
+          <LifecycleStage label="Review & submit">
+            <ToolButton
+              icon={ShieldCheck}
+              label="Check compliance"
+              status={submission.has_compliance ? "reviewed" : null}
+              statusDone={submission.has_compliance}
+              primary={next === "compliance"}
+              onClick={() => setShowCompliance(true)}
+              title="Check which approvals your project needs — IRB, IACUC, COI, RCR, export control."
+            />
+            {solicited && (
+              <ToolButton
+                icon={ClipboardCheck}
+                label="Critique draft"
+                primary={next === "critique"}
+                onClick={() => setShowCritique(true)}
+                title="Upload a draft PDF and check it against this proposal's solicitation requirements."
+              />
+            )}
+          </LifecycleStage>
+
+          <OverflowMenu
+            items={[
+              ...(submission.deadline ? [{
+                key: "cal", label: "Add to Google Calendar", icon: CalendarPlus,
+                onClick: () => openGoogleCal(submission),
+              }] : []),
+              { key: "del", label: "Delete proposal", icon: Trash2, danger: true, onClick: onDelete },
+            ]}
+          />
         </div>
       </header>
 
@@ -460,6 +651,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         />
       )}
 
+      {showCoach && (
+        <SectionCoachModal
+          submission={submission}
+          onClose={() => setShowCoach(false)}
+        />
+      )}
+
       <section className="proposal-detail-summary">
         <div className="proposal-detail-title-row">
           <div className="proposal-detail-sponsor">{submission.sponsor}</div>
@@ -474,6 +672,12 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
                 {dleft < 0 ? `${Math.abs(dleft)} days overdue`
                   : dleft === 0 ? "Today"
                     : `in ${dleft} days`}
+              </span>
+            )}
+            {submission.internal_deadline && (
+              <span className="meta-internal"
+                title="Morgan ORA needs proposals routed internally before the sponsor's deadline — about 5 business days earlier.">
+                Internal ORA deadline: {formatDeadline(submission.internal_deadline)}
               </span>
             )}
           </div>
@@ -500,11 +704,15 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
 
       {error && <div className="proposals-error">{error}</div>}
 
+      {submission.status === "active" && (
+        <NextStepCard stepKey={next} solicited={solicited} onAction={openModal} />
+      )}
+
       <section className="proposal-tasks">
         <h2>Checklist</h2>
         <ul className="task-list">
           {tasks.map((t) => (
-            <TaskRow key={t.id} task={t} onToggle={onToggleTask} />
+            <TaskRow key={t.id} task={t} onToggle={onToggleTask} deadline={submission.deadline} />
           ))}
         </ul>
       </section>
@@ -512,9 +720,27 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   );
 }
 
-function TaskRow({ task, onToggle }) {
+// Google Calendar link for a single task, dated (deadline - due_offset_days).
+function taskCalUrl(task, deadline) {
+  if (!deadline || task.due_offset_days == null) return null;
+  const due = new Date(deadline);
+  if (isNaN(due)) return null;
+  due.setDate(due.getDate() - task.due_offset_days);
+  const ymd = due.toISOString().slice(0, 10).replace(/-/g, "");
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `[Proposal] ${task.title}`,
+    details: task.description || "ORA Navigator proposal task.",
+    dates: `${ymd}/${ymd}`,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function TaskRow({ task, onToggle, deadline }) {
   const isDone = task.status === "done";
   const toggle = () => onToggle(task.id, isDone ? "pending" : "done");
+  const [showHow, setShowHow] = useState(false);
+  const calUrl = taskCalUrl(task, deadline);
   return (
     <li className={`task-row ${isDone ? "task-done" : ""}`}>
       <button
@@ -533,10 +759,30 @@ function TaskRow({ task, onToggle }) {
         {task.description && (
           <div className="task-description">{task.description}</div>
         )}
-        {task.due_offset_days != null && (
-          <div className="task-meta">
-            <Calendar size={9} />
-            <span>{task.due_offset_days} days before deadline</span>
+        <div className="task-meta-row">
+          {task.due_offset_days != null && (
+            <div className="task-meta">
+              <Calendar size={9} />
+              <span>{task.due_offset_days} days before deadline</span>
+            </div>
+          )}
+          {calUrl && (
+            <a className="task-cal-link" href={calUrl} target="_blank" rel="noopener noreferrer">
+              <CalendarPlus size={11} /> Add to calendar
+            </a>
+          )}
+          {task.guidance && (
+            <button className="task-how-toggle" onClick={() => setShowHow((s) => !s)}>
+              <HelpCircle size={11} /> {showHow ? "Hide help" : "How do I do this?"}
+            </button>
+          )}
+        </div>
+        {showHow && task.guidance && (
+          <div className="task-how">
+            <div className="task-how-text">{task.guidance.how_to}</div>
+            {task.guidance.sample && (
+              <div className="task-how-sample"><b>Example:</b> {task.guidance.sample}</div>
+            )}
           </div>
         )}
         {task.kb_doc_url && (

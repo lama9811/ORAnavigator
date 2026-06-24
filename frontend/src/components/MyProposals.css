@@ -85,9 +85,7 @@ body.dark .proposals-upload-btn {
   align-items: center;
 }
 
-.proposals-back-btn,
-.proposals-delete-btn,
-.proposals-critique-btn {
+.proposals-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -108,84 +106,157 @@ body.dark .proposals-upload-btn {
   color: var(--msu-blue, #4285F4);
 }
 
-.proposals-delete-btn:hover {
-  border-color: #d93025;
-  color: #d93025;
+/* ── Guided pathway: lifecycle-staged tools ──────────────────────────────
+   One calm tool style for every tool; only the "next step" gets the accent.
+   Non-tool actions (Delete, Calendar) live in the ⋯ overflow. */
+.lc-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lc-stage-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, #94a3b8);
+}
+.lc-stage-tools {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-/* Critique Draft is a "primary positive" action on the detail view --
-   give it a subtle blue tint so it reads as the recommended next step. */
-.proposals-critique-btn {
-  background: rgba(66, 133, 244, 0.1);
+.lc-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  transition: all 0.15s;
+}
+.lc-tool:hover {
+  border-color: var(--msu-blue, #4285F4);
   color: var(--msu-blue, #4285F4);
-  border-color: rgba(66, 133, 244, 0.3);
 }
-.proposals-critique-btn:hover {
-  background: rgba(66, 133, 244, 0.18);
-  border-color: rgba(66, 133, 244, 0.5);
+.lc-tool-main { display: inline-flex; align-items: center; gap: 6px; }
+.lc-tool-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.65;
 }
+.lc-tool-status.is-done { color: #1a7f37; opacity: 1; }
 
-/* Build/Edit budget -- gold tint to set it apart from the blue Critique action. */
-.proposals-budget-btn {
+.lc-tool.is-primary {
+  background: var(--msu-blue, #4285F4);
+  color: #fff;
+  border-color: var(--msu-blue, #4285F4);
+}
+.lc-tool.is-primary:hover { color: #fff; box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25); }
+.lc-tool.is-primary .lc-tool-status { color: #fff; opacity: 0.85; }
+
+.lc-tool.is-disabled { cursor: default; opacity: 0.6; }
+.lc-tool.is-disabled:hover { border-color: var(--border-color); color: var(--text-secondary); }
+
+.lc-overflow { position: relative; margin-left: auto; }
+.lc-overflow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.lc-overflow-btn:hover { border-color: var(--msu-blue, #4285F4); color: var(--msu-blue, #4285F4); }
+.lc-overflow-menu {
+  position: absolute;
+  right: 0;
+  top: 38px;
+  z-index: 20;
+  min-width: 210px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lc-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.lc-overflow-item:hover { background: rgba(66, 133, 244, 0.1); }
+.lc-overflow-item.is-danger { color: #d93025; }
+.lc-overflow-item.is-danger:hover { background: rgba(217, 48, 37, 0.1); }
+
+/* ── Guided pathway: "What to do next" card ──────────────────────────────── */
+.np-card {
+  background: rgba(66, 133, 244, 0.06);
+  border: 1px solid rgba(66, 133, 244, 0.25);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.np-head {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: inherit;
-  background: rgba(247, 148, 30, 0.12);
-  color: #b45309;
-  border: 1px solid rgba(247, 148, 30, 0.4);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--msu-blue, #4285F4);
 }
-.proposals-budget-btn:hover {
-  background: rgba(247, 148, 30, 0.2);
-  border-color: rgba(247, 148, 30, 0.6);
-}
-
-.proposals-compliance-btn {
+.np-title { margin-top: 6px; font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+.np-why { margin-top: 4px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; }
+.np-tip { margin-top: 8px; font-size: 0.8rem; color: var(--text-tertiary, #94a3b8); }
+.np-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  margin-top: 12px;
+  padding: 8px 16px;
   border-radius: 8px;
-  font-size: 0.82rem;
+  border: none;
+  background: var(--msu-blue, #4285F4);
+  color: #fff;
+  font-size: 0.86rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
   font-family: inherit;
-  background: rgba(27, 58, 107, 0.1);
-  color: #1B3A6B;
-  border: 1px solid rgba(27, 58, 107, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
-.proposals-compliance-btn:hover {
-  background: rgba(27, 58, 107, 0.18);
-  border-color: rgba(27, 58, 107, 0.55);
-}
+.np-action:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25); }
 
-/* "Add to Google Calendar" — detail view action button (Google blue) */
-.proposals-gcal-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: inherit;
-  background: rgba(26, 115, 232, 0.1);
-  color: #1a73e8;
-  border: 1px solid rgba(26, 115, 232, 0.4);
-}
-.proposals-gcal-btn:hover {
-  background: rgba(26, 115, 232, 0.18);
-  border-color: rgba(26, 115, 232, 0.6);
-}
+body.dark .np-card { background: rgba(66, 133, 244, 0.1); }
+body.dark .lc-overflow-menu { background: var(--bg-card, #1e1e2a); }
 
 .proposals-error {
   background: rgba(217, 48, 37, 0.08);
@@ -398,6 +469,13 @@ body.dark .proposal-card-status.status-withdrawn {
   font-size: 0.78rem;
   color: var(--text-secondary);
   margin-top: 2px;
+}
+
+.meta-internal {
+  font-size: 0.74rem;
+  color: var(--text-tertiary, #94a3b8);
+  margin-top: 2px;
+  cursor: help;
 }
 
 .status-pill {
@@ -714,6 +792,43 @@ body.dark .proposal-progress-bar {
 .task-form-link:hover {
   text-decoration: underline;
 }
+
+/* Phase 4: per-task calendar link, how-to toggle, and guidance disclosure */
+.task-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+.task-cal-link, .task-how-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  color: #1B3A6B;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+.task-cal-link:hover, .task-how-toggle:hover { text-decoration: underline; }
+.task-how {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: #f1f5f9;
+  border-left: 3px solid #1B3A6B;
+  border-radius: 6px;
+}
+.task-how-text { font-size: 0.82rem; color: #334155; line-height: 1.5; }
+.task-how-sample {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: #475569;
+  font-style: italic;
+}
+.task-how-sample b { font-style: normal; color: #0B2545; }
 
 .calendar-export {
   display: inline-flex;

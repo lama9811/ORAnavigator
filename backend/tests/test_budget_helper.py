@@ -185,3 +185,177 @@ def test_effort_over_100_is_clamped():
     r = compute_budget({"people": [{"base_salary": 100_000, "effort_pct": 150}]})
     assert r["personnel"][0]["salary"] == 100_000.0        # clamped to 100%
     assert r["warnings"]
+
+
+# ---------------------------------------------------------------------------
+# Phase 1: Budget Coaching -- advisories + trim suggestions (additive, advisory).
+# These NEVER change a computed number; they only coach. A clean budget => [].
+# ---------------------------------------------------------------------------
+
+def test_clean_budget_has_no_advisories():
+    r = compute_budget({
+        "people": [{"name": "PI", "base_salary": 100_000, "effort_pct": 20}],
+        "supplies": 5_000, "travel": 3_000,
+    })
+    assert r["advisories"] == []
+    assert r["trim_suggestions"] == []
+
+
+def test_equipment_heavy_flags_advisory():
+    r = compute_budget({
+        "people": [{"name": "PI", "base_salary": 100_000, "effort_pct": 10}],
+        "equipment": 80_000,  # >40% of direct
+    })
+    fields = [a["field"] for a in r["advisories"]]
+    assert "equipment" in fields
+    # advisory only -- the math is untouched
+    assert r["equipment"] == 80_000.0
+
+
+def test_travel_heavy_flags_advisory():
+    r = compute_budget({"travel": 50_000, "supplies": 10_000})  # travel >25%
+    assert any(a["field"] == "travel" for a in r["advisories"])
+
+
+def test_salary_but_no_effort_flags_advisory():
+    r = compute_budget({"people": [{"name": "Maria", "base_salary": 90_000, "effort_pct": 0}],
+                        "supplies": 5_000})
+    msgs = " ".join(a["message"] for a in r["advisories"])
+    assert "Maria" in msgs and "0% effort" in msgs
+
+
+def test_no_personnel_is_info_advisory():
+    r = compute_budget({"supplies": 10_000})
+    assert any(a["field"] == "personnel" and a["severity"] == "info" for a in r["advisories"])
+
+
+def test_subawards_majority_flags_advisory():
+    r = compute_budget({"people": [{"base_salary": 50_000, "effort_pct": 10}],
+                        "subawards": [60_000]})
+    assert any(a["field"] == "subawards" for a in r["advisories"])
+
+
+def test_no_trim_suggestions_when_under_cap():
+    r = compute_budget({"supplies": 10_000, "cap": 100_000})
+    assert r["cap_status"] == "ok"
+    assert r["trim_suggestions"] == []
+
+
+def test_trim_suggestions_bring_under_cap():
+    r = compute_budget({"travel": 100_000, "cap": 120_000})   # total 154,000; over by 34,000
+    assert r["cap_status"] == "over"
+    trims = r["trim_suggestions"]
+    assert trims and trims[0]["line"] == "Travel"
+    # Applying the suggested cuts (each saves cut*(1+F&A)) should reach the cap.
+    total_cut = sum(t["reduce_by"] for t in trims)
+    projected = r["total"] - round(total_cut * (1 + r["fa_rate"]), 2)
+    assert projected <= r["cap"] + 1.0
+
+
+def test_compute_output_keys_unchanged_plus_new():
+    """Regression guard: every pre-existing key still present; new keys added;
+    warnings unchanged for the worked example."""
+    r = compute_budget({
+        "people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 20, "fringe": "faculty_ay"}],
+        "equipment": 40_000, "travel": 3_000, "supplies": 5_000,
+        "participant_support": 2_000, "subawards": [50_000],
+    })
+    for key in ("personnel", "personnel_total", "equipment", "travel", "supplies",
+                "participant_support", "other", "subawards", "subawards_total",
+                "direct_costs", "mtdc_base", "mtdc_exclusions", "fa_year",
+                "fa_rate_key", "fa_rate", "fa_rate_label", "fa_amount", "total",
+                "cap", "cap_status", "cap_overage", "warnings"):
+        assert key in r, f"existing key disappeared: {key}"
+    assert r["warnings"] == []          # clean inputs -> no warnings, as before
+    assert "advisories" in r and "trim_suggestions" in r
+    assert r["total"] == 161_556.0      # math identical to the existing worked example
+
+
+# ---------------------------------------------------------------------------
+# Budget Helper v2: multi-year (backward-compatible), CSV export, per-line.
+# ---------------------------------------------------------------------------
+from services.budget_helper import (
+    compute_budget as _cb, budget_to_csv, per_line_justifications,
+)
+
+
+def test_single_year_unchanged_and_no_multi_year_key():
+    base = {"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}]}
+    r = _cb(base)
+    assert "multi_year" not in r                 # single-year shape is untouched
+    assert r["total"] == 218_680.0               # (100k + 42k fringe) * 1.54
+    # project_years=1 behaves identically to omitting it.
+    assert _cb({**base, "project_years": 1})["total"] == r["total"]
+
+
+def test_multi_year_projection_and_cumulative():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}],
+             "project_years": 3, "escalation_pct": 0})
+    my = r["multi_year"]
+    assert my["project_years"] == 3 and len(my["years"]) == 3
+    # No escalation -> every year equal; cumulative = 3x year 1.
+    assert my["years"][0]["total"] == 218_680.0
+    assert my["cumulative"]["total"] == round(218_680.0 * 3, 2)
+
+
+def test_multi_year_escalation_raises_later_years():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}],
+             "project_years": 2, "escalation_pct": 10})
+    yrs = r["multi_year"]["years"]
+    assert yrs[1]["total"] > yrs[0]["total"]     # year 2 escalated
+
+
+def test_multi_year_cap_checks_cumulative():
+    r = _cb({"supplies": 100_000, "project_years": 2, "cap": 150_000})  # ~308k cumulative
+    assert r["multi_year"]["cap_status"] == "over"
+
+
+def test_per_line_justifications():
+    b = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 50, "fringe": "faculty_ay"}],
+             "equipment": 5_000})
+    lines = per_line_justifications(b)
+    assert any(l["line"] == "Dr. X" for l in lines)
+    assert any(l["line"] == "Equipment" and l["amount"] == 5_000 for l in lines)
+
+
+def test_budget_to_csv_has_totals():
+    b = _cb({"supplies": 10_000})
+    csv_text = budget_to_csv(b)
+    assert "TOTAL PROJECT COST" in csv_text and "Category" in csv_text
+
+
+# ---------------------------------------------------------------------------
+# Spreadsheet (grid) view -- render-ready `table` model
+# ---------------------------------------------------------------------------
+
+def test_table_single_year_one_amount_column_and_total_row():
+    r = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 50}],
+             "supplies": 5_000})
+    t = r["table"]
+    assert t["columns"] == ["Amount"]
+    labels = [row["label"] for row in t["rows"]]
+    assert "Salary" in labels and "Fringe" in labels and "Materials & supplies" in labels
+    total_row = next(row for row in t["rows"] if row["kind"] == "total")
+    assert total_row["values"][0] == r["total"]   # grid total == summary total
+
+
+def test_table_omits_zero_categories():
+    r = _cb({"supplies": 5_000})            # no travel/equipment/etc.
+    labels = [row["label"] for row in r["table"]["rows"]]
+    assert "Travel" not in labels and "Equipment" not in labels
+
+
+def test_table_multi_year_year_columns_and_row_totals():
+    r = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 50, "fringe": "faculty_ay"}],
+             "supplies": 5_000, "project_years": 3, "escalation_pct": 3})
+    t = r["table"]
+    assert t["columns"] == ["Year 1", "Year 2", "Year 3", "Total"]
+    # Every row's trailing cell is the sum of its year cells.
+    for row in t["rows"]:
+        assert row["values"][-1] == round(sum(row["values"][:-1]), 2)
+    # Salaries escalate year over year.
+    salary = next(row for row in t["rows"] if row["label"] == "Salary")
+    assert salary["values"][1] > salary["values"][0] > 0
+    # The grid grand total matches the multi-year cumulative total.
+    total_row = next(row for row in t["rows"] if row["kind"] == "total")
+    assert abs(total_row["values"][-1] - r["multi_year"]["cumulative"]["total"]) < 0.01

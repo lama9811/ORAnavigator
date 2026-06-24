@@ -1,0 +1,105 @@
+.sc-overlay {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+}
+.sc-modal {
+  background: #fff; border-radius: 14px; width: 100%; max-width: 680px;
+  max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+.sc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+}
+.sc-title { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0B2545; }
+.sc-sub { font-weight: 500; font-size: 0.8rem; color: #64748b; margin-left: 4px; }
+.sc-close { background: #f1f5f9; border: none; border-radius: 8px; padding: 6px; cursor: pointer; color: #475569; }
+.sc-close:hover { background: #e2e8f0; }
+.sc-intro { margin: 0; padding: 12px 20px; font-size: 0.82rem; color: #475569; background: #f8fafc; border-bottom: 1px solid #eef2f7; line-height: 1.5; }
+.sc-intro b { color: #0B2545; }
+.sc-loading { padding: 50px; text-align: center; color: #64748b; }
+.sc-body { padding: 16px 20px; overflow-y: auto; }
+
+.sc-controls { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; }
+.sc-select { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
+.sc-select > span { font-size: 0.75rem; font-weight: 600; color: #334155; }
+.sc-select select { padding: 9px 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.88rem; color: #0B2545; background: #fff; }
+
+.sc-tabs { display: flex; gap: 6px; }
+.sc-tabs button {
+  display: inline-flex; align-items: center; gap: 5px; padding: 8px 12px;
+  border: 1.5px solid #e2e8f0; background: #fff; border-radius: 8px; cursor: pointer;
+  font-size: 0.8rem; color: #475569;
+}
+.sc-tabs button.active { border-color: #1B3A6B; background: #eef4ff; color: #0B2545; font-weight: 600; }
+
+.sc-topic { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
+.sc-topic > span { font-size: 0.78rem; font-weight: 600; color: #334155; }
+.sc-topic > span em { font-weight: 500; color: #94a3b8; font-style: normal; }
+.sc-topic input, .sc-topic textarea {
+  padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+  font-size: 0.88rem; color: #0B2545; font-family: inherit; resize: vertical;
+}
+.sc-topic input:focus, .sc-topic textarea:focus { outline: none; border-color: #1B3A6B; }
+
+.sc-run {
+  padding: 10px 18px; border: 1.5px solid #1B3A6B; border-radius: 8px;
+  background: #1B3A6B; color: #fff; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+  line-height: 1.2;
+}
+.sc-run:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Results */
+.sc-result { margin-top: 18px; border-top: 1px solid #eef2f7; padding-top: 16px; }
+.sc-purpose, .sc-summary { font-size: 0.9rem; color: #0B2545; line-height: 1.55; }
+.sc-meta { font-size: 0.74rem; color: #94a3b8; margin-top: 6px; }
+.sc-outline { margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.sc-outline li { font-size: 0.86rem; color: #1e293b; }
+.sc-guidance { font-size: 0.8rem; color: #475569; margin-top: 2px; }
+
+.sc-block-head { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin: 16px 0 6px; }
+.sc-pitfalls ul, .sc-suggestions ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
+.sc-pitfalls li, .sc-suggestions li { font-size: 0.82rem; color: #475569; line-height: 1.45; }
+.sc-kbhint { display: flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 0.76rem; color: #2563eb; }
+.sc-sample { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.78rem; font-weight: 600; color: #2563eb; text-decoration: none; }
+.sc-sample:hover { text-decoration: underline; }
+
+.sc-checklist { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sc-check { padding: 9px 11px; border-radius: 8px; border-left: 3px solid #cbd5e1; background: #f8fafc; }
+.sc-check-head { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #0B2545; }
+.sc-status { margin-left: auto; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; }
+.sc-note { font-size: 0.78rem; color: #475569; margin-top: 3px; }
+.sc-evidence { font-size: 0.76rem; color: #64748b; font-style: italic; margin-top: 3px; }
+.sc-ok { border-left-color: #16a34a; }
+.sc-warn { border-left-color: #f59e0b; }
+.sc-bad { border-left-color: #ef4444; }
+.sc-fallback { margin-top: 12px; font-size: 0.74rem; color: #94a3b8; }
+
+/* v2: length meter, save row, solicitation constraints, clarity */
+.sc-meter { margin-top: 6px; font-size: 0.74rem; color: #64748b; }
+.sc-meter-bar { height: 5px; border-radius: 3px; background: #e2e8f0; overflow: hidden; margin-bottom: 4px; }
+.sc-meter-fill { height: 100%; background: #16a34a; transition: width 0.2s; }
+.sc-meter-ok .sc-meter-fill { background: #16a34a; }
+.sc-meter-over .sc-meter-fill { background: #ef4444; }
+.sc-meter-over { color: #b91c1c; }
+.sc-meter-short .sc-meter-fill { background: #f59e0b; }
+.sc-meter-short { color: #b45309; }
+
+.sc-run-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.sc-save { padding: 10px 18px; border: 1.5px solid #1B3A6B; background: #fff; color: #1B3A6B; border-radius: 8px; font-weight: 600; font-size: 0.88rem; cursor: pointer; line-height: 1.2; }
+.sc-save:disabled { opacity: 0.5; cursor: not-allowed; }
+.sc-saved { font-size: 0.78rem; color: #15803d; }
+
+.sc-constraints { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.sc-con-line { font-size: 0.8rem; color: #475569; margin-top: 4px; line-height: 1.45; }
+.sc-con-line b { color: #0B2545; }
+
+.sc-clarity ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
+.sc-clarity li { font-size: 0.82rem; color: #475569; line-height: 1.45; }
+.sc-len-bad { color: #b91c1c; font-weight: 600; }
+
+@media (max-width: 640px) {
+  .sc-controls { flex-direction: column; align-items: stretch; }
+  .sc-tabs { width: 100%; }
+  .sc-tabs button { flex: 1; justify-content: center; }
+}

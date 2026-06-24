@@ -13,7 +13,7 @@
 // reviews what the AI pulled out before it becomes a real proposal.
 
 import React, { useState, useRef } from "react";
-import { ArrowLeft, Check, FileText, Quote, X } from "lucide-react";
+import { ArrowLeft, Check, FileText, Link as LinkIcon, Quote, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SolicitationUploadModal.css";
 
@@ -27,7 +27,7 @@ function authHeaders() {
 const SPONSORS = ["NSF", "NIH", "DoD", "DoE", "NASA", "USDA", "EPA",
                   "Foundation", "State of Maryland", "Internal"];
 
-export default function SolicitationUploadModal({ onClose, onCreated }) {
+export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "" }) {
   // step: "pick" -> "extracting" -> "review" -> "creating"
   const [step, setStep] = useState("pick");
   const [error, setError] = useState("");
@@ -67,6 +67,44 @@ export default function SolicitationUploadModal({ onClose, onCreated }) {
       setStep("review");
     } catch (e) {
       setError(e.message || "Couldn't read that PDF.");
+      setStep("pick");
+    }
+  };
+
+  const handleUrl = async (rawUrl) => {
+    const url = (rawUrl || "").trim();
+    if (!url) {
+      setError("Please paste a solicitation URL.");
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setError("Enter a full URL starting with http:// or https://");
+      return;
+    }
+
+    setStep("extracting");
+    setError("");
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/me/submissions/from-solicitation/url`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ url }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+      setExtracted(data.extracted);
+      setTitleOverride(
+        data.extracted?.program_name || data.extracted?.program_id || "",
+      );
+      setStep("review");
+    } catch (e) {
+      setError(e.message || "Couldn't read that URL.");
       setStep("pick");
     }
   };
@@ -111,10 +149,10 @@ export default function SolicitationUploadModal({ onClose, onCreated }) {
               className="solicitation-back-btn"
               onClick={() => setStep("pick")}
             >
-              <ArrowLeft size={11} /> Re-upload
+              <ArrowLeft size={11} /> Start over
             </button>
           ) : (
-            <h2>Start from a Solicitation PDF</h2>
+            <h2>Start from a Solicitation</h2>
           )}
           <button className="solicitation-close-btn" onClick={onClose}>
             <X />
@@ -126,6 +164,7 @@ export default function SolicitationUploadModal({ onClose, onCreated }) {
         {step === "pick" && (
           <PickStep
             onFile={handleFile}
+            onUrl={handleUrl}
             fileInputRef={fileInputRef}
           />
         )}
@@ -152,17 +191,18 @@ export default function SolicitationUploadModal({ onClose, onCreated }) {
 // STEP 1 -- Pick a file
 // ============================================================
 
-function PickStep({ onFile, fileInputRef }) {
+function PickStep({ onFile, onUrl, fileInputRef }) {
   const [dragOver, setDragOver] = useState(false);
+  const [url, setUrl] = useState(initialUrl);
 
   return (
     <div className="solicitation-pick">
       <p className="solicitation-intro">
-        Upload the solicitation PDF from NSF, NIH, DoD, a foundation, or any
-        sponsor. ORA Navigator will read it and pre-fill your proposal —
-        deadline, page limits, required attachments, eligibility, budget cap,
-        and submission portal. You'll review every field before anything is
-        saved.
+        Upload the solicitation PDF — or paste a link to it — from NSF, NIH,
+        DoD, a foundation, or any sponsor. ORA Navigator will read it and
+        pre-fill your proposal — deadline, page limits, required attachments,
+        eligibility, budget cap, and submission portal. You'll review every
+        field before anything is saved.
       </p>
 
       <div
@@ -193,6 +233,33 @@ function PickStep({ onFile, fileInputRef }) {
         style={{ display: "none" }}
         onChange={(e) => onFile(e.target.files?.[0])}
       />
+
+      <div className="solicitation-or">
+        <span>or</span>
+      </div>
+
+      <form
+        className="solicitation-url-row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onUrl(url);
+        }}
+      >
+        <input
+          type="url"
+          className="solicitation-url-input"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Paste a solicitation URL (funder page or PDF link)"
+        />
+        <button
+          type="submit"
+          className="btn-primary solicitation-url-btn"
+          disabled={!url.trim()}
+        >
+          <LinkIcon size={11} /> Fetch &amp; extract
+        </button>
+      </form>
 
       <p className="solicitation-note">
         Tip: text-based PDFs work best. Scanned image-only PDFs may not
@@ -234,8 +301,8 @@ function ReviewStep({
     <div className="solicitation-review">
       <p className="solicitation-review-intro">
         Review what the AI extracted. Edit anything that's wrong. Source quotes
-        from the PDF are shown for trust — if something looks made up, fix it
-        before creating the proposal.
+        from the solicitation are shown for trust — if something looks made up,
+        fix it before creating the proposal.
       </p>
 
       <Field
@@ -294,6 +361,19 @@ function ReviewStep({
         </Field>
       </FieldRow>
 
+      {extracted.deadline_details && (
+        <Field
+          label="All deadlines (by category)"
+          hint="This solicitation lists more than one deadline. The Deadline above is the earliest (most restrictive); the full list is saved to your proposal notes. If you're applying to a different category, set the Deadline to match."
+        >
+          <textarea
+            value={extracted.deadline_details}
+            onChange={(e) => onChange("deadline_details", e.target.value)}
+            rows={2}
+          />
+        </Field>
+      )}
+
       <Field
         label="Eligibility"
         sourceQuote={sq.eligibility}
@@ -347,7 +427,7 @@ function ReviewStep({
         />
         <span>
           I've checked the <b>deadline</b> and <b>budget cap</b> against the
-          solicitation PDF. (These are AI-extracted — one wrong value can miss
+          solicitation. (These are AI-extracted — one wrong value can miss
           or over-budget the proposal.)
         </span>
       </label>

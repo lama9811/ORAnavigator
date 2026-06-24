@@ -120,9 +120,12 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState("idle"); // idle, listening, processing, speaking
 
-  // The chat always uses the standard fast model. The old iNav / iNav Pro
-  // dropdown was removed — "Pro" mapped to the same model (no real difference)
-  // and the "Pro" label read like a paid upgrade. ORA Navigator is free.
+  // Uses inav-1.1 -> gemini-2.5-flash. We tried inav-1.0 -> gemini-2.0-flash for
+  // speed, but that model is NOT enabled for this Vertex project in us-central1
+  // (it 404s: "Publisher Model gemini-2.0-flash ... not found or no access").
+  // 2.5-flash is the model this project can access; speed comes from warm
+  // instances + token streaming instead. (If 2.0-flash is enabled later, switch
+  // back to "inav-1.0".) The old iNav / iNav Pro dropdown was removed.
   const selectedModel = "inav-1.1";
 
   // 🔥 Feedback State
@@ -145,43 +148,6 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   ];
   // Derived: completed steps are all before current index, active is current
   const thinkingStatus = thinkingMessages[thinkingStepIndex] || thinkingMessages[0];
-
-  // Map status text to contextual SVG icon
-  const getStatusIcon = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s.includes("search") || s.includes("knowledge"))
-      return ( // magnifying glass
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-search"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.8"/><path d="M12.5 12.5L17 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-      );
-    if (s.includes("understand") || s.includes("analyz") || s.includes("question"))
-      return ( // brain / lightbulb
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-think"><path d="M10 2a5.5 5.5 0 00-2 10.63V15a1 1 0 001 1h2a1 1 0 001-1v-2.37A5.5 5.5 0 0010 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8 17h4M9 19h2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-      );
-    if (s.includes("consult") || s.includes("specialist") || s.includes("agent"))
-      return ( // people / transfer
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-consult"><circle cx="7" cy="6" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M1 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="15" cy="6" r="2" stroke="currentColor" strokeWidth="1.3"/><path d="M19 15c0-2.2-1.8-4-4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
-      );
-    if (s.includes("process") || s.includes("compil") || s.includes("generat"))
-      return ( // gear
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-process"><path d="M10 13a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" strokeWidth="1.5"/><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.93 3.93l1.41 1.41M14.66 14.66l1.41 1.41M16.07 3.93l-1.41 1.41M5.34 14.66l-1.41 1.41" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
-      );
-    if (s.includes("prepar") || s.includes("writing") || s.includes("response"))
-      return ( // pen / writing
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-write"><path d="M13.586 3.586a2 2 0 012.828 2.828l-9.5 9.5-3.5 1 1-3.5 9.172-9.828z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M12 5l3 3" stroke="currentColor" strokeWidth="1.3"/></svg>
-      );
-    if (s.includes("review") || s.includes("catalog") || s.includes("course"))
-      return ( // book
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-book"><path d="M3 4a1 1 0 011-1h4a3 3 0 013 3v11a2 2 0 00-2-2H4a1 1 0 01-1-1V4zM17 4a1 1 0 00-1-1h-4a3 3 0 00-3 3v11a2 2 0 012-2h4a1 1 0 001-1V4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
-      );
-    if (s.includes("department") || s.includes("info") || s.includes("check"))
-      return ( // info/clipboard
-        <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-info"><rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M8 6h4M8 10h4M8 14h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
-      );
-    // Default: sparkle
-    return (
-      <svg viewBox="0 0 20 20" fill="none" className="status-icon icon-default"><path d="M10 2l1.5 5L17 8.5l-5 2L10 16l-2-5.5L3 8.5l5-1L10 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-    );
-  };
 
   // --- REFS ---
   const messagesEndRef = useRef(null);
@@ -1254,21 +1220,15 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
 
                     {/* Streaming indicator - show steps when no text, cursor when text is streaming */}
                     {msg.isStreaming && !msg.text && (
-                      <div className="stream-status-container">
-                        {thinkingMessages.slice(0, thinkingStepIndex).map((step, si) => (
-                          <div key={si} className="stream-step completed">
-                            <div className="step-icon-wrap done">
-                              <svg className="step-check" viewBox="0 0 16 16" fill="none"><path d="M4 8.5l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            </div>
-                            <span>{step}</span>
-                          </div>
-                        ))}
-                        <div className="stream-step active">
-                          <div className="step-icon-wrap active-icon">
-                            {getStatusIcon(thinkingMessages[thinkingStepIndex])}
-                          </div>
-                          <span className="thinking-text-shimmer">{thinkingMessages[thinkingStepIndex]}</span>
-                        </div>
+                      <div className="ora-sweep-status">
+                        <span className="ora-sweep" aria-hidden="true">
+                          <span className="ora-sweep-track"></span>
+                          <span className="ora-sweep-lens">
+                            <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.8"/><path d="M12.5 12.5L17 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                          </span>
+                        </span>
+                        <span className="thinking-text-shimmer">{thinkingMessages[thinkingStepIndex]}</span>
+                        <span className="thinking-timer">{thinkingTimer}s</span>
                       </div>
                     )}
                     {msg.isStreaming && msg.text && (
@@ -1382,22 +1342,15 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
             <img src="/bot_avatar.webp" alt="Bot" className="avatar-img" />
             <div className="message-content">
               <div className="message-bubble thinking-bubble">
-                <div className="stream-status-container">
-                  {thinkingMessages.slice(0, thinkingStepIndex).map((step, si) => (
-                    <div key={si} className="stream-step completed">
-                      <div className="step-icon-wrap done">
-                        <svg className="step-check" viewBox="0 0 16 16" fill="none"><path d="M4 8.5l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </div>
-                      <span>{step}</span>
-                    </div>
-                  ))}
-                  <div className="stream-step active">
-                    <div className="step-icon-wrap active-icon">
-                      {getStatusIcon(thinkingMessages[thinkingStepIndex])}
-                    </div>
-                    <span className="thinking-text-shimmer">{thinkingMessages[thinkingStepIndex]}</span>
-                    <span className="thinking-timer">{thinkingTimer}s</span>
-                  </div>
+                <div className="ora-sweep-status">
+                  <span className="ora-sweep" aria-hidden="true">
+                    <span className="ora-sweep-track"></span>
+                    <span className="ora-sweep-lens">
+                      <svg viewBox="0 0 20 20" fill="none"><circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.8"/><path d="M12.5 12.5L17 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    </span>
+                  </span>
+                  <span className="thinking-text-shimmer">{thinkingMessages[thinkingStepIndex]}</span>
+                  <span className="thinking-timer">{thinkingTimer}s</span>
                 </div>
               </div>
             </div>

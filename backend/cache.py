@@ -587,6 +587,12 @@ class MultiTierCache:
             return False
         if "trouble connecting" in response.lower() or "system issue" in response.lower():
             return False
+        # Transient "try again" messages (rate-limit / busy / initializing). These
+        # are not real answers; caching one poisons the entry until TTL expiry and
+        # keeps serving the failure long after the backend recovers.
+        if ("busy right now" in response.lower() or "try again in a moment" in response.lower()
+                or "try again in a minute" in response.lower()):
+            return False
 
         # Don't cache responses with grounding disclaimers (they indicate low confidence)
         if "I may not have complete information" in response or "Please verify with the Office of Research Administration" in response:

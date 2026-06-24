@@ -220,6 +220,18 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add compliance_json column: {e}")
 
+        # 5d. Add submissions.sections_json column if missing (Section Drafting Coach).
+        try:
+            conn.execute(text("SELECT sections_json FROM submissions LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'sections_json' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN sections_json MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'sections_json' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add sections_json column: {e}")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -1096,13 +1108,12 @@ def _schedule_touch_last_chat(user_id: int) -> None:
 
 
 def _schedule_regenerate_suggestions(user_id: int) -> None:
-    """Refresh the user's home-screen suggestions in the background.
-    Internally throttled by source_signature + 10-min window."""
-    try:
-        from services.suggestion_generator import regenerate_for_user
-        asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
-    except RuntimeError:
-        pass  # No event loop — caller is outside an async context.
+    """No-op: home-screen suggestions are now a single GLOBAL "Top 10 most-asked"
+    list (same for every user), computed from ChatHistory by services/
+    popular_questions.py and refreshed by the daily cron. Per-user AI
+    personalization was removed, so we no longer burn a Gemini call per chat turn
+    regenerating it. Kept as a stub so the post-commit task list is untouched."""
+    return
 
 
 def _schedule_post_commit_memory_tasks(
@@ -1135,16 +1146,21 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # Detect file upload early
     file_match = re.search(r'uploads/chat_files/([^\)]+)', user_q)
 
+    # Embed the query ONCE and share the vector across both semantic-recall
+    # functions. Previously each (retrieve_relevant_memories + retrieve_relevant_turns)
+    # embedded the same query independently -> two Vertex embed calls per turn.
+    from services.embedding_util import embed_text as _embed_text
+    q_vec = await asyncio.to_thread(_embed_text, user_q)
+
     # Parallel fetch: history (for rewriting) + long-term memory
     #   + Phase 2 semantic-fact recall + Phase 4 verbatim-turn recall.
-    # All 4 run concurrently to keep added latency near zero (~50-80ms total
-    # for the slowest = single Vertex embed call shared across both retrievals
-    # via lazy client memoization).
+    # The two recall tasks reuse the pre-computed q_vec, so no embedding happens
+    # inside the gather (one shared embed call above instead of two).
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user["user_id"], session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user["user_id"], 10),
-        asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55),
-        asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id),
+        asyncio.to_thread(retrieve_relevant_memories, user["user_id"], user_q, 5, 0.55, q_vec),
+        asyncio.to_thread(retrieve_relevant_turns, user["user_id"], user_q, 3, 0.62, session_id, query_vec=q_vec),
     ]
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
     if isinstance(results[0], Exception):
@@ -1163,6 +1179,30 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     if USE_VERTEX_AGENT and history_dicts and is_likely_followup(user_q):
         user_q = await asyncio.to_thread(rewrite_query, user_q, history_dicts)
 
+    # Cache check (mirrors /chat/stream). Skip for file uploads (unique content).
+    # query_cache.get() internally refuses to serve personal-recall queries
+    # ("what's my deadline?") from the shared cache, so this is leak-safe.
+    if USE_VERTEX_AGENT and not file_match and not getattr(req, "skip_cache", False):
+        _cache_ctx = get_context_hash(user["user_id"], model=req.model)
+        _cached = query_cache.get(user_q, _cache_ctx)
+        if _cached:
+            print(f"[CACHE] HIT (/chat) for query: {user_q[:50]}...")
+            _cached_cites = query_cache.get_citations(user_q, _cache_ctx)
+            try:
+                new_chat = ChatHistory(
+                    user_id=user["user_id"],
+                    session_id=session_id,
+                    user_query=original_q,
+                    bot_response=_cached,
+                    citations=json.dumps(_cached_cites) if _cached_cites else None,
+                )
+                db.add(new_chat)
+                db.commit()
+                _schedule_post_commit_memory_tasks(user["user_id"], session_id, new_chat.id)
+            except Exception as e:
+                print(f"[ERROR] Failed to save cached chat history: {e}")
+            return {"response": _cached, "citations": _cached_cites or []}
+
     memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
     conversation_context = _build_conversation_context(history_dicts, session_summary)
     # Phase 1: session summary + recent-turn context rides on memory_context so
@@ -1170,6 +1210,35 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # when both are empty.
     if conversation_context:
         memory_context = conversation_context + (memory_context or "")
+
+    # Always inject the user's SAVED PROFILE (department / title / role) as
+    # authoritative context, independent of memory selection. The profile is
+    # the source of truth for "what department am I in?"-type questions; relying
+    # only on the mirrored memory failed when the department row got crowded out
+    # of the top-N memory fetch, so the bot wrongly claimed it had no access.
+    try:
+        _pu = db.query(User).filter(User.id == user["user_id"]).first()
+        _pbits = []
+        if _pu is not None:
+            if getattr(_pu, "name", None):
+                _pbits.append(f"name: {_pu.name}")
+            if getattr(_pu, "department", None):
+                _pbits.append(f"department: {_pu.department}")
+            if getattr(_pu, "title", None):
+                _pbits.append(f"title: {_pu.title}")
+            if getattr(_pu, "primary_role", None):
+                _pbits.append(f"role: {_pu.primary_role}")
+        if _pbits:
+            profile_block = (
+                "\nUSER PROFILE (authoritative facts the user saved about themselves; "
+                "use these to answer questions like 'what department am I in?' or "
+                "'what is my role?' -- never claim you don't have access to them):\n"
+                + "\n".join(f"  {b}" for b in _pbits) + "\n"
+            )
+            memory_context = profile_block + (memory_context or "")
+    except Exception as _e:
+        print(f"[MEMORY] profile injection skipped: {_e}")
+
     print(
         f"[MEMORY] user={user['user_id']} session={session_id} "
         f"facts={len(memory_dicts)} relevant_facts={len(relevant_memories)} "
@@ -1228,9 +1297,27 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     else:
         answer = "AI system is initializing. Please try again in a moment."
 
+    # Store the answer in the cache for future identical questions. The
+    # _should_cache() gate inside set() refuses personal-recall queries and
+    # error/outage text, so this is leak-safe and won't poison on failures.
+    _chat_citations = get_last_grounding().get("citations", [])
+    _looks_err = (
+        not answer
+        or "trouble" in answer.lower()[:40]
+        or "error" in answer.lower()[:50]
+        or "initializing" in answer.lower()[:40]
+    )
+    if USE_VERTEX_AGENT and not file_match and not _looks_err:
+        try:
+            _cache_ctx = get_context_hash(user["user_id"], model=req.model)
+            query_cache.set(user_q, answer, _cache_ctx)
+            if _chat_citations:
+                query_cache.set_citations(user_q, _chat_citations, _cache_ctx)
+        except Exception as e:
+            print(f"[CACHE] store skipped: {e}")
+
     # Persist user-specific chat record
     try:
-        _chat_citations = get_last_grounding().get("citations", [])
         new_chat = ChatHistory(
             user_id=user["user_id"],
             session_id=session_id,
@@ -1271,12 +1358,17 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     session_id = req.session_id or "default"
     user_id = user["user_id"]
 
+    # Embed the query ONCE and share the vector across both recall functions
+    # (was two independent embed calls per turn -- one for memories, one for turns).
+    from services.embedding_util import embed_text as _embed_text
+    q_vec = await asyncio.to_thread(_embed_text, user_q)
+
     # Parallel fetch: history + memory + Phase 2 semantic facts + Phase 4 verbatim turns
     fetch_tasks = [
         asyncio.to_thread(_fetch_history_sync, user_id, session_id, 5),
         asyncio.to_thread(fetch_user_memories_sync, user_id, 10),
-        asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55),
-        asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id),
+        asyncio.to_thread(retrieve_relevant_memories, user_id, user_q, 5, 0.55, q_vec),
+        asyncio.to_thread(retrieve_relevant_turns, user_id, user_q, 3, 0.62, session_id, query_vec=q_vec),
     ]
     results = await asyncio.gather(*fetch_tasks, return_exceptions=True)
     if isinstance(results[0], Exception):
@@ -1610,6 +1702,71 @@ async def get_forms_catalog(
     return {"forms": forms, "count": len(forms)}
 
 
+@app.get("/api/sample-proposals")
+async def get_sample_proposals(category: str = ""):
+    """Curated shelf of real, public example/funded proposals a PI can read for
+    reference. Static, read-only, no LLM and no auth (the content is entirely
+    public links). Optional ?category= narrows to one filter bucket; an empty or
+    unknown value returns the full list."""
+    from services.sample_proposals import list_samples, categories
+    proposals = list_samples(category or None)
+    return {
+        "proposals": proposals,
+        "categories": categories(),
+        "count": len(proposals),
+    }
+
+
+@app.get("/api/sample-proposals/{sample_id}/download")
+async def download_sample_proposal(sample_id: str):
+    """Stream the hosted PDF for an authored ("pdf"-type) sample proposal as a
+    download. 404 if the id is unknown, the entry is a link (not a hosted PDF),
+    or the file is missing. No auth -- the content is our own public sample."""
+    from fastapi.responses import FileResponse
+    from services.sample_proposals import get_sample, pdf_path
+    path = pdf_path(sample_id)
+    if not path:
+        raise HTTPException(status_code=404, detail="Sample PDF not found")
+    sample = get_sample(sample_id) or {}
+    # A clean, human filename for the browser's Save dialog.
+    download_name = f"{sample.get('id', 'sample-proposal')}.pdf"
+    return FileResponse(path, media_type="application/pdf", filename=download_name)
+
+
+class OpportunitySearchRequest(BaseModel):
+    description: str
+
+
+@app.post("/api/opportunities/search")
+async def search_opportunities(
+    req: OpportunitySearchRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Opportunity Finder: a PI's free-text research description -> ranked list of
+    live, OPEN federal opportunities (Grants.gov), each with a grounded fit
+    explanation, a deterministic institution-eligibility verdict, a PI-level
+    eligibility advisory, and a mechanism note. The PI's saved interests enrich
+    the query. Returns [] (not an error) when the federal API is unreachable, so
+    the UI degrades gracefully."""
+    description = (req.description or "").strip()
+    if not description:
+        raise HTTPException(status_code=422, detail="A research description is required.")
+
+    # Enrich the query with the user's saved interests (multi-value, in memories).
+    interest_rows = (
+        db.query(UserMemory)
+        .filter(UserMemory.user_id == user["user_id"], UserMemory.memory_type == "interest")
+        .order_by(UserMemory.id.asc())
+        .all()
+    )
+    interests = ", ".join((r.content or "").strip() for r in interest_rows if (r.content or "").strip())
+
+    from services.opportunity_finder import find_opportunities
+    results = find_opportunities(description, profile={"interests": interests})
+    return {"opportunities": results, "count": len(results)}
+
+
 @app.get("/chat-history")
 async def get_chat_history(user=Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetch chat history for the logged-in user."""
@@ -1739,12 +1896,18 @@ DEFAULT_QUESTION_POOL = [
 
 
 @app.get("/api/popular-questions")
-async def get_popular_questions():
-    """Returns 10 randomly selected ORA-themed questions from the curated pool.
-    Used by the home-screen on the guest (unauthenticated) path. Authenticated
-    users get personalized suggestions via GET /api/me/suggested-questions."""
-    import random
-    return {"questions": random.sample(DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL)))}
+async def get_popular_questions(db: Session = Depends(get_db)):
+    """Global Top-10 most-asked ORA questions: the curated pool ranked by how
+    many DISTINCT users have asked about each (services/popular_questions.py).
+    The SAME list for everyone (guests and authenticated users). Cached + daily
+    cron; degrades to the curated pool order when history is thin."""
+    from services.popular_questions import get_top_questions
+    try:
+        questions = get_top_questions(db, DEFAULT_QUESTION_POOL, 10)
+    except Exception as e:
+        print(f"[POPULAR] get_popular_questions failed: {e}")
+        questions = DEFAULT_QUESTION_POOL[:10]
+    return {"questions": questions, "source": "popular"}
 
 @app.get("/health")
 def health():
@@ -2738,6 +2901,28 @@ async def internal_deadline_check(request: Request):
     return result
 
 
+@app.post("/api/internal/popular-questions/recompute")
+async def internal_recompute_popular_questions(request: Request):
+    """Recompute the global "Top 10 most-asked" landing-page questions from
+    ChatHistory and refresh the cache. Meant for a daily Cloud Scheduler cron so
+    the serving endpoints never run the scan inline. Idempotent.
+
+    Auth via X-Research-Secret (same shared secret as the other internal crons)."""
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+
+    from services.popular_questions import recompute
+
+    def _run():
+        with SessionLocal() as db:
+            return recompute(db, DEFAULT_QUESTION_POOL, 10)
+
+    questions = await asyncio.to_thread(_run)
+    return {"status": "ok", "count": len(questions), "questions": questions}
+
+
 # ==============================================================================
 # Phase 5 — Per-User Memory Management API (Memory tab in ProfilePage)
 # ==============================================================================
@@ -2776,61 +2961,19 @@ async def me_get_suggested_questions(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Personalized home-screen suggestions, precomputed in the post-commit
-    memory hook. Pure read — ~5ms. Always returns 200; on any error or
-    missing row, falls back to a shuffled sample of DEFAULT_QUESTION_POOL."""
+    """Same GLOBAL Top-10 most-asked questions as /api/popular-questions -- every
+    user now sees the identical list (per-user personalization was removed by
+    product decision). Kept as a separate route so the authenticated frontend
+    path is unchanged. Pure read; degrades to the curated pool on any error."""
     if not user:
         raise HTTPException(401, "Unauthorized")
-
-    from models import UserSuggestedQuestions
-    import random as _random
-
-    user_id = user["user_id"]
+    from services.popular_questions import get_top_questions
     try:
-        row = db.query(UserSuggestedQuestions)\
-            .filter(UserSuggestedQuestions.user_id == user_id).first()
-        if row is None:
-            # First visit — no row yet. Return the default pool synchronously,
-            # kick off a background regen so next visit shows personalized.
-            try:
-                from services.suggestion_generator import regenerate_for_user
-                asyncio.create_task(asyncio.to_thread(regenerate_for_user, user_id))
-            except RuntimeError:
-                pass
-            return {
-                "questions": _random.sample(
-                    DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
-                ),
-                "generated_at": None,
-                "source": "default",
-            }
-
-        try:
-            questions = json.loads(row.questions or "[]")
-            if not isinstance(questions, list):
-                questions = []
-        except Exception:
-            questions = []
-
-        if not questions:
-            questions = _random.sample(
-                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
-            )
-
-        return {
-            "questions": questions,
-            "generated_at": row.generated_at.isoformat() if row.generated_at else None,
-            "source": row.source or "default",
-        }
+        questions = get_top_questions(db, DEFAULT_QUESTION_POOL, 10)
     except Exception as e:
-        print(f"[SUGGEST] me_get_suggested_questions failed for user={user_id}: {e}")
-        return {
-            "questions": _random.sample(
-                DEFAULT_QUESTION_POOL, min(10, len(DEFAULT_QUESTION_POOL))
-            ),
-            "generated_at": None,
-            "source": "default",
-        }
+        print(f"[POPULAR] me_get_suggested_questions failed for user={user.get('user_id')}: {e}")
+        questions = DEFAULT_QUESTION_POOL[:10]
+    return {"questions": questions, "generated_at": None, "source": "popular"}
 
 
 @app.get("/api/me/memories")
@@ -3007,6 +3150,10 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         "title": s.title,
         "sponsor": s.sponsor,
         "deadline": s.deadline.isoformat() if s.deadline else None,
+        # Morgan's internal routing deadline: 5 business days before the sponsor
+        # date, so a first-timer plans backward from the real institutional cutoff.
+        "internal_deadline": (_proposals_service.internal_routing_deadline(s.deadline).isoformat()
+                              if s.deadline else None),
         "status": s.status,
         "notes": s.notes,
         # Budget Helper: parsed saved inputs (None if no budget saved). Whether a
@@ -3014,6 +3161,8 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         "has_budget": bool(getattr(s, "budget_json", None)),
         # Compliance Sentinel: whether a compliance check has been saved (badge).
         "has_compliance": bool(getattr(s, "compliance_json", None)),
+        # Drafting Coach: whether a section draft has been saved (badge / next-step).
+        "has_sections": bool(getattr(s, "sections_json", None)),
         "created_at": s.created_at.isoformat() if s.created_at else None,
         "updated_at": s.updated_at.isoformat() if s.updated_at else None,
     }
@@ -3032,6 +3181,7 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
 
 def _submission_task_to_dict(t) -> dict:
     from services.forms_catalog import get_form
+    from services.task_guidance import guidance_for
     form = get_form(t.kb_doc_id)
     return {
         "id": t.id,
@@ -3046,6 +3196,8 @@ def _submission_task_to_dict(t) -> dict:
         "status": t.status,
         "notes": t.notes,
         "sort_order": t.sort_order,
+        # Phase 4: short how-to + sample for known tasks (None if no match).
+        "guidance": guidance_for(t.title),
     }
 
 
@@ -3188,12 +3340,15 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
     deterministic compute -- the AI is told to never change a number."""
     if not user:
         raise HTTPException(401, "Unauthorized")
-    from services.budget_helper import compute_budget, draft_justification
+    from services.budget_helper import (
+        compute_budget, draft_justification, per_line_justifications, _fmt,
+    )
     inputs = payload.get("inputs", payload) or {}
     budget = compute_budget(inputs)
     template = draft_justification(budget)
+    per_line = per_line_justifications(budget)   # deterministic, additive
     if not payload.get("use_ai", True):
-        return {"justification": template, "ai": False}
+        return {"justification": template, "ai": False, "per_line": per_line}
     try:
         from services import gemini_client
         prompt = (
@@ -3204,11 +3359,19 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
             f"{template}"
         )
         text_out = (gemini_client.generate_text(prompt, temperature=0.2, max_output_tokens=900) or "").strip()
+        # Completeness guard: Gemini can return a TRUNCATED fragment (e.g. it
+        # stops mid-sentence under load). A non-empty fragment would otherwise
+        # be shown in place of the full justification. A complete justification
+        # always states the total project cost, so require that figure to be
+        # present; otherwise fall back to the complete deterministic template.
+        total_fmt = _fmt(budget.get("total") or 0)
+        if text_out and total_fmt in text_out:
+            return {"justification": text_out, "ai": True, "template": template, "per_line": per_line}
         if text_out:
-            return {"justification": text_out, "ai": True, "template": template}
+            print(f"[BUDGET] AI justification truncated (missing {total_fmt}) -- using template")
     except Exception as e:
         print(f"[BUDGET] AI justification failed, using deterministic template: {e}")
-    return {"justification": template, "ai": False}
+    return {"justification": template, "ai": False, "per_line": per_line}
 
 
 @app.get("/api/me/submissions/{submission_id}/budget")
@@ -3254,6 +3417,35 @@ async def save_submission_budget(
     db.commit()
     db.refresh(sub)
     return {"inputs": inputs, "computed": computed}
+
+
+@app.get("/api/me/submissions/{submission_id}/budget.csv")
+async def export_submission_budget_csv(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Download the saved budget as CSV (opens in Excel / Sheets)."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from fastapi.responses import Response
+    from services.budget_helper import compute_budget, budget_to_csv
+    raw = getattr(sub, "budget_json", None)
+    inputs = {}
+    if raw:
+        try:
+            inputs = json.loads(raw)
+        except (ValueError, TypeError):
+            inputs = {}
+    csv_text = budget_to_csv(compute_budget(inputs))
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="budget-{submission_id}.csv"'},
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -3530,6 +3722,39 @@ async def extract_solicitation(
     return {"extracted": extracted}
 
 
+class SolicitationUrlRequest(BaseModel):
+    url: str
+
+
+@app.post("/api/me/submissions/from-solicitation/url")
+async def extract_solicitation_from_url(
+    payload: SolicitationUrlRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Step 1 (URL variant): fetch a sponsor solicitation URL (an HTML page or a
+    linked PDF), extract the same structured JSON the PDF flow returns. Does NOT
+    create a Submission -- the user reviews/edits, then calls the confirm
+    endpoint. Same response shape as /from-solicitation so the UI is shared."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    from services import url_fetcher, solicitation_extractor as _sx
+    try:
+        text = url_fetcher.fetch_solicitation_text(payload.url)
+    except url_fetcher.FetchError as e:
+        raise HTTPException(e.status, e.message)
+
+    extracted = _sx.extract_from_text(text)
+    if extracted is None:
+        raise HTTPException(
+            422,
+            "Couldn't pull a solicitation out of that page -- it may not be a "
+            "solicitation, or the content is image-only. Try the PDF upload, or "
+            "create the proposal manually.",
+        )
+    return {"extracted": extracted}
+
+
 @app.post("/api/me/submissions/from-solicitation/confirm")
 async def confirm_solicitation_submission(
     payload: dict,
@@ -3614,6 +3839,135 @@ async def critique_draft(
         "solicitation_context": solicitation,
         "critique": critique,
     }
+
+
+# ----------------------------------------------------------------------------
+# Section Drafting Coach (Phase 2): outline a proposal section, or give advisory
+# feedback on the PI's own draft of it. Coaching only -- never writes the prose.
+
+@app.get("/api/me/submissions/{submission_id}/sections")
+async def list_coach_sections(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The proposal sections the coach can help with, for this submission's sponsor."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services import section_coach as _sc
+    return {"sponsor": sub.sponsor, "sections": _sc.available_sections(sub.sponsor)}
+
+
+class SectionCoachRequest(BaseModel):
+    section_key: str
+    mode: str = "outline"          # "outline" | "review"
+    topic: str = ""                # optional: tailors the outline tips
+    draft_text: str = ""           # required for "review"
+
+
+@app.post("/api/me/submissions/{submission_id}/section-coach")
+async def section_coach(
+    submission_id: int,
+    payload: SectionCoachRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Outline a section or review the PI's draft of it. Uses the submission's
+    sponsor + reconstructed solicitation context. Advisory; never authoritative."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    from services import section_coach as _sc
+    context = _proposals_service.reconstruct_solicitation_context(sub)
+    context["eligibility"] = _eligibility_text_from_notes(sub.notes)   # 'match THIS solicitation'
+    if payload.mode == "review":
+        result = _sc.review_section(sub.sponsor, payload.section_key, payload.draft_text, context)
+    else:
+        result = _sc.outline_section(sub.sponsor, payload.section_key, payload.topic, context)
+    if result is None:
+        raise HTTPException(400, "Unknown proposal section.")
+    return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
+
+
+@app.get("/api/me/submissions/{submission_id}/sections/drafts")
+async def get_section_drafts(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The PI's saved per-section draft text for this submission."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    raw = getattr(sub, "sections_json", None)
+    drafts = {}
+    if raw:
+        try:
+            drafts = json.loads(raw)
+        except (ValueError, TypeError):
+            drafts = {}
+    return {"drafts": drafts if isinstance(drafts, dict) else {}}
+
+
+class SectionDraftRequest(BaseModel):
+    section_key: str
+    text: str = ""
+
+
+@app.put("/api/me/submissions/{submission_id}/sections/drafts")
+async def save_section_draft(
+    submission_id: int,
+    payload: SectionDraftRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save (or clear) the PI's draft text for one section. Coaching only -- this
+    is the PI's own writing; we store it so they can come back to it."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    raw = getattr(sub, "sections_json", None)
+    drafts = {}
+    if raw:
+        try:
+            drafts = json.loads(raw)
+        except (ValueError, TypeError):
+            drafts = {}
+    if not isinstance(drafts, dict):
+        drafts = {}
+    text = (payload.text or "").strip()
+    if text:
+        drafts[payload.section_key] = text
+    else:
+        drafts.pop(payload.section_key, None)   # empty -> clear
+    sub.sections_json = json.dumps(drafts)
+    db.commit()
+    return {"drafts": drafts}
+
+
+# ----------------------------------------------------------------------------
+# Eligibility-text helper. Pulls the "Eligibility: ..." line out of a
+# submission's solicitation notes; used by the section-coach ("match THIS
+# solicitation"). The interactive Fundability / Eligibility self-check feature
+# was removed, but the extracted eligibility TEXT is still part of ingestion.
+
+def _eligibility_text_from_notes(notes: Optional[str]) -> Optional[str]:
+    """Pull the 'Eligibility: ...' line out of a submission's solicitation notes."""
+    if not notes:
+        return None
+    import re as _re
+    m = _re.search(r"^Eligibility:\s*(.+)$", notes, _re.MULTILINE)
+    return m.group(1).strip() if m else None
 
 
 # ----------------------------------------------------------------------------
