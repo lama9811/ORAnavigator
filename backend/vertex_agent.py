@@ -393,6 +393,113 @@ def _extract_citations(chunks: list, supports: Optional[list] = None) -> list:
 
 
 # =============================================================================
+# PART C: DETERMINISTIC CITATION FALLBACK
+# =============================================================================
+# Gemini's native VertexAiSearch grounding returns groundingChunks/Supports
+# unreliably -- a correct, KB-grounded answer frequently comes back with empty
+# metadata, so the Sources block is blank even though the answer IS from the KB.
+# When that happens on a real ORA content answer, we run our own live KB search
+# and attach the matching docs as Sources. This mirrors the precedent in
+# _extract_citations (retrieval-order fallback when supports are absent),
+# extended to the zero-chunk case. Anti-hallucination is unaffected: these are
+# clickable Source links resolved from the KB URL map, not factual claims.
+
+# The unified KB datastore the agent grounds on (same value in cloudbuild.yaml).
+_FALLBACK_DATASTORE_ID = os.getenv(
+    "VERTEX_AI_DATASTORE_ID",
+    "projects/infra-vertex-494621-v1/locations/us/collections/default_collection"
+    "/dataStores/oranavigator-kb-v8",
+)
+
+
+def _search_kb_titles(query: str, top_k: int = 5) -> list:
+    """Live Vertex AI Search over the unified KB datastore; returns the top doc
+    titles. Network boundary -- returns [] on any failure so the answer still
+    delivers (golden rule 3)."""
+    if not query or not query.strip():
+        return []
+    try:
+        from google.cloud import discoveryengine_v1 as discoveryengine
+        from google.api_core.client_options import ClientOptions
+    except Exception:
+        return []
+    try:
+        parts = _FALLBACK_DATASTORE_ID.split("/")
+        location = parts[parts.index("locations") + 1] if "locations" in parts else "us"
+        endpoint = f"{location}-discoveryengine.googleapis.com"
+        client = discoveryengine.SearchServiceClient(
+            client_options=ClientOptions(api_endpoint=endpoint)
+        )
+        serving_config = f"{_FALLBACK_DATASTORE_ID}/servingConfigs/default_search"
+        request = discoveryengine.SearchRequest(
+            serving_config=serving_config,
+            query=query,
+            page_size=top_k,
+        )
+        titles: list = []
+        for result in client.search(request):
+            doc = getattr(result, "document", None)
+            if doc is None:
+                continue
+            title = ""
+            for field in ("struct_data", "derived_struct_data"):
+                data = getattr(doc, field, None)
+                if data and "title" in data:
+                    title = (data.get("title") or "").strip()
+                    if title:
+                        break
+            if title:
+                titles.append(title)
+            if len(titles) >= top_k:
+                break
+        return titles
+    except Exception as e:
+        print(f"   [FALLBACK_CITATIONS] KB search failed: {e}")
+        return []
+
+
+def _fallback_citations(query: str, top_k: int = 5) -> list:
+    """Run a live KB search and resolve the matching doc titles to clickable
+    {title, url} Sources via the KB URL map. Deduped, capped at 5, and only
+    titles with a resolvable URL are kept (an unclickable Source is no Source).
+    Returns [] when nothing matches -- never a blank guess."""
+    try:
+        titles = _search_kb_titles(query, top_k=top_k)
+    except Exception:
+        return []
+    if not titles:
+        return []
+    url_map = _get_kb_url_map()
+    out: list = []
+    seen: set = set()
+    for title in titles:
+        key = _norm_title(title)
+        if key in seen:
+            continue
+        url = url_map.get(key)
+        if not url:
+            continue
+        seen.add(key)
+        out.append({"title": title, "url": url})
+        if len(out) >= 5:
+            break
+    return out
+
+
+def _wants_fallback_citations(question: str, result: dict) -> bool:
+    """True only when fallback Sources should be attached: a real ORA content
+    answer that came back uncited. Skips small talk/greetings (no source), and
+    any refusal/outage/KB-failure path ("I don't have that" has no source)."""
+    if result.get("citations"):
+        return False
+    if result.get("kb_fail") or result.get("outage") or result.get("error"):
+        return False
+    if _is_smalltalk(question):
+        return False
+    return True
+
+
+# =============================================================================
 # IDENTIFIER FAITHFULNESS: SOP/FWA/EIN/UEI numbers and rates must be KB-grounded
 # =============================================================================
 _IDENTIFIER_PATTERNS = [
@@ -1315,6 +1422,11 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
             return
 
     # ---- DELIVER ---------------------------------------------------------
+    # Part C: a correct ORA answer can come back uncited (Gemini's grounding
+    # metadata is unreliable). Attach Sources from a live KB search so the
+    # answer is never sourceless.
+    if _wants_fallback_citations(message, result):
+        result["citations"] = _fallback_citations(message)
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
                    citations=result["citations"])
     final = _finalize_answer(text, result["grounded_corpus"])
@@ -1385,6 +1497,11 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
             if merged:
                 text, verdict = _clean_answer_text(merged), "ok"
 
+    # Part C: attach Sources from a live KB search when a TRUSTED answer came
+    # back uncited. Skipped for weak answers -- we don't lend authority to one
+    # already flagged with a caution note.
+    if verdict != "weak" and _wants_fallback_citations(message, result):
+        result["citations"] = _fallback_citations(message)
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
                    citations=result["citations"])
     final = _finalize_answer(text, result["grounded_corpus"])
