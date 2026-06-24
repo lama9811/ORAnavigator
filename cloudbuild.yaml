@@ -99,10 +99,7 @@ steps:
       - '--port=8080'
       - '--memory=2Gi'
       - '--cpu=2'
-      - '--min-instances=1'
-      # Startup CPU boost (no recurring cost): speeds the cold start of a freshly
-      # deployed revision -- the first request after each deploy still cold-starts
-      # even with a warm min-instance, which is the likely cause of one-off ~60s turns.
+
       - '--cpu-boost'
       - '--max-instances=10'
       - '--timeout=300'
@@ -146,7 +143,7 @@ steps:
           --port=5000 \
           --memory=1Gi \
           --cpu=1 \
-          --min-instances=1 \
+=
           --cpu-boost \
           --max-instances=20 \
           --timeout=300 \
