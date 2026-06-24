@@ -199,8 +199,15 @@ def prefetch_kb_context(query: str, top_k: int = 5) -> str:
     if not top:
         return ""
 
-    parts = ["[PRE-FETCHED KB CONTEXT - use this to ground your answer]"]
+    parts = [
+        "[REFERENCE CONTEXT - FACT-CHECK ONLY]",
+        "The excerpts below are a hallucination guard, NOT your retrieved answer. "
+        "Do NOT answer from these excerpts alone and do NOT cite them as your source. "
+        "You MUST still ground the visible answer and its Sources in your own "
+        "knowledge-base search results; use these excerpts only to verify you are "
+        "not stating anything they contradict.",
+    ]
     for i, (text, _) in enumerate(top, 1):
         parts.append(f"--- Doc {i} ---\n{text}")
-    parts.append("[END PRE-FETCHED KB CONTEXT]")
+    parts.append("[END REFERENCE CONTEXT]")
     return "\n".join(parts)
