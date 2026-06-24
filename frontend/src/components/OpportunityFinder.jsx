@@ -18,6 +18,12 @@ import "./OpportunityFinder.css";
 
 const API_BASE = getApiBase();
 
+// The app authenticates with a Bearer token in localStorage (same as MyProposals).
+function authHeaders() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // Deterministic institution-eligibility verdict -> badge styling + copy.
 const ELIGIBILITY = {
   eligible:     { cls: "ok",   Icon: CircleCheck, label: "Your institution is eligible" },
@@ -35,7 +41,7 @@ export default function OpportunityFinder() {
 
   // Pre-fill a hint from the saved profile interests so the box is never blank.
   useEffect(() => {
-    fetch(`${API_BASE}/api/profile`, { credentials: "include" })
+    fetch(`${API_BASE}/api/profile`, { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => {
         if (p?.interests && !description) {
@@ -58,8 +64,7 @@ export default function OpportunityFinder() {
     try {
       const r = await fetch(`${API_BASE}/api/opportunities/search`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ description: desc }),
       });
       if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
