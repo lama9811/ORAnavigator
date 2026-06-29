@@ -1705,11 +1705,18 @@ async def get_forms_catalog(
 @app.get("/api/sample-proposals")
 async def get_sample_proposals(category: str = ""):
     """Curated shelf of real, public example/funded proposals a PI can read for
-    reference. Static, read-only, no LLM and no auth (the content is entirely
-    public links). Optional ?category= narrows to one filter bucket; an empty or
-    unknown value returns the full list."""
+    reference. The authored + vetted entries are static; researcher-shared
+    proposals are merged in LIVE from Open Grants (ogrants.org), cached, and
+    degrade gracefully to [] if that source is unreachable. No LLM, no auth (the
+    content is entirely public links). Optional ?category= narrows to one filter
+    bucket; an empty or unknown value returns the full list."""
     from services.sample_proposals import list_samples, categories
-    proposals = list_samples(category or None)
+    proposals = list_samples(category or None)  # authored-first, unchanged
+    try:
+        from services.ogrants_finder import list_community_samples
+        proposals = proposals + list_community_samples(category or None)
+    except Exception:  # noqa: BLE001 -- a live-source failure never breaks the page
+        pass
     return {
         "proposals": proposals,
         "categories": categories(),
@@ -3892,6 +3899,48 @@ async def section_coach(
         result = _sc.outline_section(sub.sponsor, payload.section_key, payload.topic, context)
     if result is None:
         raise HTTPException(400, "Unknown proposal section.")
+    return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
+
+
+@app.post("/api/me/submissions/{submission_id}/coherence")
+async def section_coherence(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Advisory cross-section coherence check: do the PI's SAVED sections agree
+    with each other (and with eligibility + budget)? Reads existing
+    sections_json/budget_json/notes -- no new state. Advisory; never authoritative."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    from services import section_coach as _sc
+    from services.budget_helper import compute_budget
+
+    raw = getattr(sub, "sections_json", None)
+    drafts = {}
+    if raw:
+        try:
+            drafts = json.loads(raw)
+        except (ValueError, TypeError):
+            drafts = {}
+    if not isinstance(drafts, dict):
+        drafts = {}
+
+    budget = None
+    raw_b = getattr(sub, "budget_json", None)
+    if raw_b:
+        try:
+            budget = compute_budget(json.loads(raw_b))
+        except (ValueError, TypeError):
+            budget = None
+
+    context = _proposals_service.reconstruct_solicitation_context(sub)
+    context["eligibility"] = _eligibility_text_from_notes(sub.notes)
+    result = _sc.coherence_check(sub.sponsor, drafts, context, budget)
     return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
 
 

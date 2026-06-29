@@ -32,6 +32,7 @@
   font-size: 0.8rem; color: #475569;
 }
 .sc-tabs button.active { border-color: #1B3A6B; background: #eef4ff; color: #0B2545; font-weight: 600; }
+.sc-tabs button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .sc-topic { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
 .sc-topic > span { font-size: 0.78rem; font-weight: 600; color: #334155; }
@@ -93,6 +94,17 @@
 .sc-constraints { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
 .sc-con-line { font-size: 0.8rem; color: #475569; margin-top: 4px; line-height: 1.45; }
 .sc-con-line b { color: #0B2545; }
+
+/* Reviewer-lens rubric panel */
+.sc-reviewer { background: #f5f8ff; border: 1px solid #e4ecfb; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; }
+.sc-rubric { list-style: none; margin: 0; padding: 0; }
+.sc-rubric li { margin-top: 8px; }
+.sc-rubric li:first-child { margin-top: 4px; }
+.sc-rubric b { color: #0B2545; font-size: 0.84rem; }
+.sc-weight { font-size: 0.72rem; color: #94a3b8; font-weight: 500; }
+.sc-asks { font-size: 0.78rem; color: #475569; line-height: 1.45; margin-top: 1px; }
+.sc-rev-note { font-size: 0.78rem; color: #1B3A6B; background: #fff; border-left: 2px solid #1B3A6B; padding: 4px 8px; margin-top: 4px; border-radius: 0 4px 4px 0; }
+.sc-coherence-intro { font-size: 0.84rem; color: #475569; line-height: 1.5; margin: 14px 0 0; }
 
 .sc-clarity ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; }
 .sc-clarity li { font-size: 0.82rem; color: #475569; line-height: 1.45; }

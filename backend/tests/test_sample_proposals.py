@@ -98,9 +98,13 @@ def test_every_category_has_at_least_one_entry():
 
 # --- endpoint ---------------------------------------------------------------
 
-def test_endpoint_returns_full_list_no_auth():
+def test_endpoint_returns_full_list_no_auth(monkeypatch):
     from fastapi.testclient import TestClient
     import main
+    # Stub the live ogrants source so this test stays offline + deterministic;
+    # the static authored/vetted list is what we're pinning here.
+    import services.ogrants_finder as og
+    monkeypatch.setattr(og, "list_community_samples", lambda *a, **k: [])
     with TestClient(main.app) as client:
         r = client.get("/api/sample-proposals")
         assert r.status_code == 200
@@ -109,9 +113,11 @@ def test_endpoint_returns_full_list_no_auth():
         assert body["categories"] == CATEGORIES
 
 
-def test_endpoint_filters_by_category():
+def test_endpoint_filters_by_category(monkeypatch):
     from fastapi.testclient import TestClient
     import main
+    import services.ogrants_finder as og
+    monkeypatch.setattr(og, "list_community_samples", lambda *a, **k: [])
     with TestClient(main.app) as client:
         r = client.get("/api/sample-proposals", params={"category": "NIH"})
         assert r.status_code == 200

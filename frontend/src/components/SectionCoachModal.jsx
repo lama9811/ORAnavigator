@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle, FileText } from "lucide-react";
+import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle, FileText, GitCompare, Scale } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SectionCoachModal.css";
 
@@ -70,6 +70,7 @@ export default function SectionCoachModal({ submission, onClose }) {
   };
 
   const run = async () => {
+    if (mode === "coherence") return runCoherence();
     if (!sectionKey) return;
     setBusy(true); setResult(null);
     try {
@@ -80,6 +81,19 @@ export default function SectionCoachModal({ submission, onClose }) {
       if (r.ok) setResult((await r.json()).result);
     } finally { setBusy(false); }
   };
+
+  // Cross-section coherence runs over the SAVED sections (no per-section input).
+  const runCoherence = async () => {
+    setBusy(true); setResult(null);
+    try {
+      const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/coherence`, {
+        method: "POST", headers: authHeaders(),
+      });
+      if (r.ok) setResult({ ...(await r.json()).result, mode: "coherence" });
+    } finally { setBusy(false); }
+  };
+
+  const savedCount = Object.keys(drafts || {}).length;
 
   // Re-run is explicit (button); switching section/mode clears the old result.
   const pickSection = (k) => {
@@ -121,6 +135,11 @@ export default function SectionCoachModal({ submission, onClose }) {
                 <button className={mode === "review" ? "active" : ""} onClick={() => pickMode("review")}>
                   <MessageSquare size={13} /> Feedback on my draft
                 </button>
+                <button className={mode === "coherence" ? "active" : ""} onClick={() => pickMode("coherence")}
+                  disabled={savedCount < 2}
+                  title={savedCount < 2 ? "Save at least two sections to compare them" : "Check that your saved sections agree"}>
+                  <GitCompare size={13} /> Cross-section
+                </button>
               </div>
             </div>
 
@@ -141,9 +160,19 @@ export default function SectionCoachModal({ submission, onClose }) {
               </label>
             )}
 
+            {mode === "coherence" && (
+              <p className="sc-coherence-intro">
+                Checks whether your <b>{savedCount} saved sections</b> agree with each other —
+                e.g. does the Research Strategy address every Specific Aim, does the scope fit the
+                eligibility, does the timeline match the budget? Advisory only.
+              </p>
+            )}
+
             <div className="sc-run-row">
-              <button className="sc-run" onClick={run} disabled={busy || (mode === "review" && !draft.trim())}>
-                {busy ? "Thinking…" : mode === "outline" ? "Get outline" : "Get feedback"}
+              <button className="sc-run" onClick={run}
+                disabled={busy || (mode === "review" && !draft.trim()) || (mode === "coherence" && savedCount < 2)}>
+                {busy ? "Thinking…" : mode === "outline" ? "Get outline"
+                  : mode === "review" ? "Get feedback" : "Check sections"}
               </button>
               {mode === "review" && (
                 <button className="sc-save" onClick={saveDraft} disabled={!draft.trim()}>Save draft</button>
@@ -153,6 +182,7 @@ export default function SectionCoachModal({ submission, onClose }) {
 
             {result && result.mode === "outline" && <OutlineView r={result} />}
             {result && result.mode === "review" && <ReviewView r={result} />}
+            {result && result.mode === "coherence" && <CoherenceView r={result} />}
           </div>
         )}
       </div>
@@ -194,6 +224,29 @@ function Constraints({ c }) {
   );
 }
 
+// The panel's actual scoring criteria + (when available) an AI note per
+// criterion on how a reviewer would judge THIS draft. Rubric is deterministic
+// (always present); notes are advisory and only appear when the AI is on.
+function ReviewerPanel({ rubric, notes }) {
+  if (!rubric?.length) return null;
+  const noteFor = {};
+  (notes || []).forEach((n) => { if (n.criterion) noteFor[n.criterion] = n.note; });
+  return (
+    <div className="sc-reviewer">
+      <div className="sc-block-head"><Scale size={13} /> How reviewers will score this</div>
+      <ul className="sc-rubric">
+        {rubric.map((c, i) => (
+          <li key={i}>
+            <b>{c.criterion}</b>{c.weight ? <span className="sc-weight"> · {c.weight}</span> : null}
+            <div className="sc-asks">{c.asks}</div>
+            {noteFor[c.criterion] && <div className="sc-rev-note">{noteFor[c.criterion]}</div>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // A link to a hosted, authored sample proposal showing what a strong version of
 // this section reads like. Opens the public download endpoint in a new tab.
 function SampleLink({ sample }) {
@@ -210,6 +263,7 @@ function OutlineView({ r }) {
   return (
     <div className="sc-result">
       <Constraints c={r.solicitation_constraints} />
+      <ReviewerPanel rubric={r.rubric} />
       <div className="sc-purpose">{r.purpose}</div>
       <div className="sc-meta">Target length: {r.target_words}</div>
       <SampleLink sample={r.sample} />
@@ -237,6 +291,7 @@ function ReviewView({ r }) {
     <div className="sc-result">
       <Constraints c={r.solicitation_constraints} />
       <div className="sc-summary">{r.summary}</div>
+      <ReviewerPanel rubric={r.rubric} notes={r.reviewer_notes} />
       <SampleLink sample={r.sample} />
       {typeof r.word_count === "number" && r.word_count > 0 && (
         <div className="sc-meta">
@@ -271,6 +326,45 @@ function ReviewView({ r }) {
       )}
       {!r.ai && (
         <div className="sc-fallback">Quick keyword check (AI offline) — clear, labeled headings help most.</div>
+      )}
+    </div>
+  );
+}
+
+const PAIR_STATUS = {
+  aligned: { cls: "sc-ok", icon: <CheckCircle2 size={13} />, label: "aligned" },
+  gap: { cls: "sc-bad", icon: <AlertTriangle size={13} />, label: "gap" },
+  unclear: { cls: "sc-warn", icon: <HelpCircle size={13} />, label: "check by hand" },
+};
+
+function CoherenceView({ r }) {
+  if (!r.ready) {
+    return <div className="sc-result"><div className="sc-summary">{r.summary}</div></div>;
+  }
+  return (
+    <div className="sc-result">
+      <div className="sc-summary">{r.summary}</div>
+      <ul className="sc-checklist">
+        {r.pairs.map((p, i) => {
+          const s = PAIR_STATUS[p.status] || PAIR_STATUS.unclear;
+          return (
+            <li key={i} className={`sc-check ${s.cls}`}>
+              <div className="sc-check-head">{s.icon} <b>{p.a} ↔ {p.b}</b> <span className="sc-status">{s.label}</span></div>
+              {p.note && <div className="sc-note">{p.note}</div>}
+              {p.evidence_a && <div className="sc-evidence">{p.a}: “{p.evidence_a}”</div>}
+              {p.evidence_b && <div className="sc-evidence">{p.b}: “{p.evidence_b}”</div>}
+            </li>
+          );
+        })}
+      </ul>
+      {r.suggestions?.length > 0 && (
+        <div className="sc-suggestions">
+          <div className="sc-block-head"><Lightbulb size={13} /> Suggestions</div>
+          <ul>{r.suggestions.map((sug, i) => <li key={i}>{sug}</li>)}</ul>
+        </div>
+      )}
+      {!r.ai && (
+        <div className="sc-fallback">Offline mode — compare these pairs by hand; no AI grounding was applied.</div>
       )}
     </div>
   );

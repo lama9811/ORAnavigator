@@ -176,3 +176,28 @@ def test_review_includes_sample_hint():
 def test_unmapped_section_has_no_sample_hint():
     o = sc.outline_section("Some Foundation", "abstract")
     assert o["sample"] is None
+
+
+# ── reviewer-lens rubric (deterministic; present with AI off) ──────────────--
+
+def test_review_rubric_by_sponsor():
+    nsf = [c["criterion"] for c in sc.review_rubric("NSF")]
+    assert "Intellectual Merit" in nsf and "Broader Impacts" in nsf and len(nsf) == 2
+    nih = [c["criterion"] for c in sc.review_rubric("NIH")]
+    assert "Approach" in nih and "Significance" in nih and len(nih) == 5
+    # Unknown sponsor -> generic rubric.
+    generic = [c["criterion"] for c in sc.review_rubric("Some Foundation")]
+    assert generic and "Approach / feasibility" in generic
+
+
+def test_outline_includes_rubric():
+    o = sc.outline_section("NSF", "project_summary")
+    crits = [c["criterion"] for c in o["rubric"]]
+    assert "Intellectual Merit" in crits
+
+
+def test_review_includes_rubric_with_ai_off():
+    r = sc.review_section("NIH", "specific_aims", "Aim 1: do X. Aim 2: do Y.")
+    assert r["ai"] is False                          # AI forced offline
+    assert [c["criterion"] for c in r["rubric"]][:1] == ["Significance"]
+    assert "reviewer_notes" in r and r["reviewer_notes"] == []   # no AI -> empty

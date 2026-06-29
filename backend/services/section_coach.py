@@ -196,6 +196,47 @@ _SPONSOR_ORDER = {
 _GENERIC_ORDER = ["abstract", "narrative", "data_management_plan"]
 
 
+# ── Reviewer-lens rubric ────────────────────────────────────────────────────
+# The ACTUAL criteria a review panel scores against, per sponsor. This is the
+# authoritative, deterministic framework (always present, even with AI off) so a
+# first-time PI writes TO the criteria and sees how their draft lands. Sourced
+# from the public NSF PAPPG and NIH peer-review criteria.
+REVIEW_RUBRICS = {
+    "NSF": [
+        {"criterion": "Intellectual Merit", "weight": "Equally weighted",
+         "asks": "Does the work advance knowledge? Is the approach sound, creative, and feasible, and is the team qualified?"},
+        {"criterion": "Broader Impacts", "weight": "Equally weighted",
+         "asks": "How does the work benefit society and broaden participation (education, outreach, diversity)?"},
+    ],
+    "NIH": [
+        {"criterion": "Significance", "weight": "Scored 1-9 → Overall Impact",
+         "asks": "Does it address an important problem? Will success change the field or practice?"},
+        {"criterion": "Innovation", "weight": "Scored 1-9 → Overall Impact",
+         "asks": "Does it challenge current paradigms or use novel concepts, methods, or interventions?"},
+        {"criterion": "Approach", "weight": "Scored 1-9 → Overall Impact",
+         "asks": "Are the strategy, methods, and analyses rigorous, with pitfalls and alternatives considered?"},
+        {"criterion": "Investigator(s)", "weight": "Scored 1-9 → Overall Impact",
+         "asks": "Are the PI and team suited to the project (training, expertise, track record)?"},
+        {"criterion": "Environment", "weight": "Scored 1-9 → Overall Impact",
+         "asks": "Will the institutional resources and support enable success?"},
+    ],
+}
+_GENERIC_RUBRIC = [
+    {"criterion": "Significance", "weight": "Reviewer judgment",
+     "asks": "Why does this matter, and to whom?"},
+    {"criterion": "Approach / feasibility", "weight": "Reviewer judgment",
+     "asks": "Is the plan sound, and can this team actually do it?"},
+    {"criterion": "Outcomes / impact", "weight": "Reviewer judgment",
+     "asks": "What changes if the project succeeds?"},
+]
+
+
+def review_rubric(sponsor: Optional[str]) -> list[dict]:
+    """The panel's scoring criteria for a sponsor (deterministic, always
+    available). Falls back to a generic rubric for unknown sponsors."""
+    return [dict(c) for c in REVIEW_RUBRICS.get((sponsor or "").upper(), _GENERIC_RUBRIC)]
+
+
 def available_sections(sponsor: Optional[str]) -> list[dict]:
     """The sections offered for a sponsor, as [{key, label}] in display order."""
     keys = _SPONSOR_ORDER.get((sponsor or "").upper(), _GENERIC_ORDER)
@@ -349,6 +390,8 @@ def outline_section(sponsor: Optional[str], section_key: str,
         # and a worked-example link when one exists.
         "solicitation_constraints": _solicitation_constraints(context),
         "sample": _sample_hint(section_key),
+        # The panel's scoring criteria, so the PI writes TO the rubric up front.
+        "rubric": review_rubric(sponsor),
     }
     topic = (topic or "").strip()
     ctx = _context_line(context)
@@ -394,6 +437,10 @@ _REVIEW_SYSTEM = (
     "4. If SOLICITATION CONSTRAINTS are given, also check whether the draft addresses the "
     "requirements they state (eligibility, scope, page limits). Add a checklist item for any "
     "stated requirement the draft does NOT clearly address, marked 'missing' or 'partial'.\n"
+    "5. If REVIEW CRITERIA are given, write the 'summary' in a reviewer's voice and add "
+    "'reviewer_notes': one advisory note per criterion on how a panel would judge THIS draft "
+    "and what would strengthen it. These are OPINIONS/QUESTIONS (no quote required) and must "
+    "NOT assert the draft 'covers' anything — coverage stays in the grounded checklist (rule 2).\n"
 )
 
 
@@ -423,23 +470,30 @@ def _keyword_review(sec: dict, draft_text: str) -> dict:
     }
 
 
+def _quote_in(text: str, quote: str) -> bool:
+    """True if `quote` appears in `text`, ignoring whitespace/line-wrap and case.
+    Collapse ALL whitespace runs (newlines included) on BOTH sides before
+    matching: a pasted draft is often hard-wrapped, so the draft contains
+    "health,\\nand" while Gemini quotes "health, and"; a raw substring check
+    then fails and would (wrongly) reject a real quote. Shared by the section
+    evidence check and the cross-section coherence check (golden rule 2)."""
+    q = " ".join((quote or "").lower().split())
+    if not q:
+        return False
+    return q in " ".join((text or "").lower().split())
+
+
 def _verify_evidence(checklist: list, draft_text: str) -> list:
     """Drop 'covered' claims whose evidence isn't actually in the draft (anti-
     hallucination, mirrors draft_critic). Demote them to 'unclear'."""
-    # Collapse ALL whitespace runs (newlines included) on BOTH sides before
-    # matching: a pasted draft is often hard-wrapped, so the draft contains
-    # "health,\nand" while Gemini quotes "health, and". A raw substring check
-    # then fails and (wrongly) demotes every covered element to NOT FOUND.
-    low = " ".join(draft_text.lower().split())
     out = []
     for c in checklist:
         if not isinstance(c, dict):
             continue
         status = c.get("status")
         ev = (c.get("evidence") or "").strip()
-        ev_norm = " ".join(ev.lower().split())
         if status == "covered":
-            if not ev_norm or ev_norm not in low:
+            if not _quote_in(draft_text, ev):
                 c["status"] = "unclear"
                 c["evidence"] = ""
                 if not c.get("note"):
@@ -471,10 +525,12 @@ def review_section(sponsor: Optional[str], section_key: str, draft_text: str,
         "target_max": tmax,
         "solicitation_constraints": _solicitation_constraints(context),
         "sample": _sample_hint(section_key),
+        "rubric": review_rubric(sponsor),
     }
     if not draft_text:
         return {**base, "ai": False, "summary": "Paste your draft of this section to get feedback.",
-                "checklist": [], "suggestions": [], "word_count": 0, "clarity": [], "length_status": "none"}
+                "checklist": [], "suggestions": [], "reviewer_notes": [], "word_count": 0,
+                "clarity": [], "length_status": "none"}
 
     words = len(draft_text.split())
     if tmax and words > tmax * 1.1:
@@ -487,30 +543,231 @@ def review_section(sponsor: Optional[str], section_key: str, draft_text: str,
 
     ctx = _context_line(context)
     expected = [mh["item"] for mh in sec["must_haves"]]
+    rubric = review_rubric(sponsor)
+    criteria_line = "; ".join(f"{c['criterion']} ({c['asks']})" for c in rubric)
     prompt = (
         f"SECTION: {sec['label']} for a {sponsor or 'grant'} proposal.\n"
         f"PURPOSE: {sec['purpose']}\n"
         f"EXPECTED ELEMENTS: {expected}\n"
+        f"REVIEW CRITERIA: {criteria_line}\n"
         + (f"SOLICITATION CONSTRAINTS: {ctx}\n" if ctx else "")
         + "DRAFT_TEXT:\n\"\"\"\n" + draft_text[:12000] + "\n\"\"\"\n\n"
-        'Return JSON: {"summary": "<2-3 sentences>", '
+        'Return JSON: {"summary": "<2-3 sentences, reviewer voice>", '
         '"checklist": [{"item": "<expected element>", "status": "covered|partial|missing", '
         '"note": "<one sentence>", "evidence": "<verbatim quote or empty>"}], '
+        '"reviewer_notes": [{"criterion": "<exact criterion>", "note": "<advisory, how a panel judges THIS draft>"}], '
         '"suggestions": ["<concrete next step>", ...]}'
     )
-    ai = gemini_client.generate_json(prompt, temperature=0.2, max_output_tokens=1400,
+    ai = gemini_client.generate_json(prompt, temperature=0.2, max_output_tokens=1800,
                                      system_instruction=_REVIEW_SYSTEM)
     if not ai or not isinstance(ai.get("checklist"), list):
-        return {**base, **_keyword_review(sec, draft_text), **extra}
+        return {**base, **_keyword_review(sec, draft_text), "reviewer_notes": [], **extra}
 
     checklist = _verify_evidence(ai["checklist"], draft_text)
     suggestions = [str(s) for s in (ai.get("suggestions") or []) if str(s).strip()][:6]
+    # Reviewer notes are advisory opinions keyed to a real rubric criterion — no
+    # evidence grounding (they're questions/judgments, not coverage claims).
+    valid_criteria = {c["criterion"] for c in rubric}
+    reviewer_notes = [
+        {"criterion": str(n.get("criterion", "")).strip(), "note": str(n.get("note", "")).strip()}
+        for n in (ai.get("reviewer_notes") or [])
+        if isinstance(n, dict) and str(n.get("criterion", "")).strip() in valid_criteria
+        and str(n.get("note", "")).strip()
+    ]
     return {
         **base,
         "ai": True,
         "summary": str(ai.get("summary", "")).strip() or "Feedback below.",
         "checklist": checklist,
+        "reviewer_notes": reviewer_notes,
         "suggestions": suggestions,
         "word_count": words,
         **extra,
+    }
+
+
+# ── CROSS-SECTION COHERENCE ─────────────────────────────────────────────────
+# A proposal fails review not just on weak sections but on sections that
+# disagree: a Research Strategy that drops an aim, a scope the PI isn't eligible
+# for, a narrative timeline the budget doesn't fund. This advisory check compares
+# the PI's SAVED sections against each other (and against eligibility/budget).
+# AI-driven WITH the same evidence grounding as review_section; deterministic
+# fallback when the LLM is off. Coaching only — never rewrites anything.
+
+_COHERENCE_SYSTEM = (
+    "You are a senior research mentor checking whether the SECTIONS of a draft grant "
+    "proposal AGREE with each other. You do NOT rewrite anything — you flag inconsistencies.\n"
+    "RULES:\n"
+    "1. Judge ONLY the text provided for each side. Never invent content.\n"
+    "2. For any pair you mark 'aligned', you MUST quote BOTH sides: 'evidence_a' is a VERBATIM "
+    "quote (<=160 chars) from side A and 'evidence_b' a VERBATIM quote from side B that show the "
+    "agreement. No quotes from both -> it is NOT 'aligned' (use 'gap' or 'unclear').\n"
+    "3. Mark 'gap' when the sides conflict or one omits what the other promises; 'unclear' when "
+    "you can't tell. Notes are specific and constructive.\n"
+)
+
+
+def _coherence_candidate_pairs(drafts: dict, context: Optional[dict],
+                               budget: Optional[dict]) -> list[dict]:
+    """Build the cross-checks that are POSSIBLE given what's saved. Each:
+    {id, a_label, b_label, a_text, b_text, question}. Deterministic."""
+    def text(k):
+        return (drafts.get(k) or "").strip()
+
+    checks: list[dict] = []
+
+    # 1. Specific Aims <-> Research Strategy (NIH): does the Strategy address each aim?
+    if text("specific_aims") and text("research_strategy"):
+        checks.append({
+            "id": "aims_strategy",
+            "a_label": "Specific Aims", "b_label": "Research Strategy",
+            "a_text": text("specific_aims"), "b_text": text("research_strategy"),
+            "question": "Does the Research Strategy address EACH aim named in the Specific Aims "
+                        "(Aim 1, Aim 2, ...)? Flag any aim with no matching approach.",
+        })
+
+    # 2. Project Summary <-> Project Description (NSF): do the promises match?
+    if text("project_summary") and text("project_description"):
+        checks.append({
+            "id": "summary_description",
+            "a_label": "Project Summary", "b_label": "Project Description",
+            "a_text": text("project_summary"), "b_text": text("project_description"),
+            "question": "Do the goals and claims in the Project Summary match what the Project "
+                        "Description actually proposes? Flag claims the description doesn't deliver.",
+        })
+
+    # The PI's main narrative section, used for scope/eligibility + timeline checks.
+    narrative_key = next((k for k in ("project_description", "research_strategy", "narrative")
+                          if text(k)), None)
+
+    # 3. Scope <-> eligibility (does the drafted scope conflict with who may apply / what's funded?)
+    elig = ((context or {}).get("eligibility") or "").strip()
+    if narrative_key and elig:
+        checks.append({
+            "id": "scope_eligibility",
+            "a_label": SECTIONS[narrative_key]["label"], "b_label": "Solicitation eligibility",
+            "a_text": text(narrative_key), "b_text": elig,
+            "question": "Does the proposed scope/audience in the draft fit the solicitation's "
+                        "eligibility/scope text? Flag any conflict (wrong applicant, audience, or focus).",
+        })
+
+    # 4. Timeline <-> staffing (only when a budget exists): does the narrative's timeline match
+    #    the budget's project length and staffing?
+    if narrative_key and budget:
+        my = budget.get("multi_year") or {}
+        years = my.get("project_years")
+        people = [p.get("name") or "a team member" for p in (budget.get("personnel") or [])]
+        if years or people:
+            b_text = (f"The budget funds a {years}-year project. "
+                      if years else "The budget covers a single year. ")
+            b_text += ("Budgeted personnel: " + ", ".join(people) + "."
+                       if people else "No personnel are budgeted.")
+            checks.append({
+                "id": "timeline_staffing",
+                "a_label": SECTIONS[narrative_key]["label"], "b_label": "Budget",
+                "a_text": text(narrative_key), "b_text": b_text,
+                "question": "Does the timeline and team described in the draft match the budget "
+                            "(project length in years, and the people funded)?",
+            })
+
+    return checks
+
+
+def _coherence_fallback(checks: list[dict]) -> dict:
+    """Deterministic coherence result when the LLM is unavailable. No fabricated
+    quotes: report which cross-checks are possible, plus a light keyword pass for
+    the aims<->strategy case, all as advisory 'unclear'/'gap' notes."""
+    pairs = []
+    for c in checks:
+        status, note = "unclear", (f"Compare your {c['a_label']} against your {c['b_label']} "
+                                   f"by hand: {c['question']}")
+        if c["id"] == "aims_strategy":
+            a_low, b_low = c["a_text"].lower(), c["b_text"].lower()
+            aims = [n for n in ("aim 1", "aim 2", "aim 3", "aim 4")
+                    if n in a_low]
+            missing = [n for n in aims if n not in b_low]
+            if aims and missing:
+                status = "gap"
+                note = (f"Your Specific Aims name {', '.join(a.title() for a in aims)}, but "
+                        f"{', '.join(m.title() for m in missing)} "
+                        f"{'is' if len(missing) == 1 else 'are'} not referenced by label in the "
+                        f"Research Strategy — make sure each aim has a matching approach.")
+        pairs.append({"a": c["a_label"], "b": c["b_label"], "status": status,
+                      "note": note, "evidence_a": "", "evidence_b": ""})
+    return {
+        "ai": False,
+        "ready": True,
+        "summary": "Cross-section check (offline mode): compare these section pairs by hand.",
+        "pairs": pairs,
+        "suggestions": [],
+    }
+
+
+def coherence_check(sponsor: Optional[str], drafts: dict,
+                    context: Optional[dict] = None, budget: Optional[dict] = None) -> dict:
+    """Advisory cross-section coherence check over the PI's SAVED sections.
+    Grounded (every 'aligned' claim quotes both sides, verified with `_quote_in`)
+    and degrades to a deterministic result when the LLM is off. Returns
+    {ai, ready, summary, pairs:[{a,b,status,note,evidence_a,evidence_b}], suggestions}."""
+    drafts = {k: v for k, v in (drafts or {}).items() if (v or "").strip()}
+    if len(drafts) < 2:
+        return {"ai": False, "ready": False,
+                "summary": "Save at least two sections to check that they agree with each other.",
+                "pairs": [], "suggestions": []}
+
+    checks = _coherence_candidate_pairs(drafts, context, budget)
+    if not checks:
+        return {"ai": False, "ready": False,
+                "summary": "No cross-section checks apply to the sections you've saved yet. "
+                           "Save a pair like Specific Aims + Research Strategy to compare them.",
+                "pairs": [], "suggestions": []}
+
+    lines = ["Check whether these proposal sides AGREE. For each pair, judge alignment and quote both sides.\n"]
+    for i, c in enumerate(checks):
+        lines.append(f"PAIR {i} — A={c['a_label']} | B={c['b_label']}\nQUESTION: {c['question']}\n"
+                     f"A_TEXT:\n\"\"\"\n{c['a_text'][:6000]}\n\"\"\"\n"
+                     f"B_TEXT:\n\"\"\"\n{c['b_text'][:6000]}\n\"\"\"\n")
+    lines.append('Return JSON: {"summary": "<2-3 sentences>", '
+                 '"pairs": [{"index": <PAIR number>, "status": "aligned|gap|unclear", '
+                 '"note": "<one sentence>", "evidence_a": "<verbatim from A or empty>", '
+                 '"evidence_b": "<verbatim from B or empty>"}], '
+                 '"suggestions": ["<concrete fix>", ...]}')
+    prompt = "\n".join(lines)
+
+    ai = gemini_client.generate_json(prompt, temperature=0.2, max_output_tokens=1800,
+                                     system_instruction=_COHERENCE_SYSTEM)
+    if not ai or not isinstance(ai.get("pairs"), list):
+        return _coherence_fallback(checks)
+
+    by_index = {}
+    for p in ai["pairs"]:
+        if isinstance(p, dict):
+            try:
+                by_index[int(p.get("index"))] = p
+            except (TypeError, ValueError):
+                continue
+
+    pairs = []
+    for i, c in enumerate(checks):
+        p = by_index.get(i, {})
+        status = p.get("status") if p.get("status") in ("aligned", "gap", "unclear") else "unclear"
+        ev_a = (p.get("evidence_a") or "").strip()
+        ev_b = (p.get("evidence_b") or "").strip()
+        note = str(p.get("note", "")).strip()
+        # Grounding: 'aligned' must be backed by a real quote from BOTH sides.
+        if status == "aligned" and not (_quote_in(c["a_text"], ev_a) and _quote_in(c["b_text"], ev_b)):
+            status = "unclear"
+            ev_a = ev_b = ""
+            if not note:
+                note = "Could not verify the two sides line up — double-check by hand."
+        pairs.append({"a": c["a_label"], "b": c["b_label"], "status": status,
+                      "note": note or c["question"], "evidence_a": ev_a, "evidence_b": ev_b})
+
+    suggestions = [str(s) for s in (ai.get("suggestions") or []) if str(s).strip()][:6]
+    return {
+        "ai": True,
+        "ready": True,
+        "summary": str(ai.get("summary", "")).strip() or "Cross-section feedback below.",
+        "pairs": pairs,
+        "suggestions": suggestions,
     }

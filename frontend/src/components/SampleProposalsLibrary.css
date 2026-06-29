@@ -170,6 +170,13 @@
   letter-spacing: 0.04em;
 }
 
+/* "Community" badge on researcher-shared (Open Grants) entries. */
+.sample-badge-community {
+  background: rgba(27, 58, 107, 0.1);
+  color: #1B3A6B;
+  letter-spacing: 0.03em;
+}
+
 /* Authored downloads get a left accent so they read as the "host" entries. */
 .sample-card-pdf {
   border-left: 3px solid var(--msu-blue);
