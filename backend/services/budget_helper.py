@@ -64,11 +64,17 @@ FRINGE_GUIDANCE = (
     "Choose by how the person is appointed: Faculty (Academic Year) and Full-Time staff "
     "are ~42%; Faculty (Summer) and short-term Contractual appointments are ~9%."
 )
+ESCALATION_GUIDANCE = (
+    "Escalation is the annual cost-of-living raise applied to SALARIES ONLY (equipment, "
+    "travel, and supplies are not escalated). The federal norm is ~2-3% per year -- check "
+    "your solicitation, since some sponsors cap escalation or forbid it."
+)
 
 # Tunable thresholds for the advisory sanity checks. Advisory only -- they never
 # change a number or block saving; they just prompt the PI to double-check.
 _EQUIPMENT_PCT_FLAG = 0.40   # equipment > 40% of direct costs is unusual
 _TRAVEL_PCT_FLAG = 0.25      # travel > 25% of direct costs is unusual
+_ESCALATION_HIGH_FLAG = 10.0  # escalation > 10%/yr is implausible (percent units)
 
 
 # ── input coercion (never crash on junk; warn instead) ─────────────────────
@@ -199,6 +205,7 @@ def compute_budget(inputs: dict) -> dict:
 
     per_year, cum = [], {"direct_costs": 0.0, "fa_amount": 0.0, "total": 0.0}
     year_results = []   # full per-year breakdowns, retained for the spreadsheet grid
+    prev_personnel = 0.0
     for i in range(years):
         people = []
         for p in (inputs.get("people") or []):
@@ -210,8 +217,19 @@ def compute_budget(inputs: dict) -> dict:
             people.append(p2)
         cy = _compute_single({**inputs, "people": people, "cap": None, "project_years": None})
         year_results.append(cy)
-        per_year.append({"year": i + 1, "direct_costs": cy["direct_costs"],
-                         "fa_amount": cy["fa_amount"], "total": cy["total"]})
+        # Year-over-year salary growth makes escalation visible to the PI (numbers
+        # straight from the per-year breakdown -- never invented).
+        ptotal = cy.get("personnel_total") or 0.0
+        per_year.append({
+            "year": i + 1,
+            "direct_costs": cy["direct_costs"],
+            "fa_amount": cy["fa_amount"],
+            "total": cy["total"],
+            "personnel_total": ptotal,
+            "salary_delta": round(ptotal - prev_personnel, 2) if i else 0.0,
+            "salary_delta_pct": round((ptotal / prev_personnel - 1) * 100, 1) if i and prev_personnel else 0.0,
+        })
+        prev_personnel = ptotal
         for k in cum:
             cum[k] = round(cum[k] + cy[k], 2)
 
@@ -234,7 +252,11 @@ def compute_budget(inputs: dict) -> dict:
         "cap": cap_out,
         "cap_status": cap_status,
         "cap_overage": cap_overage,
+        "cap_basis": "cumulative",  # the cap is the whole-project total, not per-year
     }
+    # Multi-year-only advisories (escalation sanity) can't live in the per-year
+    # _compute_single (it never sees escalation_pct), so append them at this level.
+    base["advisories"] = (base.get("advisories") or []) + multi_year_advisories(base["multi_year"])
     base["table"] = _budget_table(year_results, multi=True)
     return base
 
@@ -374,6 +396,7 @@ def rate_options() -> dict:
         "category_guidance": dict(CATEGORY_GUIDANCE),
         "fa_guidance": FA_GUIDANCE,
         "fringe_guidance": FRINGE_GUIDANCE,
+        "escalation_guidance": ESCALATION_GUIDANCE,
     }
 
 
@@ -444,6 +467,27 @@ def draft_justification(budget: dict) -> str:
         f"{_fmt(budget['fa_amount'])} in F&A costs."
     )
     paras.append("")
+
+    # Multi-year arc: explain the period of performance and escalation so a
+    # reviewer sees why later years differ from Year 1. Figures come straight
+    # from the `multi_year` block (never invented).
+    my = budget.get("multi_year")
+    if my and my.get("years"):
+        esc = my.get("escalation_pct") or 0
+        y1 = my["years"][0]["total"]
+        cum = my["cumulative"]["total"]
+        escalation_clause = (
+            f"; salaries escalate {esc:.0f}% annually to reflect cost-of-living adjustments, "
+            f"so personnel costs rise in later years"
+            if esc else ", and the budget is held flat across all years (no escalation applied)"
+        )
+        paras.append(
+            f"Period of performance. This is a {my['project_years']}-year project. "
+            f"Year 1 costs total {_fmt(y1)}{escalation_clause}. The cumulative project cost "
+            f"across all {my['project_years']} years is {_fmt(cum)}."
+        )
+        paras.append("")
+
     paras.append(
         f"Total project cost. Total direct costs are {_fmt(budget['direct_costs'])} and F&A "
         f"costs are {_fmt(budget['fa_amount'])}, for a total project cost of "
@@ -575,6 +619,35 @@ def budget_advisories(budget: dict) -> list[dict]:
             "fix": "Confirm the lead institution holds enough of the work; sponsors expect the applicant to lead.",
         })
 
+    return out
+
+
+def multi_year_advisories(multi_year: dict) -> list[dict]:
+    """Advisory flags specific to a multi-year projection (escalation sanity).
+    Returns [{severity, field: 'escalation', message, fix}]. Deterministic; never
+    changes a number or blocks saving. A plausible projection returns []."""
+    out: list[dict] = []
+    if not multi_year:
+        return out
+    years = multi_year.get("project_years") or 0
+    esc = multi_year.get("escalation_pct")
+    if years <= 1 or esc is None:
+        return out
+
+    if esc == 0:
+        out.append({
+            "severity": "info", "field": "escalation",
+            "message": (f"You set 0% escalation across {years} years, so salaries stay flat "
+                        f"every year."),
+            "fix": "Federal budgets usually escalate salaries ~2-3%/yr for cost of living. "
+                   "Confirm a flat budget is intentional (or your sponsor forbids escalation).",
+        })
+    elif esc > _ESCALATION_HIGH_FLAG:
+        out.append({
+            "severity": "warn", "field": "escalation",
+            "message": (f"{esc:.0f}%/yr salary escalation is unusually high over {years} years."),
+            "fix": "Most sponsors expect ~2-3%/yr. Confirm this rate matches your solicitation.",
+        })
     return out
 
 

@@ -123,3 +123,35 @@ def test_ics_token_cannot_be_replayed_as_bearer(ctx):
     tok = ics_export.mint_ics_token(uid)
     r = c.get("/api/me/submissions", headers={"Authorization": f"Bearer {tok}"})
     assert r.status_code in (401, 403)     # no email claim -> rejected
+
+
+# ── cross-section coherence endpoint (Gemini forced offline by conftest) ─────
+
+def test_coherence_not_ready_with_fewer_than_two_sections(ctx):
+    c, uid, sub_id, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/coherence")
+    assert r.status_code == 200
+    result = r.json()["result"]
+    assert result["ready"] is False        # no saved sections yet
+    assert result["pairs"] == []
+
+
+def test_coherence_runs_over_saved_sections(ctx):
+    c, uid, sub_id, _ = ctx
+    # Save two cross-checkable sections via the real save endpoint.
+    c.put(f"/api/me/submissions/{sub_id}/sections/drafts",
+          json={"section_key": "project_summary", "text": "We will build an open data system."})
+    c.put(f"/api/me/submissions/{sub_id}/sections/drafts",
+          json={"section_key": "project_description", "text": "A three-year plan to serve schools."})
+    r = c.post(f"/api/me/submissions/{sub_id}/coherence")
+    assert r.status_code == 200
+    result = r.json()["result"]
+    assert result["ready"] is True
+    assert any(p["a"] == "Project Summary" for p in result["pairs"])
+
+
+def test_coherence_requires_auth(ctx):
+    c, *_ = ctx
+    main.app.dependency_overrides.pop(main.get_current_user, None)
+    r = c.post("/api/me/submissions/1/coherence")
+    assert r.status_code in (401, 403)

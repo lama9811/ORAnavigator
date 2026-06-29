@@ -400,6 +400,7 @@
    per-line justification (light bottom) */
 .bh-multiyear { margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 10px; }
 .bh-multiyear-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #cbd5e1; margin-bottom: 6px; }
+.bh-delta { font-style: normal; font-size: 0.68rem; color: #93c5b6; margin-left: 4px; }
 
 .bh-effort { margin-top: 16px; }
 .bh-effort-toggle { display: inline-flex; align-items: center; gap: 5px; background: none; border: none; padding: 0; color: #1B3A6B; font-size: 0.78rem; font-weight: 600; cursor: pointer; font-family: inherit; }

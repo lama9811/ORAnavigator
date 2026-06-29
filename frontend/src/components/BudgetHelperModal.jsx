@@ -275,8 +275,14 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </label>
-                {inputs.project_years > 1 &&
-                  numField("Annual escalation %", "escalation_pct", "(e.g. 3)")}
+                {inputs.project_years > 1 && (
+                  <label className="bh-field">
+                    <span>Annual escalation %<em className="bh-hint"> (e.g. 3)</em>
+                      <Tip text={guide.escalation_guidance} /></span>
+                    <input type="number" min="0" inputMode="decimal" value={inputs.escalation_pct}
+                      onChange={(e) => set({ escalation_pct: e.target.value })} placeholder="$0" />
+                  </label>
+                )}
               </div>
 
               <EffortHelper people={inputs.people} />
@@ -303,15 +309,19 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
                   </div>
                   {computed.multi_year.years.map((y) => (
                     <div className="bh-line bh-muted" key={y.year}>
-                      <span>Year {y.year}</span><span>{fmt(y.total)}</span>
+                      <span>Year {y.year}
+                        {y.salary_delta > 0 &&
+                          <em className="bh-delta"> salary +{fmt(y.salary_delta)} ({y.salary_delta_pct}%)</em>}
+                      </span>
+                      <span>{fmt(y.total)}</span>
                     </div>
                   ))}
                   <div className="bh-line bh-total"><span>All years</span><b>{fmt(computed.multi_year.cumulative.total)}</b></div>
                   {computed.multi_year.cap_status === "over" && (
-                    <div className="bh-cap bh-cap-over"><AlertTriangle size={14} /> Over the {fmt(computed.multi_year.cap)} project cap by {fmt(computed.multi_year.cap_overage)}</div>
+                    <div className="bh-cap bh-cap-over"><AlertTriangle size={14} /> Over the {fmt(computed.multi_year.cap)} {computed.multi_year.project_years}-year TOTAL cap by {fmt(computed.multi_year.cap_overage)} (cumulative)</div>
                   )}
                   {computed.multi_year.cap_status === "ok" && (
-                    <div className="bh-cap bh-cap-ok"><CheckCircle2 size={14} /> Under the {fmt(computed.multi_year.cap)} project cap</div>
+                    <div className="bh-cap bh-cap-ok"><CheckCircle2 size={14} /> Under the {fmt(computed.multi_year.cap)} {computed.multi_year.project_years}-year TOTAL cap (cumulative)</div>
                   )}
                 </div>
               )}

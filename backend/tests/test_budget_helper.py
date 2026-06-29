@@ -276,6 +276,7 @@ def test_compute_output_keys_unchanged_plus_new():
 # ---------------------------------------------------------------------------
 from services.budget_helper import (
     compute_budget as _cb, budget_to_csv, per_line_justifications,
+    multi_year_advisories, draft_justification, rate_options,
 )
 
 
@@ -359,3 +360,61 @@ def test_table_multi_year_year_columns_and_row_totals():
     # The grid grand total matches the multi-year cumulative total.
     total_row = next(row for row in t["rows"] if row["kind"] == "total")
     assert abs(total_row["values"][-1] - r["multi_year"]["cumulative"]["total"]) < 0.01
+
+
+# ---------------------------------------------------------------------------
+# Phase: multi-year budget COACHING (escalation guidance, deltas, advisories)
+# ---------------------------------------------------------------------------
+
+def test_rate_options_exposes_escalation_guidance():
+    opts = rate_options()
+    assert "escalation_guidance" in opts and "salaries" in opts["escalation_guidance"].lower()
+
+
+def test_per_year_reports_salary_delta():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}],
+             "project_years": 3, "escalation_pct": 3})
+    yrs = r["multi_year"]["years"]
+    assert yrs[0]["salary_delta"] == 0.0                 # year 1 has no prior year
+    assert yrs[1]["salary_delta"] > 0                    # escalation makes year 2 grow
+    assert abs(yrs[1]["salary_delta_pct"] - 3.0) < 0.2   # ~3% growth
+
+
+def test_zero_escalation_multi_year_is_info_advisory():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100}],
+             "project_years": 3, "escalation_pct": 0})
+    advs = r["advisories"]
+    assert any(a["field"] == "escalation" and a["severity"] == "info" for a in advs)
+
+
+def test_high_escalation_multi_year_is_warn_advisory():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100}],
+             "project_years": 3, "escalation_pct": 15})
+    advs = r["advisories"]
+    assert any(a["field"] == "escalation" and a["severity"] == "warn" for a in advs)
+
+
+def test_typical_escalation_has_no_escalation_advisory():
+    r = _cb({"people": [{"base_salary": 100_000, "effort_pct": 100}],
+             "project_years": 3, "escalation_pct": 3})
+    assert not any(a["field"] == "escalation" for a in r["advisories"])
+
+
+def test_multi_year_advisories_empty_for_single_year():
+    assert multi_year_advisories({}) == []
+    assert multi_year_advisories({"project_years": 1, "escalation_pct": 0}) == []
+
+
+def test_justification_includes_period_of_performance_when_multiyear():
+    b = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}],
+             "project_years": 3, "escalation_pct": 3})
+    text = draft_justification(b)
+    assert "Period of performance" in text
+    assert "3-year" in text
+    # cumulative figure appears so the endpoint truncation guard can catch loss
+    assert f"{b['multi_year']['cumulative']['total']:,.0f}" in text
+
+
+def test_justification_single_year_has_no_period_of_performance():
+    b = _cb({"people": [{"name": "Dr. X", "base_salary": 100_000, "effort_pct": 100, "fringe": "faculty_ay"}]})
+    assert "Period of performance" not in draft_justification(b)

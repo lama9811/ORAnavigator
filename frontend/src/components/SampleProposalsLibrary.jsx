@@ -56,7 +56,8 @@ export default function SampleProposalsLibrary() {
         <p className="samples-disclaimer">
           The downloadable PDFs are original samples written by ORA Navigator for
           reference. External links open in a new tab and are maintained by third
-          parties.
+          parties; entries marked <strong>Community</strong> are researcher-shared
+          via Open Grants (ogrants.org).
         </p>
       </header>
 
@@ -132,6 +133,14 @@ export default function SampleProposalsLibrary() {
                         title="Some content needs a free account or is partly paywalled"
                       >
                         <Lock size={11} /> Partly paywalled
+                      </span>
+                    )}
+                    {p.community && (
+                      <span
+                        className="sample-card-badge sample-badge-community"
+                        title="Researcher-shared via Open Grants (ogrants.org), a community library"
+                      >
+                        Community
                       </span>
                     )}
                   </div>
