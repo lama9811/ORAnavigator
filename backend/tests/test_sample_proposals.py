@@ -11,7 +11,7 @@ Run from backend/:
 """
 from services.sample_proposals import (
     SAMPLE_PROPOSALS, CATEGORIES, list_samples, categories,
-    get_sample, pdf_path,
+    get_sample, pdf_path, rank_samples,
 )
 
 # Keys every entry carries, regardless of type.
@@ -172,3 +172,83 @@ def test_download_endpoint_404_for_unknown_id():
     with TestClient(main.app) as client:
         r = client.get("/api/sample-proposals/nope/download")
         assert r.status_code == 404
+
+
+# --- interest ranking (deterministic) ---------------------------------------
+
+_RANK_ITEMS = [
+    {"id": "a", "title": "Machine learning for robotics control", "source": "NSF",
+     "kind": "CAREER", "why": "", "categories": ["NSF"]},
+    {"id": "b", "title": "Coral reef restoration", "source": "NOAA",
+     "kind": "", "why": "marine ecology", "categories": ["Foundations"]},
+    {"id": "c", "title": "Soil microbiome", "source": "USDA",
+     "kind": "", "why": "uses robotics sensors in the field", "categories": []},
+]
+
+
+def test_rank_samples_orders_by_relevance():
+    out = rank_samples(_RANK_ITEMS, "AI and robotics")
+    # 'a' (robotics in title, 3x) ranks above 'c' (robotics in body, 1x).
+    ids = [s["id"] for s in out]
+    assert ids.index("a") < ids.index("c")
+    assert out[0]["id"] == "a"
+    assert "robotics" in out[0]["match"]["terms"]
+
+
+def test_rank_samples_unmatched_keep_order_and_have_no_match():
+    out = rank_samples(_RANK_ITEMS, "robotics")
+    unmatched = [s for s in out if "match" not in s]
+    assert any(s["id"] == "b" for s in unmatched)        # coral reef: no match
+    # matched entries sort ahead of unmatched
+    assert out[-1]["id"] == "b"
+
+
+def test_rank_samples_empty_query_unchanged():
+    out = rank_samples(_RANK_ITEMS, "   ")
+    assert [s["id"] for s in out] == ["a", "b", "c"]
+    assert all("match" not in s for s in out)
+
+
+def test_rank_samples_keeps_short_acronyms():
+    items = [{"id": "x", "title": "AI for protein folding", "source": "", "kind": "", "why": "", "categories": []},
+             {"id": "y", "title": "Coral reef ecology", "source": "", "kind": "", "why": "", "categories": []}]
+    out = rank_samples(items, "AI methods")
+    assert out[0]["id"] == "x" and "ai" in out[0]["match"]["terms"]
+
+
+def test_rank_samples_whole_word_only():
+    # "ai" must NOT match "training"/"available" (whole-word matching).
+    items = [{"id": "x", "title": "Training available datasets", "source": "", "kind": "",
+              "why": "", "categories": []}]
+    out = rank_samples(items, "AI")
+    assert "match" not in out[0]
+
+
+def test_rank_samples_does_not_mutate_input():
+    rank_samples(_RANK_ITEMS, "robotics")
+    assert "match" not in _RANK_ITEMS[0]                 # operated on copies
+
+
+def test_search_endpoint_ranks_and_requires_auth(monkeypatch):
+    from fastapi.testclient import TestClient
+    import main
+    import services.ogrants_finder as og
+    monkeypatch.setattr(og, "list_community_samples", lambda *a, **k: [])
+    # Auth + db are dependency-injected; override them for a focused route test.
+    main.app.dependency_overrides[main.get_current_user] = lambda: {"user_id": 1}
+
+    class _NoInterests:
+        def query(self, *a, **k): return self
+        def filter(self, *a, **k): return self
+        def order_by(self, *a, **k): return self
+        def all(self): return []
+    main.app.dependency_overrides[main.get_db] = lambda: (yield _NoInterests())
+    try:
+        with TestClient(main.app) as client:
+            r = client.post("/api/sample-proposals/search", json={"query": "data management"})
+            assert r.status_code == 200
+            body = r.json()
+            assert body["count"] == len(SAMPLE_PROPOSALS)   # ogrants stubbed empty
+            assert body["matched"] is True
+    finally:
+        main.app.dependency_overrides.clear()

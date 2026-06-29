@@ -1724,6 +1724,49 @@ async def get_sample_proposals(category: str = ""):
     }
 
 
+class SampleSearchRequest(BaseModel):
+    query: str = ""
+
+
+@app.post("/api/sample-proposals/search")
+async def search_sample_proposals(
+    req: SampleSearchRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rank the sample shelf (authored + live Open Grants) against a PI's
+    free-text interest, enriched with their saved research interests. Pure
+    deterministic keyword overlap (no LLM) -- returns the SAME entries reordered
+    best-first, each matched one carrying a `match` {score, terms}. Auth'd so we
+    can fold in saved interests; the page already sits behind RequireAuth."""
+    from services.sample_proposals import list_samples, categories, rank_samples
+    query = (req.query or "").strip()
+
+    # Saved interests enrich the query (same source as the Opportunity Finder).
+    interest_rows = (
+        db.query(UserMemory)
+        .filter(UserMemory.user_id == user["user_id"], UserMemory.memory_type == "interest")
+        .order_by(UserMemory.id.asc())
+        .all()
+    )
+    interests = ", ".join((r.content or "").strip() for r in interest_rows if (r.content or "").strip())
+
+    items = list_samples(None)  # rank the whole shelf; the UI filters by chip on top
+    try:
+        from services.ogrants_finder import list_community_samples
+        items = items + list_community_samples(None)
+    except Exception:  # noqa: BLE001
+        pass
+
+    ranked = rank_samples(items, f"{query} {interests}".strip())
+    return {
+        "proposals": ranked,
+        "categories": categories(),
+        "count": len(ranked),
+        "matched": bool(query or interests),
+    }
+
+
 @app.get("/api/sample-proposals/{sample_id}/download")
 async def download_sample_proposal(sample_id: str):
     """Stream the hosted PDF for an authored ("pdf"-type) sample proposal as a
