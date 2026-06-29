@@ -43,6 +43,51 @@
   max-width: 720px;
 }
 
+/* Interest box — rank the shelf to what the PI is working on */
+.samples-search {
+  margin: 18px 0 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.samples-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  resize: vertical;
+  font: inherit;
+  color: var(--text-primary);
+  background: transparent;
+  outline: none;
+  line-height: 1.5;
+}
+.samples-search-input::placeholder { color: var(--text-tertiary); }
+.samples-search-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.samples-search-hint { color: var(--text-tertiary); font-size: 0.8rem; }
+.samples-search-actions { display: flex; align-items: center; gap: 10px; }
+.samples-search-clear {
+  appearance: none; background: none; border: none; cursor: pointer;
+  color: var(--text-tertiary); font: inherit; font-size: 0.85rem; text-decoration: underline;
+}
+.samples-search-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #f59e0b; color: #1a1306; border: none; border-radius: 8px;
+  padding: 9px 16px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+}
+.samples-search-btn:hover { background: #e8920a; }
+.samples-search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sample-card-match {
+  margin-top: 6px; font-size: 0.74rem; color: #1B3A6B; font-weight: 600;
+}
+
 /* Category filter chips */
 .samples-filters {
   display: flex;

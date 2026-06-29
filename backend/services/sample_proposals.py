@@ -259,3 +259,72 @@ def pdf_path(sample_id: Optional[str]) -> Optional[str]:
         return None
     path = os.path.join(PDF_DIR, s["pdf"])
     return path if os.path.exists(path) else None
+
+
+# ── Interest matching (deterministic; no LLM, no network) ───────────────────
+import re as _re
+
+# Words too common to signal a research interest (kept tiny + domain-aware).
+_RANK_STOPWORDS = {
+    "the", "a", "an", "and", "or", "of", "for", "to", "in", "on", "with", "my",
+    "our", "we", "i", "is", "are", "this", "that", "new", "using", "use", "based",
+    "study", "studies", "research", "project", "proposal", "develop", "developing",
+    "focus", "focuses", "work", "working", "interested", "interest", "area", "field",
+}
+
+
+# Short acronyms that are meaningful research interests despite being <3 chars.
+_KEEP_SHORT = {"ai", "ml", "ar", "vr", "ux", "ml", "ip", "qc"}
+
+
+def _tokens(text: str) -> list[str]:
+    """Content words (lowercased, de-duped, stopwords dropped). Keeps 3+ char
+    words plus a small allowlist of meaningful 2-char acronyms (AI, ML, ...)."""
+    out, seen = [], set()
+    for w in _re.findall(r"[a-z][a-z\-]{1,}", (text or "").lower()):
+        if w in seen or w in _RANK_STOPWORDS:
+            continue
+        if len(w) < 3 and w not in _KEEP_SHORT:
+            continue
+        seen.add(w)
+        out.append(w)
+    return out
+
+
+def _searchable(s: dict) -> str:
+    """The text we match a query against for one sample (title carries the most
+    signal, so the caller weights it separately)."""
+    return " ".join(str(s.get(k, "")) for k in ("source", "kind", "why")
+                     ) + " " + " ".join(s.get("categories") or [])
+
+
+def rank_samples(items: list[dict], query: str) -> list[dict]:
+    """Reorder `items` by how well each matches the PI's free-text `query`
+    (deterministic keyword overlap; title matches weigh 3x). Each matched item
+    gets a `match` dict {score, terms}. Items with no match keep their original
+    relative order and sort after matched ones (stable). An empty query returns
+    the list unchanged (no `match` field). Never raises; pure function."""
+    qt = _tokens(query)
+    if not qt or not items:
+        return [dict(s) for s in items]
+    # Whole-word match (so "ai" doesn't match "training", "data" doesn't match
+    # "database"). Compile once per query token.
+    patterns = [(t, _re.compile(r"\b" + _re.escape(t) + r"\b")) for t in qt]
+    ranked = []
+    for idx, s in enumerate(items):
+        s = dict(s)
+        title_low = str(s.get("title", "")).lower()
+        body_low = _searchable(s).lower()
+        terms, score = [], 0
+        for t, pat in patterns:
+            in_title = bool(pat.search(title_low))
+            in_body = bool(pat.search(body_low))
+            if in_title or in_body:
+                terms.append(t)
+                score += (3 if in_title else 0) + (1 if in_body else 0)
+        if score:
+            s["match"] = {"score": score, "terms": terms}
+        ranked.append((score, idx, s))
+    # Highest score first; original order breaks ties (stable, authored-first).
+    ranked.sort(key=lambda r: (-r[0], r[1]))
+    return [s for _, _, s in ranked]
