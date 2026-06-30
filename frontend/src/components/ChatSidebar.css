@@ -9,106 +9,22 @@
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 500;
   color: var(--text-main);
   overflow: hidden;
 }
 
-/* ─── COLLAPSED STATE ─── */
+/* ─── HIDDEN STATE ───
+   The navbar hamburger fully hides the chat history: the sidebar slides
+   off-screen (0 width) and the chat area expands to full width. Click the
+   hamburger again to bring it back. On mobile the sidebar is already a
+   slide-over (see the media queries below) — this matches that on desktop. */
 body.sidebar-collapsed .chat-sidebar {
-  width: 64px;
-}
-
-/* Hide everything except icons */
-body.sidebar-collapsed .sidebar-action-btn span,
-body.sidebar-collapsed .search-container,
-body.sidebar-collapsed .chat-history-list,
-body.sidebar-collapsed .chat-history-section,
-body.sidebar-collapsed .section-header,
-body.sidebar-collapsed .empty-state,
-body.sidebar-collapsed .sidebar-settings-wrapper,
-body.sidebar-collapsed .user-info,
-body.sidebar-collapsed .logout-icon-btn,
-body.sidebar-collapsed .sidebar-opensource-badge,
-body.sidebar-collapsed .archived-toggle,
-body.sidebar-collapsed .sidebar-middle,
-body.sidebar-collapsed .context-menu,
-body.sidebar-collapsed .setting-btn span,
-body.sidebar-collapsed .support-btn span {
-  display: none !important;
-}
-
-/* Top section */
-body.sidebar-collapsed .sidebar-top {
-  padding: 10px 11px;
-  align-items: center;
-  gap: 2px;
-  border-bottom: none;
-}
-
-body.sidebar-collapsed .sidebar-top-row {
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  align-items: center;
-}
-
-/* All nav buttons: icon-only */
-body.sidebar-collapsed .sidebar-action-btn {
-  width: 40px;
-  height: 40px;
-  min-height: 40px;
-  padding: 0;
-  justify-content: center;
-  border-radius: 10px;
-  gap: 0;
-}
-
-body.sidebar-collapsed .sidebar-action-btn.new-chat {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  margin-bottom: 2px;
-}
-
-body.sidebar-collapsed .sidebar-toggle-btn {
-  width: 40px;
-  height: 40px;
-}
-
-/* Bottom: profile avatar only, pinned to bottom */
-body.sidebar-collapsed .sidebar-bottom {
-  padding: 12px 0;
-  align-items: center;
-  margin-top: auto;
-}
-
-body.sidebar-collapsed .user-profile {
-  width: 42px;
-  height: 42px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  overflow: hidden;
-  margin: 0 auto;
-}
-
-body.sidebar-collapsed .user-avatar {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
-}
-
-body.sidebar-collapsed .chat-sidebar .profile-picture,
-body.sidebar-collapsed .user-avatar img {
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 50% !important;
-  object-fit: cover;
+  width: 0;
+  transform: translateX(-100%);
+  border-right: none;
 }
 
 /* Top Section - Actions */
