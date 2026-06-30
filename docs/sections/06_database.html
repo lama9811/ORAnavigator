@@ -112,7 +112,8 @@
 <tr><td><code>title</code> / <code>sponsor</code></td><td>The proposal's name and who is being applied to (defaults to "Internal").</td></tr>
 <tr><td><code>deadline</code></td><td>When the proposal is due (optional).</td></tr>
 <tr><td><code>status</code></td><td>One of <code>active</code> (default), <code>submitted</code>, <code>withdrawn</code>.</td></tr>
-<tr><td><code>notes</code></td><td>Free-text notes — and the structured solicitation rules that Draft Critic reads back.</td></tr>
+<tr><td><code>notes</code></td><td>Free-text notes — and the structured solicitation rules (budget cap, category caps, page limits, required attachments, eligibility) that the Budget Helper, Drafting Coach, and Draft Critic read back.</td></tr>
+<tr><td><code>budget_json</code> / <code>compliance_json</code> / <code>sections_json</code></td><td>TEXT columns holding <code>json.dumps</code> of, respectively, the saved Budget Helper inputs, the Compliance Sentinel answers, and the Drafting-Coach section drafts. Each was added later by a self-healing migration. The proposal serializer turns these into the <code>has_budget</code> / <code>has_compliance</code> / <code>has_sections</code> badges that drive the Guided Pathway (Chapter 5).</td></tr>
 <tr><td><code>created_at</code> / <code>updated_at</code></td><td>When created and last changed.</td></tr>
 </table>
 <p><strong>Cascade behavior:</strong> deleting a submission automatically deletes its tasks.</p>

@@ -34,11 +34,15 @@ THE AI (Gemini)  rule: "search the KB on EVERY ORA question"
 LAYER 2 - the receipt
   grounding chunks -> morgan.edu URLs -> the "Sources" block
   (saved to chat_history.citations so Sources survive refresh)
+  trusted answer came back uncited? -> _fallback_citations() runs a live
+     KB search and attaches the real Sources
    |
    v
 LAYER 3 - the fact-checker  (vertex_agent.py _run_verified)
-  grade ok / weak
-    weak -> redo once, strictly "KB-only" (_STRICT_PREFIX)
+  grade ok / weak    (greeting / small talk is never graded weak)
+    weak -> surgically re-ground ONLY the unsupported sentences (no 2nd search)
+    weak + over latency budget -> deliver Pass-1 + caution note (skip Pass-2)
+    weak (otherwise) -> redo once, strictly "KB-only" (_STRICT_PREFIX)
     still nothing -> REFUSE ("contact ORA")
   trust the clean redo (don't re-gate on Gemini's flaky chunk count)
   flag any number/date/SOP#/email/phone not found word-for-word in the docs
@@ -53,7 +57,7 @@ SAVE to cache  ->  SEND the answer + Sources
 <h4>Check 1 — Greetings, thanks, and "who made this" (canned replies)</h4>
 <p>If you type something like "hi", "hello", "thanks", or "who made this app", a pattern-matcher catches it and returns a fixed, pre-written reply with <em>zero</em> AI calls. This lives in <code>adk_agent/ora_navigator_unified/agent.py</code> in the <code>_greeting_fast_path</code> function (<code>agent.py:182</code>), which is wired in as <code>before_agent_callback</code>.</p>
 <p><strong>Why:</strong> a greeting needs no facts, so paying for an AI call and a KB search would be wasteful and slow. It also avoids "context bleed" — for example after a chat about withdrawing a proposal, "who made this?" could otherwise confuse the AI into talking about forms.</p>
-<div class="callout"><strong>Note:</strong> The "who made this app" answer is hard-coded so the bot never says "I don't have an app" — it always points to <code>ora.inavigator.ai</code>.</div>
+<div class="callout"><strong>Note:</strong> The "who made this app" answer is hard-coded so the bot never says "I don't have an app" — it always points to <code>ora.inavigator.ai</code>. A separate, load-bearing distinction: a plain greeting ("hi", "how are you", "thanks") gets a warm, KB-free reply — <em>not</em> the "I can only help with Morgan State…" refusal, and <em>not</em> the "developed for Morgan State / ora.inavigator.ai" identity blurb (that blurb is only for "who made this app"). The grounding gate must also never grade a greeting reply "weak" and regenerate it — that's what used to turn a friendly "I'm doing well!" back into a refusal (see Layer 3, Step A).</div>
 
 <h4>Check 2 — Was this exact (or very similar) question asked before? (the cache)</h4>
 <p>A <strong>cache</strong> is a memory of past answers. If the same question was already answered, replaying the stored answer is instant and free. ORA Navigator's cache has three tiers, all in <code>backend/cache.py</code> (class <code>MultiTierCache</code>):</p>
@@ -79,11 +83,12 @@ SAVE to cache  ->  SEND the answer + Sources
 <p>If none of the quick checks fired, this is a real ORA question and the AI will be called. But first, Layer 1 gives the AI a "head start" by stuffing some likely-relevant documents into the AI's instructions in advance.</p>
 <p><strong>TF-IDF</strong> (Term Frequency–Inverse Document Frequency) is a simple, no-AI scoring method that ranks documents by how often your search words appear in them, while down-weighting words that are common everywhere — so a rare, on-topic word like "IACUC" counts much more than a common word like "the." In one sentence: TF-IDF picks the documents whose wording best overlaps your question.</p>
 <p>The code is <code>adk_agent/ora_navigator_unified/kb_prefetch.py</code>, function <code>prefetch_kb_context</code>. It keeps all 382 KB docs in memory (refreshed every 5 minutes), tokenizes your question into keywords (dropping filler "stopwords"), scores every doc, and returns the top 5. It also boosts ORA-specific terms: acronyms like IRB / IACUC / COI / F&amp;A / FWA and SOP numbers get a big score bump so "SOP 12" finds the SOP page, not some unrelated text. This runs in under ~30 ms and costs nothing (no AI call).</p>
-<p>That top-5 text is pasted into the AI's system instruction as "[PRE-FETCHED KB CONTEXT]" by the <code>_select_model</code> function in <code>agent.py</code>, which runs as <code>before_model_callback</code>. It is called "belt-and-suspenders" grounding: even if the AI forgets to run its real search tool, some real KB text is already sitting in front of it.</p>
+<p>That top-5 text is pasted into the AI's system instruction by the <code>_select_model</code> function in <code>agent.py</code>, which runs as <code>before_model_callback</code>. It is called "belt-and-suspenders" grounding: even if the AI forgets to run its real search tool, some real KB text is already sitting in front of it.</p>
+<div class="callout"><strong>Note (the block is labeled "fact-check only" on purpose):</strong> the prefetched text is wrapped as <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code> (it used to say "use this to ground your answer"). The relabel — paired with a new grounding rule (Rule 8, below) — tells the model the excerpts are a <em>hallucination guard, not its answer</em>: it must not answer from them alone and must not cite them. This was load-bearing. When the model answered straight from the prefetched block, its own <code>VertexAiSearchTool</code> retrieval never ran, so <code>groundingMetadata</code> came back empty — the answer was correct but had <em>no Sources</em>, and it tripped the weak-grounding verdict, firing a slow Pass-2 regeneration. With the relabel the visible answer and its Sources rest on the model's own KB search.</div>
 <div class="callout"><strong>Note (gating — load-bearing bug fix):</strong> The prefetch is only injected on a <em>fresh user turn</em>, not in the middle of a tool call. The code checks <code>in_tool_loop</code> by looking only at the <strong>last</strong> item in the conversation: if it is a tool result (a <code>function_response</code>), the AI is mid-search and re-injecting prefetch would just push the real search results out of view. An earlier version scanned <em>all</em> past messages, so once any tool had been called, turn 1's leftover tool-result permanently disabled prefetch on every later turn — which left follow-ups like "give me a different training video" with no KB context and produced empty answers. Looking only at the last item fixes that.</div>
 
 <h3>2.3 The AI (Gemini) — search on every ORA question</h3>
-<p>Now the actual AI runs. It is Google's Gemini model (<code>gemini-2.5-flash</code>) driven through Google's "ADK" agent framework. Its full instruction sheet is <code>BASE_INSTRUCTION</code> in <code>agent.py</code>. The most important parts are the seven Grounding Rules.</p>
+<p>Now the actual AI runs. It is Google's Gemini model (<code>gemini-2.5-flash</code>) driven through Google's "ADK" agent framework. Its full instruction sheet is <code>BASE_INSTRUCTION</code> in <code>agent.py</code>. The most important parts are the eight Grounding Rules.</p>
 
 <h4>The real retriever: Vertex AI Search (semantic = by meaning)</h4>
 <p>The AI is given one tool: <strong>Vertex AI Search</strong> (<code>VertexAiSearchTool</code>). This is the <em>real</em> retriever. Unlike the Layer-1 keyword prefetch, Vertex AI Search is <strong>semantic</strong> — it matches by <em>meaning</em>, not exact words. So if you ask "how long can I extend my grant past the end date", it can find the "no-cost extension" document even though your question never used the words "no-cost extension." Grounding Rule 1 orders the AI to call this search on <strong>every</strong> ORA-content question — rates, policies, staff, forms, deadlines, IDs — with no exceptions.</p>
@@ -91,7 +96,7 @@ SAVE to cache  ->  SEND the answer + Sources
 <h4>When the AI skips the search</h4>
 <p>The AI skips searching in two cases: (1) greetings and small talk (already caught earlier by the fast-path), and (2) <strong>"about me" recall</strong>. Grounding Rule 6 says facts the user stated about themselves (their department, role, active grant, deadlines) are <em>not</em> KB questions — those answers come from the chat history, not from a document search. Searching the KB for "what department am I in?" would find nothing and wrongly make the bot say "I don't have that information."</p>
 
-<h4>The seven Grounding Rules in plain English</h4>
+<h4>The eight Grounding Rules in plain English</h4>
 <ul>
 <li><strong>Rule 1 — always search.</strong> Every ORA fact question triggers a KB search.</li>
 <li><strong>Rule 2 — never trust training data for Morgan facts.</strong> The AI's general internet memory is treated as outdated; only KB results count.</li>
@@ -100,12 +105,16 @@ SAVE to cache  ->  SEND the answer + Sources
 <li><strong>Rule 5 — enumeration uses the inventory tool first.</strong> For "list all X" type questions inside the AI path, it calls the deterministic topic list first.</li>
 <li><strong>Rule 6 — conversational recall.</strong> Facts about the user come from chat history, not the KB.</li>
 <li><strong>Rule 7 — NEVER return a blank answer.</strong> If asked to <em>confirm</em> a specific SOP / number / date that the KB doesn't contain, the AI must not go silent — it must explicitly say the item isn't in ORA's published records and route to ORA. A concrete example: "confirm IACUC SOP 37 covers cage sanitation." SOP 37 genuinely doesn't exist (the published list jumps 36 → 38). The AI must say so, never invent its contents. Before Rule 7, that question went silent and the user saw a useless error.</li>
+<li><strong>Rule 8 — "REFERENCE CONTEXT" is a fact-check only, not your answer.</strong> Any <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code> block (the Layer-1 prefetch) is a hallucination guard. The AI must not answer from it alone and must not cite it — the visible answer and its Sources must rest on the AI's own live KB search. This rule, plus the relabeled block (see 2.2), is what restored real Sources to grounded answers.</li>
 </ul>
 <p>The instruction sheet also repeats a hard "NEVER FABRICATE IDENTIFIERS" section that explicitly counts dates, page numbers, section numbers, and file names as identifiers too — so the AI can't paper over a gap by inventing "approved in 2017" or "see page 36" or "FringeRate-2018.pdf."</p>
 
 <h3>2.4 Layer 2 — the "receipt" (Sources)</h3>
 <p>When Gemini answers using its search tool, it returns <strong>grounding metadata</strong> alongside the text. Think of this as a receipt that says "these specific documents backed my answer." Each backing document is a <strong>grounding chunk</strong> (a chunk = one retrieved passage of KB text, with its title).</p>
 <p>The backend reads this receipt in <code>_do_agent_pass</code>: it counts the chunks, and turns them into a clean, clickable "Sources" list via <code>_extract_citations</code>. Because the live search index stores the doc <em>title</em> but not its web address, the backend rebuilds a title→URL map from the local KB files (<code>_get_kb_url_map</code>) so each source resolves to a real <code>morgan.edu</code> link. It keeps only sources the answer actually cited, deduplicates them, and caps the list at 5.</p>
+<h4>The citation fallback (when a good answer comes back uncited)</h4>
+<p>Sometimes a trustworthy ORA answer arrives with <em>no</em> grounding receipt at all (Gemini's chunk metadata is unreliable, and it's often empty even for a perfectly grounded answer). To guarantee Sources, the DELIVER step runs <code>_fallback_citations(query)</code>: it does its own live Vertex AI Search over the same unified datastore, resolves the matching titles → URLs via <code>_get_kb_url_map()</code>, and attaches them. It is gated by <code>_wants_fallback_citations()</code>, which <strong>skips</strong> small talk, refusals, outages, knowledge-base failures, and answers that are already cited — so it only adds real Sources to a trusted ORA answer that was missing them, and never to a greeting or a refusal.</p>
+<div class="callout"><strong>Note (you can't just "force" the search tool):</strong> a natural question is "why not make the model always run its search tool?" Google's <code>vertex_ai_search</code> is <em>native retrieval grounding</em>, not a function the agent declares — and the <code>tool_config mode=ANY</code> knob that can force a tool governs only declared <code>function_declarations</code>. So forcing retrieval isn't possible; the relabeled prefetch (2.2), Grounding Rule 8, and this deterministic fallback are how Sources are guaranteed instead.</div>
 <div class="callout"><strong>Note (Sources must survive a refresh):</strong> The Sources block is stored so it doesn't vanish when the page reloads or the answer is replayed from cache. There are two storage spots: (1) a <code>citations</code> column on the <code>chat_history</code> table — a JSON list of <code>{title, url}</code> — so reloading old chat history still shows Sources; and (2) a parallel cache entry under a <code>cit:</code> key so a cache hit can re-emit its Sources. This was the fix for Sources disappearing on cache/refresh/history reloads.</div>
 
 <h3>2.5 Layer 3 — the fact-checker (the real guarantee)</h3>
@@ -113,18 +122,23 @@ SAVE to cache  ->  SEND the answer + Sources
 
 <h4>Step A — run the AI (Pass 1) and grade the answer "ok" or "weak"</h4>
 <p>After Pass 1, the answer is graded by <code>_evaluate_grounding</code>. It is graded <strong>"ok"</strong> (deliver it) if any of these are true: it's a greeting/security/outage reply (no KB needed); it's already an honest "I don't have this" deflection; it was answered from an uploaded file or profile the user attached; it cited at least 2 KB documents; or at least 30% of the answer text is backed by KB passages. Otherwise it is graded <strong>"weak"</strong> and must be redone.</p>
-<p>One special case: <strong>personal-recall questions bypass the grade.</strong> If the question is "what's my deadline?" / "what department am I in?", detected by <code>_is_personal_recall</code>, a weak grade is flipped to "ok" — because that answer correctly came from chat history, not the KB, and forcing a KB-only redo would wrongly erase it.</p>
+<p>Two special cases bypass the grade. <strong>Personal-recall questions</strong> ("what's my deadline?" / "what department am I in?", detected by <code>_is_personal_recall</code>) flip a weak grade to "ok" — that answer correctly came from chat history, not the KB, and a KB-only redo would wrongly erase it. <strong>Greetings and small talk</strong> (detected by <code>_is_smalltalk</code>) do the same — a warm "I'm doing well!" must never be regraded weak and regenerated under the strict KB prompt, which would turn it back into a refusal.</p>
 
-<h4>Step B — if "weak", redo once under a strict KB-only prompt (Pass 2)</h4>
+<h4>Step B — try a surgical re-ground, and honor the latency budget</h4>
+<p>Before paying for a whole second answer, the backend tries to fix only what's broken. Using Gemini's grounded character-spans, <code>_unsupported_sentences</code> finds the specific fact-stating sentences that <em>aren't</em> backed by the retrieved KB text. If only a few sentences are unsupported, <code>_surgical_reground</code> rewrites <strong>only those sentences</strong> strictly from the already-retrieved text (no second KB search), and the rest of the good answer is kept as-is — far faster than regenerating everything.</p>
+<p>There is also a hard <strong>latency budget</strong>. A turn that stacks a full Pass-2 regeneration on top of Pass-1 can blow past the &lt;10-second target. So <code>_over_latency_budget(elapsed)</code> (controlled by <code>CHAT_LATENCY_BUDGET_S</code>, default <strong>7 seconds</strong>) checks whether the turn has already spent its budget. If a <em>usable</em> (non-empty) Pass-1 answer graded weak and the budget is spent, the backend delivers Pass-1 with a short caution note instead of regenerating — skipping the second round-trip entirely. (An <em>empty</em> Pass-1 still regenerates; the streaming path already skips Pass-2 because the answer is already on screen.) A per-turn <code>[LATENCY]</code> log records the milliseconds, the verdict, and the chunk count so the &lt;10s target is measurable.</p>
+<div class="callout"><strong>Note (the bigger lever was warm instances):</strong> the latency budget trims the worst-case turn, but the dominant cause of a slow <em>first</em> answer was never the pipeline — it was the 30–60-second Cloud Run cold start. Keeping the ADK and backend warm (Chapter 1) is what actually removed the ~40-second waits; the budget guard is the secondary lever.</div>
+
+<h4>Step C — if still weak, redo once under a strict KB-only prompt (Pass 2)</h4>
 <p>If the answer is weak, the backend wipes the AI's session (so the weak draft isn't in the AI's view) and asks again, this time prepending a strict instruction called <code>_STRICT_PREFIX</code>. In plain words, that prefix tells the AI: answer <em>only</em> from the knowledge base; you may still use facts the user told you about themselves; never guess or approximate; and if the KB genuinely doesn't have it, say so and point the user to ORA. This is the "double-checking sources" step the user sees in the progress indicator.</p>
 
-<h4>Step C — trust the clean redo (don't re-gate on the flaky chunk count)</h4>
+<h4>Step D — trust the clean redo (don't re-gate on the flaky chunk count)</h4>
 <p>This is a subtle but load-bearing decision. The strict redo already forced the AI to either ground its answer or honestly deflect. So if the redo produces <em>any</em> non-empty text, the backend <strong>trusts it</strong> and delivers it — it deliberately does NOT re-check the grounding-chunk count again. Why: Gemini reports that chunk-count metadata unreliably (it's often empty even for a perfectly correct, grounded answer), and re-gating on it is exactly what used to make Layer 3 throw away good answers.</p>
 
-<h4>Step D — if the redo also produces nothing, REFUSE</h4>
+<h4>Step E — if the redo also produces nothing, REFUSE</h4>
 <p>If even the strict redo comes back empty or errored, the backend refuses rather than guess. It returns <code>_REFUSAL_MSG</code>: "I don't have reliable information on this in my knowledge base, so I'd rather not guess. Please contact ORA at 443-885-4044 or ask.ora@morgan.edu …" A related edge case: if Pass 1 returns empty text <em>and</em> zero chunks (the dead-end that used to fire a useless "try rephrasing" error), it now degrades to this same honest refusal.</p>
 
-<h4>Step E — the identifier faithfulness check (verify the specifics word-for-word)</h4>
+<h4>Step F — the identifier faithfulness check (verify the specifics word-for-word)</h4>
 <p>For an answer that passed, <code>_finalize_answer</code> runs one more guardrail: <code>_check_identifier_faithfulness</code>. It scans the answer for high-risk specifics — SOP numbers, FWA / EIN / UEI numbers, F&amp;A and fringe percentages, dates, dollar amounts, emails, phone numbers, page / section numbers, and file names — and checks each one appears <strong>verbatim</strong> (exact, word-for-word) in the retrieved KB text. If a number was invented (not found in the docs), it's logged. Two safeguards prevent false alarms: ORA's own main phone and email are whitelisted so canned messages don't flag themselves, and it is <strong>negation-aware</strong> — it skips a value the answer is <em>refuting</em> ("the rate is NOT 99%"), since refuting a wrong number is faithful behavior, not a fabrication.</p>
 <div class="callout"><strong>Note (the removed "could not be verified" footer):</strong> There used to be a user-facing footer that appended "I couldn't verify this number against ORA's records…" whenever a specific value wasn't found verbatim. It was <strong>removed on 2026-06-02</strong> because it produced false positives: the check is purely token-based and couldn't tell <em>asserting</em> a number from <em>refuting</em> one — so when the bot correctly rejected a planted fake "99%" F&amp;A rate, the footer still fired and flagged the very number the bot was denying. The separate <strong>staff-name</strong> faithfulness disclaimer stays active — it appends a "verify at the staff directory" note when the answer mentions a "Dr. X" whose surname isn't in the ORA roster.</div>
 
@@ -160,6 +174,22 @@ SAVE to cache  ->  SEND the answer + Sources
 <tr>
 <td><strong>Frontend SSE buffer flush</strong></td>
 <td>The answer streams to the browser line-by-line. The browser's reader splits on newlines and keeps the last unfinished line in a buffer; it must <strong>flush that buffer after the stream ends</strong>. The final <code>data: {done}</code> frame can arrive without a trailing newline as the connection closes; if the buffer isn't flushed, that frame is dropped and the message stays "still streaming," firing the misleading frontend-only fallback "I couldn't generate a response." That string is a <strong>frontend</strong> fallback — the backend always produced and saved a real answer. Don't remove the flush.</td>
+</tr>
+<tr>
+<td><strong>Gemini 429 arrives as text, not an exception</strong></td>
+<td>When Vertex/Gemini is over quota, the error comes back as response <em>text</em> ("429 … RESOURCE_EXHAUSTED"), so it slips past the normal <code>except</code> handlers. <code>_is_rate_limited</code> detects it and retries with backoff, then flags a real outage — instead of laundering it into a "system is busy" sentence and then amplifying the load by regenerating it in Pass-2.</td>
+</tr>
+<tr>
+<td><strong>Grounded citations from the real KB search</strong></td>
+<td>A correct-but-uncited answer was the symptom of the model answering from the prefetched block instead of its own retrieval. The fix has three parts: the prefetch is relabeled <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code> (2.2); Grounding Rule 8 forbids answering from or citing it; and <code>_fallback_citations</code> runs a live KB search to attach real Sources when a trusted answer came back uncited (2.4). Forcing the native retrieval tool isn't possible, so these three together guarantee Sources.</td>
+</tr>
+<tr>
+<td><strong>Latency budget + warm instances</strong></td>
+<td>A turn can stack a full Pass-2 regeneration on Pass-1 and blow the &lt;10s target. <code>_over_latency_budget</code> (<code>CHAT_LATENCY_BUDGET_S</code>, default 7s) delivers a usable Pass-1 + caution note instead of regenerating once the budget is spent, and a <code>[LATENCY]</code> log makes the target measurable. The bigger lever, though, was keeping the ADK and backend warm so the chat path never pays a 30–60s cold start.</td>
+</tr>
+<tr>
+<td><strong>Token-by-token streaming with a guard</strong></td>
+<td>The answer streams cumulatively from the agent; the backend emits the new delta each event so the user sees it appear word-by-word. A short prefix guard (the first 60 characters) is held back before anything is shown, so a leaked error (a 429 or a KB-access failure) is caught and never streamed to the user. The streaming path never regenerates Pass-2 — the answer is already on screen — it only appends the caution note when weak.</td>
 </tr>
 </tbody>
 </table>

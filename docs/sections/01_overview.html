@@ -152,6 +152,7 @@ When the app is live for real users, it does not run on a laptop — it runs on 
   <li><code>ora-admin-email</code> — the email address of the built-in administrator account.</li>
   <li><code>ora-admin-password</code> — the password for that administrator account.</li>
   <li><code>ora-redis-url</code> — the connection string for Redis, an optional fast in-memory cache used to remember recent answers.</li>
+  <li><code>ora-firecrawl-api-key</code> — the key for Firecrawl, the hosted browser-scraper used to fetch funder pages (e.g. NSF) that block server IPs when importing a solicitation from a URL. It is <em>optional</em>: the deploy self-heals a placeholder value <code>unset</code> if the secret is missing (see 1.6), and the URL fetcher degrades gracefully to other scrapers when there's no real key.</li>
 </ul>
 
 <h4>The live web addresses</h4>
@@ -191,10 +192,28 @@ The database can be reached in two ways depending on where the app is running, a
 
 <h3>1.6 How deployment works, and the traps to avoid</h3>
 <p>
-"Deployment" means taking the code on the developer's machine and publishing it to the live Cloud Run services. This is done with one script, <code>deploy-cloudrun.sh</code>. In plain terms, for each service the script: (1) packages the code into a container image, (2) pushes that image to Artifact Registry, and (3) tells Cloud Run to run the new image.
+"Deployment" means taking the code and publishing it to the live Cloud Run services. There are two paths, and the primary one is now automatic:
+</p>
+<ul>
+  <li><strong>Push to <code>main</code> → Cloud Build (the real path).</strong> A push to the <code>main</code> branch triggers <strong>Cloud Build</strong>, which reads <code>cloudbuild.yaml</code> and builds + deploys <em>all three</em> Cloud Run services in one run (project <code>infra-vertex-494621-v1</code>, region <code>us-central1</code>). Nobody runs a script by hand for a normal release — merging to <code>main</code> is the deploy.</li>
+  <li><strong>The manual script (fallback).</strong> <code>deploy-cloudrun.sh</code> still exists for hand-deploys from a laptop that has <code>gcloud</code> installed. For each service it (1) packages the code into a container image, (2) pushes that image to Artifact Registry, and (3) tells Cloud Run to run the new image.</li>
+</ul>
+
+<h4>Warm instances (so the chat path never pays a cold start)</h4>
+<p>
+A Cloud Run service that has scaled to zero must "cold-start" a fresh container on the next request, which took <strong>30–60 seconds</strong> — and that, not the answer pipeline, was the dominant cause of a slow <em>first</em> answer. So the <strong>ADK and backend</strong> services deploy with a startup CPU boost (<code>--cpu-boost</code>) and are kept warm (a minimum instance always running) so the chat path is always hot. The <strong>frontend</strong> stays scale-to-zero — it's static files served off the per-question path, so a cold start there doesn't matter.
 </p>
 
-<h4>Trap 1 — the env-var wipe</h4>
+<div class="callout"><strong>Note (<code>GOOGLE_GENAI_USE_VERTEXAI=TRUE</code>):</strong> this environment variable must be set on <strong>both</strong> the ADK and the backend services in <code>cloudbuild.yaml</code>. Without it, Google's AI library falls back to the public consumer Gemini API and demands a separate API key the project doesn't use — so every AI call fails with "No API key was provided."</div>
+
+<h4>Trap 0 — <code>cloudbuild.yaml</code> is a single point of failure</h4>
+<p>
+Because one push to <code>main</code> now deploys everything, <code>cloudbuild.yaml</code> is load-bearing. The backend deploy step is an inline bash heredoc, so a one-character typo there (for example a stray <code>=</code> swallowing a flag) breaks the <em>whole</em> deploy and silently blocks every merge from shipping. After any edit, validate it with <code>python3 -c "import yaml; yaml.safe_load(open('cloudbuild.yaml'))"</code> — but note that a bash typo <em>inside</em> a heredoc string passes the YAML check and only fails at deploy time, so eyeball the heredoc too.
+</p>
+
+<div class="callout"><strong>Note (the optional-secret self-heal):</strong> Cloud Build runs as the project's <strong>default compute service account</strong>, which lacks <code>secretmanager.secrets.create</code>. So the backend deploy step <strong>self-heals</strong> the optional <code>ora-firecrawl-api-key</code>: if the secret is missing it creates one with the placeholder value <code>unset</code> and grants the backend access — so a missing optional secret never breaks the deploy. Set the real Firecrawl key later via the Console (the project picker prevents the "wrong project" mistake).</div>
+
+<h4>Trap 1 — the env-var wipe (manual deploys)</h4>
 <p>
 Cloud Run services hold <strong>environment variables</strong> (named settings the program reads at startup, like the SMTP email password). When the script runs, it sets a fixed list of these settings and <strong>overwrites everything else</strong>, accidentally erasing important ones such as <code>SMTP_*</code> (email settings), <code>API_URL</code>, <code>RESEARCH_SECRET</code> (the password the scheduled jobs use), and <code>ALLOW_TEST_EMAILS</code>. The fix is to run a recovery script, <code>/tmp/post_deploy_backend.sh</code>, after <strong>every</strong> backend deploy to put those settings back.
 </p>
@@ -238,6 +257,7 @@ A developer can run all three services locally to test changes before deploying.
   <li><code>frontend/</code> — the React + Vite user interface (its <code>package.json</code>, <code>src/</code> source code, <code>Dockerfile</code> for building the container, and Nginx config for serving it).</li>
   <li><code>backend/</code> — the FastAPI server. Key files include <code>main.py</code> (the entry point), <code>db.py</code> (database connection), <code>models.py</code> (database table definitions), <code>cache.py</code> (answer caching), <code>vertex_agent.py</code> (the code that talks to the ADK/AI), <code>kb_browser.py</code> (browses the knowledge base), and the <code>kb_structured/</code> folder holding the 382 source documents.</li>
   <li><code>adk_agent/</code> — the Google ADK AI agent, with its agent logic under <code>ora_navigator_unified/</code> and its own <code>Dockerfile</code>.</li>
-  <li><code>deploy-cloudrun.sh</code> — the one deployment script.</li>
+  <li><code>backend/services/</code> — the proposal-toolkit logic (Chapter 5): <code>solicitation_extractor.py</code>, <code>url_fetcher.py</code>, <code>budget_helper.py</code>, <code>section_coach.py</code>, <code>compliance_sentinel.py</code>, <code>draft_critic.py</code>, <code>deadline_watcher.py</code>, <code>opportunity_finder.py</code>, <code>sample_proposals.py</code>, and the memory/research helpers.</li>
+  <li><code>cloudbuild.yaml</code> — the Cloud Build recipe that builds + deploys all three services on a push to <code>main</code>; <code>deploy-cloudrun.sh</code> — the manual fallback deploy script.</li>
   <li><code>CLAUDE.md</code> — the project's master notes file.</li>
 </ul>
