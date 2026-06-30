@@ -17,6 +17,7 @@ Semantic: Matches similar queries via Google text-embedding-004 vectors.
 import hashlib
 import json
 import os
+import re
 import time
 import logging
 from typing import Optional
@@ -84,6 +85,34 @@ NO_CACHE_KEYWORDS = [
     "recommend me",
     "for me",
 ]
+
+# A personalized opening greeting ("Hi Mingma!", "Hello Mingma Lama,") must be
+# scrubbed before an answer enters the SHARED cache. The cache key is
+# md5(query)+model with NO user_id, so a stored greeting would be replayed to
+# every other user who asks the same question (they'd see "Hello Mingma!"). We
+# strip ONLY a leading salutation addressed to a proper-name (1-3 capitalized
+# tokens) and its trailing punctuation -- the answer body (the actual KB
+# content) is identical across users and stays cacheable. The salutation word is
+# matched case-insensitively via the scoped (?i:...) group, but the name tokens
+# must stay capitalized (real [A-Z]) so generic openings like "Hello there,
+# here's how..." are left untouched.
+_PERSONAL_GREETING_RE = re.compile(
+    r"^\s*(?i:hi|hello|hey|greetings|dear|good\s+(?:morning|afternoon|evening))"
+    r"[ \t]*[,]?[ \t]+"
+    r"[A-Z][\w'’.\-]*(?:[ \t]+[A-Z][\w'’.\-]*){0,2}"  # 1-3 capitalized name tokens
+    r"[ \t]*[-!,.:;…—–]+[ \t]*",                       # required terminator(s)
+)
+
+
+def _strip_personal_greeting(text):
+    """Remove a leading personalized greeting so a shared-cache entry never
+    carries one user's name. Returns the text unchanged when there is no such
+    greeting. Applied on both write (so a name is never persisted) and read (so
+    any entry poisoned before this fix is sanitized on the way out)."""
+    if not text or not isinstance(text, str):
+        return text
+    return _PERSONAL_GREETING_RE.sub("", text, count=1)
+
 
 # Redis Configuration (from environment variables)
 REDIS_URL = os.getenv("REDIS_URL", "")
@@ -555,7 +584,7 @@ class MultiTierCache:
         response = self.l1.get(key)
         if response is not None:
             logger.info(f"[CACHE] L1 HIT for: {query[:50]}...")
-            return response
+            return _strip_personal_greeting(response)
 
         # Try L2 (Redis)
         response = self.l2.get(key)
@@ -563,7 +592,7 @@ class MultiTierCache:
             logger.info(f"[CACHE] L2 HIT for: {query[:50]}...")
             # Promote to L1 for faster future access
             self.l1.set(key, response)
-            return response
+            return _strip_personal_greeting(response)
 
         # L3: Semantic similarity (catches rephrased versions of the same question)
         # 0.95 threshold = safe, only near-identical matches. Saves a full Gemini call (~4s)
@@ -572,7 +601,7 @@ class MultiTierCache:
         response = self.semantic.get(query)
         if response is not None:
             self.l1.set(key, response)
-            return response
+            return _strip_personal_greeting(response)
 
         logger.info(f"[CACHE] MISS for: {query[:50]}...")
         return None
@@ -581,6 +610,12 @@ class MultiTierCache:
         """Store response in all cache tiers."""
         if not self._should_cache(query):
             return False
+
+        # Scrub a leading personalized greeting ("Hello Mingma!") before the
+        # answer enters the shared, user-agnostic cache -- otherwise one user's
+        # name leaks to every other user who asks the same question. The body
+        # below this greeting is generic KB content and stays cacheable.
+        response = _strip_personal_greeting(response)
 
         # Don't cache error responses or outage messages
         if "error" in response.lower()[:50] or "unavailable" in response.lower()[:50]:

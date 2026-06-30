@@ -143,3 +143,51 @@ def test_institutional_questions_still_cache():
     stored = c.set(institutional, answer, context_hash=CTX)
     assert stored is True
     assert c.get(institutional, context_hash=CTX) == answer
+
+
+# =====================================================================
+# Personalized-greeting scrub -- the shared cache key has NO user_id, so
+# an answer that opens "Hello Mingma!" would replay one user's name to
+# every other user who asks the same question. The leading greeting is
+# stripped on BOTH write (never persist a name) and read (sanitize any
+# entry poisoned before this fix). The generic body stays cacheable.
+# =====================================================================
+
+QF = "How do I find funding opportunities for my research"
+
+
+def test_personalized_greeting_stripped_on_write():
+    """A personalized greeting must not be persisted into the shared cache."""
+    c = _fresh_cache()
+    personalized = ("Hello Mingma! Morgan State's ORA provides several resources "
+                    "to help PIs find funding opportunities.")
+    generic = ("Morgan State's ORA provides several resources "
+               "to help PIs find funding opportunities.")
+    assert c.set(QF, personalized, context_hash=CTX) is True
+    # Stored under the exact key with no greeting, in every tier we can see.
+    served = c.get(QF, context_hash=CTX)
+    assert served == generic
+    assert "Mingma" not in served
+    # The semantic (L3) copy is generic too -- it is shared meaning-wise.
+    assert "Mingma" not in c.semantic.store.get(QF, "")
+
+
+def test_legacy_personalized_entry_sanitized_on_read():
+    """An entry written BEFORE this fix (still carrying a name) must be
+    scrubbed on the way out, so a cache HIT never replays the name."""
+    c = _fresh_cache()
+    key = c._generate_key(QF, CTX)
+    # Simulate a poisoned L1 entry from before the fix.
+    c.l1.set(key, "Hi Mingma, here are the funding databases you can use.")
+    served = c.get(QF, context_hash=CTX)
+    assert served == "here are the funding databases you can use."
+    assert "Mingma" not in served
+
+
+def test_generic_opening_is_not_over_stripped():
+    """Generic openings (no proper name addressed) must be left intact so the
+    scrub never eats real KB content."""
+    c = _fresh_cache()
+    intact = "Hello there, here is how you find funding at Morgan State."
+    assert c.set(QF, intact, context_hash=CTX) is True
+    assert c.get(QF, context_hash=CTX) == intact
