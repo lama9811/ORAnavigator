@@ -67,6 +67,20 @@ A discovery surface at **`/opportunities`** (navbar "Find Funding" button → `f
 - **Ranking = AI advisory, grounded** (`rank_and_explain`): Gemini re-ranks + gives a 1–2 sentence fit, each backed by a verbatim quote **verified against `synopsisDesc`** (unquotable quotes dropped, same whitespace-collapse pattern as `section_coach`). Falls back to API relevance order (no AI prose) when Gemini is down. `max_output_tokens=4096` (1536 truncated the ranking JSON → silent fallback).
 - **Handoff:** "Start a proposal from this" routes the opp's solicitation URL into the existing `SolicitationUploadModal` via router state (`MyProposals` reads `location.state.solicitationUrl`; the modal gained an `initialUrl` prop), dropping the PI into the guided pathway. Tests: `tests/test_opportunity_finder.py` (unit) + `tests/test_opportunities_api_e2e.py` (route/auth).
 
+## Caching (layers + lifetimes)
+Caching exists to dodge the two real latency costs — the **Gemini call** and the **networked Cloud SQL read** from a **single-worker** backend — NOT to cache authoritative figures. **Cache the expensive (LLM answers), never the authoritative (budgets, statuses, verdicts, deadlines).**
+
+**Chat answer cache** — `cache.py`, a 3-tier stack behind `query_cache.get/set` (keyed `md5(normalized_query : model)` — **no `user_id`**, so it's shared across users; personal/recall questions are gated out by `_should_cache`):
+- **L1** in-memory (`cachetools.TTLCache`) — **24h**, 500 entries, per-instance.
+- **L2** Redis — **7 days**, shared across instances, persistent. Degrades gracefully to "no L2" if Redis is down.
+- **L3 semantic** (Google `text-embedding-004`, 256-dim) — matches re-worded questions at **cosine ≥ 0.95**; 100 in-memory entries + a 7-day Redis copy.
+- **Citations** ride the same tiers under a `cit:` key (L1 24h / L2 7 days) so a cache HIT re-emits Sources.
+- The chat HTTP responses are **`Cache-Control: no-cache`** (the cache is server-side only).
+
+**Other server caches:** popular questions (`popular_questions.py`, in-process **6h** + Redis 7 days, daily-cron refreshed), Open Grants samples (`ogrants_finder.py`, **6h** TTLCache), forms catalog (`forms_catalog.py`, `@lru_cache` — **process-lifetime**, until redeploy). **Browser:** PWA service-worker precache of the app shell (workbox `autoUpdate` — until next deploy), Google-Fonts runtime `CacheFirst` (**1 year**), and `localStorage` (token/theme — until logout). TTLs are hard-coded constants per file (not yet env-configurable).
+
+**Never cached:** personal-recall answers, errors/outages, transient "busy/try again" text, refusals (all gated in `cache.set`), and any answer's **personalized greeting** (stripped before storage — see Load-bearing fixes).
+
 ## Cron jobs (Cloud Scheduler → internal endpoints, auth via `X-Research-Secret` / `RESEARCH_SECRET`)
 4 recurring + 1 manual: `/api/internal/research/run` (daily ~2am), `/api/internal/memory/consolidate` (daily ~3am — rolls conversations into long-term `UserMemory`), `/api/internal/memory/idle-sweep` (every 5 min), `/api/internal/deadlines/check` (daily — Deadline Watcher, idempotent so a retry never double-emails), and `/api/internal/memory/backfill-profiles` (one-off). The actual schedules live in **Cloud Scheduler in GCP**, not the repo.
 
@@ -82,6 +96,7 @@ Two tiers: **short-term** (current chat history) and **long-term** (`UserMemory`
 - **Budget justification truncation** (`/api/budget/justification`): a non-empty-but-truncated AI fragment must fall back to the deterministic template (guard on the total figure), or the box shows a half-sentence.
 - **Chat knows the profile** (`main.py` chat endpoint): inject the saved `User` profile every turn — see Memory section.
 - **Cache poisoning** (`cache.py`): transient "busy / try again" messages must never be cached (they're not real answers).
+- **Cached personalized greeting** (`cache.py`): the chat cache key has **no `user_id`** (answers are shared across users), so an answer that opens "Hello \<name>!" would replay one user's name to everyone who asks the same question. `_strip_personal_greeting` removes a leading salutation addressed to a proper name on **both write** (never persist a name) **and read** (sanitize entries poisoned before the fix). Kept narrow — a punctuation terminator is required, so generic openings ("Hello there, here's how…") and content ("Hello World Bank is a funder…") are left intact; the generic KB body stays cacheable.
 - **Deploy:** `cloudbuild.yaml` must use the `ora-*` secret names and set the full Vertex env on both ADK and backend; the Cloud Build service account needs Cloud Run Admin + Service Account User. An **optional** secret (e.g. `ora-firecrawl-api-key`) must never hard-fail the deploy — the backend step self-heals a placeholder (see Secrets).
 
 ## Known limitations / open work
