@@ -28,6 +28,13 @@
   align-items: center;
 }
 
+/* ========== Left cluster: sidebar toggle + clickable logo/title ========== */
+.nav-left-cluster {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* ========== Left Side - Logo and Title - CLICKABLE ========== */
 .navbar-left {
   display: flex;
@@ -49,61 +56,34 @@
   opacity: 0.75;
 }
 
-/* Logo that morphs into hamburger on hover (Chat page) */
+/* Standalone sidebar toggle (three lines in a box), to the LEFT of the logo.
+   The breakpoint media-queries below keep it square at every screen size. */
 .logo-hamburger-toggle {
-  position: relative;
-  width: 50px;
-  height: 50px;
-  background: transparent;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  color: var(--msu-blue);
   cursor: pointer;
   padding: 0;
-  overflow: hidden;
-  border-radius: 8px;
-  transition: all 0.3s ease;
+  flex-shrink: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .logo-hamburger-toggle:hover {
   background: rgba(66, 133, 244, 0.08);
+  border-color: rgba(66, 133, 244, 0.4);
 }
 
-/* Logo image - visible by default */
-.nav-logo-image {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  opacity: 1;
+.logo-hamburger-toggle:active {
+  background: rgba(66, 133, 244, 0.14);
 }
 
-/* Hamburger overlay - hidden by default */
-.hamburger-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--msu-blue);
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-/* On hover: hide logo, show hamburger */
-.logo-hamburger-toggle:hover .nav-logo-image {
-  opacity: 0;
-  transform: scale(1.2);
-}
-
-.logo-hamburger-toggle:hover .hamburger-overlay {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Regular logo (when not authenticated) */
+/* Logo (always shown, next to the toggle) */
 .nav-logo {
   height: 50px;
   width: auto;
@@ -341,8 +321,10 @@ body.dark .navbar-forms-btn:hover {
   background: rgba(138, 180, 248, 0.08);
 }
 
-.dark .hamburger-overlay {
+.dark .logo-hamburger-toggle {
   color: #8ab4f8;
+  background: #2a2d31;
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .dark .profile-icon-btn {

@@ -67,47 +67,37 @@ export default function NavBar({ role, onToggleSidebar }) {
     <>
     <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
       <div className="nav-container">
-        {/* Left side - logo and title - CLICKABLE */}
-        <div
-          className="navbar-left"
-          onClick={() => navigate(isAuthed ? "/chat" : "/")}
-          style={{ cursor: 'pointer' }}
-          title={isAuthed ? "Go to Chat" : "Return to Home"}
-        >
+        {/* Left cluster: standalone sidebar toggle (three lines) sits to the
+            LEFT of the logo; the logo + title remain a separate clickable
+            block that navigates home/chat. */}
+        <div className="nav-left-cluster">
           {isAuthed && (
-            <button 
+            <button
               type="button"
-              className="logo-hamburger-toggle" 
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleSidebar();
-              }}
-              title="Toggle Sidebar" // 🔥 NEW: Hover Text
+              className="logo-hamburger-toggle"
+              onClick={onToggleSidebar}
+              title="Toggle Sidebar"
               aria-label="Toggle sidebar"
             >
-              <img 
-                src="/msu_logo.webp" 
-                alt="Morgan State University" 
-                className="nav-logo-image"
-              />
-              <div className="hamburger-overlay">
-                <Menu size={24} />
-              </div>
+              <Menu size={24} />
             </button>
           )}
-          
-          {!isAuthed && (
-            <img 
-              src="/msu_logo.webp" 
-              alt="Morgan State University" 
-              className="nav-logo" 
-              title="Return to Home" // 🔥 NEW: Hover Text
+
+          <div
+            className="navbar-left"
+            onClick={() => navigate(isAuthed ? "/chat" : "/")}
+            style={{ cursor: 'pointer' }}
+            title={isAuthed ? "Go to Chat" : "Return to Home"}
+          >
+            <img
+              src="/msu_logo.webp"
+              alt="Morgan State University"
+              className="nav-logo"
             />
-          )}
-          
-          <div className="nav-title">
-            <span className="brand-main">ORA Navigator</span>
-            <span className="brand-sub">Office of Research Administration · MSU</span>
+            <div className="nav-title">
+              <span className="brand-main">ORA Navigator</span>
+              <span className="brand-sub">Office of Research Administration · MSU</span>
+            </div>
           </div>
         </div>
 
