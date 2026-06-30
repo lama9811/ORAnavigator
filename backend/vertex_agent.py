@@ -678,6 +678,19 @@ _FILLER_SENTENCE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# In-app navigation pointers ("use the Find Funding tool", "the Opportunity
+# Finder", "the Proposals/Samples/Forms button") are app-capability suggestions,
+# NOT knowledge-base facts, so they need no KB citation and must never be graded
+# weak or stripped during Pass-2 re-grounding (mirrors the agent's IN-APP TOOLS
+# instruction). Kept narrow: the app's distinctive feature names + nav phrasing.
+_INAPP_TOOL_RE = re.compile(
+    r"opportunity finder|find funding|sample proposals|guided (?:proposal )?pathway"
+    r"|(?:\"|“|‘|')?(?:find funding|proposals|samples|forms)(?:\"|”|’|')?\s+"
+    r"(?:button|tool|tab|feature|page|library|catalog)"
+    r"|top nav(?:igation)?(?:\s+bar)?",
+    re.IGNORECASE,
+)
+
 
 def _split_sentences(text: str) -> list:
     """Split text into trimmed, non-empty sentences (mirror of _sentences)."""
@@ -694,6 +707,8 @@ def _sentence_is_exempt(sentence: str, is_personal_recall: bool) -> bool:
     if _HONEST_DEFLECTION_RE.search(sentence):
         return True
     if _FILLER_SENTENCE_RE.search(sentence):
+        return True
+    if _INAPP_TOOL_RE.search(sentence):
         return True
     return False
 

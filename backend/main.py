@@ -61,6 +61,7 @@ from vertex_agent import query_agent, query_agent_stream, check_agent_health, re
 
 # Query caching for faster responses
 from cache import query_cache, get_context_hash, log_cache_stats
+from services.feature_suggester import suggest_feature
 from kb_browser import try_browse, browse_citations
 
 
@@ -1201,7 +1202,11 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
                 _schedule_post_commit_memory_tasks(user["user_id"], session_id, new_chat.id)
             except Exception as e:
                 print(f"[ERROR] Failed to save cached chat history: {e}")
-            return {"response": _cached, "citations": _cached_cites or []}
+            return {
+                "response": _cached,
+                "citations": _cached_cites or [],
+                "feature": suggest_feature(original_q),
+            }
 
     memory_context = build_memory_context(memory_dicts, relevant_memories, relevant_turns)
     conversation_context = _build_conversation_context(history_dicts, session_summary)
@@ -1341,7 +1346,11 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
         except Exception:
             pass
 
-    return {"response": answer, "citations": get_last_grounding().get("citations", [])}
+    return {
+        "response": answer,
+        "citations": get_last_grounding().get("citations", []),
+        "feature": suggest_feature(original_q),
+    }
 
 
 # ==============================================================================
@@ -1462,6 +1471,9 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
             yield f"data: {json.dumps({'type': 'status', 'content': 'Retrieved from cache'})}\n\n"
             if cached_citations:
                 yield f"data: {json.dumps({'type': 'citations', 'content': cached_citations})}\n\n"
+            _feat = suggest_feature(original_q)
+            if _feat:
+                yield f"data: {json.dumps({'type': 'feature', 'content': _feat})}\n\n"
             yield f"data: {json.dumps({'type': 'done', 'content': cached_response})}\n\n"
 
             try:
@@ -1500,6 +1512,12 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
         nonlocal stream_had_error
         full_response = ""
         full_citations = []
+        # Deterministic in-app feature callout (from the question, not the
+        # answer). Emitted early so it's attached to the message regardless of
+        # how the stream finishes; the UI only renders it once streaming ends.
+        _feat = suggest_feature(original_q)
+        if _feat:
+            yield f"data: {json.dumps({'type': 'feature', 'content': _feat})}\n\n"
         try:
             for event in query_agent_stream(
                 query=user_q,

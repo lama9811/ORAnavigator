@@ -2600,6 +2600,86 @@ body.dark .drag-overlay-content {
   line-height: 1.4;
 }
 
+/* ===== In-app feature callout ("we have a tool for this — use it") ===== */
+.feature-callout {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--msu-gold-50, rgba(243, 112, 33, 0.25));
+  background: linear-gradient(135deg, rgba(243, 112, 33, 0.06), rgba(11, 37, 69, 0.04));
+}
+
+.feature-callout-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--msu-gold, #F37021);
+  color: #fff;
+}
+
+.feature-callout-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-callout-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main, #0B2545);
+  line-height: 1.25;
+}
+
+.feature-callout-text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary, #64748B);
+  margin-top: 2px;
+}
+
+.feature-callout-cta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 9px;
+  background: var(--msu-blue, #0B2545);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.feature-callout-cta:hover {
+  background: var(--msu-blue-hover, #123257);
+  transform: translateY(-1px);
+}
+
+.feature-callout-cta:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .feature-callout {
+    flex-wrap: wrap;
+  }
+  .feature-callout-cta {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .message-sources-list a {
   color: var(--msu-blue, #002D72);
   text-decoration: none;

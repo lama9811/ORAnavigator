@@ -32,7 +32,8 @@ SyntaxHighlighter.registerLanguage('typescript', tsLang);
 SyntaxHighlighter.registerLanguage('ts', tsLang);
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { ArrowUpCircle, AudioLines, EllipsisVertical, File, FileImage, FileText, Flag, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Volume2, X } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, AudioLines, EllipsisVertical, File, FileImage, FileText, Flag, Lightbulb, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Volume2, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // 🔥 Icons for File Cards
 
@@ -101,6 +102,7 @@ const getFileIcon = (filename) => {
 };
 
 export default function Chatbox({ initialMessages = [], onSessionChange, sessionId }) {
+  const navigate = useNavigate();
   // --- STATE ---
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
@@ -555,7 +557,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
           icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="url(#tg2)" strokeWidth="2" strokeLinecap="round"/><path d="M12 7v5l3 3" stroke="url(#tg2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><defs><linearGradient id="tg2" x1="3" y1="3" x2="21" y2="21"><stop stopColor="#818cf8"/><stop offset="1" stopColor="#6366f1"/></linearGradient></defs></svg>,
         });
       } else {
-        addMessage(botResponse, "bot", { citations: data.citations || [] });
+        addMessage(botResponse, "bot", { citations: data.citations || [], feature: data.feature || null });
         await speakWithTTS(botResponse);
       }
 
@@ -851,6 +853,16 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                                 };
                                 return newMessages;
                             });
+                        } else if (event.type === "feature") {
+                            // Attach the deterministic in-app feature callout
+                            setMessages((prev) => {
+                                const newMessages = [...prev];
+                                newMessages[newMessages.length - 1] = {
+                                    ...newMessages[newMessages.length - 1],
+                                    feature: event.content || null
+                                };
+                                return newMessages;
+                            });
                         } else if (event.type === "done") {
                             // Finalize the message
                             fullText = event.content || fullText;
@@ -947,6 +959,15 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                         newMessages[newMessages.length - 1] = {
                             ...newMessages[newMessages.length - 1],
                             citations: event.content || []
+                        };
+                        return newMessages;
+                    });
+                } else if (event.type === "feature") {
+                    setMessages((prev) => {
+                        const newMessages = [...prev];
+                        newMessages[newMessages.length - 1] = {
+                            ...newMessages[newMessages.length - 1],
+                            feature: event.content || null
                         };
                         return newMessages;
                     });
@@ -1247,6 +1268,27 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {msg.sender === "bot" && !msg.isStreaming && msg.feature && (
+                      <div className="feature-callout">
+                        <div className="feature-callout-icon" aria-hidden="true">
+                          <Lightbulb size={18} />
+                        </div>
+                        <div className="feature-callout-body">
+                          <div className="feature-callout-title">{msg.feature.title}</div>
+                          <div className="feature-callout-text">{msg.feature.body}</div>
+                        </div>
+                        <button
+                          type="button"
+                          className="feature-callout-cta"
+                          onClick={() => navigate(msg.feature.route)}
+                          title={msg.feature.cta}
+                        >
+                          <span>{msg.feature.cta}</span>
+                          <ArrowRight size={15} />
+                        </button>
                       </div>
                     )}
 

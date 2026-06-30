@@ -60,6 +60,30 @@ def test_empty_text_is_weak():
     assert _evaluate_grounding("", 0, 0.0, False) == "weak"
 
 
+def test_inapp_tool_suggestions_are_grounding_exempt():
+    """In-app feature pointers (Find Funding / Opportunity Finder / Proposals /
+    Samples / Forms) are app-navigation, not KB facts -- they must never be
+    flagged as unsupported, so they survive a Pass-2 re-grounding instead of
+    being stripped out of the answer."""
+    suggestions = [
+        "Try the Find Funding tool in the top navigation to discover live grants.",
+        "Use the Opportunity Finder to describe your research and get matched opportunities.",
+        "The Proposals button opens a guided pathway to build your submission.",
+        "See the Samples library for examples of fundable proposals.",
+        "Browse the Forms page for the required templates.",
+    ]
+    for s in suggestions:
+        assert vertex_agent._sentence_is_exempt(s, False), \
+            f"in-app tool suggestion must be grounding-exempt: {s!r}"
+
+
+def test_real_kb_claim_is_not_exempt_by_inapp_rule():
+    """Regression guard: the in-app exemption must stay narrow -- an ordinary
+    KB fact sentence must still require grounding."""
+    claim = "Morgan State's on-campus organized research F&A rate is 54 percent."
+    assert not vertex_agent._sentence_is_exempt(claim, False)
+
+
 def test_refusal_message_reads_as_ok():
     """The refusal text itself must evaluate as 'ok' so re-checking it never
     loops back into another regenerate/refuse cycle."""
