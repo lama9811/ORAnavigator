@@ -35,6 +35,9 @@
     <tr><td><strong>Prefetch</strong></td><td>Pasting a few likely-relevant docs into the AI's instructions in advance, as a head start.</td></tr>
     <tr><td><strong>Refusal / deflection</strong></td><td>When the bot honestly says it doesn't have the info and points you to ORA, instead of guessing.</td></tr>
     <tr><td><strong>SSE (Server-Sent Events)</strong></td><td>A way to stream an answer to the browser piece-by-piece so you see it appear gradually.</td></tr>
+    <tr><td><strong>Reference context (fact-check only)</strong></td><td>The prefetched KB excerpts, labeled so the model treats them as a hallucination guard, not its answer — it must not answer from or cite them (Grounding Rule 8).</td></tr>
+    <tr><td><strong>Surgical re-grounding</strong></td><td>Rewriting only the few sentences of a draft answer that aren't backed by the KB, instead of regenerating the whole thing.</td></tr>
+    <tr><td><strong>Latency budget</strong></td><td>A per-turn time limit (default 7s) that delivers a usable first answer plus a caution note instead of paying for a slow second regeneration.</td></tr>
   </tbody>
 </table>
 
@@ -82,7 +85,11 @@
     <tr><td><strong>IAM / role</strong></td><td>Identity and Access Management — Google's permission system; a "role" is a bundle of permissions.</td></tr>
     <tr><td><strong>Cron job</strong></td><td>A task that runs automatically on a fixed schedule.</td></tr>
     <tr><td><strong>Cloud Scheduler</strong></td><td>Google's "alarm clock" that triggers cron jobs at set times.</td></tr>
-    <tr><td><strong>Deploy</strong></td><td>Publishing the latest code from a laptop to the live Cloud Run services.</td></tr>
+    <tr><td><strong>Deploy</strong></td><td>Publishing the latest code to the live Cloud Run services.</td></tr>
+    <tr><td><strong>Cloud Build</strong></td><td>Google's build-and-deploy service; a push to <code>main</code> triggers it to build and deploy all three services.</td></tr>
+    <tr><td><strong>Warm instance / cold start</strong></td><td>A "cold start" is the 30–60s wait to spin up a scaled-to-zero service; keeping the ADK and backend "warm" (always one running) avoids it on the chat path.</td></tr>
+    <tr><td><strong>SSRF</strong></td><td>Server-Side Request Forgery — tricking a server into fetching a private/internal address; the URL importer guards against it by validating and pinning the IP.</td></tr>
+    <tr><td><strong>Firecrawl</strong></td><td>A hosted browser-scraper used to fetch funder pages (e.g. NSF) that block server IPs when importing a solicitation from a URL.</td></tr>
     <tr><td><strong>PWA</strong></td><td>Progressive Web App — a website that installs like an app and caches itself with a "service worker."</td></tr>
     <tr><td><strong>Service worker</strong></td><td>The background script that caches the app's files (why you check changes in incognito).</td></tr>
   </tbody>
@@ -102,5 +109,25 @@
     <tr><td><strong>RCR</strong></td><td>Responsible Conduct of Research — required research-ethics training.</td></tr>
     <tr><td><strong>No-cost extension (NCE)</strong></td><td>Extra time to finish a grant past its end date, with no extra money.</td></tr>
     <tr><td><strong>Biosketch / DMP</strong></td><td>A short researcher CV / a Data Management Plan — common required proposal attachments.</td></tr>
+    <tr><td><strong>MTDC</strong></td><td>Modified Total Direct Cost — the base F&amp;A is charged on; excludes equipment, participant support, and each subaward's amount over $25,000.</td></tr>
+    <tr><td><strong>Fringe rate</strong></td><td>The percentage added to a salary for benefits (Morgan's faculty academic-year fringe is ~42%, summer/contractual ~9%).</td></tr>
+    <tr><td><strong>Budget cap</strong></td><td>The maximum award a sponsor allows per proposal (not the total program budget); per-track caps are stored as "category caps."</td></tr>
+    <tr><td><strong>Grants.gov</strong></td><td>The U.S. government's public grants portal/API the Opportunity Finder searches across all 26 federal agencies.</td></tr>
+    <tr><td><strong>Internal routing deadline</strong></td><td>Morgan ORA's institutional cutoff — about 5 business days before the sponsor deadline — to plan backward from.</td></tr>
+  </tbody>
+</table>
+
+<h3>The proposal toolkit</h3>
+<table>
+  <tbody>
+    <tr><td><strong>Solicitation Ingestion</strong></td><td>Reads a sponsor PDF or URL and extracts the rules (deadline, caps, page limits, attachments) for human review.</td></tr>
+    <tr><td><strong>Budget Helper</strong></td><td>A deterministic grant-budget calculator (F&amp;A / MTDC / fringe), with an AI-polished — never AI-computed — justification.</td></tr>
+    <tr><td><strong>Drafting Coach</strong></td><td>Per-section outlines and grounded, advisory feedback on the PI's own prose; it coaches but never writes the prose.</td></tr>
+    <tr><td><strong>Compliance Sentinel</strong></td><td>A deterministic questionnaire that decides which approvals (IRB/IACUC/COI/RCR/export) a proposal needs.</td></tr>
+    <tr><td><strong>Draft Critic</strong></td><td>Checks the whole draft package against the rules (page limits, sections, attachments, budget) with an advisory AI second opinion.</td></tr>
+    <tr><td><strong>Deadline Watcher</strong></td><td>Sends reminder emails at 14/7/3/1/0 days out, never double-sending.</td></tr>
+    <tr><td><strong>Opportunity Finder</strong></td><td>Describe your research → a ranked list of live federal grants with a grounded fit note and eligibility verdict.</td></tr>
+    <tr><td><strong>Sample Proposals Library</strong></td><td>Browse worked example proposals — authored PDFs we host plus vetted links out to public libraries.</td></tr>
+    <tr><td><strong>Guided Proposal Pathway</strong></td><td>The staged Set up → Build → Review presentation of the toolkit, with a single recommended "next step."</td></tr>
   </tbody>
 </table>

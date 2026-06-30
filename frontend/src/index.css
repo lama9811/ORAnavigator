@@ -324,7 +324,7 @@ body.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 body.sidebar-collapsed .page-content {
-  left: 64px;
+  left: 0;
   overflow-x: hidden;
 }
 

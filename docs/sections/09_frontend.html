@@ -31,14 +31,16 @@
     <tr><td><code>/reset-password</code></td><td>Set a new password from the email link (<code>ResetPassword.jsx</code>)</td><td>Public</td></tr>
     <tr><td><code>/chat</code></td><td>The main chat (<code>Chatbox.jsx</code> inside a sidebar layout)</td><td>Private</td></tr>
     <tr><td><code>/forms</code></td><td>Forms &amp; templates catalog (<code>FormsCatalog.jsx</code>)</td><td>Private</td></tr>
-    <tr><td><code>/my-proposals</code></td><td>Proposal tracker (<code>MyProposals.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/sample-proposals</code></td><td>Sample Proposals Library (<code>SampleProposalsLibrary.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/opportunities</code></td><td>Opportunity Finder + Fit Advisor (<code>OpportunityFinder.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/my-proposals</code></td><td>Proposal tracker / Guided Pathway (<code>MyProposals.jsx</code>)</td><td>Private</td></tr>
     <tr><td><code>/profile</code></td><td>Profile / settings (<code>ProfilePage.jsx</code>)</td><td>Private</td></tr>
     <tr><td><code>/admin</code></td><td>Admin dashboard (<code>AdminDashboard.jsx</code>) — and only if your token says role = admin; otherwise a "Forbidden" page (<code>App.jsx:538-545</code>)</td><td>Private + admin-only</td></tr>
     <tr><td>anything else</td><td>Falls back to <code>/chat</code> or <code>/trychat</code> (<code>App.jsx:548-551</code>)</td><td>—</td></tr>
   </tbody>
 </table>
 
-<p>The top menu bar (<code>NavBar.jsx</code>) holds the links that move you between these pages: My Proposals, Forms, Profile (<code>NavBar.jsx:118-136</code>), plus Try Free / Log in / Sign up when you are logged out (<code>NavBar.jsx:161-171</code>). On the left there is also a <code>ChatSidebar.jsx</code> that lists your past chat conversations.</p>
+<p>The top menu bar (<code>NavBar.jsx</code>) holds the links that move you between these pages: <strong>Find Funding</strong> (the Opportunity Finder), <strong>Proposals</strong>, <strong>Forms</strong>, <strong>Samples</strong> (the Sample Proposals Library), and Profile, plus Try Free / Log in / Sign up when you are logged out. On the left there is also a <code>ChatSidebar.jsx</code> that lists your past chat conversations.</p>
 
 <h4>1. The Chat page (<code>/chat</code>) — the heart of the app</h4>
 
@@ -82,10 +84,12 @@
 <p>There are two ways to start a proposal (<code>MyProposals.jsx:193-206</code>):</p>
 <ul>
   <li><strong>New Proposal</strong> — a manual form (title, sponsor, deadline, notes). NSF and NIH proposals get extra sponsor-specific checklist steps; others get a generic 10-step checklist (<code>MyProposals.jsx:464-467</code>). Creating it POSTs to <code>/api/me/submissions</code> (<code>MyProposals.jsx:149</code>).</li>
-  <li><strong>Start from Solicitation</strong> — opens <code>SolicitationUploadModal.jsx</code>. You drop the sponsor's PDF; the app reads it with AI and pre-fills deadline, page limits, and required attachments. It is a deliberate two-step flow so a wrong AI-read deadline can never auto-save: first <code>POST /api/me/submissions/from-solicitation</code> extracts the fields for you to review (<code>SolicitationUploadModal.jsx:54-63</code>), then you confirm with <code>POST .../from-solicitation/confirm</code> (<code>SolicitationUploadModal.jsx:78-84</code>). Any field whose supporting quote wasn't actually found in the PDF is shown in red so you double-check it.</li>
+  <li><strong>Start from Solicitation</strong> — opens <code>SolicitationUploadModal.jsx</code>. You either drop the sponsor's PDF <em>or</em> paste the solicitation's URL (the modal's <code>initialUrl</code> prop is what the Opportunity Finder's "Start a proposal from this" pre-fills). The app reads it and pre-fills deadline, page limits, required attachments, and budget caps. It is a deliberate two-step flow so a wrong AI-read deadline can never auto-save: an extract endpoint returns the fields for you to review, then a separate confirm endpoint commits them. Any field whose supporting quote wasn't actually found is shown in red so you double-check it.</li>
 </ul>
 
-<p>If a proposal came from a solicitation (so it has real rules like a page limit), a <strong>Critique Draft</strong> button appears (<code>MyProposals.jsx:309-317</code>). It opens <code>DraftCritiqueModal.jsx</code>, where you upload your draft PDF and it is checked against those rules via <code>POST /api/me/submissions/{id}/critique</code> (<code>DraftCritiqueModal.jsx:136-137</code>). The result has a verdict banner and a deterministic checklist (page count, attachments, budget), plus an <em>advisory</em> AI Review clearly badged as "advisory" so nobody mistakes the AI's opinion for the hard rules (<code>DraftCritiqueModal.jsx:73</code>).</p>
+<h4>The Guided Proposal Pathway (the staged toolbar)</h4>
+<p>Inside a proposal, the seven tools are not a flat row — for an inexperienced PI they're reshaped into three stages: <strong>Set up → Build → Review &amp; submit</strong> (no new tool logic, pure presentation). Each tool carries a ✓ badge from the serializer flags (<code>has_budget</code>, <code>has_sections</code>, <code>has_compliance</code>, and the solicitation status). A pure <code>nextStep(submission)</code> function picks the single recommended action and gives <em>only</em> that button the accent color; the rest share one calm style. A plain-language <strong>"What to do next"</strong> card explains the current step and why (active proposals only), and the less-common actions — Delete and Add to Google Calendar — live behind a <code>⋯</code> overflow. The summary also shows the <strong>internal ORA routing deadline</strong> (about 5 business days before the sponsor's date) so a first-timer plans backward from the real institutional cutoff.</p>
+<p>The Build and Review tools each open their own modal: <strong>Budget Helper</strong> (<code>BudgetHelperModal.jsx</code> — live budget math, advisories, a read-only budget table, CSV, and an AI-polished justification), <strong>Drafting Coach</strong> (<code>SectionCoachModal.jsx</code> — per-section outline or feedback with a "See a worked example" link), <strong>Compliance Sentinel</strong> (<code>ComplianceSentinelModal.jsx</code> — the deterministic "which approvals?" questionnaire with an "Add required to my proposal" button), and — when the proposal carries solicitation rules — <strong>Draft Critic</strong> (<code>DraftCritiqueModal.jsx</code>), whose result has a verdict banner and a deterministic checklist plus an <em>advisory</em> AI Review clearly badged as "advisory" so nobody mistakes the AI's opinion for the hard rules. (These are all covered in depth in Chapter 5.)</p>
 
 <h4>4. Forms &amp; Templates (<code>/forms</code>)</h4>
 
@@ -122,6 +126,12 @@
 </table>
 
 <p>Which data loads is tied to the active tab (<code>AdminDashboard.jsx:685-695</code>) — for example opening the Research tab loads research stats and suggestions. This keeps the page fast by only fetching what you're looking at.</p>
+
+<h4>8. Find Funding (<code>/opportunities</code>) — the Opportunity Finder</h4>
+<p><code>OpportunityFinder.jsx</code> is a standalone discovery page. A PI types a plain-English description of their research and the page POSTs it to <code>/api/opportunities/search</code> (with the login token). It renders a ranked list of live federal grants pulled from Grants.gov, each with a grounded fit note, an eligibility badge (eligible / unrestricted / see-text / ineligible), a mechanism note, the close date, and the internal ORA routing deadline. A "Start a proposal from this" button routes the opportunity's URL into the Solicitation modal, dropping the PI into the guided pathway. The page guards against a too-short query and shows a graceful "couldn't reach the federal database" message on API failure. (Full logic in Chapter 5.)</p>
+
+<h4>9. Samples (<code>/sample-proposals</code>) — the Sample Proposals Library</h4>
+<p><code>SampleProposalsLibrary.jsx</code> is a browse surface styled like the Forms catalog. It loads <code>GET /api/sample-proposals</code> once on mount and filters client-side by a category chip (NSF / NIH / Foundations / Early-career). Authored example PDFs (which we host and serve via <code>GET /api/sample-proposals/{id}/download</code>) are listed first; the rest are vetted links out to public proposal libraries. The page sits behind <code>RequireAuth</code>, but the endpoints are public because the content is. (Full detail in Chapter 5.)</p>
 
 <h4>The PWA / service-worker caching gotcha (why you sometimes need incognito)</h4>
 
@@ -197,7 +207,33 @@
 
 <h3 id="changelog">9.3 Changelog — What changes did we make</h3>
 
-<p>This is a simple list of the load-bearing changes, newest first, taken from the real git history and the project notes. Each line says <em>what</em> changed and <em>why</em> it mattered. Dates are from the development sessions in late May to early June 2026.</p>
+<p>This is a simple list of the load-bearing changes, newest first, taken from the real git history and the project notes. Each line says <em>what</em> changed and <em>why</em> it mattered. Dates are from the development sessions in late May to late June 2026.</p>
+
+<h4>June 9–25, 2026 — the proposal toolkit grows up (new tools, discovery pages, grounded Sources, a latency budget)</h4>
+<p><em>New PI-facing features</em></p>
+<ul>
+  <li><strong>Opportunity Finder + Fit Advisor.</strong> A new "Find Funding" page: describe your research in plain English and get a ranked list of live, open federal grants from Grants.gov, each with a grounded fit note, a deterministic Morgan-eligibility verdict, and a mechanism note. "Start a proposal from this" drops you straight into the guided pathway. Why: it helps a PI <em>before</em> they even have a solicitation in hand.</li>
+  <li><strong>Budget Helper.</strong> A deterministic grant-budget calculator — correct F&amp;A / MTDC / fringe math on Morgan's real rates, sanity advisories, under-cap trim suggestions, multi-year projection with escalation, a read-only budget table, CSV export, and an AI-polished (never AI-computed) justification narrative. A funding-category picker fills the sponsor cap when a solicitation has multiple tracks. Why: a trustworthy budget where every number is code-computed.</li>
+  <li><strong>Drafting Coach.</strong> Per-section outlines and advisory feedback on the PI's own prose (covered / partial / missing, each grounded in a quote), a live length meter, a deterministic clarity check, and — solicitation-aware — tips tailored to this funder plus a "See a worked example" link into the Sample Library. It coaches; it never writes the prose.</li>
+  <li><strong>Compliance Sentinel.</strong> A deterministic "which approvals do I need?" questionnaire (IRB / IACUC / COI / RCR / export) that produces a checklist and can add the required items as proposal tasks. No AI in the decision path at all.</li>
+  <li><strong>Guided Proposal Pathway.</strong> For inexperienced PIs, the flat toolbar became a staged path (Set up → Build → Review &amp; submit) with ✓ badges, a single accented "next step," a "What to do next" card, and the <strong>internal ORA routing deadline</strong> (about 5 business days before the sponsor's date) so a first-timer plans backward from the real cutoff.</li>
+  <li><strong>Sample Proposals Library.</strong> A "Samples" page: a hybrid of original example PDFs we authored and host (with disclaimers) and vetted links out to public proposal libraries — so a new PI can see what a fundable proposal actually reads like.</li>
+  <li><strong>Start a proposal from a URL.</strong> The solicitation importer now accepts a pasted URL, not just a PDF — with an SSRF-guarded fetcher (validated, pinned IP) and a Firecrawl → Jina → allorigins scraper fallback chain for funder sites (NSF/Akamai) that block server IPs.</li>
+</ul>
+<p><em>Chat reliability &amp; speed</em></p>
+<ul>
+  <li><strong>Grounded citations from the real KB search.</strong> A correct-but-uncited answer was the symptom of the model answering from the prefetched block instead of its own retrieval. Fixed in three parts: the prefetch is relabeled <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code>, a new Grounding Rule 8 forbids answering from or citing it, and a deterministic fallback runs a live KB search to attach real Sources when a trusted answer came back without them.</li>
+  <li><strong>Chat latency budget + warm instances.</strong> A per-turn budget (default 7s) skips the slow Pass-2 regeneration when a usable Pass-1 answer graded weak, and a <code>[LATENCY]</code> log makes the &lt;10s target measurable. The bigger win was keeping the ADK and backend warm (startup CPU boost, no scale-to-zero) so the chat path stopped paying a 30–60s cold start — the real cause of slow first answers.</li>
+  <li><strong>Token-by-token streaming</strong> with a short prefix guard so a leaked quota error is caught and never shown.</li>
+  <li><strong>Gemini 429 handled honestly.</strong> A quota error arrives as response text; it's now detected and retried with backoff, then flagged as a real outage — instead of being laundered into a "system is busy" line and amplified by regenerating it.</li>
+  <li><strong>Greetings answered warmly.</strong> "hi" / "how are you" / "thanks" get a brief, friendly, KB-free reply — not the "I can only help with Morgan State" refusal and not the identity blurb — and the grounding gate no longer regrades a greeting as "weak."</li>
+  <li><strong>Transient "busy / try again" messages are never cached</strong>, so a momentary outage can't get stuck poisoning the cache.</li>
+</ul>
+<p><em>Infrastructure &amp; cleanup</em></p>
+<ul>
+  <li><strong>Deploy via Cloud Build on push to <code>main</code></strong>, building all three services with the correct <code>ora-*</code> secret names and the full Vertex env (<code>GOOGLE_GENAI_USE_VERTEXAI=TRUE</code>) on both the ADK and backend. An optional <code>ora-firecrawl-api-key</code> secret self-heals to a placeholder so a missing key never breaks the deploy.</li>
+  <li><strong>Removed the Fundability / Eligibility self-check tool</strong> by product decision (its files, tests, modal, and endpoints are gone). The eligibility <em>text</em> from a solicitation is still kept and fed to the Drafting Coach.</li>
+</ul>
 
 <h4>June 8, 2026 — Draft Critic accuracy, 100% live form links, faster login &amp; safer deploys</h4>
 <ul>

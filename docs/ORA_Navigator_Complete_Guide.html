@@ -88,7 +88,7 @@ a{ color:#1f5fae; }
   <div class="meta">
     AI Assistant for the Office of Research Administration<br>
     <b>Morgan State University</b> &nbsp;&middot;&nbsp; ora.inavigator.ai<br><br>
-    Compiled from the live codebase &nbsp;&middot;&nbsp; <b>June 8, 2026</b>
+    Compiled from the live codebase &nbsp;&middot;&nbsp; <b>June 25, 2026</b>
   </div>
   <div class="tag">Three services (Frontend / Backend / ADK Agent) &nbsp;&middot;&nbsp;
      Google Cloud (Cloud Run, Cloud SQL, Vertex AI Search) &nbsp;&middot;&nbsp;
@@ -267,6 +267,7 @@ When the app is live for real users, it does not run on a laptop — it runs on 
   <li><code>ora-admin-email</code> — the email address of the built-in administrator account.</li>
   <li><code>ora-admin-password</code> — the password for that administrator account.</li>
   <li><code>ora-redis-url</code> — the connection string for Redis, an optional fast in-memory cache used to remember recent answers.</li>
+  <li><code>ora-firecrawl-api-key</code> — the key for Firecrawl, the hosted browser-scraper used to fetch funder pages (e.g. NSF) that block server IPs when importing a solicitation from a URL. It is <em>optional</em>: the deploy self-heals a placeholder value <code>unset</code> if the secret is missing (see 1.6), and the URL fetcher degrades gracefully to other scrapers when there's no real key.</li>
 </ul>
 
 <h4>The live web addresses</h4>
@@ -306,10 +307,28 @@ The database can be reached in two ways depending on where the app is running, a
 
 <h3>1.6 How deployment works, and the traps to avoid</h3>
 <p>
-"Deployment" means taking the code on the developer's machine and publishing it to the live Cloud Run services. This is done with one script, <code>deploy-cloudrun.sh</code>. In plain terms, for each service the script: (1) packages the code into a container image, (2) pushes that image to Artifact Registry, and (3) tells Cloud Run to run the new image.
+"Deployment" means taking the code and publishing it to the live Cloud Run services. There are two paths, and the primary one is now automatic:
+</p>
+<ul>
+  <li><strong>Push to <code>main</code> → Cloud Build (the real path).</strong> A push to the <code>main</code> branch triggers <strong>Cloud Build</strong>, which reads <code>cloudbuild.yaml</code> and builds + deploys <em>all three</em> Cloud Run services in one run (project <code>infra-vertex-494621-v1</code>, region <code>us-central1</code>). Nobody runs a script by hand for a normal release — merging to <code>main</code> is the deploy.</li>
+  <li><strong>The manual script (fallback).</strong> <code>deploy-cloudrun.sh</code> still exists for hand-deploys from a laptop that has <code>gcloud</code> installed. For each service it (1) packages the code into a container image, (2) pushes that image to Artifact Registry, and (3) tells Cloud Run to run the new image.</li>
+</ul>
+
+<h4>Warm instances (so the chat path never pays a cold start)</h4>
+<p>
+A Cloud Run service that has scaled to zero must "cold-start" a fresh container on the next request, which took <strong>30–60 seconds</strong> — and that, not the answer pipeline, was the dominant cause of a slow <em>first</em> answer. So the <strong>ADK and backend</strong> services deploy with a startup CPU boost (<code>--cpu-boost</code>) and are kept warm (a minimum instance always running) so the chat path is always hot. The <strong>frontend</strong> stays scale-to-zero — it's static files served off the per-question path, so a cold start there doesn't matter.
 </p>
 
-<h4>Trap 1 — the env-var wipe</h4>
+<div class="callout"><strong>Note (<code>GOOGLE_GENAI_USE_VERTEXAI=TRUE</code>):</strong> this environment variable must be set on <strong>both</strong> the ADK and the backend services in <code>cloudbuild.yaml</code>. Without it, Google's AI library falls back to the public consumer Gemini API and demands a separate API key the project doesn't use — so every AI call fails with "No API key was provided."</div>
+
+<h4>Trap 0 — <code>cloudbuild.yaml</code> is a single point of failure</h4>
+<p>
+Because one push to <code>main</code> now deploys everything, <code>cloudbuild.yaml</code> is load-bearing. The backend deploy step is an inline bash heredoc, so a one-character typo there (for example a stray <code>=</code> swallowing a flag) breaks the <em>whole</em> deploy and silently blocks every merge from shipping. After any edit, validate it with <code>python3 -c "import yaml; yaml.safe_load(open('cloudbuild.yaml'))"</code> — but note that a bash typo <em>inside</em> a heredoc string passes the YAML check and only fails at deploy time, so eyeball the heredoc too.
+</p>
+
+<div class="callout"><strong>Note (the optional-secret self-heal):</strong> Cloud Build runs as the project's <strong>default compute service account</strong>, which lacks <code>secretmanager.secrets.create</code>. So the backend deploy step <strong>self-heals</strong> the optional <code>ora-firecrawl-api-key</code>: if the secret is missing it creates one with the placeholder value <code>unset</code> and grants the backend access — so a missing optional secret never breaks the deploy. Set the real Firecrawl key later via the Console (the project picker prevents the "wrong project" mistake).</div>
+
+<h4>Trap 1 — the env-var wipe (manual deploys)</h4>
 <p>
 Cloud Run services hold <strong>environment variables</strong> (named settings the program reads at startup, like the SMTP email password). When the script runs, it sets a fixed list of these settings and <strong>overwrites everything else</strong>, accidentally erasing important ones such as <code>SMTP_*</code> (email settings), <code>API_URL</code>, <code>RESEARCH_SECRET</code> (the password the scheduled jobs use), and <code>ALLOW_TEST_EMAILS</code>. The fix is to run a recovery script, <code>/tmp/post_deploy_backend.sh</code>, after <strong>every</strong> backend deploy to put those settings back.
 </p>
@@ -353,7 +372,8 @@ A developer can run all three services locally to test changes before deploying.
   <li><code>frontend/</code> — the React + Vite user interface (its <code>package.json</code>, <code>src/</code> source code, <code>Dockerfile</code> for building the container, and Nginx config for serving it).</li>
   <li><code>backend/</code> — the FastAPI server. Key files include <code>main.py</code> (the entry point), <code>db.py</code> (database connection), <code>models.py</code> (database table definitions), <code>cache.py</code> (answer caching), <code>vertex_agent.py</code> (the code that talks to the ADK/AI), <code>kb_browser.py</code> (browses the knowledge base), and the <code>kb_structured/</code> folder holding the 382 source documents.</li>
   <li><code>adk_agent/</code> — the Google ADK AI agent, with its agent logic under <code>ora_navigator_unified/</code> and its own <code>Dockerfile</code>.</li>
-  <li><code>deploy-cloudrun.sh</code> — the one deployment script.</li>
+  <li><code>backend/services/</code> — the proposal-toolkit logic (Chapter 5): <code>solicitation_extractor.py</code>, <code>url_fetcher.py</code>, <code>budget_helper.py</code>, <code>section_coach.py</code>, <code>compliance_sentinel.py</code>, <code>draft_critic.py</code>, <code>deadline_watcher.py</code>, <code>opportunity_finder.py</code>, <code>sample_proposals.py</code>, and the memory/research helpers.</li>
+  <li><code>cloudbuild.yaml</code> — the Cloud Build recipe that builds + deploys all three services on a push to <code>main</code>; <code>deploy-cloudrun.sh</code> — the manual fallback deploy script.</li>
   <li><code>CLAUDE.md</code> — the project's master notes file.</li>
 </ul>
 
@@ -395,11 +415,15 @@ THE AI (Gemini)  rule: "search the KB on EVERY ORA question"
 LAYER 2 - the receipt
   grounding chunks -> morgan.edu URLs -> the "Sources" block
   (saved to chat_history.citations so Sources survive refresh)
+  trusted answer came back uncited? -> _fallback_citations() runs a live
+     KB search and attaches the real Sources
    |
    v
 LAYER 3 - the fact-checker  (vertex_agent.py _run_verified)
-  grade ok / weak
-    weak -> redo once, strictly "KB-only" (_STRICT_PREFIX)
+  grade ok / weak    (greeting / small talk is never graded weak)
+    weak -> surgically re-ground ONLY the unsupported sentences (no 2nd search)
+    weak + over latency budget -> deliver Pass-1 + caution note (skip Pass-2)
+    weak (otherwise) -> redo once, strictly "KB-only" (_STRICT_PREFIX)
     still nothing -> REFUSE ("contact ORA")
   trust the clean redo (don't re-gate on Gemini's flaky chunk count)
   flag any number/date/SOP#/email/phone not found word-for-word in the docs
@@ -414,7 +438,7 @@ SAVE to cache  ->  SEND the answer + Sources
 <h4>Check 1 — Greetings, thanks, and "who made this" (canned replies)</h4>
 <p>If you type something like "hi", "hello", "thanks", or "who made this app", a pattern-matcher catches it and returns a fixed, pre-written reply with <em>zero</em> AI calls. This lives in <code>adk_agent/ora_navigator_unified/agent.py</code> in the <code>_greeting_fast_path</code> function (<code>agent.py:182</code>), which is wired in as <code>before_agent_callback</code>.</p>
 <p><strong>Why:</strong> a greeting needs no facts, so paying for an AI call and a KB search would be wasteful and slow. It also avoids "context bleed" — for example after a chat about withdrawing a proposal, "who made this?" could otherwise confuse the AI into talking about forms.</p>
-<div class="callout"><strong>Note:</strong> The "who made this app" answer is hard-coded so the bot never says "I don't have an app" — it always points to <code>ora.inavigator.ai</code>.</div>
+<div class="callout"><strong>Note:</strong> The "who made this app" answer is hard-coded so the bot never says "I don't have an app" — it always points to <code>ora.inavigator.ai</code>. A separate, load-bearing distinction: a plain greeting ("hi", "how are you", "thanks") gets a warm, KB-free reply — <em>not</em> the "I can only help with Morgan State…" refusal, and <em>not</em> the "developed for Morgan State / ora.inavigator.ai" identity blurb (that blurb is only for "who made this app"). The grounding gate must also never grade a greeting reply "weak" and regenerate it — that's what used to turn a friendly "I'm doing well!" back into a refusal (see Layer 3, Step A).</div>
 
 <h4>Check 2 — Was this exact (or very similar) question asked before? (the cache)</h4>
 <p>A <strong>cache</strong> is a memory of past answers. If the same question was already answered, replaying the stored answer is instant and free. ORA Navigator's cache has three tiers, all in <code>backend/cache.py</code> (class <code>MultiTierCache</code>):</p>
@@ -440,11 +464,12 @@ SAVE to cache  ->  SEND the answer + Sources
 <p>If none of the quick checks fired, this is a real ORA question and the AI will be called. But first, Layer 1 gives the AI a "head start" by stuffing some likely-relevant documents into the AI's instructions in advance.</p>
 <p><strong>TF-IDF</strong> (Term Frequency–Inverse Document Frequency) is a simple, no-AI scoring method that ranks documents by how often your search words appear in them, while down-weighting words that are common everywhere — so a rare, on-topic word like "IACUC" counts much more than a common word like "the." In one sentence: TF-IDF picks the documents whose wording best overlaps your question.</p>
 <p>The code is <code>adk_agent/ora_navigator_unified/kb_prefetch.py</code>, function <code>prefetch_kb_context</code>. It keeps all 382 KB docs in memory (refreshed every 5 minutes), tokenizes your question into keywords (dropping filler "stopwords"), scores every doc, and returns the top 5. It also boosts ORA-specific terms: acronyms like IRB / IACUC / COI / F&amp;A / FWA and SOP numbers get a big score bump so "SOP 12" finds the SOP page, not some unrelated text. This runs in under ~30 ms and costs nothing (no AI call).</p>
-<p>That top-5 text is pasted into the AI's system instruction as "[PRE-FETCHED KB CONTEXT]" by the <code>_select_model</code> function in <code>agent.py</code>, which runs as <code>before_model_callback</code>. It is called "belt-and-suspenders" grounding: even if the AI forgets to run its real search tool, some real KB text is already sitting in front of it.</p>
+<p>That top-5 text is pasted into the AI's system instruction by the <code>_select_model</code> function in <code>agent.py</code>, which runs as <code>before_model_callback</code>. It is called "belt-and-suspenders" grounding: even if the AI forgets to run its real search tool, some real KB text is already sitting in front of it.</p>
+<div class="callout"><strong>Note (the block is labeled "fact-check only" on purpose):</strong> the prefetched text is wrapped as <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code> (it used to say "use this to ground your answer"). The relabel — paired with a new grounding rule (Rule 8, below) — tells the model the excerpts are a <em>hallucination guard, not its answer</em>: it must not answer from them alone and must not cite them. This was load-bearing. When the model answered straight from the prefetched block, its own <code>VertexAiSearchTool</code> retrieval never ran, so <code>groundingMetadata</code> came back empty — the answer was correct but had <em>no Sources</em>, and it tripped the weak-grounding verdict, firing a slow Pass-2 regeneration. With the relabel the visible answer and its Sources rest on the model's own KB search.</div>
 <div class="callout"><strong>Note (gating — load-bearing bug fix):</strong> The prefetch is only injected on a <em>fresh user turn</em>, not in the middle of a tool call. The code checks <code>in_tool_loop</code> by looking only at the <strong>last</strong> item in the conversation: if it is a tool result (a <code>function_response</code>), the AI is mid-search and re-injecting prefetch would just push the real search results out of view. An earlier version scanned <em>all</em> past messages, so once any tool had been called, turn 1's leftover tool-result permanently disabled prefetch on every later turn — which left follow-ups like "give me a different training video" with no KB context and produced empty answers. Looking only at the last item fixes that.</div>
 
 <h3>2.3 The AI (Gemini) — search on every ORA question</h3>
-<p>Now the actual AI runs. It is Google's Gemini model (<code>gemini-2.5-flash</code>) driven through Google's "ADK" agent framework. Its full instruction sheet is <code>BASE_INSTRUCTION</code> in <code>agent.py</code>. The most important parts are the seven Grounding Rules.</p>
+<p>Now the actual AI runs. It is Google's Gemini model (<code>gemini-2.5-flash</code>) driven through Google's "ADK" agent framework. Its full instruction sheet is <code>BASE_INSTRUCTION</code> in <code>agent.py</code>. The most important parts are the eight Grounding Rules.</p>
 
 <h4>The real retriever: Vertex AI Search (semantic = by meaning)</h4>
 <p>The AI is given one tool: <strong>Vertex AI Search</strong> (<code>VertexAiSearchTool</code>). This is the <em>real</em> retriever. Unlike the Layer-1 keyword prefetch, Vertex AI Search is <strong>semantic</strong> — it matches by <em>meaning</em>, not exact words. So if you ask "how long can I extend my grant past the end date", it can find the "no-cost extension" document even though your question never used the words "no-cost extension." Grounding Rule 1 orders the AI to call this search on <strong>every</strong> ORA-content question — rates, policies, staff, forms, deadlines, IDs — with no exceptions.</p>
@@ -452,7 +477,7 @@ SAVE to cache  ->  SEND the answer + Sources
 <h4>When the AI skips the search</h4>
 <p>The AI skips searching in two cases: (1) greetings and small talk (already caught earlier by the fast-path), and (2) <strong>"about me" recall</strong>. Grounding Rule 6 says facts the user stated about themselves (their department, role, active grant, deadlines) are <em>not</em> KB questions — those answers come from the chat history, not from a document search. Searching the KB for "what department am I in?" would find nothing and wrongly make the bot say "I don't have that information."</p>
 
-<h4>The seven Grounding Rules in plain English</h4>
+<h4>The eight Grounding Rules in plain English</h4>
 <ul>
 <li><strong>Rule 1 — always search.</strong> Every ORA fact question triggers a KB search.</li>
 <li><strong>Rule 2 — never trust training data for Morgan facts.</strong> The AI's general internet memory is treated as outdated; only KB results count.</li>
@@ -461,12 +486,16 @@ SAVE to cache  ->  SEND the answer + Sources
 <li><strong>Rule 5 — enumeration uses the inventory tool first.</strong> For "list all X" type questions inside the AI path, it calls the deterministic topic list first.</li>
 <li><strong>Rule 6 — conversational recall.</strong> Facts about the user come from chat history, not the KB.</li>
 <li><strong>Rule 7 — NEVER return a blank answer.</strong> If asked to <em>confirm</em> a specific SOP / number / date that the KB doesn't contain, the AI must not go silent — it must explicitly say the item isn't in ORA's published records and route to ORA. A concrete example: "confirm IACUC SOP 37 covers cage sanitation." SOP 37 genuinely doesn't exist (the published list jumps 36 → 38). The AI must say so, never invent its contents. Before Rule 7, that question went silent and the user saw a useless error.</li>
+<li><strong>Rule 8 — "REFERENCE CONTEXT" is a fact-check only, not your answer.</strong> Any <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code> block (the Layer-1 prefetch) is a hallucination guard. The AI must not answer from it alone and must not cite it — the visible answer and its Sources must rest on the AI's own live KB search. This rule, plus the relabeled block (see 2.2), is what restored real Sources to grounded answers.</li>
 </ul>
 <p>The instruction sheet also repeats a hard "NEVER FABRICATE IDENTIFIERS" section that explicitly counts dates, page numbers, section numbers, and file names as identifiers too — so the AI can't paper over a gap by inventing "approved in 2017" or "see page 36" or "FringeRate-2018.pdf."</p>
 
 <h3>2.4 Layer 2 — the "receipt" (Sources)</h3>
 <p>When Gemini answers using its search tool, it returns <strong>grounding metadata</strong> alongside the text. Think of this as a receipt that says "these specific documents backed my answer." Each backing document is a <strong>grounding chunk</strong> (a chunk = one retrieved passage of KB text, with its title).</p>
 <p>The backend reads this receipt in <code>_do_agent_pass</code>: it counts the chunks, and turns them into a clean, clickable "Sources" list via <code>_extract_citations</code>. Because the live search index stores the doc <em>title</em> but not its web address, the backend rebuilds a title→URL map from the local KB files (<code>_get_kb_url_map</code>) so each source resolves to a real <code>morgan.edu</code> link. It keeps only sources the answer actually cited, deduplicates them, and caps the list at 5.</p>
+<h4>The citation fallback (when a good answer comes back uncited)</h4>
+<p>Sometimes a trustworthy ORA answer arrives with <em>no</em> grounding receipt at all (Gemini's chunk metadata is unreliable, and it's often empty even for a perfectly grounded answer). To guarantee Sources, the DELIVER step runs <code>_fallback_citations(query)</code>: it does its own live Vertex AI Search over the same unified datastore, resolves the matching titles → URLs via <code>_get_kb_url_map()</code>, and attaches them. It is gated by <code>_wants_fallback_citations()</code>, which <strong>skips</strong> small talk, refusals, outages, knowledge-base failures, and answers that are already cited — so it only adds real Sources to a trusted ORA answer that was missing them, and never to a greeting or a refusal.</p>
+<div class="callout"><strong>Note (you can't just "force" the search tool):</strong> a natural question is "why not make the model always run its search tool?" Google's <code>vertex_ai_search</code> is <em>native retrieval grounding</em>, not a function the agent declares — and the <code>tool_config mode=ANY</code> knob that can force a tool governs only declared <code>function_declarations</code>. So forcing retrieval isn't possible; the relabeled prefetch (2.2), Grounding Rule 8, and this deterministic fallback are how Sources are guaranteed instead.</div>
 <div class="callout"><strong>Note (Sources must survive a refresh):</strong> The Sources block is stored so it doesn't vanish when the page reloads or the answer is replayed from cache. There are two storage spots: (1) a <code>citations</code> column on the <code>chat_history</code> table — a JSON list of <code>{title, url}</code> — so reloading old chat history still shows Sources; and (2) a parallel cache entry under a <code>cit:</code> key so a cache hit can re-emit its Sources. This was the fix for Sources disappearing on cache/refresh/history reloads.</div>
 
 <h3>2.5 Layer 3 — the fact-checker (the real guarantee)</h3>
@@ -474,18 +503,23 @@ SAVE to cache  ->  SEND the answer + Sources
 
 <h4>Step A — run the AI (Pass 1) and grade the answer "ok" or "weak"</h4>
 <p>After Pass 1, the answer is graded by <code>_evaluate_grounding</code>. It is graded <strong>"ok"</strong> (deliver it) if any of these are true: it's a greeting/security/outage reply (no KB needed); it's already an honest "I don't have this" deflection; it was answered from an uploaded file or profile the user attached; it cited at least 2 KB documents; or at least 30% of the answer text is backed by KB passages. Otherwise it is graded <strong>"weak"</strong> and must be redone.</p>
-<p>One special case: <strong>personal-recall questions bypass the grade.</strong> If the question is "what's my deadline?" / "what department am I in?", detected by <code>_is_personal_recall</code>, a weak grade is flipped to "ok" — because that answer correctly came from chat history, not the KB, and forcing a KB-only redo would wrongly erase it.</p>
+<p>Two special cases bypass the grade. <strong>Personal-recall questions</strong> ("what's my deadline?" / "what department am I in?", detected by <code>_is_personal_recall</code>) flip a weak grade to "ok" — that answer correctly came from chat history, not the KB, and a KB-only redo would wrongly erase it. <strong>Greetings and small talk</strong> (detected by <code>_is_smalltalk</code>) do the same — a warm "I'm doing well!" must never be regraded weak and regenerated under the strict KB prompt, which would turn it back into a refusal.</p>
 
-<h4>Step B — if "weak", redo once under a strict KB-only prompt (Pass 2)</h4>
+<h4>Step B — try a surgical re-ground, and honor the latency budget</h4>
+<p>Before paying for a whole second answer, the backend tries to fix only what's broken. Using Gemini's grounded character-spans, <code>_unsupported_sentences</code> finds the specific fact-stating sentences that <em>aren't</em> backed by the retrieved KB text. If only a few sentences are unsupported, <code>_surgical_reground</code> rewrites <strong>only those sentences</strong> strictly from the already-retrieved text (no second KB search), and the rest of the good answer is kept as-is — far faster than regenerating everything.</p>
+<p>There is also a hard <strong>latency budget</strong>. A turn that stacks a full Pass-2 regeneration on top of Pass-1 can blow past the &lt;10-second target. So <code>_over_latency_budget(elapsed)</code> (controlled by <code>CHAT_LATENCY_BUDGET_S</code>, default <strong>7 seconds</strong>) checks whether the turn has already spent its budget. If a <em>usable</em> (non-empty) Pass-1 answer graded weak and the budget is spent, the backend delivers Pass-1 with a short caution note instead of regenerating — skipping the second round-trip entirely. (An <em>empty</em> Pass-1 still regenerates; the streaming path already skips Pass-2 because the answer is already on screen.) A per-turn <code>[LATENCY]</code> log records the milliseconds, the verdict, and the chunk count so the &lt;10s target is measurable.</p>
+<div class="callout"><strong>Note (the bigger lever was warm instances):</strong> the latency budget trims the worst-case turn, but the dominant cause of a slow <em>first</em> answer was never the pipeline — it was the 30–60-second Cloud Run cold start. Keeping the ADK and backend warm (Chapter 1) is what actually removed the ~40-second waits; the budget guard is the secondary lever.</div>
+
+<h4>Step C — if still weak, redo once under a strict KB-only prompt (Pass 2)</h4>
 <p>If the answer is weak, the backend wipes the AI's session (so the weak draft isn't in the AI's view) and asks again, this time prepending a strict instruction called <code>_STRICT_PREFIX</code>. In plain words, that prefix tells the AI: answer <em>only</em> from the knowledge base; you may still use facts the user told you about themselves; never guess or approximate; and if the KB genuinely doesn't have it, say so and point the user to ORA. This is the "double-checking sources" step the user sees in the progress indicator.</p>
 
-<h4>Step C — trust the clean redo (don't re-gate on the flaky chunk count)</h4>
+<h4>Step D — trust the clean redo (don't re-gate on the flaky chunk count)</h4>
 <p>This is a subtle but load-bearing decision. The strict redo already forced the AI to either ground its answer or honestly deflect. So if the redo produces <em>any</em> non-empty text, the backend <strong>trusts it</strong> and delivers it — it deliberately does NOT re-check the grounding-chunk count again. Why: Gemini reports that chunk-count metadata unreliably (it's often empty even for a perfectly correct, grounded answer), and re-gating on it is exactly what used to make Layer 3 throw away good answers.</p>
 
-<h4>Step D — if the redo also produces nothing, REFUSE</h4>
+<h4>Step E — if the redo also produces nothing, REFUSE</h4>
 <p>If even the strict redo comes back empty or errored, the backend refuses rather than guess. It returns <code>_REFUSAL_MSG</code>: "I don't have reliable information on this in my knowledge base, so I'd rather not guess. Please contact ORA at 443-885-4044 or ask.ora@morgan.edu …" A related edge case: if Pass 1 returns empty text <em>and</em> zero chunks (the dead-end that used to fire a useless "try rephrasing" error), it now degrades to this same honest refusal.</p>
 
-<h4>Step E — the identifier faithfulness check (verify the specifics word-for-word)</h4>
+<h4>Step F — the identifier faithfulness check (verify the specifics word-for-word)</h4>
 <p>For an answer that passed, <code>_finalize_answer</code> runs one more guardrail: <code>_check_identifier_faithfulness</code>. It scans the answer for high-risk specifics — SOP numbers, FWA / EIN / UEI numbers, F&amp;A and fringe percentages, dates, dollar amounts, emails, phone numbers, page / section numbers, and file names — and checks each one appears <strong>verbatim</strong> (exact, word-for-word) in the retrieved KB text. If a number was invented (not found in the docs), it's logged. Two safeguards prevent false alarms: ORA's own main phone and email are whitelisted so canned messages don't flag themselves, and it is <strong>negation-aware</strong> — it skips a value the answer is <em>refuting</em> ("the rate is NOT 99%"), since refuting a wrong number is faithful behavior, not a fabrication.</p>
 <div class="callout"><strong>Note (the removed "could not be verified" footer):</strong> There used to be a user-facing footer that appended "I couldn't verify this number against ORA's records…" whenever a specific value wasn't found verbatim. It was <strong>removed on 2026-06-02</strong> because it produced false positives: the check is purely token-based and couldn't tell <em>asserting</em> a number from <em>refuting</em> one — so when the bot correctly rejected a planted fake "99%" F&amp;A rate, the footer still fired and flagged the very number the bot was denying. The separate <strong>staff-name</strong> faithfulness disclaimer stays active — it appends a "verify at the staff directory" note when the answer mentions a "Dr. X" whose surname isn't in the ORA roster.</div>
 
@@ -521,6 +555,22 @@ SAVE to cache  ->  SEND the answer + Sources
 <tr>
 <td><strong>Frontend SSE buffer flush</strong></td>
 <td>The answer streams to the browser line-by-line. The browser's reader splits on newlines and keeps the last unfinished line in a buffer; it must <strong>flush that buffer after the stream ends</strong>. The final <code>data: {done}</code> frame can arrive without a trailing newline as the connection closes; if the buffer isn't flushed, that frame is dropped and the message stays "still streaming," firing the misleading frontend-only fallback "I couldn't generate a response." That string is a <strong>frontend</strong> fallback — the backend always produced and saved a real answer. Don't remove the flush.</td>
+</tr>
+<tr>
+<td><strong>Gemini 429 arrives as text, not an exception</strong></td>
+<td>When Vertex/Gemini is over quota, the error comes back as response <em>text</em> ("429 … RESOURCE_EXHAUSTED"), so it slips past the normal <code>except</code> handlers. <code>_is_rate_limited</code> detects it and retries with backoff, then flags a real outage — instead of laundering it into a "system is busy" sentence and then amplifying the load by regenerating it in Pass-2.</td>
+</tr>
+<tr>
+<td><strong>Grounded citations from the real KB search</strong></td>
+<td>A correct-but-uncited answer was the symptom of the model answering from the prefetched block instead of its own retrieval. The fix has three parts: the prefetch is relabeled <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code> (2.2); Grounding Rule 8 forbids answering from or citing it; and <code>_fallback_citations</code> runs a live KB search to attach real Sources when a trusted answer came back uncited (2.4). Forcing the native retrieval tool isn't possible, so these three together guarantee Sources.</td>
+</tr>
+<tr>
+<td><strong>Latency budget + warm instances</strong></td>
+<td>A turn can stack a full Pass-2 regeneration on Pass-1 and blow the &lt;10s target. <code>_over_latency_budget</code> (<code>CHAT_LATENCY_BUDGET_S</code>, default 7s) delivers a usable Pass-1 + caution note instead of regenerating once the budget is spent, and a <code>[LATENCY]</code> log makes the target measurable. The bigger lever, though, was keeping the ADK and backend warm so the chat path never pays a 30–60s cold start.</td>
+</tr>
+<tr>
+<td><strong>Token-by-token streaming with a guard</strong></td>
+<td>The answer streams cumulatively from the agent; the backend emits the new delta each event so the user sees it appear word-by-word. A short prefix guard (the first 60 characters) is held back before anything is shown, so a leaked error (a 429 or a KB-access failure) is caught and never streamed to the user. The streaming path never regenerates Pass-2 — the answer is already on screen — it only appends the caution note when weak.</td>
 </tr>
 </tbody>
 </table>
@@ -854,67 +904,149 @@ USER ASKS A QUESTION
 
 </section>
 <section class="chapter">
-<h2 id="agents">5. The AI Agents &amp; Proposals / Forms</h2>
+<h2 id="agents">5. The Proposal Toolkit — AI Agents, Tools &amp; Forms</h2>
 
-<p>This section explains the part of ORA Navigator that helps a faculty member actually <em>build and submit a grant proposal</em> — not just chat about grants. There are three small AI helpers (called "agents"), plus the screens and database tables they read and write. Everything here is wired up so a wrong guess by the AI can never quietly cause harm: a human always reviews before anything is committed, and the AI's output is double-checked against the real document.</p>
+<p>This section explains the part of ORA Navigator that helps a faculty member actually <em>build and submit a grant proposal</em> — not just chat about grants. It is a whole toolkit: some pieces are real LLM-backed "agents," others are deterministic tools with an optional advisory AI layer, plus the screens and database tables they read and write. Everything here is wired up so a wrong guess by the AI can never quietly cause harm: a human always reviews before anything is committed, the deterministic core is authoritative, and any AI claim is double-checked against the real document.</p>
 
-<h3>5.1 The big idea: agents that coordinate through a shared record</h3>
-<p>An "agent" here just means a focused piece of software that does one job and can call the AI model (Gemini) when it needs to. ORA Navigator has <strong>three</strong> agents:</p>
+<h3>5.1 The big idea: tools that coordinate through a shared record</h3>
+<p>A "tool" here just means a focused piece of software that does one job; an "agent" is a tool that can call the AI model (Gemini) when it needs to. The proposal toolkit is:</p>
 <ul>
-<li><strong>Solicitation Ingestion</strong> — reads a sponsor's grant announcement PDF and pulls out the key facts.</li>
-<li><strong>Draft Critic</strong> — checks a faculty member's draft proposal PDF against the rules.</li>
+<li><strong>Solicitation Ingestion</strong> — reads a sponsor's grant announcement (a PDF <em>or</em> a pasted URL) and pulls out the key facts.</li>
+<li><strong>Budget Helper</strong> — a deterministic grant-budget calculator (F&amp;A / MTDC / fringe math) with an AI-polished justification narrative.</li>
+<li><strong>Drafting Coach</strong> — per-section outlines and advisory feedback on the PI's own draft prose.</li>
+<li><strong>Compliance Sentinel</strong> — a deterministic "which approvals do I need?" questionnaire (IRB / IACUC / COI / RCR / export).</li>
+<li><strong>Draft Critic</strong> — checks the whole draft package against the rules before submission.</li>
 <li><strong>Deadline Watcher</strong> — emails faculty as a deadline gets close.</li>
+<li><strong>Task Guidance</strong> — a plain-English how-to attached to each checklist task.</li>
 </ul>
-<div class="callout"><strong>Note:</strong> There used to be a fourth agent called "Sponsor Fit-Finder" (it suggested funding sources). It was <strong>removed on 2026-06-01</strong>. The funding knowledge-base documents were kept, so the chatbot can still answer funding questions — but the agent itself is gone. So today there are exactly three agents.</div>
-<p>The most important design point: <strong>the agents never call each other directly.</strong> Instead, they all read and write the <em>same</em> proposal record in the database. Think of it like a shared notebook on a desk. Solicitation Ingestion writes the proposal's facts into the notebook. Later, Draft Critic opens the same notebook to learn the rules. Later still, Deadline Watcher opens it to see when things are due. None of them phones the others — they just share the notebook (the <code>submissions</code> and <code>submission_tasks</code> tables in the database).</p>
-<p>All three are <strong>real LLM-backed agents</strong> — they genuinely call the Gemini AI model. But every one of them is protected by <strong>evidence verification</strong>, not just polite instructions. "Evidence verification" means: after the AI says something, the code mechanically checks whether the AI's claim is actually backed by a real quote from the source document. If the AI invents a fact, the code catches it and throws it away. This is the difference between <em>asking</em> the AI to behave ("please don't make things up") and <em>forcing</em> it to ("if you can't quote it, we delete it").</p>
+<p>There are also two <strong>standalone discovery surfaces</strong> (browse pages, not per-proposal tools) covered later in this chapter: the <strong>Opportunity Finder</strong> (find live federal grants) and the <strong>Sample Proposals Library</strong> (read worked examples).</p>
+<div class="callout"><strong>Note (what was removed):</strong> Two tools were deleted by product decision and must not come back. The "Sponsor Fit-Finder" agent was <strong>removed on 2026-06-01</strong> (the funding knowledge-base documents stayed, so the chatbot still answers funding questions). The "Fundability / Eligibility self-check" tool (reviewer-lens scoring + go/no-go) was <strong>also removed</strong> — its files (<code>services/fundability.py</code>, <code>services/eligibility.py</code>), tests, the <code>FundabilityModal</code>, and the <code>/fundability</code> · <code>/eligibility</code> endpoints are all gone. The eligibility <em>text</em> extracted from a solicitation is still kept (<code>_eligibility_text_from_notes</code>) and fed to the Drafting Coach.</div>
+<p>The most important design point: <strong>the tools never call each other directly.</strong> Instead, they all read and write the <em>same</em> proposal record in the database. Think of it like a shared notebook on a desk. Solicitation Ingestion writes the proposal's facts into the notebook. Later, Budget Helper, the Drafting Coach, the Compliance Sentinel, and Draft Critic each open the same notebook to learn the rules. Deadline Watcher opens it to see when things are due. None of them phones the others — they just share the notebook (the <code>submissions</code> and <code>submission_tasks</code> tables in the database).</p>
+<p>The AI-backed pieces are protected by <strong>evidence verification</strong>, not just polite instructions. "Evidence verification" means: after the AI says something, the code mechanically checks whether the AI's claim is actually backed by a real quote from the source document. If the AI invents a fact, the code catches it and throws it away. This is the difference between <em>asking</em> the AI to behave ("please don't make things up") and <em>forcing</em> it to ("if you can't quote it, we delete it"). The deterministic tools (Budget Helper math, the Compliance Sentinel) have no AI in the authoritative path at all.</p>
 
 <h4>The shared Gemini client</h4>
-<p>All three agents reach Gemini through one shared helper, <code>backend/services/gemini_client.py</code> — "one reusable phone line to Gemini 2.5 Flash." It does three helpful things:</p>
+<p>Every AI-backed piece reaches Gemini through one shared helper, <code>backend/services/gemini_client.py</code> — "one reusable phone line to Gemini 2.5 Flash." It does three helpful things:</p>
 <ul>
 <li><strong>Builds the connection once and reuses it</strong> — no slow setup on every call.</li>
-<li><strong>Fails fast and safely.</strong> If the AI can't be reached at all (for example, running offline or in a test), every call returns <code>None</code> <em>immediately</em> instead of hanging. This is what lets each agent quietly fall back to its non-AI behavior.</li>
+<li><strong>Fails fast and safely.</strong> If the AI can't be reached at all (for example, running offline or in a test), every call returns <code>None</code> <em>immediately</em> instead of hanging. This is what lets each tool quietly fall back to its non-AI behavior.</li>
 <li><strong>Never crashes.</strong> The two public functions <code>generate_text</code> and <code>generate_json</code> always return either a clean result or <code>None</code> — they never raise an error. <code>generate_json</code> also strips out any stray markdown code-fences and tolerates odd control characters that PDFs sometimes leak.</li>
 </ul>
 <p>The model name is hard-coded to <code>"gemini-2.5-flash"</code> because the older <code>gemini-2.0-flash</code> name returns a "not found" error in this Google Cloud project.</p>
 
-<h3>5.2 Agent 1 — Solicitation Ingestion (PDF in, structured proposal out)</h3>
-<p>A "solicitation" (also called an FOA, "Funding Opportunity Announcement") is the long PDF a sponsor like NSF or NIH publishes to describe a grant: who can apply, how much money, the deadline, page limits, what attachments are required. Reading it carefully is tedious and error-prone. This agent does the first pass for you. Code lives in <code>backend/services/solicitation_extractor.py</code>.</p>
-<h4>Step by step, what happens to the PDF</h4>
+<h3>5.2 Solicitation Ingestion (a PDF or a URL in, a structured proposal out)</h3>
+<p>A "solicitation" (also called an FOA, "Funding Opportunity Announcement") is the long document a sponsor like NSF or NIH publishes to describe a grant: who can apply, how much money, the deadline, page limits, what attachments are required. Reading it carefully is tedious and error-prone. This agent does the first pass for you. Code lives in <code>backend/services/solicitation_extractor.py</code> and <code>backend/services/url_fetcher.py</code>.</p>
+<h4>Two ways in: upload a PDF, or paste a URL</h4>
+<p>There are two entry points that both end at the same extractor:</p>
+<ul>
+<li><strong>Upload a PDF</strong> — <code>POST /api/me/submissions/from-solicitation</code>. The file must be a PDF and at most 25 MB. The PDF is read into memory only (<code>pdf_bytes = await file.read()</code>), parsed locally with <code>pdfplumber</code>, and discarded — it is never saved to disk or any table. Because it is 100% local, an uploaded PDF <em>always</em> works, even for funder sites that block servers.</li>
+<li><strong>Paste a URL</strong> — <code>POST /api/me/submissions/from-solicitation/url</code> (body <code>{ "url": "..." }</code>). The backend fetches the page itself with <code>fetch_solicitation_text</code> and feeds the text to the same extractor, so the review screen is identical. The Opportunity Finder's "Start a proposal from this" handoff lands here (it pre-fills the URL box via the modal's <code>initialUrl</code> prop).</li>
+</ul>
+<h4>Fetching a URL safely (SSRF guard)</h4>
+<p>Letting a server fetch a user-supplied URL is dangerous — a malicious URL could point at the cloud's internal metadata service or a private IP. So <code>url_fetcher.py</code> is locked down:</p>
+<ul>
+<li>It resolves the hostname (<code>_resolve_public_ip</code>) and <strong>rejects</strong> any private, loopback, link-local, reserved, multicast, or unspecified address (<code>_ip_is_public</code>). If <em>any</em> resolved address is internal, the whole request is refused — including the cloud metadata endpoint <code>169.254.169.254</code>.</li>
+<li>It then <strong>pins the validated IP</strong> (<code>_PinnedIPAdapter</code>) so the actual connection goes to the address that was just checked — defeating "DNS rebinding," a trick where a hostname resolves to a safe IP during the check and a private IP a moment later. The real hostname is still used for the TLS certificate and <code>Host</code> header. Each redirect hop (up to <code>_MAX_REDIRECTS = 5</code>) is re-resolved and re-validated.</li>
+</ul>
+<h4>When funder sites block the server (the scraper fallback chain)</h4>
+<p>Some funder sites (NSF and other Akamai-fronted sites) deliberately block requests coming from cloud-datacenter IP addresses, so a direct fetch from Cloud Run gets a 403/blocked. To handle that, <code>fetch_solicitation_text</code> tries the <strong>direct fetch first</strong>, and on a blocked/empty result falls through a chain of scrapers in order:</p>
 <ol>
-<li><strong>You upload the PDF.</strong> The browser sends it to the endpoint <code>POST /api/me/submissions/from-solicitation</code>. The file must be a PDF and at most 25 MB.</li>
-<li><strong>The PDF is read into memory only.</strong> The endpoint does <code>pdf_bytes = await file.read()</code> — the bytes live in RAM for the length of the request. <strong>The PDF file is never saved to disk and never stored in any database table.</strong> Once the request finishes, the bytes are gone.</li>
-<li><strong>pdfplumber turns the PDF into plain text.</strong> <code>extract_text_from_pdf</code> opens the PDF with the <code>pdfplumber</code> library and pulls the text out of each page. It also strips illegal control characters that pdfplumber sometimes emits — those would otherwise break the next step.</li>
-<li><strong>Gemini extracts the facts as JSON.</strong> The text (up to 250,000 characters — a big window so facts buried deep in long FOAs aren't missed) is sent to Gemini with a very strict instruction sheet called <code>_EXTRACT_SYSTEM</code>. Gemini must return a JSON object with exactly these fields: <code>sponsor</code>, <code>program_id</code>, <code>program_name</code>, <code>deadline</code>, <code>page_limits</code>, <code>required_attachments</code>, <code>eligibility</code>, <code>budget_cap</code>, <code>submission_portal</code>, and <code>source_quotes</code>.</li>
+<li><strong>Firecrawl</strong> (<code>_fetch_via_firecrawl</code>, preferred) — a hosted service that runs a real browser from non-blocked IPs. It needs <code>FIRECRAWL_API_KEY</code>, and it treats the literal placeholder value <code>"unset"</code> (the deploy self-heals a missing secret to this) as "no key."</li>
+<li><strong>Jina reader</strong> (<code>r.jina.ai</code>) — a public read-through proxy; an optional <code>JINA_API_KEY</code> lifts its rate limit.</li>
+<li><strong>allorigins</strong> — a no-key public proxy, last resort.</li>
 </ol>
-<p>The <code>source_quotes</code> field is the clever part. For <em>every</em> value Gemini fills in, it must also paste the <strong>exact verbatim sentence</strong> from the PDF that proves that value. If Gemini can't find a real supporting quote, the rules tell it to return <code>null</code> ("no quote, no value"). The instruction sheet also forces other safety rules: never guess a deadline, use the <em>most restrictive</em> number when several are given (smallest budget cap, smallest page limit, so an applicant is never told they have more room than they do), and <code>budget_cap</code> means the maximum <em>per award</em>, not the total program budget.</p>
+<p>The fetched page is converted to text locally (HTML via lxml, or a downloaded PDF via pdfplumber), capped at 25 MB to match the upload limit.</p>
+<h4>Gemini extracts the facts as JSON</h4>
+<p>However the text arrived, it (up to <strong>250,000 characters</strong> — a big window so facts buried deep in long FOAs aren't missed) is sent to Gemini with a very strict instruction sheet called <code>_EXTRACT_SYSTEM</code>. Gemini must return a JSON object with these fields: <code>sponsor</code>, <code>program_id</code>, <code>program_name</code>, <code>deadline</code>, <code>deadline_details</code>, <code>page_limits</code>, <code>required_attachments</code>, <code>eligibility</code>, <code>budget_cap</code>, <code>budget_cap_details</code>, <code>submission_portal</code>, and <code>source_quotes</code>.</p>
+<p>The <code>source_quotes</code> field is the clever part. For <em>every</em> value Gemini fills in, it must also paste the <strong>exact verbatim sentence</strong> (≤200 chars) from the document that proves that value. If Gemini can't find a real supporting quote, the rules tell it to return <code>null</code> ("no quote, no value"). The instruction sheet also forces other safety rules: never guess a deadline, use the <em>most restrictive</em> number when several are given (smallest budget cap, smallest page limit, so an applicant is never told they have more room than they do), and <code>budget_cap</code> means the maximum <em>per award / per proposal</em>, not the total program budget.</p>
+<h4>Multiple deadlines and per-category caps</h4>
+<p>Real solicitations often have several deadlines or several funding tracks with different award maxima (e.g. NSF IDSS Category I / II / III). Two extra fields capture that without losing the single safe number:</p>
+<ul>
+<li><strong><code>deadline_details</code></strong> — a plain-text summary listing each deadline with its category/condition, surfaced in an "All deadlines (by category)" box. The single <code>deadline</code> stays the one used for reminders.</li>
+<li><strong><code>budget_cap_details</code></strong> — an array of <code>{category, cap}</code> when tracks have different maxima (a stated range is read as its <em>maximum</em>). The single <code>budget_cap</code> stays the <em>smallest</em> cap, so the default is conservative. These per-category caps are persisted as a <code>Category caps:</code> line in the proposal's <code>notes</code> and round-tripped by <code>reconstruct_solicitation_context</code>; the Budget Helper then shows a "Funding category" picker (see 5.3).</li>
+</ul>
 <h4>The anti-hallucination check: flag, don't drop</h4>
-<p>Telling the AI "always quote your source" is not enough — an AI can paste a fake quote. So after Gemini answers, a deterministic (non-AI) function <code>_verify_source_quotes</code> checks each filled field: it normalizes the text (lowercase, drop bullet symbols, collapse spaces) and asks "is this quote actually a substring of the real PDF text?" If a field has a value but no real quote behind it, that field name is added to a list called <code>unverified_fields</code>.</p>
-<p>The key policy is <strong>"flag, don't drop"</strong>: the suspicious value is <em>not</em> deleted. It is kept but marked, and the UI shows it in <strong>red</strong> so the human reviewing it knows to double-check that one. This is safe because a human reviews everything before it becomes a real proposal.</p>
-<div class="callout"><strong>Note:</strong> A wrong deadline can cost a faculty member an entire grant. That is exactly why this agent <strong>never</strong> creates a proposal by itself. Step 1 only <em>returns</em> the extracted facts for review. Nothing is saved yet.</div>
+<p>Telling the AI "always quote your source" is not enough — an AI can paste a fake quote. So after Gemini answers, a deterministic (non-AI) function <code>_verify_source_quotes</code> checks each filled field: it normalizes the text (lowercase, drop bullet symbols, collapse spaces) and asks "is this quote actually a substring of the real document text?" If a field has a value but no real quote behind it, that field name is added to a list called <code>unverified_fields</code>.</p>
+<p>The key policy is <strong>"flag, don't drop"</strong>: the suspicious value is <em>not</em> deleted. It is kept but marked, and the UI shows it in <strong>red</strong> (with a ⚠ "couldn't back this with a quote" note) so the human reviewing it knows to double-check that one. This is safe because a human reviews everything before it becomes a real proposal.</p>
+<div class="callout"><strong>Note:</strong> A wrong deadline can cost a faculty member an entire grant. That is exactly why this agent <strong>never</strong> creates a proposal by itself. Step one only <em>returns</em> the extracted facts for review. Nothing is saved yet.</div>
 <h4>Step two: the human confirms, and a Submission is born</h4>
 <p>After the user reviews and edits the extracted fields on screen, the browser calls a <em>second, separate</em> endpoint, <code>POST /api/me/submissions/from-solicitation/confirm</code>. This two-step design means a wrong AI guess can never auto-commit — the user must explicitly confirm.</p>
 <p>Confirm calls <code>create_submission_from_solicitation</code>, which is where the extracted facts finally get <strong>saved to the database</strong>:</p>
 <ul>
 <li>A new row is inserted into the <code>submissions</code> table: the <code>title</code>, <code>sponsor</code>, parsed <code>deadline</code>, <code>status="active"</code>, and a <code>notes</code> text blob.</li>
-<li>The <code>notes</code> column carries the leftover facts in a structured, machine-readable format — lines like <code>"Budget cap: $600,000"</code>, <code>"Page limits: project_description: 15p, ..."</code>, and <code>"Required attachments: ..."</code>. This matters later: Draft Critic reads these exact lines back out.</li>
+<li>The <code>notes</code> column carries the leftover facts in a structured, machine-readable format — lines like <code>"Budget cap: $600,000"</code>, <code>"Category caps: Category I — $750,000; ..."</code>, <code>"Page limits: project_description: 15p, ..."</code>, <code>"Required attachments: ..."</code>, and <code>"Eligibility: ..."</code>. This matters later: the Budget Helper, Drafting Coach, and Draft Critic all read these exact lines back out.</li>
 <li>The checklist tasks are inserted into the <code>submission_tasks</code> table: first the sponsor's standard template tasks, then one extra task per required attachment that the template didn't already cover (titled <code>"Prepare required attachment: X"</code>).</li>
 </ul>
 <table>
 <thead><tr><th>Artifact</th><th>Where it is saved</th></tr></thead>
 <tbody>
-<tr><td>The uploaded solicitation PDF</td><td>Nowhere persistent — read into memory, used, then discarded. Never on disk, never in a table.</td></tr>
+<tr><td>The uploaded solicitation PDF (or fetched URL text)</td><td>Nowhere persistent — read into memory, used, then discarded. Never on disk, never in a table.</td></tr>
 <tr><td>The extracted fields (before confirm)</td><td>Nowhere — returned in the HTTP response only; they live in the browser until the user confirms.</td></tr>
-<tr><td>The proposal itself (after confirm)</td><td>One row in the <code>submissions</code> table; budget cap / page limits / attachments stored as text lines in the <code>submissions.notes</code> column.</td></tr>
+<tr><td>The proposal itself (after confirm)</td><td>One row in the <code>submissions</code> table; budget cap / category caps / page limits / attachments / eligibility stored as text lines in the <code>submissions.notes</code> column.</td></tr>
 <tr><td>The checklist items</td><td>Rows in the <code>submission_tasks</code> table.</td></tr>
 </tbody>
 </table>
 
-<h3>5.3 Agent 2 — Draft Critic (check your draft before you submit)</h3>
-<p>Once you've written your actual proposal, Draft Critic gives it a pre-submission once-over: is it under the page limit? are all required attachments present? is the budget under the cap? Code lives in <code>backend/services/draft_critic.py</code>.</p>
+<h3>5.3 Budget Helper (deterministic grant-budget math, AI-polished prose)</h3>
+<p>The Budget Helper is the trustworthy, deterministic core of the toolkit. A PI types in line items — people (base salary, % effort, fringe category), plus equipment, travel, supplies, participant support, "other," and subawards — and the modal computes a full federal grant budget live as they type. Code lives in <code>backend/services/budget_helper.py</code>; the UI is <code>frontend/src/components/BudgetHelperModal.jsx</code>. <strong>Every number is computed by code; the LLM is forbidden to change any figure.</strong></p>
+<h4>The deterministic math</h4>
+<p>The entry point is <code>compute_budget</code>. It applies Morgan State's real, hard-coded rates:</p>
+<ul>
+<li><strong>F&amp;A (indirect cost) rates</strong> — for FY 2025–2026: Organized Research (on-campus) <strong>54%</strong>, Instruction 64%, Other Sponsored Activity 42%, Off-campus 26% (the prior year's organized-research rate was 53%). The default is organized research on-campus.</li>
+<li><strong>Fringe rates</strong> — Faculty (academic year) <strong>42%</strong>, Faculty summer 9%, Full-time / non-contractual 42%, Contractual 9%.</li>
+</ul>
+<p>The key subtlety it gets right: F&amp;A is charged only on the <strong>Modified Total Direct Cost (MTDC)</strong> base, not on every dollar. MTDC = total direct costs <em>minus</em> equipment, <em>minus</em> participant support, <em>minus</em> the portion of each subaward above the first <strong>$25,000</strong>. Per person, <code>salary = base × effort%</code> and <code>fringe = salary × fringe_rate</code>; the F&amp;A amount is <code>MTDC × F&amp;A rate</code>; the grand total is direct + F&amp;A. It then checks the total against the sponsor cap and reports <code>cap_status</code> as <code>none</code> / <code>ok</code> / <code>over</code>. Junk and negative inputs are coerced to zero with a warning; effort over 100% is clamped.</p>
+<h4>The coaching layer (advisory; never changes a number, never blocks saving)</h4>
+<ul>
+<li><strong><code>budget_advisories()</code></strong> — sanity flags: equipment over 40% of direct costs, travel over 25%, a person with salary but 0% effort, effort but $0 base, no personnel at all, or subawards over half the budget.</li>
+<li><strong><code>suggest_trims()</code></strong> — only fires when you're <em>over</em> the cap. It proposes concrete cuts to the flexible F&amp;A-eligible lines (travel → supplies → other); because those sit in MTDC, every $1 cut saves <code>$(1 + F&amp;A rate)</code> of total cost, which the suggestion explains.</li>
+<li>Plain-English tooltips for each category, the F&amp;A choice, and fringe.</li>
+</ul>
+<h4>v2: multi-year, CSV, and a real justification</h4>
+<ul>
+<li><strong>Multi-year projection.</strong> If the inputs include <code>project_years &gt; 1</code>, <code>compute_budget</code> escalates each person's salary by the chosen escalation percent each year, computes every year, and reports per-year and <em>cumulative</em> totals — and checks a multi-year award's cap against the <strong>cumulative</strong> total. Single-year output is unchanged.</li>
+<li><strong>CSV export.</strong> <code>budget_to_csv</code> serves a download at <code>GET /api/me/submissions/{id}/budget.csv</code>; its row order mirrors the on-screen grid.</li>
+<li><strong>Deterministic prose justification.</strong> <code>draft_justification</code> writes a labeled-paragraph budget-justification narrative (Personnel / Other direct costs / F&amp;A / Total project cost) using full sentences, every figure pulled straight from the computed budget — it reads like a real submission. There is also a one-sentence per-line justification.</li>
+</ul>
+<div class="callout"><strong>Note (AI is forbidden to touch figures):</strong> Only one endpoint, <code>POST /api/budget/justification</code>, calls the LLM, and only to <em>rewrite the prose</em> — the prompt explicitly says "do NOT change any dollar figure, percentage, name, or rate." There is a <strong>truncation guard</strong>: the AI output is kept only if it is non-empty <em>and</em> contains the total-cost figure verbatim; otherwise the code logs the truncation and falls back to the deterministic template. So a complete, figure-correct justification always comes back even when Gemini is down or cut off — a known under-load failure mode where the box would otherwise show a half-sentence.</div>
+<h4>Read-only effort helper, the category picker, and the spreadsheet view</h4>
+<ul>
+<li>The <strong>effort → person-months helper</strong> is read-only: it derives the months from each person's <code>effort_pct</code> in the People rows (academic 9 mo, summer 3 mo, calendar 12 mo), so it can never disagree with the budget.</li>
+<li>When a solicitation defined two or more funding categories, a <strong>"Funding category" picker</strong> appears (and only then). Its default is a blank "Select your category…" so the PI consciously chooses; picking a category fills the sponsor cap from <code>budget_cap_details</code>.</li>
+<li><code>compute_budget</code> also returns a render-ready <strong><code>table</code></strong> (<code>{columns, rows}</code>; one "Amount" column for single-year, a column per year plus "Total" for multi-year), built by <code>_budget_table</code> from the per-year breakdowns. The modal renders it as a read-only <strong>Budget table</strong> grid that <em>formats</em> numbers but computes none, so it always matches the summary and the CSV.</li>
+</ul>
+<div class="callout"><strong>Note (a load-bearing CSS detail):</strong> the Budget table's <code>&lt;table&gt;</code> uses the class <strong><code>bh-table</code></strong> — <em>not</em> <code>bh-grid</code>, which is the form's two-column <code>display:grid</code> and would silently turn the table into a broken 2-column grid with the header and body split and amounts clipped. The whole modal body (form + summary + table + justification) scrolls as one <code>.bh-scroll</code> region; the navy Summary is <code>position:sticky</code> so the total stays in view while the taller form scrolls (disabled on mobile). The justification panel has a Close (×) that clears the draft without closing the whole modal.</div>
+
+<h3>5.4 Drafting Coach (section outlines and advisory feedback)</h3>
+<p>The Drafting Coach helps a PI write one proposal section at a time. It has two modes and <strong>never writes the prose for the PI</strong> — it is coaching only. Code lives in <code>backend/services/section_coach.py</code>; the UI is <code>SectionCoachModal.jsx</code>.</p>
+<ul>
+<li><strong>Outline mode</strong> — a deterministic skeleton of the must-have elements for that section (always returned), optionally tailored by AI to this funder.</li>
+<li><strong>Feedback mode</strong> — advisory review of the PI's own pasted draft: which required elements are covered, partial, or missing, each backed by a verbatim quote from the draft.</li>
+</ul>
+<h4>The section menu is by sponsor</h4>
+<p>The constant <code>_SPONSOR_ORDER</code> picks which sections to show: <strong>NSF</strong> → Project Summary / Project Description / Broader Impacts / Data Management Plan; <strong>NIH</strong> → Specific Aims / Research Strategy / DMP; any other sponsor → a generic Abstract / Narrative / DMP.</p>
+<h4>What it does (v2 and v3)</h4>
+<ul>
+<li><strong>Save drafts</strong> — a PI's section text is stored in the <code>submissions.sections_json</code> column (endpoints <code>GET</code>/<code>PUT .../sections/drafts</code>).</li>
+<li><strong>Live length meter</strong> — the <code>WORD_TARGETS</code> constant gives each section a sensible word range (e.g. Project Summary 200–500), and feedback flags a draft as "long" or "short."</li>
+<li><strong>Deterministic clarity check</strong> — <code>clarity_check()</code> (no AI) flags very long sentences, heavy passive voice, undefined acronyms, and vague filler.</li>
+<li><strong>Solicitation-aware (v3)</strong> — the outline now <em>uses</em> the solicitation context it already has: tips reflect this funder's page limits, required attachments, and eligibility, and the "match THIS solicitation" panel shows in outline mode too. Each section maps (via <code>SECTION_SAMPLES</code>) to a worked example in the Sample Proposals Library, surfaced as a "See a worked example" link — and the link is validated with <code>get_sample</code> so it can never 404. In feedback mode, the review also flags any stated solicitation requirement the draft doesn't address.</li>
+</ul>
+<div class="callout"><strong>Note (grounding, and a real bug it fixed):</strong> like the Draft Critic, the Coach runs <code>_verify_evidence</code> on every "covered" claim — it must quote the draft, or it is dropped. The membership check <strong>collapses whitespace on both sides</strong> first (<code>" ".join(s.split())</code>). This matters because a pasted, hard-wrapped draft has a newline where Gemini's quote has a space (e.g. <code>"health,\nand"</code> vs <code>"health, and"</code>); a raw substring match would fail and wrongly mark a complete section "NOT FOUND." Collapsing whitespace is what stopped present sections from being reported as missing.</div>
+
+<h3>5.5 Compliance Sentinel (which approvals do I need?)</h3>
+<p>The Compliance Sentinel answers a question every new PI has: which research-compliance approvals does <em>this</em> proposal need? Code lives in <code>backend/services/compliance_sentinel.py</code>; the UI is <code>ComplianceSentinelModal.jsx</code>. <strong>It has no AI at all</strong> — every decision is a plain code rule, and the plain-English explanations are deterministic templates. (The chat assistant can explain compliance topics; this tool decides requirements deterministically.)</p>
+<p>The PI answers a short yes/no questionnaire — does the project involve human subjects, animals, a financial interest, foreign collaboration, or export-controlled technology? Combined with the proposal's sponsor, five code rules produce a checklist:</p>
+<ul>
+<li><strong>IRB</strong> (human subjects), <strong>IACUC</strong> (animals), <strong>COI</strong> (a financial interest — or automatically when the sponsor is NIH/PHS), <strong>RCR training</strong> (required when the sponsor is NSF or NIH), and <strong>Export Control / Research Security</strong> (export-controlled tech, or a "review" flag for foreign collaboration).</li>
+</ul>
+<p>Each item comes back marked <strong>required</strong>, <strong>not required</strong>, or <strong>review</strong>, with a plain-English "why," a timing note, and a resolved link to the matching ORA form in the knowledge base (and no link at all if the form can't be resolved, so there's never a dead link). An unanswered question defaults to "review" — it never invents a requirement.</p>
+<p>The PI can save their answers (stored in <code>submissions.compliance_json</code>) and click <strong>"Add required to my proposal,"</strong> which creates a checklist task for each <em>required</em> item (review/not-required items are advisory and are skipped). That step is idempotent — running it twice won't duplicate tasks. Endpoints: <code>GET /api/compliance/questions</code>, <code>POST /api/compliance/assess</code>, and the per-proposal <code>.../compliance</code> save and <code>.../compliance/tasks</code> add.</p>
+
+<h3>5.6 Draft Critic (check the whole package before you submit)</h3>
+<p>The Drafting Coach grades the <em>writing</em> of one section. The Draft Critic checks the <em>whole package's</em> completeness and compliance: is it under the page limit? are all required sections and solicitation-required attachments present? is the budget under the cap? Code lives in <code>backend/services/draft_critic.py</code>.</p>
 <p>You upload your draft to <code>POST /api/me/submissions/{submission_id}/critique</code>. Just like the solicitation upload, the draft PDF is <strong>read into memory only</strong> and never stored — it is parsed, checked, and discarded when the request ends.</p>
 <h4>Where the "rules" come from: reconstructed solicitation context</h4>
-<p>Draft Critic needs to know the rules to check against. It gets them by <em>rebuilding</em> them from the proposal record, using <code>reconstruct_solicitation_context</code>. This function reads the <code>submissions.notes</code> lines that Solicitation Ingestion wrote earlier — the budget cap, the page limits, the required attachments — and turns them back into a small rules dictionary. This is the "shared notebook" idea in action: Agent 1 wrote the rules into <code>notes</code>; Agent 2 reads them back out. The two agents never talk; they just share the record.</p>
+<p>Draft Critic needs to know the rules to check against. It gets them by <em>rebuilding</em> them from the proposal record, using <code>reconstruct_solicitation_context</code>. This function reads the <code>submissions.notes</code> lines that Solicitation Ingestion wrote earlier — the budget cap, the page limits, the required attachments — and turns them back into a small rules dictionary. This is the "shared notebook" idea in action: Solicitation Ingestion wrote the rules into <code>notes</code>; Draft Critic reads them back out. The tools never talk; they just share the record.</p>
 <h4>The two layers: deterministic core (boss) + advisory AI (helper)</h4>
 <p>The single entry point is <code>critique_pdf</code>. It produces two layers, and it is important which one is in charge.</p>
 <p><strong>Layer 1 — the deterministic core, which is AUTHORITATIVE (the boss).</strong> "Deterministic" means it uses plain, predictable code with no AI — so there is zero chance of hallucination. These checks run in order:</p>
@@ -926,11 +1058,11 @@ USER ASKS A QUESTION
 <li><strong>Project Summary word count</strong>, <strong>per-section page limits</strong> for DMP/biosketch etc., and <strong>budget vs cap</strong> (which understands "$2.5 million" as well as plain numbers).</li>
 </ul>
 <p>All these results roll up into a one-line <strong>verdict banner</strong>: "Critical issues" (red) if anything failed, "Needs review" / "Minor issues" (amber) for warnings, or "Looks ready" (green) if all clear. Because this layer is pure code, if it says "Biographical Sketch: MISSING," the user can trust that string really is absent from the document.</p>
-<p><strong>Layer 2 — the advisory AI review (the helper).</strong> Since 2026-06-03, after the deterministic checks finish, an optional Gemini review is added under a separate key called <code>ai_review</code> (turned on by the <code>include_ai=True</code> argument). It gives a plain-English summary, judgment calls the rules can't make, and rewrite suggestions. It runs against a strict instruction sheet which tells it to ground every claim in the draft and quote its evidence.</p>
+<p><strong>Layer 2 — the advisory AI review (the helper).</strong> After the deterministic checks finish, an optional Gemini review is added under a separate key called <code>ai_review</code> (turned on by the <code>include_ai=True</code> argument). It gives a plain-English summary, judgment calls the rules can't make, and rewrite suggestions. It runs against a strict instruction sheet which tells it to ground every claim in the draft and quote its evidence.</p>
 <p>Crucially, this AI layer is <strong>advisory only — it never changes the verdict, checks, or counts</strong>. And it gets the same evidence-verification treatment: <code>_verify_evidence</code> drops any finding whose quote is <em>not</em> actually a substring of the draft, and drops any "the draft does X" claim that came with no quote at all. So if the AI invents a quote or a feature, that whole finding is thrown away before you ever see it. If the AI is unavailable or errors, <code>ai_review</code> is simply <code>None</code> and the deterministic output is unchanged.</p>
 <div class="callout"><strong>Note:</strong> A clean way to remember it: the rules engine is the judge whose verdict is final; the AI is a colleague offering a second opinion in a clearly-labeled advisory box. The colleague can be ignored, can be wrong, or can be silent — and the judge's verdict never moves.</div>
 
-<h3>5.4 Agent 3 — Deadline Watcher (reminder emails that never double-send)</h3>
+<h3>5.7 Deadline Watcher (reminder emails that never double-send)</h3>
 <p>This agent emails faculty when one of their in-flight proposals is approaching its deadline. Code lives in <code>backend/services/deadline_watcher.py</code>.</p>
 <h4>When reminders fire</h4>
 <p>Reminders go out at exactly five points before the deadline: <code>THRESHOLD_DAYS = (14, 7, 3, 1, 0)</code> — so 14 days out, 7 days out, 3 days out, 1 day out, and on the due day (0). These are exact matches: a proposal that is 8 days out fires nothing; it waits until it hits 7. There are no negative buckets — once a deadline passes, the watcher stops nagging.</p>
@@ -944,23 +1076,28 @@ USER ASKS A QUESTION
 <h4>What triggers it</h4>
 <p>The watcher runs when something POSTs to <code>/api/internal/deadlines/check</code>. This endpoint is protected by a shared secret in the <code>X-Research-Secret</code> request header, matched against the <code>RESEARCH_SECRET</code> environment variable — so random internet traffic can't trigger it. In production, Google Cloud Scheduler calls this endpoint automatically once a day (at 7am Eastern). The endpoint just opens a database session and calls <code>send_due_reminders(db)</code>, then returns a small JSON summary (how many scanned, sent, failed).</p>
 
-<h3>5.5 The Proposals tracker screen (/my-proposals)</h3>
-<p>This is the page where a faculty member sees and manages their proposals. The UI code is <code>frontend/src/components/MyProposals.jsx</code>.</p>
+<h3>5.8 The Guided Proposal Pathway (/my-proposals)</h3>
+<p>This is the page where a faculty member sees and manages their proposals. The UI code is <code>frontend/src/components/MyProposals.jsx</code>. For an inexperienced PI, a flat toolbar of seven tools is intimidating — so this screen reshapes the same tools into a <strong>staged pathway</strong> (no new tool logic, just presentation and orchestration).</p>
 <p>What the user sees:</p>
 <ul>
 <li>A list of their proposal cards, each showing the title, sponsor, status pill (Active / Submitted / Withdrawn), and a countdown to the deadline that turns urgent when 7 or fewer days remain and "overdue" when it's past.</li>
-<li>Inside a proposal, the checklist of tasks. Each <code>TaskRow</code> shows a check circle, the task title, an optional description, and a "N days before deadline" hint. Clicking the circle toggles the task between pending and done.</li>
-<li>Buttons to upload a solicitation PDF (opening <code>SolicitationUploadModal</code>) and to critique a draft (<code>DraftCritiqueModal</code>). The "Critique Draft" button only appears for proposals that actually carry solicitation rules — the frontend checks the same <code>notes</code> lines the backend wrote.</li>
+<li>The summary also shows the <strong>internal ORA routing deadline</strong> — about <strong>5 business days before</strong> the sponsor's date (weekends skipped), computed by <code>proposals_service.internal_routing_deadline</code> and delivered as the <code>internal_deadline</code> field. This is the real institutional cutoff a first-timer should plan backward from.</li>
 </ul>
-<h4>Proposal templates (the seeded checklist)</h4>
-<p>When a proposal is created, its checklist isn't blank — it's seeded from a template so the user lands on a populated to-do list. Templates live in <code>backend/services/proposal_templates.py</code>. There is a <code>_GENERIC_CHECKLIST</code> used for any sponsor, plus NSF-specific and NIH-specific add-on tasks. <code>get_template</code> returns the right combined list for the sponsor. There's also a special NSF Education-program-only task that is appended <em>only</em> when the program text actually looks like an NSF education program — so a plain NSF science proposal doesn't get an irrelevant education checklist.</p>
-<h4>The kb_doc_id "Open form" link — and an honest caveat</h4>
-<p>Each template task can carry a <code>kb_doc_id</code> — a pointer to the matching form/template in the knowledge base, the idea being the UI could show an "Open form" link right on the task row. For example, "Build the proposal budget" points to <code>form_budget_justification_template</code>. This value <em>is</em> saved on the task row (column <code>submission_tasks.kb_doc_id</code>) and <em>is</em> sent to the browser by the API.</p>
-<div class="callout"><strong>Note (verified against the code):</strong> The frontend does <strong>not</strong> yet use <code>kb_doc_id</code>. The <code>TaskRow</code> component renders only the title, description, and the days-before-deadline hint — there is no "Open form" link anywhere in the file. So the data is delivered but unused: the "Open form" button is still to be built. (Tasks that have no matching KB form — biosketch, DMP, Specific Aims, etc. — correctly leave <code>kb_doc_id</code> as <code>None</code> so no dead link could ever be created.)</div>
+<h4>The three stages and the "next step"</h4>
+<p>Inside a proposal, the tools are grouped into three stages — <strong>Set up → Build → Review &amp; submit</strong>:</p>
+<ul>
+<li><strong>Set up</strong> — the Solicitation (a status, not a step: it can only be attached at creation).</li>
+<li><strong>Build</strong> — Budget Helper and Drafting Coach.</li>
+<li><strong>Review &amp; submit</strong> — Compliance Sentinel and (only when the proposal carries solicitation rules) Draft Critic.</li>
+</ul>
+<p>Each tool carries a ✓ status badge driven by serializer flags: <code>has_budget</code>, <code>has_sections</code> (true when <code>sections_json</code> is saved), <code>has_compliance</code>, and a <code>hasSolicitation</code> check on the notes lines (the Critic is stateless, so it has no badge). A pure function, <code>nextStep(submission)</code>, picks the single recommended action in order — budget → coach → compliance → critique → done — and <strong>only that one button gets the accent color</strong>; the rest share one calm style. A plain-language <strong>"What to do next"</strong> card explains the current step and <em>why</em> (shown for active proposals only). The less-common actions — Delete, and Add to Google Calendar — live behind a <code>⋯</code> overflow menu so they don't compete with the recommended step.</p>
+<h4>The checklist, templates, and per-task guidance</h4>
+<p>Each proposal owns a checklist of tasks (a check circle, the title, an optional description, and a "N days before deadline" hint; clicking the circle toggles done). When a proposal is created its checklist isn't blank — it's seeded from a template in <code>backend/services/proposal_templates.py</code> (a generic checklist for any sponsor, plus NSF- and NIH-specific add-ons; <code>get_template</code> combines them). There's a special NSF Education-program-only task that is appended <em>only</em> when the program text actually looks like an NSF education program — so a plain NSF science proposal doesn't get an irrelevant education checklist.</p>
+<p>Each task also carries plain-English help from <code>backend/services/task_guidance.py</code>: <code>guidance_for(title)</code> keyword-matches the task title to a how-to (and sometimes a short sample), attached as <code>guidance</code> in the task serializer. There's a per-task "Add to calendar" button (a Google Calendar link), plus a per-user <code>.ics</code> deadline feed.</p>
 <h4>The proposal/task API endpoints</h4>
 <p>The tracker talks to a small set of endpoints in <code>main.py</code>: list (<code>GET /api/me/submissions</code>), create (which seeds the template), get one, update, delete (which cascade-deletes its tasks), plus add / update / delete individual tasks, and a template list for the create dropdown. Every one of these is gated so a user can only touch their own proposals.</p>
 
-<h3>5.6 The Forms catalog (/forms)</h3>
+<h3>5.9 The Forms catalog (/forms)</h3>
 <p>The Forms catalog is a browsable list of ORA's forms, templates, checklists, and memos — so a faculty member can open the right PDF in one click without asking the chatbot (which would burn an AI call and risk a made-up link). Code lives in <code>backend/services/forms_catalog.py</code>.</p>
 <p>Where the catalog data comes from: it is a <strong>pure static read of a bundled file</strong> — no database, no AI, no network. At import time it reads <code>kb_structured/_all_documents.jsonl</code> once, keeps only the "form-like" documents (those whose subcategory mentions words like form, template, docusign, checklist, memo, sample), and for each one derives extra tags it can be filtered by:</p>
 <ul>
@@ -969,21 +1106,39 @@ USER ASKS A QUESTION
 </ul>
 <p>Each catalog entry includes the clickable form link (<code>url</code>), a "View on morgan.edu" source link (<code>source_url</code>), a short summary, and the sponsor/role tags. The endpoint <code>GET /api/forms</code> calls <code>list_forms</code> with optional <code>category</code>, <code>sponsor</code>, and <code>role</code> filters. Because everything is read straight from the bundled knowledge base, every link is real — nothing here is invented by an AI.</p>
 
-<h3>5.7 The tables that store all of this</h3>
+<h3>5.10 Opportunity Finder + Fit Advisor (/opportunities)</h3>
+<p>The Opportunity Finder closes the gap <em>before</em> a PI even has a solicitation: they describe their research in plain English and get a ranked list of <strong>live, open federal opportunities</strong>, each with a grounded fit explanation, an eligibility verdict, and a mechanism note. It's a standalone page (navbar "Find Funding"), not a per-proposal tool. Logic in <code>backend/services/opportunity_finder.py</code>; endpoint <code>POST /api/opportunities/search</code> (the search also pulls in the user's saved <code>interest</code> memories to enrich the query).</p>
+<ul>
+<li><strong>Source = Grants.gov public API</strong> (fixed host <code>api.grants.gov</code>, no key, covers all 26 federal agencies). It calls <code>search2</code> (keyword → open opportunity ids/basics) then <code>fetchOpportunity</code> per top result for the rich synopsis (applicant types, eligibility description, synopsis text, award ceiling, close date, contact). It returns an empty list — never fabricated results — on any API failure.</li>
+<li><strong>Eligibility = a deterministic STOP-gate</strong> (<code>eligibility_gate</code>). Morgan State's profile is baked in (public institution of higher education, HBCU, MSI — just like the F&amp;A rates are baked in) and matched against each opportunity's applicant-type descriptions → <code>eligible</code> / <code>unrestricted</code> / <code>see_text</code> / <code>ineligible</code>. AI is advisory only.</li>
+<li><strong>Ranking = AI advisory, grounded</strong> (<code>rank_and_explain</code>). Gemini re-ranks and writes a 1–2 sentence fit note, each backed by a verbatim quote that is <strong>verified against the synopsis text</strong> (unquotable quotes are dropped — the same whitespace-collapse pattern as the Coach). The model gets <code>max_output_tokens=4096</code> (a smaller budget truncated the ranking JSON and silently fell back). When Gemini is down it falls back to the API's relevance order with no AI prose.</li>
+</ul>
+<p>Each result also shows the internal ORA routing deadline (5 business days before close) and a mechanism note for recognized NIH activity codes (R01/R21/K-series, etc.). <strong>Nothing is persisted</strong> — the page only <em>reads</em> the user's interest memories to enrich the query; the live API results live in the browser. "Start a proposal from this" routes the opportunity's URL into the Solicitation upload modal (via router state and the modal's <code>initialUrl</code> prop), dropping the PI straight into the guided pathway. Tests: <code>tests/test_opportunity_finder.py</code> (unit) and <code>tests/test_opportunities_api_e2e.py</code> (route/auth).</p>
+
+<h3>5.11 Sample Proposals Library (/sample-proposals)</h3>
+<p>So an inexperienced PI can see what a fundable proposal actually reads like, there's a browse surface at <code>/sample-proposals</code> (navbar "Samples," styled like the Forms catalog). It's a <strong>hybrid</strong> of two entry kinds, ranked authored-first and filtered by a category chip (NSF / NIH / Foundations / Early-career). Data and helpers are a static constant in <code>backend/services/sample_proposals.py</code> — no database, no LLM, no network.</p>
+<ul>
+<li><strong>Type "pdf"</strong> — <em>original</em> samples we authored ourselves and host for download (zero copyright exposure; each PDF carries a "not a real submitted proposal" disclaimer). Three today: a full NSF planning proposal (EJ-IDSS), an NIH Specific Aims + Research Strategy excerpt, and an annotated Budget Justification.</li>
+<li><strong>Type "link"</strong> — vetted links <em>out</em> to authoritative public libraries (NSF's official sample, NIH/NIAID, USF/UAF/Northwestern/UChicago/Carleton-SERC, Open Grants, Morgan ORA). We never rehost these — they're copyrighted and often index pages, not single files.</li>
+</ul>
+<p>Endpoints: public <code>GET /api/sample-proposals?category=</code> (listing) and public <code>GET /api/sample-proposals/{id}/download</code> (a <code>FileResponse</code>; 404 for an unknown id, a "link" entry, or a missing file). The page sits behind <code>RequireAuth</code> like <code>/forms</code>, but the endpoints are auth-free because the content is all public.</p>
+<div class="callout"><strong>Note (how the PDFs ship):</strong> the authored PDFs are generated by <code>scripts/make_sample_proposals.py</code> (reportlab, dev-only) into <code>backend/sample_proposals/</code> and are <strong>committed</strong> so they ride along in the Docker image — <code>.gitignore</code> has a <code>!backend/sample_proposals/*.pdf</code> negation past the blanket <code>*.pdf</code> rule, without which the download would 404 in production. The backend needs <em>no</em> runtime PDF dependency — it only serves the pre-generated files.</div>
+
+<h3>5.12 The tables that store all of this</h3>
 <table>
 <thead><tr><th>Table</th><th>Key columns</th><th>What it holds</th></tr></thead>
 <tbody>
-<tr><td><code>submissions</code></td><td><code>id</code>, <code>user_id</code>, <code>title</code>, <code>sponsor</code> (default "Internal"), <code>deadline</code>, <code>status</code> (<code>active</code> / <code>submitted</code> / <code>withdrawn</code>, default <code>active</code>), <code>notes</code>, <code>created_at</code>, <code>updated_at</code></td><td>One in-flight proposal. The <code>notes</code> column secretly carries the structured solicitation rules (budget cap, page limits, attachments) that Draft Critic reads back.</td></tr>
+<tr><td><code>submissions</code></td><td><code>id</code>, <code>user_id</code>, <code>title</code>, <code>sponsor</code> (default "Internal"), <code>deadline</code>, <code>status</code> (<code>active</code> / <code>submitted</code> / <code>withdrawn</code>, default <code>active</code>), <code>notes</code>, <code>budget_json</code>, <code>compliance_json</code>, <code>sections_json</code>, <code>created_at</code>, <code>updated_at</code></td><td>One in-flight proposal. The <code>notes</code> column secretly carries the structured solicitation rules (budget cap, category caps, page limits, attachments, eligibility) that the Budget Helper, Coach, and Draft Critic read back. <code>budget_json</code> / <code>compliance_json</code> / <code>sections_json</code> hold the saved Budget Helper inputs, Compliance answers, and Drafting-Coach drafts (each is TEXT holding <code>json.dumps</code>, added by a self-healing migration).</td></tr>
 <tr><td><code>submission_tasks</code></td><td><code>id</code>, <code>submission_id</code>, <code>title</code>, <code>description</code>, <code>kb_doc_id</code>, <code>due_offset_days</code>, <code>status</code> (<code>pending</code> / <code>done</code>, default <code>pending</code>), <code>notes</code>, <code>sort_order</code></td><td>One checklist item under a proposal. Deletes automatically (cascade) when its proposal is deleted.</td></tr>
 <tr><td><code>deadline_reminder_log</code></td><td><code>id</code>, <code>submission_id</code>, <code>threshold_days</code> (14/7/3/1/0), <code>sent_at</code>, <code>sent_to</code> (which email)</td><td>One row per reminder already sent. This is the memory that makes Deadline Watcher never double-send.</td></tr>
 </tbody>
 </table>
-<p><strong>How tasks are generated:</strong> when a proposal is created manually, <code>create_submission</code> seeds tasks straight from the sponsor template. When a proposal is created from a solicitation, <code>create_submission_from_solicitation</code> seeds the template tasks <em>plus</em> one extra "Prepare required attachment: X" task for each attachment the solicitation listed that the template didn't already cover. After that, the user can freely add, edit, toggle, or delete tasks.</p>
+<p><strong>How tasks are generated:</strong> when a proposal is created manually, <code>create_submission</code> seeds tasks straight from the sponsor template. When a proposal is created from a solicitation, <code>create_submission_from_solicitation</code> seeds the template tasks <em>plus</em> one extra "Prepare required attachment: X" task for each attachment the solicitation listed that the template didn't already cover. The Compliance Sentinel can add more (one per required approval). After that, the user can freely add, edit, toggle, or delete tasks.</p>
 
-<h3>5.8 How your profile feeds the agents</h3>
+<h3>5.13 How your profile feeds the tools</h3>
 <p>A user's profile fields — Department, Title, Role, and research Interests — aren't just decoration; they quietly flow into the system that personalizes answers. The bridge is <code>mirror_profile_to_memories</code>, called from the profile-save path.</p>
 <p>"Mirroring" means copying the profile values into the <code>user_memories</code> table as memory facts: <code>department</code> becomes a memory of type <code>department</code>, the role becomes a memory of type <code>role</code>, and each interest becomes its own <code>interest</code> memory. (Title is intentionally <em>not</em> mirrored — there's no matching memory type.) A profile value <strong>overwrites</strong> any conflicting fact the system auto-learned earlier — the profile wins.</p>
-<p>Why bother? Because the chatbot already builds its context for each answer by reading the <code>user_memories</code> table through <code>build_memory_context</code>. By mirroring the profile into that same table, the profile values get picked up automatically — <strong>with no code change needed in the agent or chat path.</strong> It's the shared-notebook pattern again: instead of teaching the chatbot to read profile fields directly, the profile writes itself into the place the chatbot already looks. So a faculty member who sets their role to "PI" and department to "Chemistry" will get answers tailored to a Chemistry PI, simply because those facts now live in the memory the agent already consults.</p>
+<p>Why bother? Because the chatbot already builds its context for each answer by reading the <code>user_memories</code> table through <code>build_memory_context</code>, and the Opportunity Finder reads the same <code>interest</code> memories to enrich a funding search. By mirroring the profile into that one table, the values get picked up automatically — <strong>with no code change needed in the agent, chat path, or finder.</strong> It's the shared-notebook pattern again: instead of teaching each feature to read profile fields directly, the profile writes itself into the place they already look. So a faculty member who sets their role to "PI" and department to "Chemistry" will get answers tailored to a Chemistry PI, simply because those facts now live in the memory the tools already consult.</p>
 
 </section>
 <section class="chapter">
@@ -1101,7 +1256,8 @@ USER ASKS A QUESTION
 <tr><td><code>title</code> / <code>sponsor</code></td><td>The proposal's name and who is being applied to (defaults to "Internal").</td></tr>
 <tr><td><code>deadline</code></td><td>When the proposal is due (optional).</td></tr>
 <tr><td><code>status</code></td><td>One of <code>active</code> (default), <code>submitted</code>, <code>withdrawn</code>.</td></tr>
-<tr><td><code>notes</code></td><td>Free-text notes — and the structured solicitation rules that Draft Critic reads back.</td></tr>
+<tr><td><code>notes</code></td><td>Free-text notes — and the structured solicitation rules (budget cap, category caps, page limits, required attachments, eligibility) that the Budget Helper, Drafting Coach, and Draft Critic read back.</td></tr>
+<tr><td><code>budget_json</code> / <code>compliance_json</code> / <code>sections_json</code></td><td>TEXT columns holding <code>json.dumps</code> of, respectively, the saved Budget Helper inputs, the Compliance Sentinel answers, and the Drafting-Coach section drafts. Each was added later by a self-healing migration. The proposal serializer turns these into the <code>has_budget</code> / <code>has_compliance</code> / <code>has_sections</code> badges that drive the Guided Pathway (Chapter 5).</td></tr>
 <tr><td><code>created_at</code> / <code>updated_at</code></td><td>When created and last changed.</td></tr>
 </table>
 <p><strong>Cascade behavior:</strong> deleting a submission automatically deletes its tasks.</p>
@@ -1568,14 +1724,16 @@ USER ASKS A QUESTION
     <tr><td><code>/reset-password</code></td><td>Set a new password from the email link (<code>ResetPassword.jsx</code>)</td><td>Public</td></tr>
     <tr><td><code>/chat</code></td><td>The main chat (<code>Chatbox.jsx</code> inside a sidebar layout)</td><td>Private</td></tr>
     <tr><td><code>/forms</code></td><td>Forms &amp; templates catalog (<code>FormsCatalog.jsx</code>)</td><td>Private</td></tr>
-    <tr><td><code>/my-proposals</code></td><td>Proposal tracker (<code>MyProposals.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/sample-proposals</code></td><td>Sample Proposals Library (<code>SampleProposalsLibrary.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/opportunities</code></td><td>Opportunity Finder + Fit Advisor (<code>OpportunityFinder.jsx</code>)</td><td>Private</td></tr>
+    <tr><td><code>/my-proposals</code></td><td>Proposal tracker / Guided Pathway (<code>MyProposals.jsx</code>)</td><td>Private</td></tr>
     <tr><td><code>/profile</code></td><td>Profile / settings (<code>ProfilePage.jsx</code>)</td><td>Private</td></tr>
     <tr><td><code>/admin</code></td><td>Admin dashboard (<code>AdminDashboard.jsx</code>) — and only if your token says role = admin; otherwise a "Forbidden" page (<code>App.jsx:538-545</code>)</td><td>Private + admin-only</td></tr>
     <tr><td>anything else</td><td>Falls back to <code>/chat</code> or <code>/trychat</code> (<code>App.jsx:548-551</code>)</td><td>—</td></tr>
   </tbody>
 </table>
 
-<p>The top menu bar (<code>NavBar.jsx</code>) holds the links that move you between these pages: My Proposals, Forms, Profile (<code>NavBar.jsx:118-136</code>), plus Try Free / Log in / Sign up when you are logged out (<code>NavBar.jsx:161-171</code>). On the left there is also a <code>ChatSidebar.jsx</code> that lists your past chat conversations.</p>
+<p>The top menu bar (<code>NavBar.jsx</code>) holds the links that move you between these pages: <strong>Find Funding</strong> (the Opportunity Finder), <strong>Proposals</strong>, <strong>Forms</strong>, <strong>Samples</strong> (the Sample Proposals Library), and Profile, plus Try Free / Log in / Sign up when you are logged out. On the left there is also a <code>ChatSidebar.jsx</code> that lists your past chat conversations.</p>
 
 <h4>1. The Chat page (<code>/chat</code>) — the heart of the app</h4>
 
@@ -1619,10 +1777,12 @@ USER ASKS A QUESTION
 <p>There are two ways to start a proposal (<code>MyProposals.jsx:193-206</code>):</p>
 <ul>
   <li><strong>New Proposal</strong> — a manual form (title, sponsor, deadline, notes). NSF and NIH proposals get extra sponsor-specific checklist steps; others get a generic 10-step checklist (<code>MyProposals.jsx:464-467</code>). Creating it POSTs to <code>/api/me/submissions</code> (<code>MyProposals.jsx:149</code>).</li>
-  <li><strong>Start from Solicitation</strong> — opens <code>SolicitationUploadModal.jsx</code>. You drop the sponsor's PDF; the app reads it with AI and pre-fills deadline, page limits, and required attachments. It is a deliberate two-step flow so a wrong AI-read deadline can never auto-save: first <code>POST /api/me/submissions/from-solicitation</code> extracts the fields for you to review (<code>SolicitationUploadModal.jsx:54-63</code>), then you confirm with <code>POST .../from-solicitation/confirm</code> (<code>SolicitationUploadModal.jsx:78-84</code>). Any field whose supporting quote wasn't actually found in the PDF is shown in red so you double-check it.</li>
+  <li><strong>Start from Solicitation</strong> — opens <code>SolicitationUploadModal.jsx</code>. You either drop the sponsor's PDF <em>or</em> paste the solicitation's URL (the modal's <code>initialUrl</code> prop is what the Opportunity Finder's "Start a proposal from this" pre-fills). The app reads it and pre-fills deadline, page limits, required attachments, and budget caps. It is a deliberate two-step flow so a wrong AI-read deadline can never auto-save: an extract endpoint returns the fields for you to review, then a separate confirm endpoint commits them. Any field whose supporting quote wasn't actually found is shown in red so you double-check it.</li>
 </ul>
 
-<p>If a proposal came from a solicitation (so it has real rules like a page limit), a <strong>Critique Draft</strong> button appears (<code>MyProposals.jsx:309-317</code>). It opens <code>DraftCritiqueModal.jsx</code>, where you upload your draft PDF and it is checked against those rules via <code>POST /api/me/submissions/{id}/critique</code> (<code>DraftCritiqueModal.jsx:136-137</code>). The result has a verdict banner and a deterministic checklist (page count, attachments, budget), plus an <em>advisory</em> AI Review clearly badged as "advisory" so nobody mistakes the AI's opinion for the hard rules (<code>DraftCritiqueModal.jsx:73</code>).</p>
+<h4>The Guided Proposal Pathway (the staged toolbar)</h4>
+<p>Inside a proposal, the seven tools are not a flat row — for an inexperienced PI they're reshaped into three stages: <strong>Set up → Build → Review &amp; submit</strong> (no new tool logic, pure presentation). Each tool carries a ✓ badge from the serializer flags (<code>has_budget</code>, <code>has_sections</code>, <code>has_compliance</code>, and the solicitation status). A pure <code>nextStep(submission)</code> function picks the single recommended action and gives <em>only</em> that button the accent color; the rest share one calm style. A plain-language <strong>"What to do next"</strong> card explains the current step and why (active proposals only), and the less-common actions — Delete and Add to Google Calendar — live behind a <code>⋯</code> overflow. The summary also shows the <strong>internal ORA routing deadline</strong> (about 5 business days before the sponsor's date) so a first-timer plans backward from the real institutional cutoff.</p>
+<p>The Build and Review tools each open their own modal: <strong>Budget Helper</strong> (<code>BudgetHelperModal.jsx</code> — live budget math, advisories, a read-only budget table, CSV, and an AI-polished justification), <strong>Drafting Coach</strong> (<code>SectionCoachModal.jsx</code> — per-section outline or feedback with a "See a worked example" link), <strong>Compliance Sentinel</strong> (<code>ComplianceSentinelModal.jsx</code> — the deterministic "which approvals?" questionnaire with an "Add required to my proposal" button), and — when the proposal carries solicitation rules — <strong>Draft Critic</strong> (<code>DraftCritiqueModal.jsx</code>), whose result has a verdict banner and a deterministic checklist plus an <em>advisory</em> AI Review clearly badged as "advisory" so nobody mistakes the AI's opinion for the hard rules. (These are all covered in depth in Chapter 5.)</p>
 
 <h4>4. Forms &amp; Templates (<code>/forms</code>)</h4>
 
@@ -1659,6 +1819,12 @@ USER ASKS A QUESTION
 </table>
 
 <p>Which data loads is tied to the active tab (<code>AdminDashboard.jsx:685-695</code>) — for example opening the Research tab loads research stats and suggestions. This keeps the page fast by only fetching what you're looking at.</p>
+
+<h4>8. Find Funding (<code>/opportunities</code>) — the Opportunity Finder</h4>
+<p><code>OpportunityFinder.jsx</code> is a standalone discovery page. A PI types a plain-English description of their research and the page POSTs it to <code>/api/opportunities/search</code> (with the login token). It renders a ranked list of live federal grants pulled from Grants.gov, each with a grounded fit note, an eligibility badge (eligible / unrestricted / see-text / ineligible), a mechanism note, the close date, and the internal ORA routing deadline. A "Start a proposal from this" button routes the opportunity's URL into the Solicitation modal, dropping the PI into the guided pathway. The page guards against a too-short query and shows a graceful "couldn't reach the federal database" message on API failure. (Full logic in Chapter 5.)</p>
+
+<h4>9. Samples (<code>/sample-proposals</code>) — the Sample Proposals Library</h4>
+<p><code>SampleProposalsLibrary.jsx</code> is a browse surface styled like the Forms catalog. It loads <code>GET /api/sample-proposals</code> once on mount and filters client-side by a category chip (NSF / NIH / Foundations / Early-career). Authored example PDFs (which we host and serve via <code>GET /api/sample-proposals/{id}/download</code>) are listed first; the rest are vetted links out to public proposal libraries. The page sits behind <code>RequireAuth</code>, but the endpoints are public because the content is. (Full detail in Chapter 5.)</p>
 
 <h4>The PWA / service-worker caching gotcha (why you sometimes need incognito)</h4>
 
@@ -1734,7 +1900,33 @@ USER ASKS A QUESTION
 
 <h3 id="changelog">9.3 Changelog — What changes did we make</h3>
 
-<p>This is a simple list of the load-bearing changes, newest first, taken from the real git history and the project notes. Each line says <em>what</em> changed and <em>why</em> it mattered. Dates are from the development sessions in late May to early June 2026.</p>
+<p>This is a simple list of the load-bearing changes, newest first, taken from the real git history and the project notes. Each line says <em>what</em> changed and <em>why</em> it mattered. Dates are from the development sessions in late May to late June 2026.</p>
+
+<h4>June 9–25, 2026 — the proposal toolkit grows up (new tools, discovery pages, grounded Sources, a latency budget)</h4>
+<p><em>New PI-facing features</em></p>
+<ul>
+  <li><strong>Opportunity Finder + Fit Advisor.</strong> A new "Find Funding" page: describe your research in plain English and get a ranked list of live, open federal grants from Grants.gov, each with a grounded fit note, a deterministic Morgan-eligibility verdict, and a mechanism note. "Start a proposal from this" drops you straight into the guided pathway. Why: it helps a PI <em>before</em> they even have a solicitation in hand.</li>
+  <li><strong>Budget Helper.</strong> A deterministic grant-budget calculator — correct F&amp;A / MTDC / fringe math on Morgan's real rates, sanity advisories, under-cap trim suggestions, multi-year projection with escalation, a read-only budget table, CSV export, and an AI-polished (never AI-computed) justification narrative. A funding-category picker fills the sponsor cap when a solicitation has multiple tracks. Why: a trustworthy budget where every number is code-computed.</li>
+  <li><strong>Drafting Coach.</strong> Per-section outlines and advisory feedback on the PI's own prose (covered / partial / missing, each grounded in a quote), a live length meter, a deterministic clarity check, and — solicitation-aware — tips tailored to this funder plus a "See a worked example" link into the Sample Library. It coaches; it never writes the prose.</li>
+  <li><strong>Compliance Sentinel.</strong> A deterministic "which approvals do I need?" questionnaire (IRB / IACUC / COI / RCR / export) that produces a checklist and can add the required items as proposal tasks. No AI in the decision path at all.</li>
+  <li><strong>Guided Proposal Pathway.</strong> For inexperienced PIs, the flat toolbar became a staged path (Set up → Build → Review &amp; submit) with ✓ badges, a single accented "next step," a "What to do next" card, and the <strong>internal ORA routing deadline</strong> (about 5 business days before the sponsor's date) so a first-timer plans backward from the real cutoff.</li>
+  <li><strong>Sample Proposals Library.</strong> A "Samples" page: a hybrid of original example PDFs we authored and host (with disclaimers) and vetted links out to public proposal libraries — so a new PI can see what a fundable proposal actually reads like.</li>
+  <li><strong>Start a proposal from a URL.</strong> The solicitation importer now accepts a pasted URL, not just a PDF — with an SSRF-guarded fetcher (validated, pinned IP) and a Firecrawl → Jina → allorigins scraper fallback chain for funder sites (NSF/Akamai) that block server IPs.</li>
+</ul>
+<p><em>Chat reliability &amp; speed</em></p>
+<ul>
+  <li><strong>Grounded citations from the real KB search.</strong> A correct-but-uncited answer was the symptom of the model answering from the prefetched block instead of its own retrieval. Fixed in three parts: the prefetch is relabeled <code>[REFERENCE CONTEXT - FACT-CHECK ONLY]</code>, a new Grounding Rule 8 forbids answering from or citing it, and a deterministic fallback runs a live KB search to attach real Sources when a trusted answer came back without them.</li>
+  <li><strong>Chat latency budget + warm instances.</strong> A per-turn budget (default 7s) skips the slow Pass-2 regeneration when a usable Pass-1 answer graded weak, and a <code>[LATENCY]</code> log makes the &lt;10s target measurable. The bigger win was keeping the ADK and backend warm (startup CPU boost, no scale-to-zero) so the chat path stopped paying a 30–60s cold start — the real cause of slow first answers.</li>
+  <li><strong>Token-by-token streaming</strong> with a short prefix guard so a leaked quota error is caught and never shown.</li>
+  <li><strong>Gemini 429 handled honestly.</strong> A quota error arrives as response text; it's now detected and retried with backoff, then flagged as a real outage — instead of being laundered into a "system is busy" line and amplified by regenerating it.</li>
+  <li><strong>Greetings answered warmly.</strong> "hi" / "how are you" / "thanks" get a brief, friendly, KB-free reply — not the "I can only help with Morgan State" refusal and not the identity blurb — and the grounding gate no longer regrades a greeting as "weak."</li>
+  <li><strong>Transient "busy / try again" messages are never cached</strong>, so a momentary outage can't get stuck poisoning the cache.</li>
+</ul>
+<p><em>Infrastructure &amp; cleanup</em></p>
+<ul>
+  <li><strong>Deploy via Cloud Build on push to <code>main</code></strong>, building all three services with the correct <code>ora-*</code> secret names and the full Vertex env (<code>GOOGLE_GENAI_USE_VERTEXAI=TRUE</code>) on both the ADK and backend. An optional <code>ora-firecrawl-api-key</code> secret self-heals to a placeholder so a missing key never breaks the deploy.</li>
+  <li><strong>Removed the Fundability / Eligibility self-check tool</strong> by product decision (its files, tests, modal, and endpoints are gone). The eligibility <em>text</em> from a solicitation is still kept and fed to the Drafting Coach.</li>
+</ul>
 
 <h4>June 8, 2026 — Draft Critic accuracy, 100% live form links, faster login &amp; safer deploys</h4>
 <ul>
@@ -1822,14 +2014,17 @@ USER ASKS A QUESTION
     <tr><td>The 382 source KB documents</td><td>On disk → <code>backend/kb_structured/</code> (one <code>.json</code> file each)</td><td>Permanent; the source of truth that is indexed into the datastore.</td></tr>
     <tr><td>An uploaded <strong>solicitation PDF</strong></td><td><strong>In memory only</strong> — read, parsed, then discarded</td><td>Never saved to disk or any table. Only the confirmed extracted facts persist.</td></tr>
     <tr><td>The extracted solicitation fields (before you confirm)</td><td><strong>Nowhere</strong> — returned in the HTTP response, held in the browser</td><td>Gone unless you click Confirm.</td></tr>
-    <tr><td>A confirmed proposal</td><td>Cloud SQL → <code>submissions</code> table (one row); rules live in <code>submissions.notes</code></td><td>Permanent until the user deletes it.</td></tr>
+    <tr><td>A confirmed proposal</td><td>Cloud SQL → <code>submissions</code> table (one row); solicitation rules live in <code>submissions.notes</code></td><td>Permanent until the user deletes it.</td></tr>
     <tr><td>A proposal checklist item</td><td>Cloud SQL → <code>submission_tasks</code> table (one row)</td><td>Permanent; cascade-deletes with its proposal.</td></tr>
-    <tr><td>An uploaded <strong>draft proposal PDF</strong> (for critique)</td><td><strong>In memory only</strong> — checked, then discarded</td><td>Never stored. Only the critique result is returned to the browser.</td></tr>
+    <tr><td>Saved Budget Helper inputs / Compliance answers / Coach drafts</td><td>Cloud SQL → <code>submissions.budget_json</code> / <code>compliance_json</code> / <code>sections_json</code> (JSON text)</td><td>Permanent with the proposal; these power the <code>has_budget</code> / <code>has_compliance</code> / <code>has_sections</code> pathway badges.</td></tr>
+    <tr><td>A computed budget / justification / opportunity search</td><td><strong>Nowhere</strong> by itself — computed on request and returned to the browser</td><td>The Budget Helper math, the AI justification, and the Opportunity Finder's Grants.gov results are all live; only the <em>inputs</em> you save (above) persist.</td></tr>
+    <tr><td>An uploaded <strong>draft proposal PDF</strong> (for critique), or a fetched solicitation URL's text</td><td><strong>In memory only</strong> — checked, then discarded</td><td>Never stored. Only the critique result / extracted facts are returned to the browser.</td></tr>
+    <tr><td>The authored <strong>sample-proposal PDFs</strong></td><td>On disk → <code>backend/sample_proposals/</code> (committed to the repo)</td><td>Permanent; generated by a dev script and shipped inside the Docker image so the public download works.</td></tr>
     <tr><td>A sent deadline reminder</td><td>Cloud SQL → <code>deadline_reminder_log</code> table (one row per email)</td><td>Permanent; this is the record that prevents double-sending.</td></tr>
     <tr><td>A support ticket (+ its optional attachment)</td><td>Cloud SQL → <code>support_tickets</code> table (attachment as base64 in the row)</td><td>Permanent until closed/deleted.</td></tr>
     <tr><td>Thumbs-up/down/report feedback</td><td>Cloud SQL → <code>feedback</code> table (one row); a "report" also writes a <code>failed_queries</code> row</td><td>Permanent.</td></tr>
     <tr><td>A user's profile (Department/Title/Role/Interests)</td><td>Cloud SQL → <code>users</code> columns, <em>and</em> mirrored into <code>user_memories</code></td><td>Permanent; profile values overwrite auto-learned facts.</td></tr>
-    <tr><td>Secrets (DB password, JWT key, admin login, Redis URL)</td><td>Google <strong>Secret Manager</strong> (read into env vars at startup)</td><td>Permanent; never written in code or the repo. Rotatable.</td></tr>
+    <tr><td>Secrets (DB password, JWT key, admin login, Redis URL, Firecrawl key)</td><td>Google <strong>Secret Manager</strong> (read into env vars at startup)</td><td>Permanent; never written in code or the repo. Rotatable. The optional Firecrawl key self-heals to a placeholder if missing.</td></tr>
     <tr><td>The built application (the running programs)</td><td>Artifact Registry (container images) → run on Cloud Run</td><td>Each deploy pushes a new image.</td></tr>
   </tbody>
 </table>
@@ -1875,6 +2070,9 @@ USER ASKS A QUESTION
     <tr><td><strong>Prefetch</strong></td><td>Pasting a few likely-relevant docs into the AI's instructions in advance, as a head start.</td></tr>
     <tr><td><strong>Refusal / deflection</strong></td><td>When the bot honestly says it doesn't have the info and points you to ORA, instead of guessing.</td></tr>
     <tr><td><strong>SSE (Server-Sent Events)</strong></td><td>A way to stream an answer to the browser piece-by-piece so you see it appear gradually.</td></tr>
+    <tr><td><strong>Reference context (fact-check only)</strong></td><td>The prefetched KB excerpts, labeled so the model treats them as a hallucination guard, not its answer — it must not answer from or cite them (Grounding Rule 8).</td></tr>
+    <tr><td><strong>Surgical re-grounding</strong></td><td>Rewriting only the few sentences of a draft answer that aren't backed by the KB, instead of regenerating the whole thing.</td></tr>
+    <tr><td><strong>Latency budget</strong></td><td>A per-turn time limit (default 7s) that delivers a usable first answer plus a caution note instead of paying for a slow second regeneration.</td></tr>
   </tbody>
 </table>
 
@@ -1922,7 +2120,11 @@ USER ASKS A QUESTION
     <tr><td><strong>IAM / role</strong></td><td>Identity and Access Management — Google's permission system; a "role" is a bundle of permissions.</td></tr>
     <tr><td><strong>Cron job</strong></td><td>A task that runs automatically on a fixed schedule.</td></tr>
     <tr><td><strong>Cloud Scheduler</strong></td><td>Google's "alarm clock" that triggers cron jobs at set times.</td></tr>
-    <tr><td><strong>Deploy</strong></td><td>Publishing the latest code from a laptop to the live Cloud Run services.</td></tr>
+    <tr><td><strong>Deploy</strong></td><td>Publishing the latest code to the live Cloud Run services.</td></tr>
+    <tr><td><strong>Cloud Build</strong></td><td>Google's build-and-deploy service; a push to <code>main</code> triggers it to build and deploy all three services.</td></tr>
+    <tr><td><strong>Warm instance / cold start</strong></td><td>A "cold start" is the 30–60s wait to spin up a scaled-to-zero service; keeping the ADK and backend "warm" (always one running) avoids it on the chat path.</td></tr>
+    <tr><td><strong>SSRF</strong></td><td>Server-Side Request Forgery — tricking a server into fetching a private/internal address; the URL importer guards against it by validating and pinning the IP.</td></tr>
+    <tr><td><strong>Firecrawl</strong></td><td>A hosted browser-scraper used to fetch funder pages (e.g. NSF) that block server IPs when importing a solicitation from a URL.</td></tr>
     <tr><td><strong>PWA</strong></td><td>Progressive Web App — a website that installs like an app and caches itself with a "service worker."</td></tr>
     <tr><td><strong>Service worker</strong></td><td>The background script that caches the app's files (why you check changes in incognito).</td></tr>
   </tbody>
@@ -1942,6 +2144,26 @@ USER ASKS A QUESTION
     <tr><td><strong>RCR</strong></td><td>Responsible Conduct of Research — required research-ethics training.</td></tr>
     <tr><td><strong>No-cost extension (NCE)</strong></td><td>Extra time to finish a grant past its end date, with no extra money.</td></tr>
     <tr><td><strong>Biosketch / DMP</strong></td><td>A short researcher CV / a Data Management Plan — common required proposal attachments.</td></tr>
+    <tr><td><strong>MTDC</strong></td><td>Modified Total Direct Cost — the base F&amp;A is charged on; excludes equipment, participant support, and each subaward's amount over $25,000.</td></tr>
+    <tr><td><strong>Fringe rate</strong></td><td>The percentage added to a salary for benefits (Morgan's faculty academic-year fringe is ~42%, summer/contractual ~9%).</td></tr>
+    <tr><td><strong>Budget cap</strong></td><td>The maximum award a sponsor allows per proposal (not the total program budget); per-track caps are stored as "category caps."</td></tr>
+    <tr><td><strong>Grants.gov</strong></td><td>The U.S. government's public grants portal/API the Opportunity Finder searches across all 26 federal agencies.</td></tr>
+    <tr><td><strong>Internal routing deadline</strong></td><td>Morgan ORA's institutional cutoff — about 5 business days before the sponsor deadline — to plan backward from.</td></tr>
+  </tbody>
+</table>
+
+<h3>The proposal toolkit</h3>
+<table>
+  <tbody>
+    <tr><td><strong>Solicitation Ingestion</strong></td><td>Reads a sponsor PDF or URL and extracts the rules (deadline, caps, page limits, attachments) for human review.</td></tr>
+    <tr><td><strong>Budget Helper</strong></td><td>A deterministic grant-budget calculator (F&amp;A / MTDC / fringe), with an AI-polished — never AI-computed — justification.</td></tr>
+    <tr><td><strong>Drafting Coach</strong></td><td>Per-section outlines and grounded, advisory feedback on the PI's own prose; it coaches but never writes the prose.</td></tr>
+    <tr><td><strong>Compliance Sentinel</strong></td><td>A deterministic questionnaire that decides which approvals (IRB/IACUC/COI/RCR/export) a proposal needs.</td></tr>
+    <tr><td><strong>Draft Critic</strong></td><td>Checks the whole draft package against the rules (page limits, sections, attachments, budget) with an advisory AI second opinion.</td></tr>
+    <tr><td><strong>Deadline Watcher</strong></td><td>Sends reminder emails at 14/7/3/1/0 days out, never double-sending.</td></tr>
+    <tr><td><strong>Opportunity Finder</strong></td><td>Describe your research → a ranked list of live federal grants with a grounded fit note and eligibility verdict.</td></tr>
+    <tr><td><strong>Sample Proposals Library</strong></td><td>Browse worked example proposals — authored PDFs we host plus vetted links out to public libraries.</td></tr>
+    <tr><td><strong>Guided Proposal Pathway</strong></td><td>The staged Set up → Build → Review presentation of the toolkit, with a single recommended "next step."</td></tr>
   </tbody>
 </table>
 
