@@ -15,9 +15,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 
 #  FIXED IMPORTS: Use 'pypdf' which you installed, not 'PyPDF2'
-import pypdf 
+import pypdf
 import docx
-from langchain.schema import SystemMessage, HumanMessage 
 
 from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -56,27 +55,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, text
 
-# Vertex AI Agent Engine (replaces Pinecone + OpenAI RAG pipeline)
+# Vertex AI Agent Engine (the RAG pipeline: ADK agent + VertexAiSearchTool)
 from vertex_agent import query_agent, query_agent_stream, check_agent_health, reset_session, get_last_grounding
 
 # Query caching for faster responses
 from cache import query_cache, get_context_hash, log_cache_stats
 from services.feature_suggester import suggest_feature
 from kb_browser import try_browse, browse_citations
-
-
-# Legacy imports kept for /ingest endpoint and file analysis fallback
-try:
-    from langchain.text_splitter import TokenTextSplitter
-    from langchain_openai import OpenAIEmbeddings
-    from langchain_pinecone import PineconeVectorStore
-    from langchain_community.chat_models import ChatOpenAI
-    from langchain.chains import RetrievalQA
-    from pinecone import Pinecone
-    LEGACY_RAG_AVAILABLE = True
-except ImportError:
-    LEGACY_RAG_AVAILABLE = False
-    print("   Legacy RAG imports not available (Pinecone/LangChain not installed)")
 
 # Local Imports (Auth & DB) - These must run AFTER load_dotenv
 from db import SessionLocal, engine, Base
@@ -97,12 +82,8 @@ from jose import JWTError, jwt
 USE_VERTEX_AGENT   = os.getenv("USE_VERTEX_AGENT", "true").lower() == "true"
 ADK_BASE_URL       = os.getenv("ADK_BASE_URL", "http://127.0.0.1:8080")
 
-# Legacy Pinecone + OpenAI config (kept for /ingest and TTS)
-PINECONE_API_KEY   = os.getenv("PINECONE_API_KEY")
-PINECONE_ENV       = os.getenv("PINECONE_ENV")
-PINECONE_INDEX     = os.getenv("PINECONE_INDEX_NAME")
-PINECONE_NAMESPACE = os.getenv("PINECONE_NAMESPACE", "docs")
-OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY")  # Still needed for TTS
+# OpenAI config (used for text-to-speech only, not retrieval)
+OPENAI_API_KEY     = os.getenv("OPENAI_API_KEY")
 JWT_SECRET         = os.getenv("JWT_SECRET")
 ALGORITHM          = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "4320"))  # 3 days default
@@ -122,8 +103,8 @@ for folder in [UPLOAD_FOLDER, CHAT_FILES_FOLDER]:
 # Safety check for keys
 if USE_VERTEX_AGENT:
     print(f"[INFO] Using Vertex AI Agent Engine at {ADK_BASE_URL}")
-elif not all([PINECONE_API_KEY, PINECONE_ENV, PINECONE_INDEX, OPENAI_API_KEY]):
-    print("[WARN] WARNING: Some API keys are missing. Chatbot features will be limited.")
+else:
+    print("[WARN] USE_VERTEX_AGENT is disabled; the chat path requires the Vertex AI agent.")
 
 # ==============================================================================
 # 3. DATABASE MODELS
@@ -309,50 +290,13 @@ init_db()
 # 4. FASTAPI APP SETUP
 # ==============================================================================
 # AI System globals (initialized in lifespan)
-pc = None
-retriever = None
-qa = None
-llm = None
-
 def build_qa_chain():
-    """Initialize legacy AI components on startup (only when not using Vertex AI)"""
-    global retriever, qa, llm, pc
-    if USE_VERTEX_AGENT:
-        # Check Vertex AI Agent health
-        health = check_agent_health()
-        print(f" Vertex AI Agent: {health['status']} - {health['message']}")
-        if health["status"] != "connected":
-            print("[WARN] ADK server not running. Start it with:")
-            print("   cd google-ai-engine-research/adk_deploy && python -m google.adk.cli web . --port 8080")
-        return
-
-    if not LEGACY_RAG_AVAILABLE:
-        print("[WARN] Legacy RAG libraries not installed. Chatbot will be offline.")
-        return
-    if not all([PINECONE_API_KEY, OPENAI_API_KEY, PINECONE_INDEX]):
-        print("[WARN] API Keys missing. Chatbot will be offline.")
-        return
-    try:
-        pc = Pinecone(api_key=PINECONE_API_KEY)
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=OPENAI_API_KEY)
-        store = PineconeVectorStore.from_existing_index(
-            index_name=PINECONE_INDEX,
-            embedding=embeddings,
-            namespace=PINECONE_NAMESPACE,
-        )
-        retriever = store.as_retriever(
-            search_type="mmr",
-            search_kwargs={
-                "k": 10,
-                "fetch_k": 30,
-                "lambda_mult": 0.5
-            }
-        )
-        llm = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model_name="gpt-3.5-turbo", temperature=0)
-        qa = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True)
-        print("[OK] Legacy AI System Initialized (Pinecone + OpenAI)")
-    except Exception as e:
-        print(f"[ERROR] AI Init Failed: {e}")
+    """Check the Vertex AI Agent's health on startup."""
+    health = check_agent_health()
+    print(f" Vertex AI Agent: {health['status']} - {health['message']}")
+    if health["status"] != "connected":
+        print("[WARN] ADK server not running. Start it with:")
+        print("   cd google-ai-engine-research/adk_deploy && python -m google.adk.cli web . --port 8080")
 
 @asynccontextmanager
 async def lifespan(app):
@@ -1986,7 +1930,7 @@ def health():
         except Exception:
             ai_status = "offline"
         return {"status": "ok", "db": "connected", "ai": "ready" if ai_status == "connected" else "offline"}
-    return {"status": "ok", "db": "connected", "ai": "ready" if qa else "offline"}
+    return {"status": "ok", "db": "connected", "ai": "offline"}
 
 # ==============================================================================
 # ADMIN DASHBOARD ENDPOINTS
@@ -2106,18 +2050,7 @@ async def get_system_health(user: dict = Depends(get_current_user), db: Session 
     if USE_VERTEX_AGENT:
         health_status["vertex_agent"] = check_agent_health()
     else:
-        # Legacy: check Pinecone
-        try:
-            if PINECONE_API_KEY and PINECONE_INDEX and LEGACY_RAG_AVAILABLE:
-                pc_check = Pinecone(api_key=PINECONE_API_KEY)
-                idx = pc_check.Index(PINECONE_INDEX)
-                stats = idx.describe_index_stats()
-                vector_count = stats.get("total_vector_count", 0)
-                health_status["vertex_agent"] = {"status": "n/a (legacy mode)", "message": f"Pinecone: {vector_count} vectors"}
-            else:
-                health_status["vertex_agent"] = {"status": "not_configured", "message": "Legacy mode, keys missing"}
-        except Exception as e:
-            health_status["vertex_agent"] = {"status": "error", "message": str(e)[:100]}
+        health_status["vertex_agent"] = {"status": "not_configured", "message": "USE_VERTEX_AGENT disabled"}
 
     # Check OpenAI TTS
     try:
@@ -2297,29 +2230,15 @@ async def trigger_ingestion(user: dict = Depends(get_current_user)):
 
 @app.post("/api/admin/knowledge-base/sync-all")
 async def sync_all_kb(user: dict = Depends(get_current_user)):
-    """One-click: Re-index Pinecone from Vertex AI datastore + clear all caches.
-    Call this after updating KB docs to ensure both search systems are in sync."""
+    """One-click: clear all answer caches so KB edits surface immediately.
+    Retrieval is agent-first (Vertex AI Search datastore), so there is no
+    separate search index to re-ingest -- KB doc edits are live at once."""
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    results = {"pinecone": None, "cache": None}
+    results = {"cache": None}
 
-    # Step 1: Re-ingest KB docs to Pinecone (hybrid search index)
-    try:
-        from services.hybrid_retrieval import reingest_to_pinecone, is_pinecone_available
-        if is_pinecone_available():
-            ingest_result = await asyncio.to_thread(reingest_to_pinecone)
-            results["pinecone"] = {
-                "status": "ok" if ingest_result.get("failed", 0) == 0 else "partial",
-                "upserted": ingest_result.get("upserted", 0),
-                "failed": ingest_result.get("failed", 0),
-            }
-        else:
-            results["pinecone"] = {"status": "skipped", "reason": "Pinecone not configured"}
-    except Exception as e:
-        results["pinecone"] = {"status": "error", "reason": str(e)[:200]}
-
-    # Step 2: Clear all caches (L1 + L2 + semantic)
+    # Clear all caches (L1 + L2 + semantic) so updated KB docs surface right away
     try:
         cleared = query_cache.clear()
         results["cache"] = {"status": "ok", "cleared": cleared}
@@ -2328,7 +2247,7 @@ async def sync_all_kb(user: dict = Depends(get_current_user)):
 
     return {
         "success": True,
-        "message": f"Pinecone: {results['pinecone'].get('upserted', 0)} docs synced. Cache: cleared.",
+        "message": "Cache cleared. KB edits are live via the Vertex AI datastore.",
         "details": results,
     }
 

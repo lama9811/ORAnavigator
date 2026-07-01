@@ -241,7 +241,7 @@ deploy_backend() {
         --port 5000 \
         --memory 1Gi \
         --cpu 1 \
-
+        --min-instances 1 \
         --cpu-boost \
         --max-instances 20 \
         --timeout 300 \

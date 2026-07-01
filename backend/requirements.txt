@@ -24,14 +24,6 @@ iniconfig==2.1.0
 jiter==0.10.0
 jsonpatch==1.33
 jsonpointer==3.0.0
-langchain==0.3.25
-langchain-community==0.3.25
-langchain-core==0.3.65
-langchain-openai==0.3.22
-langchain-pinecone==0.2.8
-langchain-tests==0.3.20
-langchain-text-splitters==0.3.8
-langsmith==0.3.45
 markdown-it-py==3.0.0
 marshmallow==3.26.1
 mdurl==0.1.2
@@ -41,9 +33,6 @@ numpy==2.3.0
 openai==1.86.0
 orjson==3.10.18
 packaging==24.2
-pinecone==7.0.2
-pinecone-plugin-assistant==1.7.0
-pinecone-plugin-interface==0.0.7
 pluggy==1.6.0
 propcache==0.3.2
 py-cpuinfo==9.0.0
