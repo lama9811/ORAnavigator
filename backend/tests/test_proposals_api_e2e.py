@@ -155,3 +155,37 @@ def test_coherence_requires_auth(ctx):
     main.app.dependency_overrides.pop(main.get_current_user, None)
     r = c.post("/api/me/submissions/1/coherence")
     assert r.status_code in (401, 403)
+
+
+# ── responsiveness matrix endpoint (Gemini forced offline by conftest) ───────
+
+def test_responsiveness_not_ready_with_no_sections(ctx):
+    c, uid, sub_id, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/responsiveness")
+    assert r.status_code == 200
+    result = r.json()["result"]
+    assert result["ready"] is False        # no saved drafts yet
+    assert result["rows"] == []
+
+
+def test_responsiveness_runs_over_saved_sections(ctx):
+    c, uid, sub_id, _ = ctx
+    c.put(f"/api/me/submissions/{sub_id}/sections/drafts",
+          json={"section_key": "project_summary",
+                "text": "We will build an open data system for schools."})
+    r = c.post(f"/api/me/submissions/{sub_id}/responsiveness")
+    assert r.status_code == 200
+    result = r.json()["result"]
+    assert result["ready"] is True
+    assert result["rows"]
+    allowed = {"addressed", "partial", "not_found", "check_by_hand"}
+    assert all(row["status"] in allowed for row in result["rows"])
+    # NSF review criteria are always present as requirements, even with no solicitation.
+    assert any(row["requirement"] == "Broader Impacts" for row in result["rows"])
+
+
+def test_responsiveness_requires_auth(ctx):
+    c, *_ = ctx
+    main.app.dependency_overrides.pop(main.get_current_user, None)
+    r = c.post("/api/me/submissions/1/responsiveness")
+    assert r.status_code in (401, 403)
