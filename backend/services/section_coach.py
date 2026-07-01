@@ -771,3 +771,227 @@ def coherence_check(sponsor: Optional[str], drafts: dict,
         "pairs": pairs,
         "suggestions": suggestions,
     }
+
+
+# ── SOLICITATION RESPONSIVENESS MATRIX ──────────────────────────────────────
+# The #1 reason a proposal gets triaged is non-responsiveness: the draft doesn't
+# visibly address something the solicitation asked for, or a stated review
+# criterion is never covered. This proposal-level check maps each explicit ASK
+# (required narrative elements/attachments, named page-limited sections, the
+# sponsor's published review criteria, eligibility/scope) to WHERE the PI's SAVED
+# drafts address it, with a grounded status + verbatim quote.
+#
+# Boundary (golden rule 1 + the deleted Fundability tool): this is a GROUNDED
+# COVERAGE checklist, never a score/grade/verdict. It describes the drafts, not
+# the proposal's odds. The requirements list is assembled DETERMINISTICALLY from
+# already-grounded state; the AI only assigns a coverage status per fixed
+# requirement id and can NEVER invent a requirement (anti-hallucination).
+
+_RESPONSIVENESS_SYSTEM = (
+    "You are a grant program officer checking whether a draft proposal RESPONDS to what the "
+    "solicitation asked for. You do NOT rewrite anything and you do NOT judge quality, rate, or "
+    "score it — you only check COVERAGE: for each requirement, is it addressed in the draft text?\n"
+    "RULES:\n"
+    "1. Judge ONLY the DRAFT SECTIONS provided. Never invent content.\n"
+    "2. Assess ONLY the requirements in the REQUIREMENTS list, by their exact id. NEVER add, rename, "
+    "or split requirements. Return at most one row per id.\n"
+    "3. For any requirement you mark 'addressed' or 'partial', you MUST include 'evidence': a VERBATIM "
+    "quote (<=160 chars) copied from a draft that shows it. No verbatim quote -> use 'not_found'.\n"
+    "4. Use 'not_found' when the drafts do not cover it. Do NOT grade, score, or rate — coverage only.\n"
+)
+
+# Map a required-attachment / page-limit name onto a known coach section key so
+# coverage can be attributed to the right draft. Best-effort, normalized substring.
+_SECTION_ALIASES = {
+    "data management plan": "data_management_plan",
+    "data management": "data_management_plan",
+    "project summary": "project_summary",
+    "project description": "project_description",
+    "broader impacts": "broader_impacts",
+    "specific aims": "specific_aims",
+    "research strategy": "research_strategy",
+    "abstract": "abstract",
+    "executive summary": "abstract",
+    "project narrative": "narrative",
+    "narrative": "narrative",
+}
+
+
+def _match_section_key(name: str) -> Optional[str]:
+    """Best-effort map of a solicitation ask name to a coach section key, or None."""
+    n = " ".join((name or "").lower().split())
+    if n in SECTIONS:
+        return n
+    for alias, key in _SECTION_ALIASES.items():
+        if alias in n:
+            return key
+    return None
+
+
+def _responsiveness_requirements(sponsor: Optional[str],
+                                 context: Optional[dict]) -> list[dict]:
+    """The solicitation's explicit ASKS, assembled DETERMINISTICALLY from grounded
+    state (never AI-invented). Each: {id, requirement, source, detail, section_key}.
+    Deduped by normalized requirement label; order-stable."""
+    context = context or {}
+    out: list[dict] = []
+    seen: set = set()
+
+    def add(req_id: str, requirement: str, source: str,
+            detail: str = "", section_key: Optional[str] = None):
+        norm = " ".join((requirement or "").lower().split())
+        if not norm or norm in seen:
+            return
+        seen.add(norm)
+        out.append({"id": req_id, "requirement": requirement, "source": source,
+                    "detail": detail, "section_key": section_key})
+
+    # 1. Named / page-limited narrative sections (carry a section_key + page limit).
+    for key, limit in (context.get("page_limits") or {}).items():
+        label = SECTIONS[key]["label"] if key in SECTIONS else str(key).replace("_", " ").title()
+        detail = f"{limit}-page limit" if isinstance(limit, int) else ""
+        add(f"section:{key}", label, "section", detail, section_key=key)
+
+    # 2. Required attachments / narrative elements (grounded at ingestion).
+    for att in (context.get("required_attachments") or []):
+        att = str(att).strip()
+        if att:
+            add(f"attachment:{att.lower()}", att, "attachment",
+                section_key=_match_section_key(att))
+
+    # 3. Stated review criteria (always present via the deterministic rubric).
+    for c in review_rubric(sponsor):
+        add(f"criterion:{c['criterion'].lower()}", c["criterion"], "criterion", c.get("asks", ""))
+
+    # 4. Eligibility / scope fit.
+    elig = (context.get("eligibility") or "").strip()
+    if elig:
+        add("eligibility", "Eligibility / scope fit", "eligibility", elig[:200])
+
+    return out
+
+
+def _where_quote(labeled: dict, quote: str) -> str:
+    """The label of the saved section whose text contains `quote` (verified with
+    `_quote_in`), or "" — so `where` is attributed authoritatively, not trusted
+    from the model."""
+    for label, txt in labeled.items():
+        if _quote_in(txt, quote):
+            return label
+    return ""
+
+
+def _responsiveness_fallback(requirements: list[dict], drafts: dict) -> dict:
+    """Deterministic responsiveness result when the LLM is unavailable. Never
+    fabricates a quote and never guesses 'not_found' (offline we can't prove
+    absence): every row is 'check_by_hand'."""
+    drafts = {k: v for k, v in (drafts or {}).items() if (v or "").strip()}
+    rows = []
+    for r in requirements:
+        sk = r.get("section_key")
+        if sk and (drafts.get(sk) or "").strip():
+            label = SECTIONS[sk]["label"] if sk in SECTIONS else sk
+            note = f"You have a draft for {label}; confirm by hand that it addresses this."
+        else:
+            note = "Check by hand whether your drafts address this requirement."
+        rows.append({"requirement": r["requirement"], "source": r["source"],
+                     "detail": r.get("detail", ""), "status": "check_by_hand",
+                     "note": note, "where": "", "evidence": ""})
+    return {
+        "ai": False,
+        "ready": True,
+        "summary": "Responsiveness check (offline mode): confirm by hand that your drafts "
+                   "address each requirement below.",
+        "rows": rows,
+        "suggestions": [],
+    }
+
+
+def responsiveness_matrix(sponsor: Optional[str], drafts: dict,
+                          context: Optional[dict] = None) -> dict:
+    """Advisory whole-proposal responsiveness check: does each solicitation ASK
+    appear in the PI's SAVED drafts? Grounded (every 'addressed'/'partial' quotes
+    the draft, verified with `_quote_in`); degrades to a deterministic result when
+    the LLM is off. Coverage only — never a score or verdict. Returns
+    {ai, ready, summary, rows:[{requirement,source,detail,status,note,where,evidence}],
+    suggestions}."""
+    drafts = {k: v for k, v in (drafts or {}).items() if (v or "").strip()}
+    if not drafts:
+        return {"ai": False, "ready": False,
+                "summary": "Save at least one draft section to check it against the "
+                           "solicitation's requirements.",
+                "rows": [], "suggestions": []}
+
+    requirements = _responsiveness_requirements(sponsor, context)
+    if not requirements:
+        return {"ai": False, "ready": False,
+                "summary": "No solicitation requirements are on file to check against yet. "
+                           "Start this proposal from a solicitation so its required elements "
+                           "and review criteria are available.",
+                "rows": [], "suggestions": []}
+
+    # Labeled corpus of saved drafts + a flat union for grounding / where-attribution.
+    labeled: dict = {}
+    for k, v in drafts.items():
+        label = SECTIONS[k]["label"] if k in SECTIONS else k
+        labeled[label] = v.strip()
+    union_text = "\n\n".join(labeled.values())
+
+    lines = ["Check whether the DRAFT SECTIONS respond to each REQUIREMENT. Coverage only — "
+             "never judge quality.\n", "REQUIREMENTS:"]
+    for r in requirements:
+        detail = f" — {r['detail']}" if r.get("detail") else ""
+        lines.append(f"  id={r['id']} | {r['requirement']} ({r['source']}){detail}")
+    lines.append("\nDRAFT SECTIONS:")
+    for label, txt in labeled.items():
+        lines.append(f'--- {label} ---\n"""\n{txt[:6000]}\n"""\n')
+    lines.append('Return JSON: {"summary": "<2-3 sentences>", '
+                 '"rows": [{"id": "<requirement id>", "status": "addressed|partial|not_found", '
+                 '"note": "<one sentence>", "evidence": "<verbatim quote from a draft, or empty>"}], '
+                 '"suggestions": ["<concrete gap-closer>", ...]}')
+    prompt = "\n".join(lines)
+
+    ai = gemini_client.generate_json(prompt, temperature=0.2, max_output_tokens=1800,
+                                     system_instruction=_RESPONSIVENESS_SYSTEM)
+    if not ai or not isinstance(ai.get("rows"), list):
+        return _responsiveness_fallback(requirements, drafts)
+
+    by_id: dict = {}
+    for row in ai["rows"]:
+        if isinstance(row, dict) and row.get("id"):
+            by_id[str(row.get("id"))] = row   # ignore any id not in our fixed set below
+
+    rows = []
+    for r in requirements:
+        p = by_id.get(r["id"], {})
+        status = p.get("status") if p.get("status") in ("addressed", "partial", "not_found") else "not_found"
+        ev = (p.get("evidence") or "").strip()
+        note = str(p.get("note", "")).strip()
+        where = ""
+        # Grounding: 'addressed'/'partial' must be backed by a real quote from the drafts.
+        if status in ("addressed", "partial"):
+            if ev and _quote_in(union_text, ev):
+                where = _where_quote(labeled, ev)
+            else:
+                status = "check_by_hand"
+                ev = ""
+                if not note:
+                    note = "Couldn't verify this is addressed in your drafts — check by hand."
+        rows.append({
+            "requirement": r["requirement"],
+            "source": r["source"],
+            "detail": r.get("detail", ""),
+            "status": status,
+            "note": note,
+            "where": where,
+            "evidence": ev,
+        })
+
+    suggestions = [str(s) for s in (ai.get("suggestions") or []) if str(s).strip()][:6]
+    return {
+        "ai": True,
+        "ready": True,
+        "summary": str(ai.get("summary", "")).strip() or "Responsiveness check below.",
+        "rows": rows,
+        "suggestions": suggestions,
+    }

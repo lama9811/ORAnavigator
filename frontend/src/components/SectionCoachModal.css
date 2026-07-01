@@ -70,6 +70,8 @@
 .sc-check-head { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #0B2545; }
 .sc-status { margin-left: auto; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; }
 .sc-note { font-size: 0.78rem; color: #475569; margin-top: 3px; }
+.sc-req-source { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #94a3b8; margin-top: 2px; }
+.sc-req-hint { color: #94a3b8; font-style: italic; }
 .sc-evidence { font-size: 0.76rem; color: #64748b; font-style: italic; margin-top: 3px; }
 .sc-ok { border-left-color: #16a34a; }
 .sc-warn { border-left-color: #f59e0b; }

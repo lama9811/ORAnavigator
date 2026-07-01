@@ -3924,6 +3924,40 @@ async def section_coherence(
     return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
 
 
+@app.post("/api/me/submissions/{submission_id}/responsiveness")
+async def section_responsiveness(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Advisory responsiveness matrix: does each ASK in the solicitation (required
+    elements/attachments, named sections, review criteria, eligibility) appear in
+    the PI's SAVED drafts? Reads existing sections_json/notes -- no new state.
+    Grounded coverage only; never a score or verdict."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    from services import section_coach as _sc
+
+    raw = getattr(sub, "sections_json", None)
+    drafts = {}
+    if raw:
+        try:
+            drafts = json.loads(raw)
+        except (ValueError, TypeError):
+            drafts = {}
+    if not isinstance(drafts, dict):
+        drafts = {}
+
+    context = _proposals_service.reconstruct_solicitation_context(sub)
+    context["eligibility"] = _eligibility_text_from_notes(sub.notes)
+    result = _sc.responsiveness_matrix(sub.sponsor, drafts, context)
+    return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
+
+
 @app.get("/api/me/submissions/{submission_id}/sections/drafts")
 async def get_section_drafts(
     submission_id: int,
