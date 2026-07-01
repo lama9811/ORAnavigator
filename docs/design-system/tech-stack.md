@@ -50,10 +50,10 @@ lazy page splitting, and a `react-vendor` manual chunk.
 | `google-cloud-storage` 2.19 | object storage |
 | `text-embedding-004` (via genai) | semantic cache + memory recall embeddings |
 
-> **Legacy / not on the main path:** `langchain*`, `pinecone*`, and `openai` are present in
-> `requirements.txt` from the project's origins. The live RAG path uses **Vertex AI Search**
-> (not Pinecone). OpenAI TTS is wired but the API key is blank. Treat these as legacy unless
-> a feature page says otherwise.
+> **Retrieval is Vertex AI Search only.** The former Pinecone + LangChain RAG pipeline
+> (dense-vector search, `chatbot.py`, `services/hybrid_retrieval.py`) has been removed — the
+> live path is the ADK agent's `VertexAiSearchTool` plus the `kb_prefetch` layer. `openai` is
+> still present for **TTS only** (API key blank by default); it is not on the retrieval path.
 
 ## ADK Agent (the LLM agent)
 
