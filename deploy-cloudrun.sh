@@ -249,25 +249,32 @@ deploy_backend() {
         --allow-unauthenticated \
         --add-cloudsql-instances "${PROJECT_ID}:${REGION}:oranavigator-db" \
         --service-account "oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com" \
-        --set-env-vars "^@^\
-USE_VERTEX_AGENT=true@\
-ADK_BASE_URL=${ADK_URL}@\
-ADK_APP_NAME=ora_navigator_unified@\
-GOOGLE_CLOUD_PROJECT=${PROJECT_ID}@\
-GOOGLE_CLOUD_LOCATION=${REGION}@\
-GOOGLE_GENAI_USE_VERTEXAI=TRUE@\
-AGENT_MODEL=gemini-2.5-flash@\
-UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8@\
-VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8@\
-ACCESS_TOKEN_EXPIRE_MINUTES=240@\
-ALGORITHM=HS256@\
+        --set-env-vars "^|^\
+USE_VERTEX_AGENT=true|\
+ADK_BASE_URL=${ADK_URL}|\
+ADK_APP_NAME=ora_navigator_unified|\
+GOOGLE_CLOUD_PROJECT=${PROJECT_ID}|\
+GOOGLE_CLOUD_LOCATION=${REGION}|\
+GOOGLE_GENAI_USE_VERTEXAI=TRUE|\
+AGENT_MODEL=gemini-2.5-flash|\
+UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8|\
+VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8|\
+ACCESS_TOKEN_EXPIRE_MINUTES=240|\
+ALGORITHM=HS256|\
+SMTP_HOST=smtp.gmail.com|\
+SMTP_PORT=587|\
+SMTP_USER=noreplyinavigator@gmail.com|\
+FROM_EMAIL=noreplyinavigator@gmail.com|\
+APP_URL=https://ora.inavigator.ai|\
+API_URL=https://api-ora.inavigator.ai|\
 CORS_ORIGINS=https://ora.inavigator.ai,https://oranavigator-frontend-ollhkgeova-uc.a.run.app,http://localhost:3001,http://127.0.0.1:3001" \
         --set-secrets "\
 DATABASE_URL=ora-database-url:latest,\
 JWT_SECRET=ora-jwt-secret:latest,\
 ADMIN_EMAIL=ora-admin-email:latest,\
 ADMIN_PASSWORD=ora-admin-password:latest,\
-REDIS_URL=ora-redis-url:latest"
+REDIS_URL=ora-redis-url:latest,\
+SMTP_PASS=ora-smtp:latest"
 
     BACKEND_URL=$(gcloud run services describe ${BACKEND_SERVICE} \
         --region=${REGION} \
