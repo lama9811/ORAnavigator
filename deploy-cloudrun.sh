@@ -266,7 +266,7 @@ SMTP_PORT=587|\
 SMTP_USER=noreplyinavigator@gmail.com|\
 FROM_EMAIL=noreplyinavigator@gmail.com|\
 APP_URL=https://ora.inavigator.ai|\
-API_URL=https://api-ora.inavigator.ai|\
+API_URL=https://oranavigator-backend-ollhkgeova-uc.a.run.app|\
 CORS_ORIGINS=https://ora.inavigator.ai,https://oranavigator-frontend-ollhkgeova-uc.a.run.app,http://localhost:3001,http://127.0.0.1:3001" \
         --set-secrets "\
 DATABASE_URL=ora-database-url:latest,\
