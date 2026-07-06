@@ -695,13 +695,31 @@ body.dark .ticket-card:hover {
   border-top: 1px solid var(--border-color);
 }
 
+/* Ticket-detail "Update Status" row: label pinned far left, the button
+   group centered in the remaining space so it reads as balanced.
+   :has() scopes this to the ticket modal only, so the generic
+   right-aligned .modal-actions (used elsewhere) is left untouched. */
+.modal-actions:has(.status-buttons) {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.modal-actions:has(.status-buttons) h4 {
+  margin: 0;
+  flex-shrink: 0;
+}
+
 .status-buttons {
   display: flex;
   gap: 12px;
+  flex: 1;
+  justify-content: center;
 }
 
 .status-btn {
-  flex: 1;
+  flex: 0 1 130px;
+  min-width: 110px;
   padding: 14px 18px;
   border-radius: 10px;
   font-size: 0.9rem;
