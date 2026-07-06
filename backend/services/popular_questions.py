@@ -158,13 +158,144 @@ def rank_questions(rows: Iterable[tuple], curated: list[str],
     return [curated[i] for i in ordered[:limit]]
 
 
+# ===========================================================================
+# Real-question ranking + AI polish
+#
+# The welcome-screen chips are the ACTUAL most-asked user questions, cleaned up
+# by Gemini (typos / grammar / semantic rewrite) — NOT a fixed list. The curated
+# pool is only a safe fallback / top-up. This runs on the daily refresh (cached),
+# so the one Gemini polish call is paid ~once a day, never on a page load.
+# ===========================================================================
+
+# Personal / sensitive signals — these must NEVER reach the public home screen.
+_SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+_LONGNUM_RE = re.compile(r"\b\d{7,}\b")               # SSN w/o dashes, IDs, accounts
+_PHONE_RE = re.compile(r"\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b")
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_MONEY_RE = re.compile(r"\$\s?\d")
+_PERSONAL_PHRASES = (
+    "my salary", "my ssn", "social security", "my name is", "my phone",
+    "my address", "my email", "my password", "my bank", "my account number",
+)
+_RECALL_PHRASES = (
+    "yesterday", "last time", "we talked", "we discussed", "our conversation",
+    "you told me", "you said earlier", "what did we", "brief about what",
+    "summarize what we", "recap what",
+)
+
+
+def _is_personal_or_junk(q: str) -> bool:
+    """True if a raw user question must be kept OFF the welcome screen: personal/
+    sensitive data, greetings/small talk, personal-recall requests, or content-
+    free chatter.
+
+    Deliberately does NOT try to judge "is this a real question" — that's too
+    error-prone (real questions omit '?' or start with a noun/typo, e.g. "F&A
+    rate", "IRB application process"). The Gemini polish step is the arbiter of
+    topicality: it rewrites messy questions and outputs null for anything that
+    isn't a genuine ORA question. Here we only enforce SAFETY + drop chatter."""
+    s = (q or "").strip()
+    if len(s) < 8:
+        return True
+    low = s.lower()
+    if (_SSN_RE.search(s) or _LONGNUM_RE.search(s) or _PHONE_RE.search(s)
+            or _EMAIL_RE.search(s) or _MONEY_RE.search(s)):
+        return True
+    if any(p in low for p in _PERSONAL_PHRASES):
+        return True
+    if any(p in low for p in _RECALL_PHRASES):
+        return True
+    if len(_topic_tokens(s)) < 2:            # no real content words (greetings, "ok", etc.)
+        return True
+    return False
+
+
+def cluster_real_questions(rows: Iterable[tuple]) -> list[dict]:
+    """Group clean user questions by topic and rank by DISTINCT askers.
+
+    `rows` is (user_id, user_query). Personal/junk rows are dropped. Returns
+    [{"rep", "users", "asks"}] ranked by distinct users then total asks, where
+    `rep` is the most common raw phrasing in that group (handed to the polisher).
+    """
+    clusters: list[dict] = []
+    for user_id, query in rows:
+        if not query or _is_personal_or_junk(query):
+            continue
+        toks = _topic_tokens(query)
+        text = " ".join(query.split())
+        best, best_score = None, 0.0
+        for c in clusters:
+            shared = toks & c["seed"]
+            denom = min(len(toks), len(c["seed"])) or 1
+            score = len(shared) / denom
+            if score > best_score:
+                best, best_score = c, score
+        if best is not None and best_score >= 0.6:
+            best["users"].add(user_id)
+            best["reps"][text] = best["reps"].get(text, 0) + 1
+        else:
+            clusters.append({"seed": set(toks), "users": {user_id}, "reps": {text: 1}})
+    ranked = sorted(clusters, key=lambda c: (-len(c["users"]), -sum(c["reps"].values())))
+    out = []
+    for c in ranked:
+        rep = max(c["reps"].items(), key=lambda kv: kv[1])[0]
+        out.append({"rep": rep, "users": len(c["users"]), "asks": sum(c["reps"].values())})
+    return out
+
+
+def polish_questions(reps: list[str], limit: int) -> list[str]:
+    """Use Gemini to rewrite each raw question into ONE clean, correct, concise
+    question (fix spelling/grammar/phrasing, keep the meaning — a semantic
+    rewrite). Personal or non-topical items are dropped. Returns [] when Gemini
+    is unavailable, so the caller falls back to the curated pool. Deduped; every
+    rewritten item is re-checked for personal data (defense in depth)."""
+    from services import gemini_client
+    reps = [r for r in reps if r]
+    if not reps:
+        return []
+    numbered = "\n".join(f"{i + 1}. {r}" for i, r in enumerate(reps))
+    prompt = (
+        "Below are real questions people typed to a Morgan State University "
+        "research-administration (ORA) assistant. Rewrite EACH into a single "
+        "clean, grammatically correct, concise question. Fix spelling, grammar, "
+        "and awkward phrasing, but keep the original meaning (a semantic rewrite).\n"
+        "Rules:\n"
+        "- If an item is personal/private (someone's salary, SSN, name, or personal "
+        "details), or is not a genuine ORA / research-administration question, "
+        "output null for it.\n"
+        "- Keep it under 90 characters and end with a question mark.\n"
+        'Return JSON only: {"questions": [ "rewritten question" or null, ... ]} '
+        "in the SAME order as the input.\n\n" + numbered
+    )
+    data = gemini_client.generate_json(prompt, temperature=0.2, max_output_tokens=1024)
+    if not data or not isinstance(data.get("questions"), list):
+        return []
+    out, seen = [], set()
+    for item in data["questions"]:
+        if not isinstance(item, str):
+            continue
+        cand = " ".join(item.split())
+        if not cand or _is_personal_or_junk(cand):
+            continue
+        key = " ".join(sorted(_topic_tokens(cand)))
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(cand)
+        if len(out) >= limit:
+            break
+    return out
+
+
 # ---------------------------------------------------------------------------
 # DB + cache wrappers
 # ---------------------------------------------------------------------------
 def compute_from_db(db, curated: list[str], limit: int = 10,
                     days: Optional[int] = None) -> list[str]:
-    """Scan ChatHistory and rank. `days` limits to recent questions (None =
-    all-time). Never raises -- on any error returns the curated pool order."""
+    """The welcome-screen list: the REAL most-asked user questions, cleaned by
+    Gemini, then topped up from the curated pool. `days` limits to recent
+    questions. Never raises -- on any error / no Gemini / no traffic it returns
+    the curated pool (always clean, never empty)."""
     from models import ChatHistory
     try:
         q = db.query(ChatHistory.user_id, ChatHistory.user_query)
@@ -172,11 +303,29 @@ def compute_from_db(db, curated: list[str], limit: int = 10,
             from datetime import datetime, timedelta, timezone
             cutoff = datetime.now(timezone.utc) - timedelta(days=days)
             q = q.filter(ChatHistory.timestamp >= cutoff)
-        rows = q.all()
-        return rank_questions(rows, curated, limit)
+        # Cap to the most recent chats so the once-a-day scan stays cheap.
+        rows = q.order_by(ChatHistory.timestamp.desc()).limit(4000).all()
     except Exception as e:  # pragma: no cover - defensive
         print(f"[POPULAR] compute_from_db failed: {e}")
         return list(curated[:limit])
+
+    clusters = cluster_real_questions(rows)
+    reps = [c["rep"] for c in clusters[: limit * 2]]   # extra survives polish drops
+    polished = polish_questions(reps, limit)
+
+    # Top up from the curated pool (deduped by topic) so the list is always
+    # full AND clean, even with no traffic or no Gemini.
+    result, seen = [], set()
+    for item in list(polished) + list(curated):
+        key = " ".join(sorted(_topic_tokens(item)))
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        result.append(item)
+        if len(result) >= limit:
+            break
+    return result
 
 
 def _redis_get() -> Optional[list[str]]:

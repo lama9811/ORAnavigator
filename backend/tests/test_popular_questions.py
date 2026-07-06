@@ -114,3 +114,33 @@ def test_gibberish_rows_do_not_appear_or_crash():
 
 def test_empty_curated_returns_empty():
     assert rank_questions([(1, "budget grant")], [], limit=5) == []
+
+
+# ---------------------------------------------------------------------------
+# Real-question ranking + PII/junk filtering (welcome-screen chips)
+# ---------------------------------------------------------------------------
+from services.popular_questions import _is_personal_or_junk, cluster_real_questions
+
+
+def test_filters_personal_and_junk():
+    assert _is_personal_or_junk("My salary is $145,000 and my SSN is 123-45-6789.")
+    assert _is_personal_or_junk("hi")
+    assert _is_personal_or_junk("thanks")
+    assert _is_personal_or_junk("can you brief about what we talked about yesterday?")
+    assert _is_personal_or_junk("call me at 410-555-1234")
+    assert _is_personal_or_junk("email me at pi@morgan.edu")
+    # real ORA questions survive
+    assert not _is_personal_or_junk("How do I submit an IRB application?")
+    assert not _is_personal_or_junk("what is the F&A indirect cost rate")
+
+
+def test_cluster_ranks_by_users_and_drops_personal():
+    rows = [
+        (1, "how do I submit an IRB application?"),
+        (2, "IRB application submission process?"),   # same topic, different user
+        (3, "my SSN is 123-45-6789"),                 # personal -> dropped
+        (4, "what is the F&A indirect cost rate?"),
+    ]
+    out = cluster_real_questions(rows)
+    assert out[0]["users"] == 2                        # IRB (2 users) ranks first
+    assert all("ssn" not in c["rep"].lower() for c in out)   # no personal data survives
