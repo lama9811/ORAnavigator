@@ -19,6 +19,7 @@ Two Grants.gov endpoints (public, no key, fixed host -> no SSRF):
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Optional
 
@@ -31,8 +32,9 @@ from services.proposals_service import internal_routing_deadline
 _GRANTS_HOST = "https://api.grants.gov/v1/api"
 _SEARCH_URL = f"{_GRANTS_HOST}/search2"
 _FETCH_URL = f"{_GRANTS_HOST}/fetchOpportunity"
-_TIMEOUT = 25
+_TIMEOUT = 12          # per HTTP call; fetches run in parallel (see find_opportunities)
 _MAX_RESULTS = 12
+_FETCH_WORKERS = 10    # concurrent fetchOpportunity calls
 
 # --- Morgan State institutional profile (baked in, like the F&A rates) ------
 # Morgan State University: a PUBLIC, state-controlled HBCU (also an MSI) in MD.
@@ -213,7 +215,16 @@ def find_opportunities(description: str, profile: Optional[dict] = None,
     each -> deterministic eligibility -> advisory rank/explain -> result rows."""
     keyword = extract_query(description, profile)
     hits = search_grantsgov(keyword, rows=rows)
-    detailed = [d for d in (fetch_opportunity(h.get("id")) for h in hits) if d]
+    ids = [h.get("id") for h in hits if h.get("id")]
+    # Fetch each opportunity's detail CONCURRENTLY — the main latency lever.
+    # Sequentially fetching up to _MAX_RESULTS opportunities (one blocking HTTP
+    # round-trip each) dominated the request; in parallel the fetch phase is
+    # bounded by the slowest single call, not their sum. Order is preserved
+    # (ranking reorders anyway; ties fall back to API order).
+    detailed: list = []
+    if ids:
+        with ThreadPoolExecutor(max_workers=min(len(ids), _FETCH_WORKERS)) as pool:
+            detailed = [d for d in pool.map(fetch_opportunity, ids) if d]
     # Grants.gov "posted" still returns opportunities whose response date has
     # already passed (recurring programs keep an old date) — drop those so the
     # finder only surfaces opportunities a PI can still actually apply to.
