@@ -166,6 +166,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
             onFile={handleFile}
             onUrl={handleUrl}
             fileInputRef={fileInputRef}
+            initialUrl={initialUrl}
           />
         )}
 
@@ -191,7 +192,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
 // STEP 1 -- Pick a file
 // ============================================================
 
-function PickStep({ onFile, onUrl, fileInputRef }) {
+function PickStep({ onFile, onUrl, fileInputRef, initialUrl = "" }) {
   const [dragOver, setDragOver] = useState(false);
   const [url, setUrl] = useState(initialUrl);
 
