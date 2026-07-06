@@ -151,10 +151,13 @@ steps:
           --allow-unauthenticated \
           --service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
           --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,ALGORITHM=HS256,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=noreplyinavigator@gmail.com,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://ora.inavigator.ai,API_URL=https://oranavigator-backend-ollhkgeova-uc.a.run.app,ALLOW_TEST_EMAILS=false,SKIP_EMAIL_VERIFICATION=true,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false" \
-          --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest,FIRECRAWL_API_KEY=ora-firecrawl-api-key:latest,SMTP_PASS=ora-smtp:latest"
-        # SMTP_USER is the from-address (not secret, set in --set-env-vars above); SMTP_PASS
-        # is the Gmail App Password, mounted from the ora-smtp secret. Both persist across
-        # deploys now (previously wiped because --set-env-vars replaces the whole env set).
+          --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest,FIRECRAWL_API_KEY=ora-firecrawl-api-key:latest"
+        # SMTP_PASS (Gmail App Password, from the ora-smtp secret) is intentionally
+        # NOT mounted right now: the ora-smtp secret was removed from the project and
+        # email verification is bypassed (SKIP_EMAIL_VERIFICATION=true), so the backend
+        # doesn't need it. email_service._send_email no-ops gracefully when SMTP_PASS is
+        # empty. To restore email later: recreate the ora-smtp secret, then re-add
+        # ",SMTP_PASS=ora-smtp:latest" to --set-secrets above (and flip SKIP_EMAIL_VERIFICATION).
         # NOTE: RESEARCH_SECRET (cron auth) is still set manually on the service — the crons
         # (research/memory/deadlines) 403 after every deploy until it's migrated to a secret too:
         #   gcloud run services update oranavigator-backend --update-env-vars="RESEARCH_SECRET=<secret>"
