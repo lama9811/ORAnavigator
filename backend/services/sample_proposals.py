@@ -222,6 +222,79 @@ SAMPLE_PROPOSALS: list[dict] = [
         "why": "A Title III institutional-capacity grant — the kind an HBCU like Morgan applies "
                "for; a directly relevant model for institutional and student-success proposals.",
     },
+
+    # === Morgan State ORA — sample awarded proposals (home institution) =======
+    # Real awarded proposals that Morgan's OWN Office of Research Administration
+    # posts for its PIs (morgan.edu). Verified live; the most institution-
+    # specific examples in the library.
+    {
+        "id": "morgan-nsf-eir-hulse",
+        "type": "link",
+        "title": "NSF EiR Proposal — awarded (Morgan State)",
+        "source": "Morgan State University, Office of Research Administration",
+        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/NSF-EiR-ProposalTomHulse.pdf",
+        "categories": ["NSF", "Early-career"],
+        "kind": "A complete awarded NSF EiR (HBCU Excellence in Research) proposal (PDF), posted "
+                "by Morgan State ORA",
+        "access": "free",
+        "why": "Morgan's own example of a funded NSF HBCU-EiR award — the closest model to what a "
+               "Morgan PI is actually writing.",
+    },
+    {
+        "id": "morgan-nsf-sociology",
+        "type": "link",
+        "title": "NSF Awarded Proposal — Sociology (Morgan State)",
+        "source": "Morgan State University, Office of Research Administration",
+        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/NSF-AwardedProposalSample-sociology.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete awarded NSF proposal in sociology (PDF), posted by Morgan State ORA",
+        "access": "free",
+        "why": "A funded NSF social-science proposal curated by Morgan's own ORA.",
+    },
+    {
+        "id": "morgan-nsf-geoscience",
+        "type": "link",
+        "title": "NSF Awarded Proposal — Geoscience (Morgan State)",
+        "source": "Morgan State University, Office of Research Administration",
+        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/NSF-SampleAwardedProposal-geoscience.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete awarded NSF proposal in geoscience (PDF), posted by Morgan State ORA",
+        "access": "free",
+        "why": "A funded NSF geoscience proposal curated by Morgan's own ORA.",
+    },
+    {
+        "id": "morgan-nsf-math",
+        "type": "link",
+        "title": "NSF Awarded Proposal — Mathematics (Morgan State)",
+        "source": "Morgan State University, Office of Research Administration",
+        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/NSF-SampleAwardedProposal-math.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete awarded NSF proposal in mathematics (PDF), posted by Morgan State ORA",
+        "access": "free",
+        "why": "A funded NSF mathematics proposal curated by Morgan's own ORA.",
+    },
+    {
+        "id": "morgan-nih-r01-gordon",
+        "type": "link",
+        "title": "NIH R01 Awarded Application (Morgan State sample)",
+        "source": "Morgan State University, Office of Research Administration",
+        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/1-R01-AI121500-01A1_Funded-sample.pdf",
+        "categories": ["NIH"],
+        "kind": "A complete funded NIH R01 application (PDF), posted by Morgan State ORA as a sample",
+        "access": "free",
+        "why": "A funded NIH R01 curated by Morgan's own ORA for its PIs.",
+    },
+    {
+        "id": "morgan-nih-r01-muir",
+        "type": "link",
+        "title": "NIH R01 Awarded Application #2 (Morgan State sample)",
+        "source": "Morgan State University, Office of Research Administration",
+        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/2-R01-AI042783-16A1_Muir_App_Sample.pdf",
+        "categories": ["NIH"],
+        "kind": "A second complete funded NIH R01 application (PDF), posted by Morgan State ORA as a sample",
+        "access": "free",
+        "why": "A second funded NIH R01 curated by Morgan's own ORA — good for comparing two funded applications.",
+    },
 ]
 
 
