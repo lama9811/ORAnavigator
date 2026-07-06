@@ -697,6 +697,14 @@ export default function AdminDashboard() {
     }
   }, [activeTab]);
 
+  // Reload suggestions whenever the status filter changes. The old inline
+  // onChange read the PREVIOUS filter value when it reloaded, so the dropdown
+  // and the loaded list could disagree.
+  useEffect(() => {
+    if (activeTab === "research") loadSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggestionFilter]);
+
   useEffect(() => {
     loadUsers();
   }, [userSearch, userRoleFilter]);
@@ -1368,7 +1376,7 @@ export default function AdminDashboard() {
             <button className="btn-primary" onClick={handleRunResearch} disabled={researchRunning} style={{ padding: "8px 20px" }}>
               {researchRunning ? "Researching..." : "Run Research Now"}
             </button>
-            <select value={suggestionFilter} onChange={(e) => { setSuggestionFilter(e.target.value); setTimeout(() => loadSuggestions(), 50); }} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-main)" }}>
+            <select value={suggestionFilter} onChange={(e) => setSuggestionFilter(e.target.value)} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-body)", color: "var(--text-main)" }}>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
