@@ -97,6 +97,28 @@ def register(req: RegisterRequest, db: Session = Depends(get_db)):
     hashed = hash_password(req.password)
     name = req.name.strip() if req.name else None
 
+    # Temporary bypass: when SKIP_EMAIL_VERIFICATION=true, create the (already
+    # verified) user row directly and skip the email round-trip. Used while a
+    # working no-reply sender isn't wired up yet. All other validation above
+    # (domain, password length, rate limit, duplicate check) still applies.
+    # Reversible: unset the flag to restore the normal verify-first flow.
+    skip_verification = os.getenv("SKIP_EMAIL_VERIFICATION", "false").lower() == "true"
+    if skip_verification:
+        new_user = User(
+            email=email,
+            password_hash=hashed,
+            role="user",
+            email_verified=True,
+            verification_token=None,
+            name=name,
+        )
+        db.add(new_user)
+        db.commit()
+        return {
+            "message": "Account created — you can log in now.",
+            "verified": True,
+        }
+
     token = _create_signup_token(email=email, hashed_password=hashed, name=name)
     send_verification_email(email, token)
 

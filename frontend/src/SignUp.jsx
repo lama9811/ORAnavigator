@@ -121,6 +121,12 @@ export default function Signup({ onRegistered }) {
       // Success — backend has sent a verification email. NO account exists yet;
       // we tell the user to click the link in their email to finish.
       const data = await res.json().catch(() => ({}));
+      // Bypass mode: the account was created immediately (no email step).
+      // Send the user straight to login instead of the "check your email" screen.
+      if (data?.verified) {
+        navigate("/login?created=true");
+        return;
+      }
       setVerifyPending({
         email: email.trim(),
         message: data?.message || "Check your Morgan State email to verify and finish creating your account.",
