@@ -44,6 +44,42 @@ _FALLBACK_FAILURE_PATTERNS = re.compile(
 # PHASE 1: Failed Query Detection (Grounding-Based)
 # =============================================================================
 
+# Questions ABOUT THE USER themselves (their department, name, role...) or that
+# contain personal data are answered from the profile / chat history, NOT the
+# knowledge base -- so a "miss" on one is NOT a KB gap and must never be logged
+# as a failed query (or become a KB suggestion). Mirrors
+# vertex_agent._is_personal_recall.
+_PERSONAL_RECALL_RE = re.compile(
+    r"\b(?:"
+    r"am\s+i\b|did\s+i\b|remind\s+me\b|about\s+(?:me|myself)\b"
+    r"|(?:what|who|where|when)(?:'s|s|\s+is|\s+was|\s+are)?\s+my\b|who\s+am\s+i\b"
+    r")",
+    re.IGNORECASE,
+)
+_PERSONAL_PII_RE = re.compile(
+    r"\b\d{3}-\d{2}-\d{4}\b"                              # SSN
+    r"|\b\d{9,}\b"                                        # SSN w/o dashes, long IDs
+    r"|[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"    # email
+    r"|\$\s?\d",                                          # dollar amount
+)
+_PERSONAL_PHRASES = ("my salary", "my ssn", "social security")
+
+
+def _is_personal_question(q: str) -> bool:
+    """True for questions about the user THEMSELVES ("what department am I in?",
+    "what's my role?", "who am I?") or containing personal data. These are
+    answered from the profile / chat history, not the KB -- never a KB gap."""
+    s = q or ""
+    low = s.lower()
+    if _PERSONAL_RECALL_RE.search(low):
+        return True
+    if any(p in low for p in _PERSONAL_PHRASES):
+        return True
+    if _PERSONAL_PII_RE.search(s):
+        return True
+    return False
+
+
 def detect_and_log_failed_query(user_query: str, bot_response: str, user_id: int = None, has_student_data: bool = False) -> bool:
     """Detect KB misses using Vertex AI Search grounding metadata.
 
@@ -62,6 +98,14 @@ def detect_and_log_failed_query(user_query: str, bot_response: str, user_id: int
 
     # Skip short or greeting queries
     if len(query) < 15 or SKIP_PATTERNS.match(query):
+        return False
+
+    # Skip personal questions about the user themselves ("what department am I
+    # in?", "what's my role?") and anything with personal data -- these are
+    # answered from the profile / chat history, not the KB, so a miss is NOT a
+    # KB gap. Only genuine knowledge-base questions become failed queries.
+    if _is_personal_question(query):
+        log.info(f"[RESEARCH] Skipping personal question (not a KB gap): {query[:60]}")
         return False
 
     # Skip security refusals (not a KB miss, just off-topic/injection)

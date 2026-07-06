@@ -1337,8 +1337,8 @@ export default function AdminDashboard() {
             <button onClick={() => { loadSuggestions(); loadResearchStats(); }} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "transparent", color: "var(--text-main)", cursor: "pointer" }}>
               Refresh
             </button>
-            <button onClick={() => { setShowFailedQueries(!showFailedQueries); if (!showFailedQueries) loadFailedQueries(); }} style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "transparent", color: "var(--text-secondary)", cursor: "pointer", marginLeft: "auto" }}>
-              {showFailedQueries ? "Hide" : "Show"} Failed Queries ({researchStats.total_failed || 0})
+            <button onClick={() => { setShowFailedQueries(!showFailedQueries); if (!showFailedQueries) loadFailedQueries(); }} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid var(--border-color)", background: "var(--bg-elevated)", color: "var(--text-main)", fontWeight: 600, cursor: "pointer", marginLeft: "auto" }}>
+              {showFailedQueries ? "Hide" : "View"} Failed Queries ({researchStats.total_failed || 0})
             </button>
           </div>
 
