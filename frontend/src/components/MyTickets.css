@@ -16,15 +16,8 @@
 .mytickets-header h1 {
   font-size: 1.75rem;
   font-weight: 700;
-  margin: 0 0 6px;
-  letter-spacing: -0.01em;
-}
-
-.mytickets-subtitle {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.92rem;
-  max-width: 640px;
+  letter-spacing: -0.01em;
 }
 
 .mytickets-result-meta {

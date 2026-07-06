@@ -106,10 +106,6 @@ export default function MyTickets() {
     <div className="mytickets">
       <header className="mytickets-header">
         <h1>My Support Tickets</h1>
-        <p className="mytickets-subtitle">
-          Issues and requests you've sent to the ORA Navigator team, and where
-          they stand. Resolved tickets include a note from an administrator.
-        </p>
       </header>
 
       <div className="mytickets-result-meta" role="status">
@@ -165,7 +161,7 @@ export default function MyTickets() {
                 <div className="ticket-resolution">
                   <div className="ticket-resolution-label">
                     <CheckCircle2 size={14} />
-                    <span>Resolution note</span>
+                    <span>Admin note</span>
                   </div>
                   <p className="ticket-resolution-text">{t.admin_notes}</p>
                 </div>

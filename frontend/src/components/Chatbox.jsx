@@ -134,6 +134,8 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   const [feedbackGiven, setFeedbackGiven] = useState({}); // {messageIndex: 'helpful' | 'not_helpful' | 'report'}
   const [reportModal, setReportModal] = useState(null); // index of message being reported
   const [reportText, setReportText] = useState("");
+  const [notHelpfulPanel, setNotHelpfulPanel] = useState(null); // index awaiting an optional "why" comment
+  const [notHelpfulText, setNotHelpfulText] = useState("");
 
   // 🔥 Drag-and-drop state
   const [isDragging, setIsDragging] = useState(false);
@@ -663,7 +665,9 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   };
 
   // 🔥 FEEDBACK HANDLERS
-  const handleFeedback = async (messageIndex, feedbackType, messageText) => {
+  // `details` is an optional free-text reason (used by report, and by the
+  // optional "why" on a not-helpful rating). Stored server-side in report_details.
+  const handleFeedback = async (messageIndex, feedbackType, messageText, details = null) => {
     const token = localStorage.getItem("token");
 
     try {
@@ -676,7 +680,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
         body: JSON.stringify({
           message_text: messageText,
           feedback_type: feedbackType, // 'helpful', 'not_helpful', 'report'
-          report_details: feedbackType === 'report' ? reportText : null,
+          report_details: feedbackType === 'report' ? reportText : details,
           session_id: sessionId || "default"
         })
       });
@@ -691,6 +695,25 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
     } catch (error) {
       console.error("Failed to submit feedback:", error);
     }
+  };
+
+  // Thumbs-down opens an optional "why" panel rather than submitting outright,
+  // so the not-helpful signal and its reason are recorded together in one entry.
+  const openNotHelpful = (messageIndex) => {
+    setNotHelpfulPanel(messageIndex);
+    setNotHelpfulText("");
+  };
+
+  const submitNotHelpful = (messageIndex, messageText) => {
+    const reason = notHelpfulText.trim();
+    handleFeedback(messageIndex, 'not_helpful', messageText, reason || null);
+    setNotHelpfulPanel(null);
+    setNotHelpfulText("");
+  };
+
+  const cancelNotHelpful = () => {
+    setNotHelpfulPanel(null);
+    setNotHelpfulText("");
   };
 
   const openReportModal = (messageIndex) => {
@@ -1309,8 +1332,8 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                           <ThumbsUp size={14} />
                         </button>
                         <button
-                          className={`feedback-icon-btn${feedbackGiven[i] === 'not_helpful' ? ' feedback-icon-btn--not-helpful-active' : ''}`}
-                          onClick={() => handleFeedback(i, 'not_helpful', msg.text)}
+                          className={`feedback-icon-btn${feedbackGiven[i] === 'not_helpful' ? ' feedback-icon-btn--not-helpful-active' : ''}${notHelpfulPanel === i ? ' feedback-icon-btn--not-helpful-active' : ''}`}
+                          onClick={() => openNotHelpful(i)}
                           disabled={!!feedbackGiven[i]}
                           aria-pressed={feedbackGiven[i] === 'not_helpful'}
                           title={feedbackGiven[i] === 'not_helpful' ? "You marked this not helpful" : "Not helpful"}
@@ -1326,6 +1349,28 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                         >
                           <Flag size={14} />
                         </button>
+                      </div>
+                    )}
+
+                    {/* Optional "why" panel shown after a thumbs-down. The reason
+                        is optional -- the user can submit with or without it. */}
+                    {msg.sender === "bot" && notHelpfulPanel === i && !feedbackGiven[i] && (
+                      <div className="nothelpful-panel">
+                        <label className="nothelpful-label" htmlFor={`nothelpful-${i}`}>
+                          Help us improve — what was missing or incorrect? (optional)
+                        </label>
+                        <textarea
+                          id={`nothelpful-${i}`}
+                          className="nothelpful-input"
+                          value={notHelpfulText}
+                          onChange={(e) => setNotHelpfulText(e.target.value)}
+                          rows={2}
+                          placeholder="Optional: briefly describe the issue"
+                        />
+                        <div className="nothelpful-actions">
+                          <button className="nothelpful-cancel" onClick={cancelNotHelpful}>Cancel</button>
+                          <button className="nothelpful-submit" onClick={() => submitNotHelpful(i, msg.text)}>Submit</button>
+                        </div>
                       </div>
                     )}
                   </div>

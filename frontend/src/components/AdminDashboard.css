@@ -418,6 +418,20 @@ body.dark .filter-btn.active {
   box-shadow: var(--shadow-md);
 }
 
+/* The whole list card opens the ticket -- signal it's clickable. */
+.ticket-card--clickable {
+  cursor: pointer;
+}
+
+.ticket-card--clickable:hover {
+  transform: translateY(-2px);
+}
+
+.ticket-card--clickable:focus-visible {
+  outline: 2px solid var(--msu-blue);
+  outline-offset: 2px;
+}
+
 body.dark .ticket-card:hover {
   border-color: #8ab4f8;
 }
@@ -656,6 +670,7 @@ body.dark .ticket-card:hover {
 
 .modal-description h4,
 .modal-attachment h4,
+.modal-resolution h4,
 .modal-actions h4 {
   margin: 0 0 12px 0;
   font-size: 0.85rem;
@@ -663,6 +678,58 @@ body.dark .ticket-card:hover {
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Resolution note -- the user-facing note an admin writes when resolving. */
+.modal-resolution {
+  margin-bottom: 28px;
+}
+
+.modal-resolution h4 {
+  margin-bottom: 6px;
+}
+
+.modal-resolution-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-body);
+  color: var(--text-main);
+  font-size: 0.92rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.modal-resolution-input:focus {
+  border-color: var(--msu-blue);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.12);
+}
+
+.modal-resolution-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.modal-resolution-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.modal-resolution-unsaved {
+  font-size: 0.8rem;
+  color: #d97706;
+  font-weight: 600;
+}
+
+.modal-resolution-footer .action-btn.secondary {
+  padding: 8px 18px;
 }
 
 .modal-description p {
@@ -2543,8 +2610,28 @@ body.dark .kb-icon-btn.active {
   box-shadow: var(--shadow-md);
 }
 
+/* Report cards open the full response on click -- signal it's clickable. */
+.feedback-card--clickable {
+  cursor: pointer;
+}
+
+.feedback-card--clickable:hover {
+  transform: translateY(-2px);
+}
+
+.feedback-card--clickable:focus-visible {
+  outline: 2px solid var(--msu-blue);
+  outline-offset: 2px;
+}
+
 .feedback-card.report {
   border-left: 4px solid #f59e0b;
+}
+
+/* Report status pill in the feedback detail modal */
+.status-report {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
 }
 
 .feedback-header {

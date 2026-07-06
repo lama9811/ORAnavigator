@@ -32,6 +32,8 @@ export default function AdminDashboard() {
   const [ticketStats, setTicketStats] = useState({ total: 0, open: 0, in_progress: 0, resolved: 0 });
   const [ticketFilter, setTicketFilter] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [ticketNote, setTicketNote] = useState(""); // resolution note shown to the user
+  const [ticketNoteSaving, setTicketNoteSaving] = useState(false);
   const [ticketLoading, setTicketLoading] = useState(false);
 
   // Users State
@@ -470,7 +472,8 @@ export default function AdminDashboard() {
       if (res.ok) {
         const data = await res.json();
         setFeedbackStats(data);
-        setFeedbackData(data.recent_reports || []);
+        // Note: Recent Reports reads from feedbackStats.recent_reports; the
+        // feedbackData list is owned by loadAllFeedback (the full list below).
       }
     } catch (err) { console.error("Failed to load feedback stats:", err); }
   };
@@ -685,7 +688,7 @@ export default function AdminDashboard() {
     if (activeTab === "overview") { loadOverview(); loadAnalytics(); }
     if (activeTab === "system") { loadHealth(); loadCacheStats(); }
     if (activeTab === "knowledge") loadKbFiles();
-    if (activeTab === "feedback") loadFeedbackStats();
+    if (activeTab === "feedback") { loadFeedbackStats(); loadAllFeedback(feedbackFilter); }
     if (activeTab === "research") { loadResearchStats(); loadSuggestions(); }
     if (activeTab === "cloud-kb") { loadCloudKbDocs(); loadCloudKbStats(); }
     // Preload cloud KB docs in background on first render so Datastore tab is instant
@@ -702,20 +705,58 @@ export default function AdminDashboard() {
   // ACTION HANDLERS
   // ===========================================
 
+  // Single PUT helper for the ticket modal. Always sends the current resolution
+  // note alongside whatever else changes, so the note the admin sees in the box
+  // is what gets persisted. Returns true on success.
+  const patchTicket = async (ticketId, fields) => {
+    const res = await fetch(`${API_BASE}/api/tickets/${ticketId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(fields)
+    });
+    if (res.ok) {
+      loadTickets(ticketFilter === "all" ? null : ticketFilter);
+      loadTicketStats();
+      if (selectedTicket?.id === ticketId) setSelectedTicket(prev => ({ ...prev, ...fields }));
+    }
+    return res.ok;
+  };
+
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {
-      const res = await fetch(`${API_BASE}/api/tickets/${ticketId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (res.ok) {
-        loadTickets(ticketFilter === "all" ? null : ticketFilter);
-        loadTicketStats();
-        if (selectedTicket?.id === ticketId) setSelectedTicket(prev => ({ ...prev, status: newStatus }));
-      }
+      // Only attach the note when acting on the ticket that's open in the modal
+      // -- otherwise a quick action on a list card would clobber that ticket's
+      // real note with whatever's stale in the textarea. The backend leaves
+      // admin_notes untouched when the field is absent.
+      const fields = selectedTicket?.id === ticketId
+        ? { status: newStatus, admin_notes: ticketNote.trim() }
+        : { status: newStatus };
+      await patchTicket(ticketId, fields);
     } catch (err) { console.error("Failed to update ticket:", err); }
   };
+
+  // Save the resolution note on its own, without changing status -- so an admin
+  // can write/edit the note as a deliberate action (closing the modal alone
+  // never saves it).
+  const saveTicketNote = async (ticketId) => {
+    setTicketNoteSaving(true);
+    try {
+      const ok = await patchTicket(ticketId, { admin_notes: ticketNote.trim() });
+      if (ok) toast.success("Note saved");
+      else toast.error("Couldn't save the note");
+    } catch (err) {
+      console.error("Failed to save ticket note:", err);
+      toast.error("Couldn't save the note");
+    } finally {
+      setTicketNoteSaving(false);
+    }
+  };
+
+  // Keep the note textarea in sync with whichever ticket is open (prefills any
+  // existing admin note so it can be edited rather than retyped).
+  useEffect(() => {
+    setTicketNote(selectedTicket?.admin_notes || "");
+  }, [selectedTicket?.id]);
 
   const handleAddCourse = async (e) => {
     e.preventDefault();
@@ -1481,7 +1522,15 @@ export default function AdminDashboard() {
           <div className="tickets-list">
             {ticketLoading ? <div className="tickets-loading">Loading tickets...</div> : tickets.length === 0 ? <div className="tickets-empty">No tickets found</div> : (
               tickets.map((ticket) => (
-                <div key={ticket.id} className="ticket-card">
+                <div
+                  key={ticket.id}
+                  className="ticket-card ticket-card--clickable"
+                  onClick={() => setSelectedTicket(ticket)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedTicket(ticket); } }}
+                  title="Open ticket"
+                >
                   <div className="ticket-header-row">
                     <div className="ticket-category">{getCategoryIcon(ticket.category)}<span>{ticket.category}</span></div>
                     <span className={`ticket-status ${getStatusClass(ticket.status)}`}>{ticket.status.replace("_", " ")}</span>
@@ -1493,10 +1542,12 @@ export default function AdminDashboard() {
                       <span className="ticket-user"><User size={11} />{ticket.user_email || "Unknown"}</span>
                       <span className="ticket-date"><Clock size={11} />{formatDateTime(ticket.created_at)}</span>
                     </div>
+                    {/* Quick actions stop propagation so they don't also open
+                        the modal when the whole card is clickable. */}
                     <div className="ticket-actions">
-                      <button className="view-btn" onClick={() => setSelectedTicket(ticket)} title="View"><Eye size={14} /></button>
-                      {ticket.status === "open" && <button className="progress-btn" onClick={() => updateTicketStatus(ticket.id, "in_progress")} title="In Progress"><Clock size={14} /></button>}
-                      {ticket.status !== "resolved" && <button className="resolve-btn" onClick={() => updateTicketStatus(ticket.id, "resolved")} title="Resolve"><Check size={14} /></button>}
+                      <button className="view-btn" onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }} title="View"><Eye size={14} /></button>
+                      {ticket.status === "open" && <button className="progress-btn" onClick={(e) => { e.stopPropagation(); updateTicketStatus(ticket.id, "in_progress"); }} title="In Progress"><Clock size={14} /></button>}
+                      {ticket.status !== "resolved" && <button className="resolve-btn" onClick={(e) => { e.stopPropagation(); updateTicketStatus(ticket.id, "resolved"); }} title="Resolve"><Check size={14} /></button>}
                     </div>
                   </div>
                 </div>
@@ -1547,40 +1598,93 @@ export default function AdminDashboard() {
             <span className="satisfaction-percent">{feedbackStats.satisfaction_rate || 0}%</span>
           </div>
 
-          {/* Recent Reports Section */}
+          {/* User Feedback list -- not-helpful (with comment) + reports.
+              Reads feedbackData (loadAllFeedback). Replaces the old separate
+              "Recent Reports" section, which this now encompasses. */}
           <div className="feedback-reports-section">
-            <h3><Flag size={16} /> Recent Reports ({feedbackStats.reports})</h3>
-            {feedbackStats.recent_reports && feedbackStats.recent_reports.length > 0 ? (
-              <div className="feedback-list">
-                {feedbackStats.recent_reports.map((report) => (
-                  <div key={report.id} className="feedback-card report">
-                    <div className="feedback-header">
-                      <span className="feedback-type-badge report">
-                        <Flag size={12} /> Report
-                      </span>
-                      <span className="feedback-date">
-                        <Clock size={11} /> {formatDateTime(report.timestamp)}
-                      </span>
-                    </div>
-                    <div className="feedback-message">
-                      <strong>Bot Response:</strong>
-                      <p>{report.message_preview}</p>
-                    </div>
-                    {report.details && (
-                      <div className="feedback-details">
-                        <strong>User's Report:</strong>
-                        <p>{report.details}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+            <h3><Smile size={16} /> User Feedback</h3>
+            <div className="ticket-filters">
+              {["all", "not_helpful", "report"].map((filter) => (
+                <button
+                  key={filter}
+                  className={`filter-btn ${feedbackFilter === filter ? "active" : ""}`}
+                  onClick={() => { setFeedbackFilter(filter); loadAllFeedback(filter); }}
+                >
+                  {filter === "all" ? "All" : filter === "not_helpful" ? "Not helpful" : "Reports"}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              // A not-helpful rating with no real comment is just a count, never
+              // a card. Filter here so a stale/empty entry can't render a blank
+              // card, and so the empty-state below reflects the visible list.
+              const visibleFeedback = feedbackData.filter((fb) =>
+                fb.feedback_type !== "not_helpful" || (fb.report_details && fb.report_details.trim())
+              );
+              return feedbackLoading ? (
+              <div className="tickets-loading">Loading feedback...</div>
+            ) : visibleFeedback.length === 0 ? (
+              feedbackFilter === "report" ? (
+                <div className="empty-state">
+                  <CheckCircle size={32} style={{ color: '#22c55e', marginBottom: 12 }} />
+                  <p>No reports have been submitted.</p>
+                </div>
+              ) : (
+                <div className="empty-state"><p>No feedback in this category.</p></div>
+              )
             ) : (
-              <div className="empty-state">
-                <CheckCircle size={32} style={{ color: '#22c55e', marginBottom: 12 }} />
-                <p>No reports yet! Users are happy with the responses.</p>
+              <div className="feedback-list">
+                {visibleFeedback.map((fb) => {
+                  // Only two types reach this list: reports (show the bot
+                  // message + report) and not-helpful (show the comment only).
+                  const isReport = fb.feedback_type === "report";
+                  const badge = isReport
+                    ? { cls: "report", icon: <Flag size={12} />, label: "Report" }
+                    : { cls: "not-helpful", icon: <ThumbsDown size={12} />, label: "Not helpful" };
+                  const preview = fb.message_text && fb.message_text.length > 150
+                    ? fb.message_text.slice(0, 150) + "..."
+                    : fb.message_text;
+                  // Map to the shape the detail modal reads.
+                  const forModal = { ...fb, message_preview: preview, details: fb.report_details };
+                  return (
+                    <div
+                      key={fb.id}
+                      className={`feedback-card ${badge.cls} feedback-card--clickable`}
+                      onClick={() => setSelectedFeedback(forModal)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedFeedback(forModal); } }}
+                      title="View full feedback"
+                    >
+                      <div className="feedback-header">
+                        <span className={`feedback-type-badge ${badge.cls}`}>{badge.icon} {badge.label}</span>
+                        <span className="feedback-date"><Clock size={11} /> {formatDateTime(fb.timestamp)}</span>
+                      </div>
+                      {isReport ? (
+                        <>
+                          <div className="feedback-message">
+                            <strong>Bot Response:</strong>
+                            <p>{preview || "(no response text captured)"}</p>
+                          </div>
+                          {fb.report_details && (
+                            <div className="feedback-details">
+                              <strong>User's Report:</strong>
+                              <p>{fb.report_details}</p>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="feedback-details">
+                          <strong>User's comment:</strong>
+                          <p>{fb.report_details}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            );
+            })()}
           </div>
         </div>
       )}
@@ -2110,6 +2214,31 @@ export default function AdminDashboard() {
                   )}
                 </div>
               )}
+              <div className="modal-resolution">
+                <h4>Notes</h4>
+                <textarea
+                  className="modal-resolution-input"
+                  placeholder="e.g. Resolved — the correct deadline has been updated in the knowledge base."
+                  value={ticketNote}
+                  onChange={(e) => setTicketNote(e.target.value)}
+                  rows={3}
+                />
+                {(() => {
+                  const dirty = ticketNote.trim() !== (selectedTicket.admin_notes || "").trim();
+                  return (
+                    <div className="modal-resolution-footer">
+                      {dirty && <span className="modal-resolution-unsaved">Unsaved changes</span>}
+                      <button
+                        className="action-btn secondary"
+                        onClick={() => saveTicketNote(selectedTicket.id)}
+                        disabled={ticketNoteSaving || !dirty}
+                      >
+                        {ticketNoteSaving ? "Saving…" : "Save note"}
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
               <div className="modal-actions">
                 <h4>Update Status</h4>
                 <div className="status-buttons">
@@ -2122,6 +2251,42 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* =================== FEEDBACK DETAIL MODAL =================== */}
+      {selectedFeedback && (() => {
+        const type = selectedFeedback.feedback_type || "report";
+        const typeMeta = type === "helpful"
+          ? { icon: <ThumbsUp size={18} />, badgeIcon: <ThumbsUp size={12} />, title: "Helpful response", label: "Helpful", cls: "helpful", detailsLabel: "User's comment" }
+          : type === "not_helpful"
+            ? { icon: <ThumbsDown size={18} />, badgeIcon: <ThumbsDown size={12} />, title: "Not-helpful response", label: "Not helpful", cls: "not-helpful", detailsLabel: "User's comment" }
+            : { icon: <Flag size={18} />, badgeIcon: <Flag size={12} />, title: "Reported response", label: "Report", cls: "report", detailsLabel: "User's report" };
+        return (
+        <div className="ticket-modal-overlay" onClick={() => setSelectedFeedback(null)}>
+          <div className="ticket-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-row">{typeMeta.icon}<h2>{typeMeta.title}</h2></div>
+              <button className="modal-close" onClick={() => setSelectedFeedback(null)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-meta">
+                <span className={`feedback-type-badge ${typeMeta.cls}`}>{typeMeta.badgeIcon} {typeMeta.label}</span>
+                <span className="ticket-date"><Clock size={12} />{formatDateTime(selectedFeedback.timestamp)}</span>
+              </div>
+              <div className="modal-description">
+                <h4>Full bot response</h4>
+                <p>{selectedFeedback.message_text || selectedFeedback.message_preview || "(no response text captured)"}</p>
+              </div>
+              {selectedFeedback.details && (
+                <div className="modal-description">
+                  <h4>{typeMeta.detailsLabel}</h4>
+                  <p>{selectedFeedback.details}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        );
+      })()}
 
     </div>
   );

@@ -2188,6 +2188,82 @@ body.dark .live-mode-btn.active {
   background: rgba(245, 158, 11, 0.1);
 }
 
+/* ─── OPTIONAL "WHY" PANEL (after thumbs-down) ─── */
+.nothelpful-panel {
+  margin-top: 8px;
+  max-width: 520px;
+  padding: 12px 14px;
+  background: var(--bg-card, #f8f9fa);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+}
+
+.nothelpful-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #555);
+  margin-bottom: 8px;
+}
+
+.nothelpful-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  background: var(--bg-body, #fff);
+  color: var(--text-main, #202124);
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.nothelpful-input:focus {
+  border-color: var(--msu-blue, #4285f4);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.12);
+}
+
+.nothelpful-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.nothelpful-cancel,
+.nothelpful-submit {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.nothelpful-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
+  color: var(--text-secondary, #555);
+}
+
+.nothelpful-cancel:hover {
+  background: var(--bg-card-hover, rgba(0, 0, 0, 0.04));
+}
+
+.nothelpful-submit {
+  background: var(--msu-blue, #4285f4);
+  border: 1px solid var(--msu-blue, #4285f4);
+  color: #fff;
+}
+
+.nothelpful-submit:hover {
+  filter: brightness(0.95);
+}
+
 /* ─── REPORT MODAL ─── */
 .report-modal-overlay {
   position: fixed;
