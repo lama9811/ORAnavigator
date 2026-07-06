@@ -8,6 +8,7 @@ for admin review.
 Flow: Failed Query Detection -> Clustering -> Research -> KB Suggestion
 """
 
+import os
 import re
 import json
 import logging
@@ -295,7 +296,12 @@ OUTPUT FORMAT (return ONLY valid JSON, no markdown fences):
 }}"""
 
     try:
-        client = genai.Client(vertexai=True, project="oranavigator-vertex-ai", location="us-central1")
+        # Use the SAME Vertex project as the rest of the app (env-driven). The
+        # old hardcoded "oranavigator-vertex-ai" project doesn't exist here, so
+        # every research call failed and suggestions came back empty.
+        project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
+        location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+        client = genai.Client(vertexai=True, project=project, location=location)
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
