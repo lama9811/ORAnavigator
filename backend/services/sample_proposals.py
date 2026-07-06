@@ -40,14 +40,16 @@ PDF_DIR = os.path.join(_BACKEND_DIR, "sample_proposals")
 
 # Fixed filter buckets shown as chips in the UI, in display order. An entry may
 # belong to several. Keep these in sync with the `categories` values below.
-CATEGORIES = ["NSF", "NIH", "Foundations", "Early-career"]
+CATEGORIES = ["NSF", "NIH", "Early-career"]
 
 # access: "free"    -> open, no login
 #         "partial" -> some content behind a free account / paywall (badge it)
 SAMPLE_PROPOSALS: list[dict] = [
-    # === Real funded proposals — direct links to official documents =========
-    # These open the actual funded proposal PDF on the funder's / a university's
-    # own site (we never rehost them). Verified live when added.
+    # === Curated: real funded proposals — direct links to official documents ==
+    # Every entry opens the ACTUAL proposal PDF on the funder's or a reputable
+    # university research office's own site (we never rehost). Each URL was
+    # verified live (HTTP 200, application/pdf) when added. Scope: official
+    # funders (NSF, NIH & institutes) + reputable university research offices.
     {
         "id": "nsf-full-funded-proposal",
         "type": "link",
@@ -62,151 +64,55 @@ SAMPLE_PROPOSALS: list[dict] = [
                "to see how the required sections actually fit together.",
     },
     {
+        "id": "nsf-career-proposal",
+        "type": "link",
+        "title": "NSF — CAREER Proposal (funded, early-career)",
+        "source": "Carleton College / SERC (NAGT collection of successful NSF proposals)",
+        "url": "https://cdn.serc.carleton.edu/files/NAGTWorkshops/earlycareer/research/desai_career_proposal.pdf",
+        "categories": ["NSF", "Early-career"],
+        "kind": "A complete, funded NSF CAREER proposal (PDF) — the early-career "
+                "award that pairs a research plan with an education plan",
+        "access": "free",
+        "why": "The model to study if you're preparing an NSF CAREER award — a real "
+               "funded example of the research-plus-education structure reviewers expect.",
+    },
+    {
+        "id": "nsf-research-proposal",
+        "type": "link",
+        "title": "NSF — Research Proposal (funded)",
+        "source": "Carleton College / SERC (NAGT collection of successful NSF proposals)",
+        "url": "https://cdn.serc.carleton.edu/files/NAGTWorkshops/earlycareer/research/bracco_nsf-oce_proposal.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete, funded standard NSF research proposal (PDF)",
+        "access": "free",
+        "why": "A real funded NSF research proposal — a second structural model "
+               "alongside the CAREER example.",
+    },
+    {
         "id": "nih-r01-funded-application",
         "type": "link",
         "title": "NIH — Funded R01 Application (real, with reviewer summary)",
         "source": "NIH — NIDCD (funded R01)",
         "url": "https://www.nidcd.nih.gov/sites/default/files/2024-07/carney-laurel-application-dc010813.pdf",
-        "categories": ["NIH", "Early-career"],
+        "categories": ["NIH"],
         "kind": "A complete funded R01 application (PDF); NIDCD posts the reviewers' "
                 "summary statement alongside it on nidcd.nih.gov",
         "access": "free",
         "why": "A real funded NIH R01 you can read in full — and the panel's written "
                "summary statement is posted next to it, so you see what scored well.",
     },
-
-    # === Funder-published samples (links) ===================================
     {
-        "id": "nsf-official-sample",
+        "id": "nih-r21-early-career-application",
         "type": "link",
-        "title": "NSF Official Sample Proposal (Cultural Anthropology)",
-        "source": "National Science Foundation",
-        "url": "https://www.nsf.gov/sbe/bcs/sample-proposal",
-        "categories": ["NSF"],
-        "kind": "Full proposal + original & revised budgets + 3 peer-review summaries",
-        "access": "free",
-        "why": "A rare official, end-to-end NSF example — the proposal, the "
-               "budget, and the actual reviewer summaries that scored it.",
-    },
-    {
-        "id": "niaid-sample-applications",
-        "type": "link",
-        "title": "NIH / NIAID Sample Applications & More",
-        "source": "National Institute of Allergy and Infectious Diseases (NIH)",
-        "url": "https://www.niaid.nih.gov/grants-contracts/sample-applications",
+        "title": "NIH — Funded R21 Application (Early-Career Research)",
+        "source": "NIH — NIDCD (funded R21, Early-Career Research award)",
+        "url": "https://www.nidcd.nih.gov/sites/default/files/2022-12/monson-ecr-r21-application.pdf",
         "categories": ["NIH", "Early-career"],
-        "kind": "Full funded apps — R01, R21, K-series, F31 fellowships, SBIR "
-                "— most paired with the reviewers' summary statements",
+        "kind": "A complete funded R21 Early-Career Research application (PDF); the "
+                "reviewers' summary statement is posted alongside it on nidcd.nih.gov",
         "access": "free",
-        "why": "The best federal source: complete applications PLUS the written "
-               "critiques, so you see both the proposal and what made it fundable.",
-    },
-    {
-        "id": "nsf-hbcu-eir",
-        "type": "link",
-        "title": "NSF HBCU Excellence in Research (HBCU-EiR)",
-        "source": "National Science Foundation",
-        "url": "https://www.nsf.gov/funding/opportunities/hbcu-eir-historically-black-colleges-universities-excellence-research",
-        "categories": ["NSF", "Early-career"],
-        "kind": "Solicitation to model against (for faculty building a research program)",
-        "access": "free",
-        "why": "The NSF program written for HBCU faculty starting or rebuilding a "
-               "research program — the solicitation your proposal should answer.",
-    },
-
-    # === University example libraries (multi-agency links) ==================
-    {
-        "id": "usf-proposal-samples",
-        "type": "link",
-        "title": "USF — Proposal Samples (Arts & Sciences)",
-        "source": "University of South Florida",
-        "url": "https://www.usf.edu/arts-sciences/research-scholarship/proposal-tools/proposal-samples.aspx",
-        "categories": ["NSF", "NIH"],
-        "kind": "Full proposals (NSF CAREER/EAGER/RAPID, NIH R01/R21, NASA, NEH) "
-                "plus Data Management Plans, biosketches, and budget samples",
-        "access": "free",
-        "why": "One of the richest collections — covers many agencies and the "
-               "individual components first-timers struggle with, all in one place.",
-    },
-    {
-        "id": "uaf-sample-funded-proposals",
-        "type": "link",
-        "title": "UA Fairbanks — Sample Funded Proposals",
-        "source": "University of Alaska Fairbanks",
-        "url": "https://www.uaf.edu/ogca/lifecycle/3-develop/sample-funded-proposals.php",
-        "categories": ["NSF", "NIH", "Foundations"],
-        "kind": "Full funded proposals + summary statements across NSF, NIH, NEH, "
-                "USDA, Dept. of Education, and foundations",
-        "access": "free",
-        "why": "A broad, multi-agency, multi-discipline hub assembled by a real "
-               "research office — a good first place to browse.",
-    },
-    {
-        "id": "northwestern-annotated-samples",
-        "type": "link",
-        "title": "Northwestern — Annotated Sample Grant Proposals",
-        "source": "Northwestern University",
-        "url": "https://undergradresearch.northwestern.edu/advising/sample-grant-proposals/",
-        "categories": ["NSF", "NIH"],
-        "kind": "Full funded proposals tagged by discipline AND research method "
-                "(lab, fieldwork, archival, computational)",
-        "access": "free",
-        "why": "Annotated and method-filtered — find a model that matches HOW you "
-               "do research, not just your field.",
-    },
-    {
-        "id": "uchicago-sample-proposals",
-        "type": "link",
-        "title": "UChicago — Sample Proposals",
-        "source": "University of Chicago Research Administration",
-        "url": "https://ura.uchicago.edu/resource-library/sample-proposals",
-        "categories": ["NSF", "NIH"],
-        "kind": "Agency-by-agency index of full proposals — NIH (R01/R21/K/F31-"
-                "Diversity/SBIR), NSF, NEH, USDA, 20+ Dept. of Education",
-        "access": "free",
-        "why": "A clean, well-organized index including a diversity-fellowship "
-               "example that's relevant to early-career PIs.",
-    },
-    {
-        "id": "serc-carleton-nsf",
-        "type": "link",
-        "title": "Carleton / SERC — Successful NSF Grant Proposals",
-        "source": "Carleton College (SERC)",
-        "url": "https://serc.carleton.edu/NAGTWorkshops/earlycareer/research/NSFgrants.html",
-        "categories": ["NSF", "Early-career"],
-        "kind": "Full funded NSF proposals — CAREER, research, REU, MRI, IUSE "
-                "— concentrated in geosciences & STEM education",
-        "access": "free",
-        "why": "Built specifically for early-career faculty; the strongest source "
-               "if you're preparing an NSF CAREER award.",
-    },
-
-    # === Foundations & general (links) ======================================
-    {
-        "id": "open-grants",
-        "type": "link",
-        "title": "Open Grants — Shared Proposals Database",
-        "source": "ogrants.org",
-        "url": "https://www.ogrants.org/grants-01-all",
-        "categories": ["NSF", "NIH", "Foundations"],
-        "kind": "~300 researcher-shared proposals (NSF, NIH, NASA, USDA, Sloan, "
-                "Moore, Wellcome, CZI) — both funded AND unfunded examples",
-        "access": "free",
-        "why": "The largest single open catalog of real proposals across funders; "
-               "the unfunded entries are instructive in their own right.",
-    },
-    # === Morgan State / early-career (link) =================================
-    {
-        "id": "morgan-ora-early-career",
-        "type": "link",
-        "title": "Morgan State ORA — NSF for Early-Career Researchers",
-        "source": "Morgan State University, Office of Research Administration",
-        "url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/2023%20Faculty%20Development%20Seminars/2024-02-15_PRISSEM_Early%20Career%20Morgan%20State.pdf",
-        "categories": ["Early-career"],
-        "kind": "Morgan's own faculty-development seminar on NSF early-career funding",
-        "access": "free",
-        "why": "ORA's own guidance, tailored to Morgan faculty starting out — the "
-               "most institution-specific reference here.",
+        "why": "A real funded NIH award written by an early-career investigator — a "
+               "smaller, exploratory mechanism than an R01, with the reviewer critique.",
     },
 ]
 

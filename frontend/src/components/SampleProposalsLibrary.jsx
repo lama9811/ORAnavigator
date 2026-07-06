@@ -90,15 +90,14 @@ export default function SampleProposalsLibrary() {
         </h1>
         <p className="samples-subtitle">
           See how a strong proposal actually reads before you write your own.
-          <strong> Download</strong> our annotated sample proposals to read
-          offline, or <strong>browse</strong> authoritative external libraries of
-          real funded proposals.
+          Every entry links directly to a <strong>real funded proposal</strong>
+          from an official funder (NSF, NIH) or a reputable university research
+          office.
         </p>
         <p className="samples-disclaimer">
-          The downloadable PDFs are original samples written by ORA Navigator for
-          reference. External links open in a new tab and are maintained by third
-          parties; entries marked <strong>Community</strong> are researcher-shared
-          via Open Grants (ogrants.org).
+          These are hand-picked, real funded proposals hosted on the funder's or
+          university's own site — we don't rehost them. Each link opens the actual
+          document in a new tab.
         </p>
       </header>
 

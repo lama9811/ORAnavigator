@@ -1666,19 +1666,15 @@ async def get_forms_catalog(
 
 @app.get("/api/sample-proposals")
 async def get_sample_proposals(category: str = ""):
-    """Curated shelf of real, public example/funded proposals a PI can read for
-    reference. The authored + vetted entries are static; researcher-shared
-    proposals are merged in LIVE from Open Grants (ogrants.org), cached, and
-    degrade gracefully to [] if that source is unreachable. No LLM, no auth (the
-    content is entirely public links). Optional ?category= narrows to one filter
-    bucket; an empty or unknown value returns the full list."""
+    """Curated shelf of real, public funded proposals a PI can read for
+    reference. Every entry is a hand-vetted direct link to an actual proposal
+    document from an official funder or a reputable university research office.
+    No LLM, no auth (the content is entirely public links). Optional ?category=
+    narrows to one filter bucket; an empty or unknown value returns the full
+    list. (The live Open Grants community merge was removed by product decision —
+    only curated, authoritative samples are shown.)"""
     from services.sample_proposals import list_samples, categories
-    proposals = list_samples(category or None)  # authored-first, unchanged
-    try:
-        from services.ogrants_finder import list_community_samples
-        proposals = proposals + list_community_samples(category or None)
-    except Exception:  # noqa: BLE001 -- a live-source failure never breaks the page
-        pass
+    proposals = list_samples(category or None)
     return {
         "proposals": proposals,
         "categories": categories(),
@@ -1696,11 +1692,11 @@ async def search_sample_proposals(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Rank the sample shelf (authored + live Open Grants) against a PI's
-    free-text interest, enriched with their saved research interests. Pure
-    deterministic keyword overlap (no LLM) -- returns the SAME entries reordered
-    best-first, each matched one carrying a `match` {score, terms}. Auth'd so we
-    can fold in saved interests; the page already sits behind RequireAuth."""
+    """Rank the curated sample shelf against a PI's free-text interest, enriched
+    with their saved research interests. Pure deterministic keyword overlap (no
+    LLM) -- returns the SAME entries reordered best-first, each matched one
+    carrying a `match` {score, terms}. Auth'd so we can fold in saved interests;
+    the page already sits behind RequireAuth."""
     from services.sample_proposals import list_samples, categories, rank_samples
     query = (req.query or "").strip()
 
@@ -1714,12 +1710,6 @@ async def search_sample_proposals(
     interests = ", ".join((r.content or "").strip() for r in interest_rows if (r.content or "").strip())
 
     items = list_samples(None)  # rank the whole shelf; the UI filters by chip on top
-    try:
-        from services.ogrants_finder import list_community_samples
-        items = items + list_community_samples(None)
-    except Exception:  # noqa: BLE001
-        pass
-
     ranked = rank_samples(items, f"{query} {interests}".strip())
     return {
         "proposals": ranked,
