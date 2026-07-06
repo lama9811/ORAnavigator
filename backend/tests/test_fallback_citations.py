@@ -116,6 +116,15 @@ def test_skips_small_talk():
     assert _wants_fallback_citations("thanks!", _result()) is False
 
 
+def test_skips_personal_recall():
+    # Personal answers come from the profile/chat history, not the KB — no Sources.
+    assert _wants_fallback_citations("what department am I in?", _result()) is False
+    assert _wants_fallback_citations("what's my role?", _result()) is False
+    assert _wants_fallback_citations("who am I?", _result()) is False
+    # A real ORA question is unaffected.
+    assert _wants_fallback_citations("what is the F&A rate?", _result()) is True
+
+
 def test_skips_on_kb_fail():
     assert _wants_fallback_citations("How long does IRB take?", _result(kb_fail=True)) is False
 
