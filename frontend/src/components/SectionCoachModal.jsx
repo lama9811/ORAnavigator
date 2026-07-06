@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle, FileText, GitCompare, Scale, ClipboardCheck } from "lucide-react";
+import { X, PenLine, ListChecks, MessageSquare, Lightbulb, AlertTriangle, CheckCircle2, HelpCircle, FileText, Scale } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SectionCoachModal.css";
 
@@ -20,7 +20,7 @@ const STATUS = {
 export default function SectionCoachModal({ submission, onClose }) {
   const [sections, setSections] = useState([]);
   const [sectionKey, setSectionKey] = useState("");
-  const [mode, setMode] = useState("outline");   // "outline" | "review" | "coherence" | "responsiveness"
+  const [mode, setMode] = useState("outline");   // "outline" | "review"
   const [topic, setTopic] = useState("");
   const [draft, setDraft] = useState("");
   const [result, setResult] = useState(null);
@@ -70,8 +70,6 @@ export default function SectionCoachModal({ submission, onClose }) {
   };
 
   const run = async () => {
-    if (mode === "coherence") return runCoherence();
-    if (mode === "responsiveness") return runResponsiveness();
     if (!sectionKey) return;
     setBusy(true); setResult(null);
     try {
@@ -82,30 +80,6 @@ export default function SectionCoachModal({ submission, onClose }) {
       if (r.ok) setResult((await r.json()).result);
     } finally { setBusy(false); }
   };
-
-  // Cross-section coherence runs over the SAVED sections (no per-section input).
-  const runCoherence = async () => {
-    setBusy(true); setResult(null);
-    try {
-      const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/coherence`, {
-        method: "POST", headers: authHeaders(),
-      });
-      if (r.ok) setResult({ ...(await r.json()).result, mode: "coherence" });
-    } finally { setBusy(false); }
-  };
-
-  // Responsiveness maps the solicitation's ASKS onto the SAVED drafts (no input).
-  const runResponsiveness = async () => {
-    setBusy(true); setResult(null);
-    try {
-      const r = await fetch(`${API_BASE}/api/me/submissions/${submission.id}/responsiveness`, {
-        method: "POST", headers: authHeaders(),
-      });
-      if (r.ok) setResult({ ...(await r.json()).result, mode: "responsiveness" });
-    } finally { setBusy(false); }
-  };
-
-  const savedCount = Object.keys(drafts || {}).length;
 
   // Re-run is explicit (button); switching section/mode clears the old result.
   const pickSection = (k) => {
@@ -147,16 +121,6 @@ export default function SectionCoachModal({ submission, onClose }) {
                 <button className={mode === "review" ? "active" : ""} onClick={() => pickMode("review")}>
                   <MessageSquare size={13} /> Feedback on my draft
                 </button>
-                <button className={mode === "coherence" ? "active" : ""} onClick={() => pickMode("coherence")}
-                  disabled={savedCount < 2}
-                  title={savedCount < 2 ? "Save at least two sections to compare them" : "Check that your saved sections agree"}>
-                  <GitCompare size={13} /> Cross-section
-                </button>
-                <button className={mode === "responsiveness" ? "active" : ""} onClick={() => pickMode("responsiveness")}
-                  disabled={savedCount < 1}
-                  title={savedCount < 1 ? "Save at least one section to check it against the solicitation" : "Check your drafts against what the solicitation asked for"}>
-                  <ClipboardCheck size={13} /> Responsiveness
-                </button>
               </div>
             </div>
 
@@ -177,29 +141,10 @@ export default function SectionCoachModal({ submission, onClose }) {
               </label>
             )}
 
-            {mode === "coherence" && (
-              <p className="sc-coherence-intro">
-                Checks whether your <b>{savedCount} saved sections</b> agree with each other —
-                e.g. does the Research Strategy address every Specific Aim, does the scope fit the
-                eligibility, does the timeline match the budget? Advisory only.
-              </p>
-            )}
-
-            {mode === "responsiveness" && (
-              <p className="sc-coherence-intro">
-                Maps every ask in the solicitation — required elements, named sections, and the
-                sponsor's review criteria — onto your <b>{savedCount} saved {savedCount === 1 ? "section" : "sections"}</b>,
-                so you can see what a reviewer is looking for that you haven't covered yet. Coverage
-                only — never a score.
-              </p>
-            )}
-
             <div className="sc-run-row">
               <button className="sc-run" onClick={run}
-                disabled={busy || (mode === "review" && !draft.trim()) || (mode === "coherence" && savedCount < 2) || (mode === "responsiveness" && savedCount < 1)}>
-                {busy ? "Thinking…" : mode === "outline" ? "Get outline"
-                  : mode === "review" ? "Get feedback"
-                  : mode === "responsiveness" ? "Check responsiveness" : "Check sections"}
+                disabled={busy || (mode === "review" && !draft.trim())}>
+                {busy ? "Thinking…" : mode === "outline" ? "Get outline" : "Get feedback"}
               </button>
               {mode === "review" && (
                 <button className="sc-save" onClick={saveDraft} disabled={!draft.trim()}>Save draft</button>
@@ -209,8 +154,6 @@ export default function SectionCoachModal({ submission, onClose }) {
 
             {result && result.mode === "outline" && <OutlineView r={result} />}
             {result && result.mode === "review" && <ReviewView r={result} />}
-            {result && result.mode === "coherence" && <CoherenceView r={result} />}
-            {result && result.mode === "responsiveness" && <ResponsivenessView r={result} />}
           </div>
         )}
       </div>
@@ -359,96 +302,3 @@ function ReviewView({ r }) {
   );
 }
 
-const PAIR_STATUS = {
-  aligned: { cls: "sc-ok", icon: <CheckCircle2 size={13} />, label: "aligned" },
-  gap: { cls: "sc-bad", icon: <AlertTriangle size={13} />, label: "gap" },
-  unclear: { cls: "sc-warn", icon: <HelpCircle size={13} />, label: "check by hand" },
-};
-
-function CoherenceView({ r }) {
-  if (!r.ready) {
-    return <div className="sc-result"><div className="sc-summary">{r.summary}</div></div>;
-  }
-  return (
-    <div className="sc-result">
-      <div className="sc-summary">{r.summary}</div>
-      <ul className="sc-checklist">
-        {r.pairs.map((p, i) => {
-          const s = PAIR_STATUS[p.status] || PAIR_STATUS.unclear;
-          return (
-            <li key={i} className={`sc-check ${s.cls}`}>
-              <div className="sc-check-head">{s.icon} <b>{p.a} ↔ {p.b}</b> <span className="sc-status">{s.label}</span></div>
-              {p.note && <div className="sc-note">{p.note}</div>}
-              {p.evidence_a && <div className="sc-evidence">{p.a}: “{p.evidence_a}”</div>}
-              {p.evidence_b && <div className="sc-evidence">{p.b}: “{p.evidence_b}”</div>}
-            </li>
-          );
-        })}
-      </ul>
-      {r.suggestions?.length > 0 && (
-        <div className="sc-suggestions">
-          <div className="sc-block-head"><Lightbulb size={13} /> Suggestions</div>
-          <ul>{r.suggestions.map((sug, i) => <li key={i}>{sug}</li>)}</ul>
-        </div>
-      )}
-      {!r.ai && (
-        <div className="sc-fallback">Offline mode — compare these pairs by hand; no AI grounding was applied.</div>
-      )}
-    </div>
-  );
-}
-
-const REQ_STATUS = {
-  addressed: { cls: "sc-ok", icon: <CheckCircle2 size={13} />, label: "addressed" },
-  partial: { cls: "sc-warn", icon: <AlertTriangle size={13} />, label: "partial" },
-  not_found: { cls: "sc-bad", icon: <AlertTriangle size={13} />, label: "not found" },
-  check_by_hand: { cls: "sc-warn", icon: <HelpCircle size={13} />, label: "check by hand" },
-};
-
-const REQ_SOURCE_LABEL = {
-  section: "required section",
-  attachment: "required attachment",
-  criterion: "review criterion",
-  eligibility: "eligibility",
-};
-
-// Whole-proposal responsiveness: each solicitation ASK mapped onto the saved
-// drafts. Coverage only (addressed / partial / not found / check by hand) — never
-// a score. 'addressed'/'partial' carry a verbatim quote from the draft.
-function ResponsivenessView({ r }) {
-  if (!r.ready) {
-    return <div className="sc-result"><div className="sc-summary">{r.summary}</div></div>;
-  }
-  return (
-    <div className="sc-result">
-      <div className="sc-summary">{r.summary}</div>
-      <ul className="sc-checklist">
-        {r.rows.map((row, i) => {
-          const s = REQ_STATUS[row.status] || REQ_STATUS.check_by_hand;
-          const src = REQ_SOURCE_LABEL[row.source] || row.source;
-          return (
-            <li key={i} className={`sc-check ${s.cls}`}>
-              <div className="sc-check-head">{s.icon} <b>{row.requirement}</b> <span className="sc-status">{s.label}</span></div>
-              <div className="sc-req-source">{src}{row.detail ? ` · ${row.detail}` : ""}</div>
-              {row.note && <div className="sc-note">{row.note}</div>}
-              {row.where && <div className="sc-note">Addressed in <b>{row.where}</b></div>}
-              {row.evidence && <div className="sc-evidence">“{row.evidence}”</div>}
-              {row.source === "attachment" && row.status !== "addressed" && (
-                <div className="sc-note sc-req-hint">Some attachments are separate documents prepared outside your section drafts.</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {r.suggestions?.length > 0 && (
-        <div className="sc-suggestions">
-          <div className="sc-block-head"><Lightbulb size={13} /> Suggestions</div>
-          <ul>{r.suggestions.map((sug, i) => <li key={i}>{sug}</li>)}</ul>
-        </div>
-      )}
-      {!r.ai && (
-        <div className="sc-fallback">Offline mode — confirm by hand that your drafts address each requirement; no AI grounding was applied.</div>
-      )}
-    </div>
-  );
-}
