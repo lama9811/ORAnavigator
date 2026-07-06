@@ -1,0 +1,191 @@
+/* My Tickets -- design language matches FormsCatalog / ProfilePage:
+   card surfaces on the app background, MSU-blue accent, minimal chrome.
+   Read-only; the user views status and resolution notes, nothing editable. */
+
+.mytickets {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 32px 60px;
+  color: var(--text-primary);
+}
+
+.mytickets-header {
+  margin-bottom: 18px;
+}
+
+.mytickets-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.mytickets-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  max-width: 640px;
+}
+
+.mytickets-result-meta {
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+}
+
+/* Empty state */
+.mytickets-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+}
+
+.mytickets-empty p {
+  margin: 0;
+}
+
+.mytickets-empty-hint {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+}
+
+/* Ticket list */
+.mytickets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ticket-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px 18px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ticket-card:hover {
+  border-color: var(--msu-blue, #4285f4);
+  box-shadow: 0 2px 10px rgba(66, 133, 244, 0.06);
+}
+
+.ticket-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ticket-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ticket-category-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.ticket-subject {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* Status badge */
+.ticket-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ticket-status-badge.is-resolved {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+.ticket-status-badge.is-progress {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+/* Meta row */
+.ticket-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.ticket-meta-dot {
+  opacity: 0.6;
+}
+
+.ticket-description {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* Resolution note from the admin */
+.ticket-resolution {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 10px;
+}
+
+.ticket-resolution-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #16a34a;
+  margin-bottom: 6px;
+}
+
+.ticket-resolution-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .mytickets {
+    padding: 20px 16px 48px;
+  }
+
+  .ticket-card-top {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+  }
+}

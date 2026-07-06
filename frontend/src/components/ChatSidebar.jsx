@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'sonner';
-import { Archive, Bug, CheckCircle, ChevronRight, CircleHelp, Download, EllipsisVertical, LifeBuoy, Lightbulb, LogOut, Moon, Paperclip, Pencil, Pin, Plus, Search, Sun, Trash2, User, X } from "lucide-react";
+import { Archive, Bug, CheckCircle, ChevronRight, CircleHelp, Download, EllipsisVertical, Inbox, LifeBuoy, Lightbulb, LogOut, Moon, Paperclip, Pencil, Pin, Plus, Search, Sun, Trash2, User, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./ChatSidebar.css";
 
@@ -491,6 +491,19 @@ export default function ChatSidebar({
             <LifeBuoy size={18} />
             <span>Contact Support</span>
           </button>
+
+          {/* Admins manage all tickets in the Admin dashboard, so this
+              personal "My Tickets" view is only shown to regular users. */}
+          {userProfile?.role !== "admin" && (
+            <button
+              className="setting-btn full-width"
+              onClick={() => navigate("/my-tickets")}
+              title="View your submitted tickets and their status"
+            >
+              <Inbox size={18} />
+              <span>My Tickets</span>
+            </button>
+          )}
 
           <div className="sidebar-settings-row">
             <button
