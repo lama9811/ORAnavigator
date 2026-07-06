@@ -45,45 +45,34 @@ CATEGORIES = ["NSF", "NIH", "Foundations", "Early-career"]
 # access: "free"    -> open, no login
 #         "partial" -> some content behind a free account / paywall (badge it)
 SAMPLE_PROPOSALS: list[dict] = [
-    # === Authored, downloadable PDFs (our own originals — sort first) =======
+    # === Real funded proposals — direct links to official documents =========
+    # These open the actual funded proposal PDF on the funder's / a university's
+    # own site (we never rehost them). Verified live when added.
     {
-        "id": "nsf-ej-idss-planning-proposal",
-        "type": "pdf",
-        "pdf": "nsf-ej-idss-planning-proposal.pdf",
-        "title": "NSF Planning Proposal — Integrated Data Service (full sample)",
-        "source": "ORA Navigator — original sample",
-        "categories": ["NSF", "Early-career"],
-        "kind": "Complete NSF proposal: Project Summary, Project Description, "
-                "References, Data Management Plan, and Budget Justification",
+        "id": "nsf-full-funded-proposal",
+        "type": "link",
+        "title": "NSF — Full Funded Proposal (real example)",
+        "source": "Duke University (funded NSF proposal, hosted as an example)",
+        "url": "https://www.cellbio.duke.edu/sites/default/files/2022-06/NSF-Full-Proposal-Example-2010.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete, real funded NSF proposal (PDF) — project description, "
+                "references, and supporting documents",
         "access": "free",
-        "why": "An end-to-end, Morgan-tailored NSF proposal you can download and "
-               "read offline — see how every required section actually reads.",
+        "why": "A real, end-to-end funded NSF proposal you can read start to finish "
+               "to see how the required sections actually fit together.",
     },
     {
-        "id": "nih-specific-aims-research-strategy",
-        "type": "pdf",
-        "pdf": "nih-specific-aims-research-strategy.pdf",
-        "title": "NIH Specific Aims + Research Strategy (sample)",
-        "source": "ORA Navigator — original sample",
+        "id": "nih-r01-funded-application",
+        "type": "link",
+        "title": "NIH — Funded R01 Application (real, with reviewer summary)",
+        "source": "NIH — NIDCD (funded R01)",
+        "url": "https://www.nidcd.nih.gov/sites/default/files/2024-07/carney-laurel-application-dc010813.pdf",
         "categories": ["NIH", "Early-career"],
-        "kind": "A one-page Specific Aims page plus a Significance / Innovation / "
-                "Approach Research Strategy excerpt, NIH-style",
+        "kind": "A complete funded R01 application (PDF); NIDCD posts the reviewers' "
+                "summary statement alongside it on nidcd.nih.gov",
         "access": "free",
-        "why": "The Specific Aims page is the most important page of an NIH "
-               "proposal — this shows the structure reviewers expect.",
-    },
-    {
-        "id": "budget-justification-example",
-        "type": "pdf",
-        "pdf": "budget-justification-example.pdf",
-        "title": "Budget Justification (annotated sample)",
-        "source": "ORA Navigator — original sample",
-        "categories": ["NSF", "NIH"],
-        "kind": "A line-by-line budget justification — personnel, fringe, travel, "
-                "participant support, materials, and F&A — with Morgan rates",
-        "access": "free",
-        "why": "The budget justification trips up most first-time PIs; this is a "
-               "complete worked example you can adapt.",
+        "why": "A real funded NIH R01 you can read in full — and the panel's written "
+               "summary statement is posted next to it, so you see what scored well.",
     },
 
     # === Funder-published samples (links) ===================================

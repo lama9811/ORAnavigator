@@ -46,8 +46,9 @@ def test_link_entries_have_https_urls():
 
 
 def test_pdf_entries_have_an_existing_file():
+    # Samples are now external links to real funded proposals; there may be no
+    # locally-hosted PDFs. Any pdf-type entry that DOES exist must have its file.
     pdfs = [s for s in SAMPLE_PROPOSALS if s["type"] == "pdf"]
-    assert pdfs, "expected at least one authored PDF entry"
     for s in pdfs:
         assert s.get("pdf", "").endswith(".pdf"), f"{s['id']} missing .pdf filename"
         path = pdf_path(s["id"])
@@ -149,7 +150,10 @@ def test_get_sample_returns_copy():
 def test_download_endpoint_serves_pdf():
     from fastapi.testclient import TestClient
     import main
-    pdf_entry = next(s for s in SAMPLE_PROPOSALS if s["type"] == "pdf")
+    import pytest
+    pdf_entry = next((s for s in SAMPLE_PROPOSALS if s["type"] == "pdf"), None)
+    if pdf_entry is None:
+        pytest.skip("no pdf-type samples — all samples are external links")
     with TestClient(main.app) as client:
         r = client.get(f"/api/sample-proposals/{pdf_entry['id']}/download")
         assert r.status_code == 200

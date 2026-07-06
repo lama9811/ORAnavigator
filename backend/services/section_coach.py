@@ -30,12 +30,12 @@ from services import sample_proposals as _samples
 # rather than a dead one. Only sections with a genuinely relevant authored
 # sample are mapped; the rest get no hint.
 SECTION_SAMPLES = {
-    "specific_aims": "nih-specific-aims-research-strategy",
-    "research_strategy": "nih-specific-aims-research-strategy",
-    "project_summary": "nsf-ej-idss-planning-proposal",
-    "project_description": "nsf-ej-idss-planning-proposal",
-    "broader_impacts": "nsf-ej-idss-planning-proposal",
-    "data_management_plan": "nsf-ej-idss-planning-proposal",
+    "specific_aims": "nih-r01-funded-application",
+    "research_strategy": "nih-r01-funded-application",
+    "project_summary": "nsf-full-funded-proposal",
+    "project_description": "nsf-full-funded-proposal",
+    "broader_impacts": "nsf-full-funded-proposal",
+    "data_management_plan": "nsf-full-funded-proposal",
 }
 
 

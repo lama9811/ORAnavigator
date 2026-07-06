@@ -162,15 +162,15 @@ def test_section_samples_all_resolve_to_real_samples():
 
 def test_outline_includes_sample_hint():
     o = sc.outline_section("NIH", "specific_aims")
-    assert o["sample"]["id"] == "nih-specific-aims-research-strategy"
+    assert o["sample"]["id"] == "nih-r01-funded-application"
     assert o["sample"]["title"]                     # carries a human title
     nsf = sc.outline_section("NSF", "project_summary")
-    assert nsf["sample"]["id"] == "nsf-ej-idss-planning-proposal"
+    assert nsf["sample"]["id"] == "nsf-full-funded-proposal"
 
 
 def test_review_includes_sample_hint():
     r = sc.review_section("NIH", "specific_aims", "Some aims draft text.")
-    assert r["sample"]["id"] == "nih-specific-aims-research-strategy"
+    assert r["sample"]["id"] == "nih-r01-funded-application"
 
 
 def test_unmapped_section_has_no_sample_hint():
