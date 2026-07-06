@@ -1068,16 +1068,16 @@ export default function AdminDashboard() {
         <button className={`admin-tab ${activeTab === "cloud-kb" ? "active" : ""}`} onClick={() => setActiveTab("cloud-kb")}>
           <Database size={14} /><span>Database</span>
         </button>
-        <button className={`admin-tab ${activeTab === "users" ? "active" : ""}`} onClick={() => setActiveTab("users")}>
-          <Users size={14} /><span>Users</span>
-        </button>
         <button className={`admin-tab ${activeTab === "tickets" ? "active" : ""}`} onClick={() => setActiveTab("tickets")}>
           <Ticket size={14} /><span>Tickets</span>
           {ticketStats.open > 0 && <span className="ticket-badge">{ticketStats.open}</span>}
         </button>
         <button className={`admin-tab ${activeTab === "feedback" ? "active" : ""}`} onClick={() => setActiveTab("feedback")}>
-          <Smile size={14} /><span>Reviews</span>
+          <Smile size={14} /><span>Feedback</span>
           {feedbackStats.reports > 0 && <span className="ticket-badge">{feedbackStats.reports}</span>}
+        </button>
+        <button className={`admin-tab ${activeTab === "users" ? "active" : ""}`} onClick={() => setActiveTab("users")}>
+          <Users size={14} /><span>Users</span>
         </button>
         <button className={`admin-tab ${activeTab === "research" ? "active" : ""}`} onClick={() => setActiveTab("research")}>
           <Search size={14} /><span>Research</span>

@@ -32,7 +32,7 @@ SyntaxHighlighter.registerLanguage('typescript', tsLang);
 SyntaxHighlighter.registerLanguage('ts', tsLang);
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { ArrowRight, ArrowUpCircle, AudioLines, EllipsisVertical, File, FileImage, FileText, Flag, Lightbulb, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Volume2, X } from "lucide-react";
+import { ArrowRight, ArrowUpCircle, AudioLines, File, FileImage, FileText, Flag, Lightbulb, Mic, Paperclip, Square, ThumbsDown, ThumbsUp, Volume2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // 🔥 Icons for File Cards
@@ -131,8 +131,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
   const selectedModel = "inav-1.1";
 
   // 🔥 Feedback State
-  const [feedbackMenuOpen, setFeedbackMenuOpen] = useState(null); // index of message with open menu
-  const [feedbackGiven, setFeedbackGiven] = useState({}); // {messageIndex: 'helpful' | 'not_helpful' | 'reported'}
+  const [feedbackGiven, setFeedbackGiven] = useState({}); // {messageIndex: 'helpful' | 'not_helpful' | 'report'}
   const [reportModal, setReportModal] = useState(null); // index of message being reported
   const [reportText, setReportText] = useState("");
 
@@ -684,7 +683,6 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
 
       // Update local state to show feedback was given
       setFeedbackGiven(prev => ({ ...prev, [messageIndex]: feedbackType }));
-      setFeedbackMenuOpen(null);
 
       if (feedbackType === 'report') {
         setReportModal(null);
@@ -697,24 +695,12 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
 
   const openReportModal = (messageIndex) => {
     setReportModal(messageIndex);
-    setFeedbackMenuOpen(null);
   };
 
   const closeReportModal = () => {
     setReportModal(null);
     setReportText("");
   };
-
-  // Close feedback menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (feedbackMenuOpen !== null && !e.target.closest('.feedback-menu-container')) {
-        setFeedbackMenuOpen(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [feedbackMenuOpen]);
 
   // Auto-resize textarea
   const resizeTextarea = useCallback(() => {
@@ -1310,64 +1296,40 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                             <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><path d="M13.5 8a5.5 5.5 0 11-1.3-3.56" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/><path d="M13.5 2.5v2.5H11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                           </button>
                         )}
+
+                        {/* Feedback icons — inline on the response card */}
+                        <span className="feedback-divider" aria-hidden="true" />
+                        <button
+                          className={`feedback-icon-btn${feedbackGiven[i] === 'helpful' ? ' feedback-icon-btn--helpful-active' : ''}`}
+                          onClick={() => handleFeedback(i, 'helpful', msg.text)}
+                          disabled={!!feedbackGiven[i]}
+                          aria-pressed={feedbackGiven[i] === 'helpful'}
+                          title={feedbackGiven[i] === 'helpful' ? "You found this helpful" : "Helpful"}
+                        >
+                          <ThumbsUp size={14} />
+                        </button>
+                        <button
+                          className={`feedback-icon-btn${feedbackGiven[i] === 'not_helpful' ? ' feedback-icon-btn--not-helpful-active' : ''}`}
+                          onClick={() => handleFeedback(i, 'not_helpful', msg.text)}
+                          disabled={!!feedbackGiven[i]}
+                          aria-pressed={feedbackGiven[i] === 'not_helpful'}
+                          title={feedbackGiven[i] === 'not_helpful' ? "You marked this not helpful" : "Not helpful"}
+                        >
+                          <ThumbsDown size={14} />
+                        </button>
+                        <button
+                          className={`feedback-icon-btn${feedbackGiven[i] === 'report' ? ' feedback-icon-btn--report-active' : ''}`}
+                          onClick={() => openReportModal(i)}
+                          disabled={!!feedbackGiven[i]}
+                          aria-pressed={feedbackGiven[i] === 'report'}
+                          title={feedbackGiven[i] === 'report' ? "You reported this response" : "Report an issue"}
+                        >
+                          <Flag size={14} />
+                        </button>
                       </div>
                     )}
                   </div>
 
-                  {/* 🔥 FEEDBACK MENU - Right side of bot messages */}
-                  {msg.sender === "bot" && (
-                    <div className="feedback-menu-container">
-                      {/* Show feedback status if already given */}
-                      {feedbackGiven[i] ? (
-                        <div className={`feedback-status feedback-status--${feedbackGiven[i]}`}>
-                          {feedbackGiven[i] === 'helpful' && <ThumbsUp size={12} />}
-                          {feedbackGiven[i] === 'not_helpful' && <ThumbsDown size={12} />}
-                          {feedbackGiven[i] === 'report' && <Flag size={12} />}
-                        </div>
-                      ) : (
-                        <>
-                          {/* Three-dot menu button - visible on hover */}
-                          <button
-                            className="feedback-menu-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFeedbackMenuOpen(feedbackMenuOpen === i ? null : i);
-                            }}
-                            title="Rate this response"
-                          >
-                            <EllipsisVertical size={14} />
-                          </button>
-
-                          {/* Dropdown menu */}
-                          {feedbackMenuOpen === i && (
-                            <div className="feedback-dropdown">
-                              <button
-                                className="feedback-option feedback-option--helpful"
-                                onClick={() => handleFeedback(i, 'helpful', msg.text)}
-                              >
-                                <ThumbsUp size={14} />
-                                <span>Helpful</span>
-                              </button>
-                              <button
-                                className="feedback-option feedback-option--not-helpful"
-                                onClick={() => handleFeedback(i, 'not_helpful', msg.text)}
-                              >
-                                <ThumbsDown size={14} />
-                                <span>Not Helpful</span>
-                              </button>
-                              <button
-                                className="feedback-option feedback-option--report"
-                                onClick={() => openReportModal(i)}
-                              >
-                                <Flag size={14} />
-                                <span>Report Issue</span>
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
                 <div className="timestamp">{msg.time}</div>
               </div>
