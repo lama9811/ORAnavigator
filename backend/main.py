@@ -14,6 +14,24 @@ from typing import List, Dict, Any, Optional
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 
+
+def iso_utc(dt):
+    """Serialize a datetime as an unambiguous UTC ISO string (with a trailing
+    'Z'). Timestamps are stored in UTC, but SQLite/MySQL return them as *naive*
+    datetimes, so a plain .isoformat() has no timezone marker -- the browser
+    then parses it as LOCAL time and shows the wrong hour. Stamping UTC here
+    lets the client convert to the viewer's zone correctly. Returns None for a
+    falsy input so callers can keep their `... if x else None` shape."""
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    # isoformat() renders +00:00; normalize to the shorter, universal 'Z'.
+    return dt.isoformat().replace("+00:00", "Z")
+
+
 #  FIXED IMPORTS: Use 'pypdf' which you installed, not 'PyPDF2'
 import pypdf
 import docx
@@ -1787,7 +1805,7 @@ async def get_chat_history(user=Depends(get_current_user), db: Session = Depends
             "user": c.user_query,
             "bot": c.bot_response,
             "citations": cites,
-            "time": c.timestamp.isoformat()
+            "time": iso_utc(c.timestamp)
         })
     return {"history": history}
 
@@ -1959,7 +1977,7 @@ async def get_all_users(
                 "email": u.email,
                 "name": u.name,
                 "role": u.role,
-                "created_at": u.created_at.isoformat() if u.created_at else None
+                "created_at": iso_utc(u.created_at)
             }
             for u in users
         ],
@@ -2026,7 +2044,7 @@ async def get_system_health(user: dict = Depends(get_current_user), db: Session 
         "vertex_agent": {"status": "unknown", "message": ""},
         "openai_tts": {"status": "unknown", "message": ""},
         "mode": "vertex_ai" if USE_VERTEX_AGENT else "legacy_rag",
-        "last_check": datetime.now(timezone.utc).isoformat()
+        "last_check": iso_utc(datetime.now(timezone.utc))
     }
 
     # Check Database
@@ -2072,7 +2090,7 @@ async def list_kb_files(user: dict = Depends(get_current_user)):
                 files.append({
                     "filename": f,
                     "size": size,
-                    "modified": modified.isoformat()
+                    "modified": iso_utc(modified)
                 })
 
     return {"files": sorted(files, key=lambda x: x["filename"])}
@@ -2455,7 +2473,7 @@ async def get_analytics(user: dict = Depends(get_current_user), db: Session = De
         "total_users": db.query(User).count(),
         "total_tickets": total_tickets,
         "open_tickets": open_tickets,
-        "timestamp": now.isoformat()
+        "timestamp": iso_utc(now)
     }
 
 # ==============================================================================
@@ -2484,8 +2502,8 @@ async def list_tickets(status: str = None, user: dict = Depends(get_current_user
                 "attachment_name": t.attachment_name,
                 "attachment_data": t.attachment_data if t.attachment_data else None,
                 "admin_notes": t.admin_notes,
-                "created_at": t.created_at.isoformat() if t.created_at else None,
-                "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+                "created_at": iso_utc(t.created_at),
+                "updated_at": iso_utc(t.updated_at),
             }
             for t in tickets
         ]
@@ -2633,8 +2651,9 @@ async def get_feedback_stats(user: dict = Depends(get_current_user), db: Session
             {
                 "id": r.id,
                 "message_preview": (r.message_text[:150] + "...") if r.message_text and len(r.message_text) > 150 else r.message_text,
+                "message_text": r.message_text,  # full reported response, for the detail view
                 "details": r.report_details,
-                "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+                "timestamp": iso_utc(r.timestamp),
             }
             for r in recent_reports
         ]
@@ -2648,6 +2667,19 @@ async def get_all_feedback(type: str = None, user: dict = Depends(get_current_us
     query = db.query(Feedback)
     if type and type != "all":
         query = query.filter(Feedback.feedback_type == type)
+    else:
+        # "All" means all *actionable* feedback: not-helpful + reports. Plain
+        # "helpful" ratings carry no user comment, so they're only a count
+        # (shown in the stats cards), not part of this list.
+        query = query.filter(Feedback.feedback_type.in_(["not_helpful", "report"]))
+
+    # A not-helpful rating with no comment is just a count (reflected in the
+    # stats card). Only surface not-helpful entries that actually carry a
+    # comment, so the list stays actionable. Reports always show.
+    query = query.filter(
+        (Feedback.feedback_type != "not_helpful")
+        | ((Feedback.report_details.isnot(None)) & (Feedback.report_details != ""))
+    )
     items = query.order_by(Feedback.timestamp.desc()).limit(100).all()
     return {
         "feedback": [
@@ -2658,7 +2690,7 @@ async def get_all_feedback(type: str = None, user: dict = Depends(get_current_us
                 "message_text": f.message_text,
                 "feedback_type": f.feedback_type,
                 "report_details": f.report_details,
-                "timestamp": f.timestamp.isoformat() if f.timestamp else None,
+                "timestamp": iso_utc(f.timestamp),
             }
             for f in items
         ]
@@ -2705,7 +2737,7 @@ async def list_suggestions(status: str = "pending", user: dict = Depends(get_cur
             "confidence": s.confidence, "suggested_doc_id": s.suggested_doc_id,
             "suggested_content": s.suggested_content, "status": s.status,
             "admin_notes": s.admin_notes,
-            "created_at": s.created_at.isoformat() if s.created_at else "",
+            "created_at": iso_utc(s.created_at) or "",
         } for s in suggestions]}
 
 @app.put("/api/admin/research/suggestions/{suggestion_id}")
@@ -2794,7 +2826,7 @@ async def list_failed_queries(status: str = "all", user: dict = Depends(get_curr
         return {"queries": [{
             "id": q.id, "user_query": q.user_query, "bot_response": q.bot_response[:200],
             "cluster_id": q.cluster_id, "status": q.status,
-            "created_at": q.created_at.isoformat() if q.created_at else "",
+            "created_at": iso_utc(q.created_at) or "",
         } for q in queries]}
 
 @app.post("/api/internal/research/run")
@@ -2914,8 +2946,8 @@ def _user_memory_to_dict(m) -> dict:
         "id": m.id,
         "type": m.memory_type,
         "content": m.content,
-        "created_at": m.created_at.isoformat() if m.created_at else None,
-        "updated_at": m.updated_at.isoformat() if m.updated_at else None,
+        "created_at": iso_utc(m.created_at),
+        "updated_at": iso_utc(m.updated_at),
         "paused": bool(m.paused),
     }
 
@@ -2925,7 +2957,7 @@ def _chat_row_to_dict(c) -> dict:
     return {
         "id": c.id,
         "session_id": c.session_id,
-        "timestamp": c.timestamp.isoformat() if c.timestamp else None,
+        "timestamp": iso_utc(c.timestamp),
         "user_query": (c.user_query or "")[:500],
         "bot_response": (c.bot_response or "")[:1000],
         "topic_label": c.topic_label,
@@ -3140,8 +3172,8 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         "has_compliance": bool(getattr(s, "compliance_json", None)),
         # Drafting Coach: whether a section draft has been saved (badge / next-step).
         "has_sections": bool(getattr(s, "sections_json", None)),
-        "created_at": s.created_at.isoformat() if s.created_at else None,
-        "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        "created_at": iso_utc(s.created_at),
+        "updated_at": iso_utc(s.updated_at),
     }
     if include_tasks:
         out["tasks"] = [_submission_task_to_dict(t) for t in s.tasks]
@@ -4056,7 +4088,7 @@ async def admin_get_user_memories(
             "id": target.id,
             "email": target.email,
             "name": target.name,
-            "last_chat_at": target.last_chat_at.isoformat() if getattr(target, "last_chat_at", None) else None,
+            "last_chat_at": iso_utc(getattr(target, "last_chat_at", None)),
         },
         "facts": [_user_memory_to_dict(m) for m in facts],
         "stats": {

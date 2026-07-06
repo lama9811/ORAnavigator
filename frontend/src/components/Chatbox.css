@@ -1133,13 +1133,6 @@ body.dark .send-btn:hover:not(:disabled) {
   align-items: center;
   gap: 4px;
   margin-top: 6px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.message-bubble:hover .bot-action-row,
-.bot-action-row:focus-within {
-  opacity: 1;
 }
 
 /* Text-to-Speech Button */
@@ -2129,133 +2122,146 @@ body.dark .live-mode-btn.active {
 }
 
 /* Container for feedback menu - positioned to the right of message */
-.feedback-menu-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  align-self: center;
+/* ─── INLINE FEEDBACK ICONS (on the response card) ─── */
+
+/* Divider that also pushes the feedback icons to the right edge of the row.
+   Feedback icons stay visible even though the action row fades in on hover:
+   read-aloud / regenerate are hover-only, feedback is always shown. */
+.feedback-divider {
+  margin-left: auto;
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
   flex-shrink: 0;
-}
-
-/* Three-dot menu button - hidden by default, visible on hover */
-.feedback-menu-btn {
-  opacity: 0;
-  background: transparent;
-  border: none;
-  padding: 6px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-}
-
-/* Show on message hover */
-.message.bot:hover .feedback-menu-btn {
   opacity: 1;
 }
 
-.feedback-menu-btn:hover {
-  background: var(--bg-card);
-  color: var(--msu-blue);
+/* Keep the hover-only buttons hidden until the card is hovered. */
+.bot-action-row .tts-btn,
+.bot-action-row .regen-icon-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-/* Dropdown menu */
-.feedback-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: var(--shadow-lg);
-  padding: 6px;
-  z-index: 100;
-  min-width: 160px;
-  animation: feedbackDropdown 0.15s ease-out;
+.message-bubble:hover .bot-action-row .tts-btn,
+.message-bubble:hover .bot-action-row .regen-icon-btn,
+.bot-action-row:focus-within .tts-btn,
+.bot-action-row:focus-within .regen-icon-btn {
+  opacity: 1;
 }
 
-@keyframes feedbackDropdown {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Feedback options */
-.feedback-option {
+/* Feedback icon button — matches the tts/regenerate icon buttons */
+.feedback-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary, #999);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--text-main);
-  border-radius: 8px;
-  transition: all 0.15s ease;
-  text-align: left;
+  transition: all 0.2s;
 }
 
-.feedback-option:hover {
+.feedback-icon-btn:hover:not(:disabled) {
+  color: var(--msu-blue);
   background: rgba(66, 133, 244, 0.08);
 }
 
-.feedback-option--helpful:hover {
-  background: rgba(34, 197, 94, 0.1);
+.feedback-icon-btn:disabled {
+  cursor: default;
+}
+
+/* Active (selected) states — the chosen icon stays coloured after clicking */
+.feedback-icon-btn--helpful-active {
   color: #16a34a;
+  background: rgba(34, 197, 94, 0.1);
 }
 
-.feedback-option--not-helpful:hover {
-  background: rgba(239, 68, 68, 0.1);
+.feedback-icon-btn--not-helpful-active {
   color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
 }
 
-.feedback-option--report:hover {
-  background: rgba(245, 158, 11, 0.1);
+.feedback-icon-btn--report-active {
   color: #d97706;
+  background: rgba(245, 158, 11, 0.1);
 }
 
-/* Feedback status badge - shown after feedback is given */
-.feedback-status {
+/* ─── OPTIONAL "WHY" PANEL (after thumbs-down) ─── */
+.nothelpful-panel {
+  margin-top: 8px;
+  max-width: 520px;
+  padding: 12px 14px;
+  background: var(--bg-card, #f8f9fa);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+}
+
+.nothelpful-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #555);
+  margin-bottom: 8px;
+}
+
+.nothelpful-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  background: var(--bg-body, #fff);
+  color: var(--text-main, #202124);
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.nothelpful-input:focus {
+  border-color: var(--msu-blue, #4285f4);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.12);
+}
+
+.nothelpful-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  animation: feedbackPop 0.3s ease-out;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
 }
 
-@keyframes feedbackPop {
-  0% { transform: scale(0.8); opacity: 0; }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); opacity: 1; }
+.nothelpful-cancel,
+.nothelpful-submit {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
 }
 
-.feedback-status--helpful {
-  background: rgba(34, 197, 94, 0.1);
-  color: #16a34a;
+.nothelpful-cancel {
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
+  color: var(--text-secondary, #555);
 }
 
-.feedback-status--not_helpful {
-  background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+.nothelpful-cancel:hover {
+  background: var(--bg-card-hover, rgba(0, 0, 0, 0.04));
 }
 
-.feedback-status--report {
-  background: rgba(245, 158, 11, 0.1);
-  color: #d97706;
+.nothelpful-submit {
+  background: var(--msu-blue, #4285f4);
+  border: 1px solid var(--msu-blue, #4285f4);
+  color: #fff;
+}
+
+.nothelpful-submit:hover {
+  filter: brightness(0.95);
 }
 
 /* ─── REPORT MODAL ─── */
@@ -2411,15 +2417,6 @@ body.dark .live-mode-btn.active {
 }
 
 /* Dark mode adjustments */
-body.dark .feedback-dropdown {
-  background: #2d2d2d;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark .feedback-option:hover {
-  background: rgba(138, 180, 248, 0.1);
-}
-
 body.dark .report-modal {
   background: #2d2d2d;
 }
@@ -2436,19 +2433,6 @@ body.dark .report-textarea:focus {
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
-  .feedback-menu-btn {
-    opacity: 1; /* Always visible on mobile since no hover */
-  }
-
-  .feedback-dropdown {
-    min-width: 140px;
-  }
-
-  .feedback-option {
-    padding: 8px 10px;
-    font-size: 0.8rem;
-  }
-
   .report-modal {
     width: 95%;
     margin: 16px;

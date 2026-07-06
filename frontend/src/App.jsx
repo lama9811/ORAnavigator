@@ -16,6 +16,7 @@ const FormsCatalog   = lazy(() => import("./components/FormsCatalog"));
 const SampleProposalsLibrary = lazy(() => import("./components/SampleProposalsLibrary"));
 const OpportunityFinder = lazy(() => import("./components/OpportunityFinder"));
 const MyProposals    = lazy(() => import("./components/MyProposals"));
+const MyTickets      = lazy(() => import("./components/MyTickets"));
 const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
 const LandingPage    = lazy(() => import("./components/LandingPage"));
 
@@ -624,6 +625,32 @@ export default function App() {
                 onCollapse={toggleSidebar}
               >
                 <OpportunityFinder />
+              </SidebarLayout>
+            </RequireAuth>
+          }
+        />
+
+        {/* protected: my support tickets */}
+        <Route
+          path="/my-tickets"
+          element={
+            <RequireAuth>
+              <SidebarLayout
+                sessions={sessions}
+                activeId={activeId}
+                onNew={handleNew}
+                onSelect={handleSelect}
+                onDelete={handleDelete}
+                onLogout={handleLogout}
+                userEmail={userEmail}
+                onPin={handlePin}
+                onArchive={handleArchive}
+                onRename={handleRename}
+                darkMode={darkMode}
+                onToggleTheme={toggleTheme}
+                onCollapse={toggleSidebar}
+              >
+                <MyTickets />
               </SidebarLayout>
             </RequireAuth>
           }
