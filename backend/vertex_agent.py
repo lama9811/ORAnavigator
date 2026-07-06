@@ -507,6 +507,12 @@ def _wants_fallback_citations(question: str, result: dict) -> bool:
         return False
     if _is_smalltalk(question):
         return False
+    # Personal-recall answers ("what department am I in?", "what's my role?")
+    # come from the user's profile / chat history, NOT the KB — so attaching a
+    # KB search's results as "Sources" is misleading (unrelated ORA docs get
+    # stapled onto a personal fact). Never add fallback citations to these.
+    if _is_personal_recall(question):
+        return False
     return True
 
 
