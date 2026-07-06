@@ -40,7 +40,7 @@ PDF_DIR = os.path.join(_BACKEND_DIR, "sample_proposals")
 
 # Fixed filter buckets shown as chips in the UI, in display order. An entry may
 # belong to several. Keep these in sync with the `categories` values below.
-CATEGORIES = ["NSF", "NIH", "Early-career"]
+CATEGORIES = ["NSF", "NIH", "NEH", "Education", "Early-career"]
 
 # access: "free"    -> open, no login
 #         "partial" -> some content behind a free account / paywall (badge it)
@@ -89,6 +89,32 @@ SAMPLE_PROPOSALS: list[dict] = [
                "alongside the CAREER example.",
     },
     {
+        "id": "nsf-mri-proposal",
+        "type": "link",
+        "title": "NSF — Major Research Instrumentation (MRI) Proposal (funded)",
+        "source": "Carleton College / SERC (NAGT collection of successful NSF proposals)",
+        "url": "https://cdn.serc.carleton.edu/files/NAGTWorkshops/earlycareer/research/peterman_beane_proposal_2015.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete, funded NSF MRI proposal (PDF) — a request to acquire "
+                "shared research instrumentation, a different proposal type from a study",
+        "access": "free",
+        "why": "Shows how an equipment-acquisition proposal is justified and structured "
+               "— useful when you need shared instrumentation, not a grant to run a study.",
+    },
+    {
+        "id": "nsf-education-proposal",
+        "type": "link",
+        "title": "NSF — Undergraduate STEM Education (IUSE) Proposal (funded)",
+        "source": "Carleton College / SERC (NAGT collection of successful NSF proposals)",
+        "url": "https://cdn.serc.carleton.edu/files/NAGTWorkshops/earlycareer/research/creating_academic_community_fo.pdf",
+        "categories": ["NSF"],
+        "kind": "A complete, funded NSF education proposal (IUSE) (PDF) — a "
+                "teaching/curriculum project rather than a research study",
+        "access": "free",
+        "why": "An education-focused proposal reads differently from a research one — a "
+               "model if your project is about teaching, curriculum, or broadening participation.",
+    },
+    {
         "id": "nih-r01-funded-application",
         "type": "link",
         "title": "NIH — Funded R01 Application (real, with reviewer summary)",
@@ -102,6 +128,19 @@ SAMPLE_PROPOSALS: list[dict] = [
                "summary statement is posted next to it, so you see what scored well.",
     },
     {
+        "id": "nih-r01-funded-application-2",
+        "type": "link",
+        "title": "NIH — Funded R01 Application #2 (auditory-cortex neuroscience)",
+        "source": "NIH — NIDCD (funded R01)",
+        "url": "https://www.nidcd.nih.gov/sites/default/files/2024-04/froemke-robert-application-2r01-dc012557-06-redacted-1.pdf",
+        "categories": ["NIH"],
+        "kind": "A second complete funded R01 application (PDF) in a different field; the "
+                "reviewers' summary statement is posted alongside it on nidcd.nih.gov",
+        "access": "free",
+        "why": "A second real funded R01 in a different topic than the first — comparing "
+               "two funded R01s shows what strong applications share regardless of field.",
+    },
+    {
         "id": "nih-r21-early-career-application",
         "type": "link",
         "title": "NIH — Funded R21 Application (Early-Career Research)",
@@ -113,6 +152,75 @@ SAMPLE_PROPOSALS: list[dict] = [
         "access": "free",
         "why": "A real funded NIH award written by an early-career investigator — a "
                "smaller, exploratory mechanism than an R01, with the reviewer critique.",
+    },
+
+    # === NEH — funded humanities proposals (official, neh.gov) ================
+    {
+        "id": "neh-digital-humanities-proposal",
+        "type": "link",
+        "title": "NEH — Digital Humanities Proposal (funded)",
+        "source": "National Endowment for the Humanities (funded application)",
+        "url": "https://www.neh.gov/sites/default/files/inline-files/university_of_california_santa_cruzpreserving_cultural_software_objects_and_their_development_1.pdf",
+        "categories": ["NEH"],
+        "kind": "A complete funded NEH Digital Humanities grant narrative (PDF), posted by NEH "
+                "as a successful application",
+        "access": "free",
+        "why": "A real funded humanities / digital-scholarship proposal — the model if your work "
+               "is in the humanities rather than STEM.",
+    },
+    {
+        "id": "neh-challenge-grant-proposal",
+        "type": "link",
+        "title": "NEH — Challenge Grant Proposal (funded)",
+        "source": "National Endowment for the Humanities (funded application)",
+        "url": "https://www.neh.gov/sites/default/files/inline-files/Alexandria%20Archive%20Institute%2C%20Data%20Literacy%20and%20Community%20Building%20in%20Digital%20Heritage.pdf",
+        "categories": ["NEH"],
+        "kind": "A complete funded NEH Challenge Grant narrative (PDF), posted by NEH as a "
+                "successful application",
+        "access": "free",
+        "why": "A funded NEH proposal that pairs scholarship with capacity-building — useful for "
+               "community-facing or infrastructure-oriented humanities projects.",
+    },
+    {
+        "id": "neh-summer-stipends-application",
+        "type": "link",
+        "title": "NEH — Summer Stipends Application (funded)",
+        "source": "National Endowment for the Humanities (funded application)",
+        "url": "https://www.neh.gov/sites/default/files/inline-files/american_history_summer_stipends_sample_application.pdf",
+        "categories": ["NEH"],
+        "kind": "A complete funded NEH Summer Stipends application (PDF) — a short, single-scholar "
+                "award, posted by NEH as a successful application",
+        "access": "free",
+        "why": "A small, self-contained funded application — an easy example to read end-to-end "
+               "for a first-time humanities applicant.",
+    },
+
+    # === U.S. Dept. of Education — funded applications (official, ed.gov) =====
+    {
+        "id": "ed-language-resource-centers",
+        "type": "link",
+        "title": "Dept. of Education — Language Resource Centers Proposal (funded)",
+        "source": "U.S. Department of Education (funded application, George Washington University)",
+        "url": "https://www2.ed.gov/programs/iegpslrc/lrc-sampleapp-gwu.pdf",
+        "categories": ["Education"],
+        "kind": "A complete funded U.S. Dept. of Education grant application (PDF) — Language "
+                "Resource Centers Program",
+        "access": "free",
+        "why": "A real funded Department of Education application — the model for education, "
+               "language, and international-studies projects.",
+    },
+    {
+        "id": "ed-strengthening-institutions",
+        "type": "link",
+        "title": "Dept. of Education — Strengthening Institutions / Title III (funded)",
+        "source": "U.S. Department of Education (funded application)",
+        "url": "https://www2.ed.gov/policy/gen/leg/foia/grants/bluemountstrength.pdf",
+        "categories": ["Education"],
+        "kind": "A complete funded U.S. Dept. of Education Strengthening Institutions (Title III) "
+                "application (PDF; scanned)",
+        "access": "free",
+        "why": "A Title III institutional-capacity grant — the kind an HBCU like Morgan applies "
+               "for; a directly relevant model for institutional and student-success proposals.",
     },
 ]
 
