@@ -214,6 +214,10 @@ def find_opportunities(description: str, profile: Optional[dict] = None,
     keyword = extract_query(description, profile)
     hits = search_grantsgov(keyword, rows=rows)
     detailed = [d for d in (fetch_opportunity(h.get("id")) for h in hits) if d]
+    # Grants.gov "posted" still returns opportunities whose response date has
+    # already passed (recurring programs keep an old date) — drop those so the
+    # finder only surfaces opportunities a PI can still actually apply to.
+    detailed = [d for d in detailed if _is_open(d.get("closeDate", ""))]
     ranked = rank_and_explain(description, detailed)
     return [_result_row(o) for o in ranked]
 
@@ -250,6 +254,20 @@ def _internal_deadline(close: str) -> str:
         return ""
     internal = internal_routing_deadline(dt)
     return internal.date().isoformat() if internal else ""
+
+
+def _is_open(close: str) -> bool:
+    """True if the opportunity is still open to apply: no close date (rolling /
+    continuous submission) or a close date today or later. Grants.gov 'posted'
+    status still returns opportunities whose response date has already passed, so
+    this filters out expired ones. Unparseable dates are kept (don't hide a
+    possibly-open opportunity on a formatting quirk)."""
+    if not close or not close.strip():
+        return True
+    dt = _parse_date(close)
+    if not dt:
+        return True
+    return dt.date() >= datetime.now().date()
 
 
 def _parse_date(s: str) -> Optional[datetime]:

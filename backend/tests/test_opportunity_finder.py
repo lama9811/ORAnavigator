@@ -147,3 +147,17 @@ def test_fetch_opportunity_returns_none_on_api_error(monkeypatch):
         raise RuntimeError("network down")
     monkeypatch.setattr(of.requests, "post", boom)
     assert of.fetch_opportunity("1") is None
+
+
+# ---------------------------------------------------------------------------
+# _is_open -- drop expired opportunities; keep rolling/future ones
+# ---------------------------------------------------------------------------
+
+def test_is_open_keeps_future_and_rolling_drops_past():
+    from datetime import datetime, timedelta
+    future = (datetime.now() + timedelta(days=30)).strftime("%m/%d/%Y")
+    past = (datetime.now() - timedelta(days=30)).strftime("%m/%d/%Y")
+    assert of._is_open(future) is True          # still open
+    assert of._is_open("") is True              # rolling / continuous submission
+    assert of._is_open("not a date") is True    # unparseable -> don't hide it
+    assert of._is_open(past) is False           # expired -> filtered out
