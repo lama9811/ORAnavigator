@@ -271,13 +271,13 @@ _SMALLTALK_RE = re.compile(
     r"hi|hey+|hello|yo|sup|howdy|hiya|greetings"
     r"|good\s+(?:morning|afternoon|evening|day)"
     r"|how\s+(?:are|r)\s+(?:you|u|ya)(?:\s+doing)?|how'?s\s+it\s+going|how\s+you\s+doing"
-    r"|what'?s\s+up|whats\s+up"
+    r"|what'?s\s+up|whats\s+up|wass?up|wazzup|you\s+good|you\s+ok(?:ay)?"
     r"|thanks?(?:\s+you)?|thank\s+you|thx|ty|cheers|appreciate\s+it"
     r"|ok(?:ay)?|cool|nice|great|awesome|got\s+it"
     r"|very|good|perfect|excellent|wonderful|fantastic|amazing|bravo"
     r"|well\s+done|good\s+job|nice\s+job|makes\s+sense|sounds\s+good"
-    r"|understood|noted|fine|alright|right"
-    r"|bye+|goodbye|see\s+(?:ya|you)|take\s+care"
+    r"|understood|noted|fine|alright|right|you"
+    r"|bye+|goodbye|see\s+(?:ya|you)|take\s+care|later|cya|peace"
     r"|today|now|there|friend|buddy"
     r")\b[\s,!.?'-]*)+$",
     re.IGNORECASE,

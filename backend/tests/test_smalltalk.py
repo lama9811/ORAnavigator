@@ -46,3 +46,14 @@ def test_ora_questions_are_not_smalltalk():
 def test_empty_is_not_smalltalk():
     assert not _is_smalltalk("")
     assert not _is_smalltalk(None)
+
+
+# Praise / affirmations ("very good", "awesome", "perfect") are small talk too,
+# so Layer 3 delivers Gemini's varied warm reply as-is (never regenerated under
+# the strict prompt) and the DELIVER step strips any stray KB Sources.
+def test_praise_and_affirmations_are_smalltalk():
+    for q in ["very good", "very good.", "VERY GOOD.", "awesome", "perfect",
+              "excellent", "nice", "great", "cool", "good job", "well done",
+              "makes sense", "sounds good", "got it", "good", "noted",
+              "you good?", "later"]:
+        assert _is_smalltalk(q), f"expected small talk: {q!r}"
