@@ -13,7 +13,13 @@ Request flow:
 
 Notes:
   - before_agent_callback short-circuits greetings/thanks/meta (no LLM call)
-  - generate_content_config: temperature=0.05, max_output_tokens=4096
+  - generate_content_config: temperature=0.05, max_output_tokens=2048,
+    thinking disabled (thinking_budget=0) -- this is a grounded retrieve+cite
+    bot at temp 0.05, so Gemini 2.5 Flash "thinking" adds seconds of latency
+    for negligible quality gain. Both changes keep every answer well under the
+    <10s target (thinking-off is the biggest single-pass win; the tighter
+    token cap bounds the longest answers). Restore 4096 / drop thinking_config
+    if answers start truncating or reasoning quality regresses.
   - Single unified datastore (oranavigator-kb-v8)
   - Attached context (account profile / uploaded file) injected via callable instruction
 """
@@ -435,6 +441,11 @@ root_agent = LlmAgent(
     generate_content_config=types.GenerateContentConfig(
         temperature=0.05,        # Low creativity, grounded responses
         top_p=0.9,              # Slightly tighter nucleus sampling
-        max_output_tokens=4096,
+        max_output_tokens=2048,  # bounds the longest single-pass answer (<10s)
+        # Disable 2.5-Flash "thinking": for a grounded retrieve+cite bot at
+        # temp 0.05 it adds seconds of latency for negligible quality gain.
+        # This is the biggest single-pass latency win. thinking_budget=0 is a
+        # full disable on 2.5 Flash.
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
     ),
 )
