@@ -1628,9 +1628,16 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
     cached_response = query_cache.get(user_q, context_hash="")
     if cached_response:
         print(f"[CACHE] HIT (guest) for: {user_q[:50]}...")
-        return {"response": cached_response, "cached": True}
+        # Re-emit the Sources stored alongside the answer (cit: key) so a
+        # repeated question keeps its citations instead of losing them.
+        return {
+            "response": cached_response,
+            "cached": True,
+            "citations": query_cache.get_citations(user_q, context_hash=""),
+        }
 
     # Use Vertex AI Agent for real questions
+    guest_citations = []
     if USE_VERTEX_AGENT:
         try:
             import uuid
@@ -1641,9 +1648,16 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
                 user_id=guest_user_id,
                 context="",
             )
+            # Capture grounding immediately, before any later call can mutate
+            # the module-global last-grounding state.
+            guest_citations = get_last_grounding().get("citations", [])
 
             if answer and "error" not in answer.lower()[:50] and "I may not have complete information" not in answer and "don't have reliable information" not in answer:
                 query_cache.set(user_q, answer, context_hash="")
+                # Store citations under the parallel cit: key so a later cache
+                # HIT re-emits the same Sources (see the hit branch above).
+                if guest_citations:
+                    query_cache.set_citations(user_q, guest_citations, context_hash="")
 
         except Exception as e:
             print(f"   Guest Vertex AI Error: {e}")
@@ -1659,7 +1673,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
         except Exception:
             pass
 
-    return {"response": answer, "citations": get_last_grounding().get("citations", [])}
+    return {"response": answer, "citations": guest_citations}
 
 
 @app.get("/api/forms")
