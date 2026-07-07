@@ -155,6 +155,39 @@ _SKIP_GROUNDING_RE = re.compile(
     re.IGNORECASE,
 )
 
+# A closing acknowledgment reply to a "thanks" turn ("Great! I'm glad I could
+# help", "Happy to help!", "No problem!", "My pleasure") is a pleasantry, NOT a
+# KB answer — so it must carry no Sources. The model sometimes runs a stray KB
+# search on such a turn and returns real grounding citations, which then render
+# as a bogus SOURCES list. Deliberately NOT folded into _SKIP_GROUNDING_RE
+# (which also gates grounding *verification* — a real answer opening "Great, the
+# F&A rate is…" must NOT be exempted from grounding). Used ONLY to strip Sources
+# at DELIVER, and only on a SHORT reply so it can never clobber a real answer
+# that happens to contain "happy to help" in its body.
+_ACK_REPLY_RE = re.compile(
+    r"\b(?:glad (?:I|we) could (?:help|assist)"
+    r"|(?:happy|glad|glad to be able|pleased) to (?:help|assist)"
+    r"|my pleasure|no problem|anytime|you'?re (?:very |so )?welcome)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_non_kb_reply(message: str, text: str) -> bool:
+    """True when the turn is a pleasantry / off-topic refusal / outage — i.e. the
+    reply does NOT rest on the KB, so it must never render KB Sources. Two gates:
+    the user's *message* is pure small talk, or the *reply* is a canned non-KB
+    line (_SKIP_GROUNDING_RE) or a short acknowledgment (_ACK_REPLY_RE)."""
+    if _is_smalltalk(message):
+        return True
+    if not text:
+        return False
+    head = text.lstrip()
+    if _SKIP_GROUNDING_RE.match(head):
+        return True
+    # Acknowledgments are short; bound the search so a long real answer that says
+    # "happy to help you draft…" keeps its legitimate Sources.
+    return len(text) <= 240 and bool(_ACK_REPLY_RE.search(text))
+
 # Detects when Gemini self-reports a KB access failure (transient Vertex AI Search issue)
 _KB_FAIL_RE = re.compile(r"having trouble (accessing|connecting to) my knowledge base", re.IGNORECASE)
 
@@ -1498,10 +1531,18 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     # personal fact. (_wants_fallback_citations already blocks the fallback path.)
     if _is_personal_identity(message):
         result["citations"] = []
+    # A non-KB response (off-topic refusal "I can only help with Morgan State…",
+    # greeting, outage, "You're welcome", or a "thanks" acknowledgment like
+    # "Great! I'm glad I could help") must NEVER show KB Sources — the model
+    # sometimes runs a stray KB search on such a turn and returns real grounding
+    # citations. Drop them, and skip the fallback so they can't be re-added.
+    _non_kb = _is_non_kb_reply(message, text)
+    if _non_kb:
+        result["citations"] = []
     # Part C: a correct ORA answer can come back uncited (Gemini's grounding
     # metadata is unreliable). Attach Sources from a live KB search so the
     # answer is never sourceless.
-    if _wants_fallback_citations(message, result):
+    if not _non_kb and _wants_fallback_citations(message, result):
         result["citations"] = _fallback_citations(message)
     print(f"   [LATENCY] chat turn {(time_module.time() - _t0) * 1000:.0f}ms "
           f"(verdict={verdict}, chunks={result['chunks']})")
@@ -1580,10 +1621,18 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
     # stray real grounding citations so a personal fact never shows KB Sources.
     if _is_personal_identity(message):
         result["citations"] = []
+    # A non-KB response (off-topic refusal, greeting, outage, "You're welcome",
+    # or a "thanks" acknowledgment like "Great! I'm glad I could help") must never
+    # show KB Sources — the model sometimes runs a stray KB search on such a turn
+    # and returns real grounding citations. Drop them, and skip the fallback so
+    # they can't be re-added.
+    _non_kb = _is_non_kb_reply(message, text)
+    if _non_kb:
+        result["citations"] = []
     # Part C: attach Sources from a live KB search when a TRUSTED answer came
     # back uncited. Skipped for weak answers -- we don't lend authority to one
     # already flagged with a caution note.
-    if verdict != "weak" and _wants_fallback_citations(message, result):
+    if not _non_kb and verdict != "weak" and _wants_fallback_citations(message, result):
         result["citations"] = _fallback_citations(message)
     print(f"   [LATENCY] chat turn (stream) {(time_module.time() - _t0) * 1000:.0f}ms "
           f"(verdict={verdict}, chunks={result['chunks']})")

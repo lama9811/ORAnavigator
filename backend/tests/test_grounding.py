@@ -201,6 +201,55 @@ def test_outage_surfaces_an_error(monkeypatch):
 
 
 # ===========================================================================
+# Non-KB replies (pleasantries / acknowledgments) must carry NO KB Sources --
+# the model sometimes runs a stray KB search on a "thanks" turn and returns
+# real grounding citations, which were rendered as a bogus SOURCES list
+# ("Great! I'm glad I could help." + Staff: Farin Kamangar). Two gates:
+# the user's message being small talk, and the reply being an acknowledgment.
+# ===========================================================================
+
+def _drive_msg(monkeypatch, message, pass1, pass2=None):
+    """_run_verified for a custom message with faked agent passes."""
+    monkeypatch.setattr(vertex_agent, "_do_agent_pass", _fake_passes(pass1, pass2))
+    monkeypatch.setattr(vertex_agent, "_create_session", lambda *a, **k: "s")
+    return list(vertex_agent._run_verified(message, "user-1", "sess-1"))
+
+
+_ACK_REPLY = ("Great! I'm glad I could help. Is there anything else I can assist "
+              "you with regarding Morgan State University's Office of Research "
+              "Administration?")
+_STRAY_CITES = [{"title": "Staff: Farin Kamangar", "url": "https://x"}]
+
+
+def test_smalltalk_reply_drops_stray_kb_sources(monkeypatch):
+    """A 'thanks' turn is small talk; any grounding citations the model returned
+    from a stray KB search must be dropped (no citations event)."""
+    events = _drive_msg(
+        monkeypatch, "thanks!",
+        _result(_ACK_REPLY, chunks=3, coverage=0.7, citations=_STRAY_CITES))
+    assert not [e for e in events if e["type"] == "citations"]
+
+
+def test_acknowledgment_reply_drops_stray_kb_sources(monkeypatch):
+    """Even when the message isn't matched as small talk ("that was helpful,
+    thank you so much"), an acknowledgment reply must not carry KB Sources."""
+    events = _drive_msg(
+        monkeypatch, "that was helpful, thank you so much!",
+        _result(_ACK_REPLY, chunks=3, coverage=0.7, citations=_STRAY_CITES))
+    assert not [e for e in events if e["type"] == "citations"]
+
+
+def test_real_kb_answer_keeps_its_sources(monkeypatch):
+    """The guard is narrow: a genuine KB answer keeps its grounding citations."""
+    cites = [{"title": "Pre-Award — Overview", "url": "https://p"}]
+    events = _drive_msg(
+        monkeypatch, "What is the F&A rate?",
+        _result("The on-campus F&A rate is set in the rate agreement.",
+                chunks=4, coverage=0.8, citations=cites))
+    assert [e for e in events if e["type"] == "citations"]
+
+
+# ===========================================================================
 # Personal-recall short-circuit -- a question that asks the bot to recall
 # something the user said about themselves in this conversation must NOT
 # trigger Layer 3's KB-only regeneration. Those facts live in the chat
