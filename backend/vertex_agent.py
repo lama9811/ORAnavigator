@@ -155,28 +155,36 @@ _SKIP_GROUNDING_RE = re.compile(
     re.IGNORECASE,
 )
 
-# A closing acknowledgment reply to a "thanks" turn ("Great! I'm glad I could
-# help", "Happy to help!", "No problem!", "My pleasure") is a pleasantry, NOT a
-# KB answer — so it must carry no Sources. The model sometimes runs a stray KB
-# search on such a turn and returns real grounding citations, which then render
-# as a bogus SOURCES list. Deliberately NOT folded into _SKIP_GROUNDING_RE
-# (which also gates grounding *verification* — a real answer opening "Great, the
-# F&A rate is…" must NOT be exempted from grounding). Used ONLY to strip Sources
-# at DELIVER, and only on a SHORT reply so it can never clobber a real answer
-# that happens to contain "happy to help" in its body.
-_ACK_REPLY_RE = re.compile(
-    r"\b(?:glad (?:I|we) could (?:help|assist)"
-    r"|(?:happy|glad|glad to be able|pleased) to (?:help|assist)"
-    r"|my pleasure|no problem|anytime|you'?re (?:very |so )?welcome)\b",
+# A conversational, KB-free reply — a greeting response ("I'm doing well,
+# thanks! How can I help you with ORA…"), an acknowledgment to a "thanks" turn
+# ("Great! I'm glad I could help", "Happy to help!", "No problem!"), or a
+# closing pleasantry — is NOT a KB answer, so it must carry no Sources. The
+# model sometimes runs a stray KB search on such a turn and returns real
+# grounding citations, which then render as a bogus SOURCES list. Deliberately
+# NOT folded into _SKIP_GROUNDING_RE (which also gates grounding *verification*
+# — a real answer opening "Great, the F&A rate is…" must NOT be exempted from
+# grounding). Used ONLY to strip Sources at DELIVER, and only on a SHORT reply
+# so it can never clobber a real answer that happens to contain one of these
+# phrases in its body. Markers are ones that essentially never open/appear in a
+# genuine grounded answer: the greeting-response opener ("I'm doing well/great")
+# and the pleasantry vocabulary ("glad I could help", "you're welcome").
+_NON_KB_REPLY_RE = re.compile(
+    r"\bI'?m doing (?:well|great|good|fine|okay|ok)\b"
+    r"|\b(?:thanks for asking|great to hear|glad to hear|good to hear)\b"
+    r"|\bglad (?:I|we) could (?:help|assist)\b"
+    r"|\b(?:happy|glad|glad to be able|pleased) to (?:help|assist)\b"
+    r"|\b(?:my pleasure|no problem|anytime)\b"
+    r"|\byou'?re (?:very |so )?welcome\b",
     re.IGNORECASE,
 )
 
 
 def _is_non_kb_reply(message: str, text: str) -> bool:
-    """True when the turn is a pleasantry / off-topic refusal / outage — i.e. the
-    reply does NOT rest on the KB, so it must never render KB Sources. Two gates:
-    the user's *message* is pure small talk, or the *reply* is a canned non-KB
-    line (_SKIP_GROUNDING_RE) or a short acknowledgment (_ACK_REPLY_RE)."""
+    """True when the turn is a pleasantry / greeting / off-topic refusal / outage
+    — i.e. the reply does NOT rest on the KB, so it must never render KB Sources.
+    Two gates: the user's *message* is pure small talk, or the *reply* is a
+    canned non-KB line (_SKIP_GROUNDING_RE) or a short conversational reply
+    (_NON_KB_REPLY_RE — greeting response / acknowledgment)."""
     if _is_smalltalk(message):
         return True
     if not text:
@@ -184,9 +192,9 @@ def _is_non_kb_reply(message: str, text: str) -> bool:
     head = text.lstrip()
     if _SKIP_GROUNDING_RE.match(head):
         return True
-    # Acknowledgments are short; bound the search so a long real answer that says
-    # "happy to help you draft…" keeps its legitimate Sources.
-    return len(text) <= 240 and bool(_ACK_REPLY_RE.search(text))
+    # Conversational replies are short; bound the search so a long real answer
+    # that happens to say "happy to help you draft…" keeps its legitimate Sources.
+    return len(text) <= 240 and bool(_NON_KB_REPLY_RE.search(text))
 
 # Detects when Gemini self-reports a KB access failure (transient Vertex AI Search issue)
 _KB_FAIL_RE = re.compile(r"having trouble (accessing|connecting to) my knowledge base", re.IGNORECASE)
@@ -266,6 +274,9 @@ _SMALLTALK_RE = re.compile(
     r"|what'?s\s+up|whats\s+up"
     r"|thanks?(?:\s+you)?|thank\s+you|thx|ty|cheers|appreciate\s+it"
     r"|ok(?:ay)?|cool|nice|great|awesome|got\s+it"
+    r"|very|good|perfect|excellent|wonderful|fantastic|amazing|bravo"
+    r"|well\s+done|good\s+job|nice\s+job|makes\s+sense|sounds\s+good"
+    r"|understood|noted|fine|alright|right"
     r"|bye+|goodbye|see\s+(?:ya|you)|take\s+care"
     r"|today|now|there|friend|buddy"
     r")\b[\s,!.?'-]*)+$",

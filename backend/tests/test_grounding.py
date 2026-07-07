@@ -239,6 +239,29 @@ def test_acknowledgment_reply_drops_stray_kb_sources(monkeypatch):
     assert not [e for e in events if e["type"] == "citations"]
 
 
+_GREETING_REPLY = ("I'm doing well, thanks! How can I help you with ORA — "
+                   "grants, compliance, forms, or contacts?")
+
+
+def test_praise_greeting_reply_drops_stray_kb_sources(monkeypatch):
+    """"VERY GOOD." gets a warm greeting reply ("I'm doing well, thanks! …");
+    that reply is not a KB answer and must carry no Sources, even though the
+    praise message isn't a classic greeting token."""
+    events = _drive_msg(
+        monkeypatch, "VERY GOOD.",
+        _result(_GREETING_REPLY, chunks=3, coverage=0.7, citations=_STRAY_CITES))
+    assert not [e for e in events if e["type"] == "citations"]
+
+
+def test_how_are_you_reply_drops_stray_kb_sources(monkeypatch):
+    """A greeting reply opening "I'm doing well" carries no Sources regardless
+    of how the incoming message was phrased."""
+    events = _drive_msg(
+        monkeypatch, "you good?",
+        _result(_GREETING_REPLY, chunks=2, coverage=0.5, citations=_STRAY_CITES))
+    assert not [e for e in events if e["type"] == "citations"]
+
+
 def test_real_kb_answer_keeps_its_sources(monkeypatch):
     """The guard is narrow: a genuine KB answer keeps its grounding citations."""
     cites = [{"title": "Pre-Award — Overview", "url": "https://p"}]
