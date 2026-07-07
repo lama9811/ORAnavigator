@@ -125,6 +125,20 @@ def test_skips_personal_recall():
     assert _wants_fallback_citations("what is the F&A rate?", _result()) is True
 
 
+def test_personal_identity_suppresses_real_grounding_but_institutional_keeps_it():
+    # Identity questions ("what is my name?") must show NO KB Sources even when the
+    # model ran a stray KB search and returned real grounding citations — the
+    # "your name is X + 5 unrelated Pre-Award sources" bug. Institutional "my X"
+    # (F&A rate, UEI, required attachments) is answered from the KB and keeps them.
+    from vertex_agent import _is_personal_identity
+    for q in ("what is my name?", "what department am I in?", "what's my role?",
+              "who am I?", "what is my email?"):
+        assert _is_personal_identity(q) is True, q
+    for q in ("what is my F&A rate?", "what is my fringe rate?", "what is my UEI?",
+              "what are my required attachments?", "what is the F&A rate?"):
+        assert _is_personal_identity(q) is False, q
+
+
 def test_skips_on_kb_fail():
     assert _wants_fallback_citations("How long does IRB take?", _result(kb_fail=True)) is False
 

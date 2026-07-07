@@ -194,6 +194,32 @@ def _is_personal_recall(question: str) -> bool:
         return False
     return bool(_PERSONAL_RECALL_RE.search(question))
 
+
+# Questions about the user's own IDENTITY / profile (name, department, role,
+# email, "who am I"). Answered from the saved USER PROFILE, NOT the KB — so they
+# must NEVER carry KB Sources, even when the model ran a KB search anyway and
+# returned real grounding citations (unrelated ORA docs stapled onto a personal
+# fact are misleading -- the "what is my name? -> 5 Pre-Award sources" bug).
+# Deliberately NARROWER than _is_personal_recall, which also matches institutional
+# "what is my F&A rate / my UEI / my required attachments" — those DO come from
+# the KB and must keep their legitimate Sources.
+_PERSONAL_IDENTITY_RE = re.compile(
+    r"\bwho\s+am\s+i\b"
+    r"|\b(?:about|regarding)\s+(?:me|myself)\b"
+    r"|\bmy\s+(?:name|department|dept|division|college|school|title|role|"
+    r"position|email|e-?mail|phone|office|username|user\s*name|profile|account)\b"
+    r"|\b(?:department|dept|division|college|school)\s+am\s+i\b",
+    re.IGNORECASE,
+)
+
+
+def _is_personal_identity(question: str) -> bool:
+    """True for a question about the user's own identity/profile — answered from
+    the profile, never the KB, so its answer must carry no KB Sources."""
+    if not question:
+        return False
+    return bool(_PERSONAL_IDENTITY_RE.search(question))
+
 # Greetings / pleasantries / small talk. A friendly reply to these is correct and
 # needs no KB grounding, so Layer 3 must NOT grade it "weak" and regenerate it
 # under the strict KB prompt (which turns "I'm doing well!" into a refusal).
@@ -1466,6 +1492,12 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
             return
 
     # ---- DELIVER ---------------------------------------------------------
+    # Identity questions ("what is my name?") are answered from the profile, not
+    # the KB. Drop any real grounding citations the model returned from a stray
+    # KB search — unrelated ORA docs must never be shown as Sources for a
+    # personal fact. (_wants_fallback_citations already blocks the fallback path.)
+    if _is_personal_identity(message):
+        result["citations"] = []
     # Part C: a correct ORA answer can come back uncited (Gemini's grounding
     # metadata is unreliable). Attach Sources from a live KB search so the
     # answer is never sourceless.
@@ -1544,6 +1576,10 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
             if merged:
                 text, verdict = _clean_answer_text(merged), "ok"
 
+    # Identity questions are answered from the profile, not the KB — drop any
+    # stray real grounding citations so a personal fact never shows KB Sources.
+    if _is_personal_identity(message):
+        result["citations"] = []
     # Part C: attach Sources from a live KB search when a TRUSTED answer came
     # back uncited. Skipped for weak answers -- we don't lend authority to one
     # already flagged with a caution note.
