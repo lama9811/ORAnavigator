@@ -33,7 +33,12 @@ _GRANTS_HOST = "https://api.grants.gov/v1/api"
 _SEARCH_URL = f"{_GRANTS_HOST}/search2"
 _FETCH_URL = f"{_GRANTS_HOST}/fetchOpportunity"
 _TIMEOUT = 12          # per HTTP call; fetches run in parallel (see find_opportunities)
-_MAX_RESULTS = 12
+_MAX_RESULTS = 8       # was 12; trimmed so the advisory rank call stays well
+                       # under the <10s budget. Grants.gov itself is ~1s; the
+                       # single Gemini rank call is the whole cost, and it scales
+                       # with opp count (12 opps ~8s, 8 opps ~6s with thinking
+                       # off — see rank_and_explain). 8 ranked, best-first opps
+                       # is a plenty-full discovery list.
 _FETCH_WORKERS = 10    # concurrent fetchOpportunity calls
 
 # --- Morgan State institutional profile (baked in, like the F&A rates) ------
@@ -181,10 +186,16 @@ def rank_and_explain(description: str, opps: list) -> list:
         return base
 
     prompt = _rank_prompt(description, opps)
-    # Up to 12 opps each with a fit sentence + a verbatim quote; 1536 truncated
-    # the JSON mid-string (→ parse fail → silent fallback to API order), so give
-    # the ranking response ample room.
-    data = gemini_client.generate_json(prompt, temperature=0.0, max_output_tokens=4096)
+    # Each opp gets a fit sentence + a verbatim quote; 1536 truncated the JSON
+    # mid-string (→ parse fail → silent fallback to API order), so give the
+    # ranking response ample room. thinking_budget=0 disables Gemini 2.5 Flash
+    # "thinking": with it ON the thinking tokens ate into the 4096 output budget
+    # and truncated the ranking JSON (silent fallback, empty fit prose) AND took
+    # ~22s; OFF it returns the full ranking in ~6-8s. timeout_s=8 is a hard
+    # ceiling so a slow call falls back to API order rather than blowing the
+    # <10s budget (Grants.gov itself is only ~1s).
+    data = gemini_client.generate_json(prompt, temperature=0.0, max_output_tokens=4096,
+                                       thinking_budget=0, timeout_s=8.0)
     if not data:
         return base  # graceful fallback: API relevance order, no fabricated prose
 

@@ -70,11 +70,19 @@ def get_client():
 
 def _build_config(temperature: float, max_output_tokens: int,
                   json_mode: bool, timeout_s: Optional[float],
-                  system_instruction: Optional[str]) -> dict:
+                  system_instruction: Optional[str],
+                  thinking_budget: Optional[int] = None) -> dict:
     config: dict = {
         "temperature": temperature,
         "max_output_tokens": max_output_tokens,
     }
+    if thinking_budget is not None:
+        # Gemini 2.5 Flash "thinking" is ON by default and adds seconds of
+        # latency. For latency-critical, low-temperature, grounded/structured
+        # tasks a caller can pass thinking_budget=0 to disable it. google-genai
+        # coerces this nested dict into a ThinkingConfig. Omitted (None) => the
+        # model's default thinking stays on, so existing callers are unchanged.
+        config["thinking_config"] = {"thinking_budget": thinking_budget}
     if json_mode:
         config["response_mime_type"] = "application/json"
     if system_instruction:
@@ -91,7 +99,8 @@ def _build_config(temperature: float, max_output_tokens: int,
 
 def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
               json_mode: bool, timeout_s: Optional[float],
-              system_instruction: Optional[str] = None) -> Optional[str]:
+              system_instruction: Optional[str] = None,
+              thinking_budget: Optional[int] = None) -> Optional[str]:
     """Single Gemini round-trip → raw response text, or None on any failure.
     Never raises."""
     client = get_client()
@@ -107,7 +116,7 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
                     model="gemini-2.5-flash",
                     contents=prompt,
                     config=_build_config(temperature, max_output_tokens, json_mode,
-                                         timeout_s, system_instruction),
+                                         timeout_s, system_instruction, thinking_budget),
                 )
             except TypeError:
                 # SDK rejected the http_options timeout key — retry without it.
@@ -115,7 +124,7 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
                     model="gemini-2.5-flash",
                     contents=prompt,
                     config=_build_config(temperature, max_output_tokens, json_mode,
-                                         None, system_instruction),
+                                         None, system_instruction, thinking_budget),
                 )
             return (response.text or "").strip() or None
         except Exception as e:
@@ -131,25 +140,29 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
 def generate_text(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 2048,
                   timeout_s: Optional[float] = None,
-                  system_instruction: Optional[str] = None) -> Optional[str]:
+                  system_instruction: Optional[str] = None,
+                  thinking_budget: Optional[int] = None) -> Optional[str]:
     """Free-text Gemini call. Returns the text, or None if unavailable/failed."""
     return _generate(prompt, temperature=temperature,
                      max_output_tokens=max_output_tokens,
                      json_mode=False, timeout_s=timeout_s,
-                     system_instruction=system_instruction)
+                     system_instruction=system_instruction,
+                     thinking_budget=thinking_budget)
 
 
 def generate_json(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 4096,
                   timeout_s: Optional[float] = None,
-                  system_instruction: Optional[str] = None) -> Optional[dict]:
+                  system_instruction: Optional[str] = None,
+                  thinking_budget: Optional[int] = None) -> Optional[dict]:
     """JSON Gemini call. Forces application/json, strips any markdown fences,
     parses with strict=False (tolerates control chars from PDF text). Returns a
     dict, or None on unavailable / malformed / non-dict output. Never raises."""
     raw = _generate(prompt, temperature=temperature,
                     max_output_tokens=max_output_tokens,
                     json_mode=True, timeout_s=timeout_s,
-                    system_instruction=system_instruction)
+                    system_instruction=system_instruction,
+                    thinking_budget=thinking_budget)
     if not raw:
         return None
     text = raw.strip()
