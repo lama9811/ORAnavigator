@@ -99,9 +99,16 @@ steps:
       - '--port=8080'
       - '--memory=2Gi'
       - '--cpu=2'
-      - '--min-instances=2'
+      - '--min-instances=1'
       - '--cpu-boost'
-      - '--max-instances=10'
+      # IMPORTANT: keep ADK at a SINGLE instance. The ADK service stores agent
+      # sessions IN MEMORY (no ADK_SESSION_DB_URI), so with >1 instance a
+      # session created on one instance 404s on /run_sse when the next call is
+      # routed to another instance ("An error occurred while processing your
+      # question"). A brief bump to min/max=2 caused exactly that. Scaling ADK
+      # horizontally requires a shared session store first. concurrency=80 lets
+      # one warm instance handle demo/normal load fine.
+      - '--max-instances=1'
       - '--timeout=300'
       - '--concurrency=80'
       - '--no-allow-unauthenticated'
@@ -143,7 +150,7 @@ steps:
           --port=5000 \
           --memory=1Gi \
           --cpu=1 \
-          --min-instances=2 \
+          --min-instances=1 \
           --cpu-boost \
           --max-instances=20 \
           --timeout=300 \
