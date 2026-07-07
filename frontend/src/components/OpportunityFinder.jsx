@@ -172,11 +172,15 @@ function OpportunityCard({ o, onStart }) {
       )}
 
       <div className="oppf-meta-row">
-        {o.close_date && (
+        {o.close_date ? (
           <span className="oppf-meta">
             <CalendarClock size={13} /> Sponsor close: <b>{o.close_date}</b>
           </span>
-        )}
+        ) : o.rolling ? (
+          <span className="oppf-meta">
+            <CalendarClock size={13} /> <b>Rolling — no fixed deadline</b>
+          </span>
+        ) : null}
         {o.internal_deadline && (
           <span className="oppf-meta oppf-meta-internal" title="Submit to ORA by this date — 5 business days before the sponsor deadline.">
             <CircleAlert size={13} /> ORA routing by: <b>{o.internal_deadline}</b>

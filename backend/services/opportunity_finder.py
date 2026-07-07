@@ -225,23 +225,37 @@ def find_opportunities(description: str, profile: Optional[dict] = None,
     """Full pipeline: description (+profile) -> keywords -> live search -> fetch
     each -> deterministic eligibility -> advisory rank/explain -> result rows."""
     keyword = extract_query(description, profile)
-    hits = search_grantsgov(keyword, rows=rows)
-    ids = [h.get("id") for h in hits if h.get("id")]
+    hits = [h for h in search_grantsgov(keyword, rows=rows) if h.get("id")]
+    # search2 carries its OWN closeDate (MM/DD/YYYY); keep it as a fallback for
+    # the deadline. The richer synopsis.responseDate we read in fetch_opportunity
+    # is often blank for standing/rolling program solicitations — and without
+    # this fallback a record with a blank responseDate but a PAST search close
+    # date would slip past the open-date filter and show up as expired funding.
+    close_fallback = {h["id"]: (h.get("closeDate") or "") for h in hits}
+    ids = [h["id"] for h in hits]
     # Fetch each opportunity's detail CONCURRENTLY — the main latency lever.
     # Sequentially fetching up to _MAX_RESULTS opportunities (one blocking HTTP
     # round-trip each) dominated the request; in parallel the fetch phase is
-    # bounded by the slowest single call, not their sum. Order is preserved
-    # (ranking reorders anyway; ties fall back to API order).
+    # bounded by the slowest single call, not their sum.
     detailed: list = []
     if ids:
         with ThreadPoolExecutor(max_workers=min(len(ids), _FETCH_WORKERS)) as pool:
             detailed = [d for d in pool.map(fetch_opportunity, ids) if d]
-    # Grants.gov "posted" still returns opportunities whose response date has
-    # already passed (recurring programs keep an old date) — drop those so the
-    # finder only surfaces opportunities a PI can still actually apply to.
+    for d in detailed:
+        if not (d.get("closeDate") or "").strip():
+            d["closeDate"] = close_fallback.get(d["id"], "")
+    # Keep only opportunities a PI can STILL apply to: an upcoming deadline
+    # (close date today or later) OR a rolling/continuous program with no
+    # deadline. Anything with a PAST close date is dropped — Grants.gov
+    # "posted" still returns expired/recurring ones (see _is_open).
     detailed = [d for d in detailed if _is_open(d.get("closeDate", ""))]
     ranked = rank_and_explain(description, detailed)
-    return [_result_row(o) for o in ranked]
+    # Surface opportunities WITH an upcoming deadline ahead of rolling /
+    # no-deadline programs, preserving the advisory fit order within each group
+    # (stable partition — the AI ranking still drives order inside each bucket).
+    dated = [o for o in ranked if _parse_date(o.get("closeDate", ""))]
+    rolling = [o for o in ranked if not _parse_date(o.get("closeDate", ""))]
+    return [_result_row(o) for o in dated + rolling]
 
 
 def _result_row(o: dict) -> dict:
@@ -251,6 +265,10 @@ def _result_row(o: dict) -> dict:
         "title": o.get("title", ""),
         "agency": o.get("agency", ""),
         "close_date": o.get("closeDate", ""),
+        # True when there's no parseable deadline: a rolling/continuous program
+        # the PI can apply to anytime. The UI labels these "no fixed deadline"
+        # instead of leaving the date blank.
+        "rolling": not bool(_parse_date(o.get("closeDate", ""))),
         "internal_deadline": _internal_deadline(o.get("closeDate", "")),
         "award_ceiling": o.get("award_ceiling", ""),
         "cost_sharing": o.get("cost_sharing", False),

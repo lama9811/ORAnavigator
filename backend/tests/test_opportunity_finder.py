@@ -135,6 +135,36 @@ def test_find_opportunities_builds_rows_with_deadline_and_eligibility(monkeypatc
     assert r["internal_deadline"].startswith("2026-07-14")
 
 
+def test_find_opportunities_excludes_past_and_labels_rolling(monkeypatch):
+    """Only upcoming (future-deadline) + rolling (no-deadline) opportunities are
+    returned; a PAST close date is dropped even when it's only present in the
+    search2 closeDate (synopsis responseDate blank). Dated ones sort before
+    rolling ones, and rolling ones are flagged for the UI label."""
+    from datetime import datetime, timedelta
+    future = (datetime.now() + timedelta(days=45)).strftime("%m/%d/%Y")
+    past = (datetime.now() - timedelta(days=45)).strftime("%m/%d/%Y")
+    monkeypatch.setattr(of, "search_grantsgov", lambda kw, rows=8: [
+        {"id": "1", "closeDate": future},   # upcoming, dated
+        {"id": "2", "closeDate": ""},       # rolling / continuous — no deadline
+        {"id": "3", "closeDate": past},     # PAST, only in the search2 field
+    ])
+    details = {
+        "1": {"id": "1", "title": "Upcoming Dated", "closeDate": future, "synopsisDesc": "x", "applicant_types": []},
+        "2": {"id": "2", "title": "Rolling Program", "closeDate": "", "synopsisDesc": "y", "applicant_types": []},
+        "3": {"id": "3", "title": "Expired", "closeDate": "", "synopsisDesc": "z", "applicant_types": []},
+    }
+    monkeypatch.setattr(of, "fetch_opportunity", lambda oid: details[oid])
+    monkeypatch.setattr(of.gemini_client, "generate_json", lambda *a, **k: None)  # deterministic order
+
+    rows = of.find_opportunities("anything")
+    ids = [r["id"] for r in rows]
+    assert "3" not in ids            # past date dropped (caught via search2 fallback)
+    assert ids == ["1", "2"]         # upcoming-dated before rolling
+    by_id = {r["id"]: r for r in rows}
+    assert by_id["1"]["rolling"] is False and by_id["1"]["close_date"] == future
+    assert by_id["2"]["rolling"] is True  and by_id["2"]["close_date"] == ""
+
+
 def test_search_grantsgov_returns_empty_on_api_error(monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("network down")
