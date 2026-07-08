@@ -96,6 +96,20 @@ def _select_model(callback_context, llm_request):
     if pref in MODEL_MAP:
         llm_request.model = MODEL_MAP[pref]
 
+    # Route greetings/small-talk and personal-identity turns away from KB
+    # retrieval. The backend sets skip_kb_search for them (vertex_agent.py
+    # _do_agent_pass): the model needs no search to say "hi" or to answer "what
+    # department am I in?" (that comes from the injected USER PROFILE), and with
+    # thinking disabled it otherwise fires a stray KB search that staples bogus
+    # Sources onto the reply. The VertexAiSearchTool's retrieval Tool was appended
+    # to config.tools in _preprocess_async, BEFORE this callback runs, so we drop
+    # it here for this single turn (and skip the prefetch injection below). The
+    # per-step LlmRequest is rebuilt each turn, so this never leaks to a later ORA
+    # question. Real ORA turns (skip_kb falsy) are untouched.
+    skip_kb = bool(callback_context.state.get("skip_kb_search"))
+    if skip_kb and llm_request.config and llm_request.config.tools:
+        llm_request.config.tools = []
+
     # Inject pre-fetched KB docs on every fresh user turn (belt-and-suspenders
     # grounding). Uses Discovery Engine API (NOT Gemini), cached in memory for
     # 5 min. Zero LLM quota impact.
@@ -122,7 +136,7 @@ def _select_model(callback_context, llm_request):
                 for p in (last.parts or [])
             )
 
-    if not in_tool_loop:
+    if not in_tool_loop and not skip_kb:
         user_text = ""
         for c in reversed(llm_request.contents or []):
             if hasattr(c, 'role') and c.role == 'user' and c.parts:

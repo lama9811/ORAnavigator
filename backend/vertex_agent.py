@@ -88,20 +88,15 @@ _OUTAGE_MSG = (
 # An answer is delivered as-is when >= _GROUNDING_MIN_COVERAGE of it is backed by
 # retrieved KB text (a backend-computed signal -- the fraction of the answer's
 # characters covered by Gemini's groundingSupports segments). Below that bar the
-# answer is NOT thrown away wholesale: Layer 3 surgically rewrites ONLY the
-# sentences that aren't source-backed (reusing the KB text already retrieved),
-# and falls back to a full strict-KB regeneration only when the per-sentence span
-# data is missing. See _evaluate_grounding() / _unsupported_sentences() /
-# _surgical_reground() / _run_verified().
+# answer grades "weak" and Layer 3 regenerates it once with a strict KB-only
+# prompt, then refuses rather than ship it. See _evaluate_grounding() /
+# _run_verified().
 #
 # _GROUNDING_MIN_CHUNKS is retained for logging/back-compat but is NO LONGER a
 # pass condition -- Gemini's chunk count is unreliable (often empty even for a
 # correct, grounded answer), so the gate is the coverage score alone.
 _GROUNDING_MIN_CHUNKS = 2          # (legacy) count of cited KB docs; not a gate
 _GROUNDING_MIN_COVERAGE = 0.5      # >= 50% of the answer backed by KB text -> deliver as-is
-# A sentence counts as source-backed when a grounded span overlaps at least this
-# fraction of its characters (or >= 15 chars), tolerating ragged Gemini spans.
-_SENTENCE_GROUNDED_MIN_OVERLAP = 0.4
 
 # Shown instead of an ungrounded answer when regeneration also fails.
 _REFUSAL_MSG = (
@@ -357,8 +352,8 @@ def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_co
 
     NOTE: the chunk count is deliberately NOT a pass condition -- Gemini reports
     it unreliably. The single "% backed" coverage score is the gate. A 'weak'
-    verdict triggers surgical per-sentence re-grounding in _run_verified, not an
-    outright refusal.
+    verdict triggers a single strict KB-only regeneration in _run_verified, and
+    only an outright refusal if that also comes back ungrounded.
     """
     if not text:
         return "weak"
@@ -733,228 +728,6 @@ def _check_identifier_faithfulness(text: str, grounded_corpus: str) -> list:
     return unverified[:6]
 
 
-# =============================================================================
-# SURGICAL RE-GROUNDING: when an answer is < _GROUNDING_MIN_COVERAGE backed, fix
-# ONLY the sentences that aren't source-backed (reusing the KB text already
-# retrieved in Pass 1) instead of regenerating the whole answer with a fresh
-# search. See the plan in _run_verified().
-# =============================================================================
-
-# Sentence splitter -- mirrors services.section_coach._sentences (kept local to
-# avoid importing that heavier module into the chat hot-path).
-_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
-
-# Sentences that never need KB backing: contact/transition/filler boilerplate.
-# (Greeting/outage and honest-deflection sentences are handled by the existing
-# _SKIP_GROUNDING_RE / _HONEST_DEFLECTION_RE checks.)
-_FILLER_SENTENCE_RE = re.compile(
-    r"contact ora|443-885-4044|ask\.ora@morgan\.edu|let me know|feel free|"
-    r"happy to help|hope (?:this|that) helps|in summary|to summarize|"
-    r"here'?s|below (?:is|are)|please (?:reach out|confirm)",
-    re.IGNORECASE,
-)
-
-# In-app navigation pointers ("use the Find Funding tool", "the Opportunity
-# Finder", "the Proposals/Samples/Forms button") are app-capability suggestions,
-# NOT knowledge-base facts, so they need no KB citation and must never be graded
-# weak or stripped during Pass-2 re-grounding (mirrors the agent's IN-APP TOOLS
-# instruction). Kept narrow: the app's distinctive feature names + nav phrasing.
-_INAPP_TOOL_RE = re.compile(
-    r"opportunity finder|find funding|sample proposals|guided (?:proposal )?pathway"
-    r"|(?:\"|“|‘|')?(?:find funding|proposals|samples|forms)(?:\"|”|’|')?\s+"
-    r"(?:button|tool|tab|feature|page|library|catalog)"
-    r"|top nav(?:igation)?(?:\s+bar)?",
-    re.IGNORECASE,
-)
-
-
-def _split_sentences(text: str) -> list:
-    """Split text into trimmed, non-empty sentences (mirror of _sentences)."""
-    return [s.strip() for s in _SENTENCE_SPLIT_RE.split(text) if s.strip()]
-
-
-def _sentence_is_exempt(sentence: str, is_personal_recall: bool) -> bool:
-    """A sentence that never needs KB backing (greeting/deflection/filler, or any
-    sentence when the question is personal recall answered from chat history)."""
-    if is_personal_recall:
-        return True
-    if _SKIP_GROUNDING_RE.match(sentence):
-        return True
-    if _HONEST_DEFLECTION_RE.search(sentence):
-        return True
-    if _FILLER_SENTENCE_RE.search(sentence):
-        return True
-    if _INAPP_TOOL_RE.search(sentence):
-        return True
-    return False
-
-
-def _unsupported_sentences(raw_text: str, grounded_spans: list,
-                           is_personal_recall: bool = False):
-    """Return the answer's fact-stating sentences that are NOT KB-backed.
-
-    Uses Gemini's grounded char-spans (the same data that drives coverage) to
-    decide which sentences overlap a source-backed span. A sentence is backed
-    when a span covers >= _SENTENCE_GROUNDED_MIN_OVERLAP of its chars (or >= 15
-    chars). Exempt sentences (greeting/deflection/filler/personal-recall) are
-    never flagged.
-
-    Returns:
-      - None  -> the span data is unusable (missing, or inconsistent with the
-                 text -- e.g. UTF-8 byte-vs-char drift); caller should fall back
-                 to the full strict-KB regeneration.
-      - []    -> every fact-stating sentence is backed; deliver as-is.
-      - [str] -> the verbatim unsupported sentences, in order.
-    """
-    if not raw_text or not grounded_spans:
-        return None
-    # Sanity guard: if any span index runs well past the text, the offsets are
-    # not character offsets we can trust (Gemini sometimes returns UTF-8 byte
-    # indices). Bail to the proven fallback rather than mis-map sentences.
-    if max(e for _, e in grounded_spans) > len(raw_text) * 1.5:
-        return None
-
-    unsupported = []
-    cursor = 0
-    for sentence in _split_sentences(raw_text):
-        idx = raw_text.find(sentence, cursor)
-        if idx < 0:
-            # Couldn't locate (cleaning/splitting drift) -- skip, don't guess.
-            continue
-        s_start, s_end = idx, idx + len(sentence)
-        cursor = s_end
-        if _sentence_is_exempt(sentence, is_personal_recall):
-            continue
-        # How many of this sentence's chars are covered by a grounded span?
-        overlap = 0
-        for sp_start, sp_end in grounded_spans:
-            lo, hi = max(s_start, sp_start), min(s_end, sp_end)
-            if hi > lo:
-                overlap += hi - lo
-        s_len = max(1, s_end - s_start)
-        if overlap >= 15 or (overlap / s_len) >= _SENTENCE_GROUNDED_MIN_OVERLAP:
-            continue
-        unsupported.append(sentence)
-    return unsupported
-
-
-def _surgical_reground(message: str, full_answer: str, unsupported: list,
-                       grounded_corpus: str):
-    """Rewrite ONLY the unsupported sentences strictly from grounded_corpus (no
-    new KB search). Each unsupportable sentence is replaced with a deterministic
-    honest-gap line. Returns the merged answer, or None if Gemini is unavailable
-    or nothing usable remains -> caller falls back to full regeneration/refusal.
-    """
-    if not unsupported or not grounded_corpus or len(grounded_corpus) < 50:
-        return None
-
-    numbered = "\n".join(f"{i+1}. {s}" for i, s in enumerate(unsupported))
-    sys_instruction = (
-        "You correct sentences so each is strictly supported by the provided ORA "
-        "knowledge-base passages. Never add a fact that is not in the passages. "
-        "Never change a figure that is already correct. If a sentence cannot be "
-        "supported by the passages, mark it supportable=false and give a short "
-        "topic phrase (3-6 words) naming what it was about."
-    )
-    prompt = (
-        f"QUESTION:\n{message}\n\n"
-        f"KNOWLEDGE BASE PASSAGES:\n{grounded_corpus}\n\n"
-        f"SENTENCES TO FIX (rewrite each strictly from the passages above):\n"
-        f"{numbered}\n\n"
-        "Return JSON exactly as: {\"rewrites\": [{\"original\": \"<the sentence "
-        "verbatim>\", \"fixed\": \"<rewritten sentence, or empty string if "
-        "unsupportable>\", \"supportable\": true|false, \"topic\": \"<short topic "
-        "phrase>\"}]}. Include one entry per sentence, in order."
-    )
-    data = gemini_client.generate_json(
-        prompt, temperature=0.0, max_output_tokens=1024,
-        system_instruction=sys_instruction,
-    )
-    if not data or not isinstance(data.get("rewrites"), list):
-        return None
-
-    answer = full_answer
-    answer_norm = _norm_for_match(answer)
-    any_supported_kept = False
-    gap_inserted = False
-
-    for entry in data["rewrites"]:
-        if not isinstance(entry, dict):
-            continue
-        original = (entry.get("original") or "").strip()
-        fixed = (entry.get("fixed") or "").strip()
-        supportable = bool(entry.get("supportable")) and bool(fixed)
-        topic = (entry.get("topic") or "").strip()
-        if not original:
-            continue
-        # Locate the original sentence with whitespace-collapsed matching so a
-        # hard-wrapped answer still matches (golden rule 2). We need the actual
-        # substring in `answer` to replace, so try a direct find first, then a
-        # normalized fallback that maps back to the raw span.
-        target = _locate_sentence(answer, answer_norm, original)
-        if target is None:
-            continue  # can't locate -> leave as-is, never blind-append
-        if supportable:
-            # Don't ship a rewrite that introduces a NEW unverified identifier.
-            if _check_identifier_faithfulness(fixed, grounded_corpus):
-                continue  # revert: keep the original sentence
-            replacement = fixed
-            any_supported_kept = True
-        else:
-            if gap_inserted:
-                replacement = ""  # collapse repeated gaps into one
-            else:
-                replacement = (
-                    f"I don't have source-backed details on "
-                    f"{topic or 'that point'} — please confirm with ORA "
-                    f"(443-885-4044)."
-                )
-                gap_inserted = True
-        answer = answer.replace(target, replacement, 1)
-        answer_norm = _norm_for_match(answer)
-
-    # Tidy doubled spaces / blank lines left by dropped sentences.
-    answer = re.sub(r"[ \t]{2,}", " ", answer)
-    answer = re.sub(r"\n{3,}", "\n\n", answer).strip()
-
-    # If nothing source-backed survived (answer is only gap/filler), refuse
-    # cleanly rather than ship a wall of "I don't have..." lines.
-    if not any_supported_kept and not _has_substantive_backed_content(
-            answer, full_answer):
-        return None
-    return answer or None
-
-
-def _locate_sentence(answer: str, answer_norm: str, sentence: str):
-    """Return the exact substring of `answer` matching `sentence` (direct match
-    first, then whitespace-collapsed), or None if it can't be located."""
-    if sentence in answer:
-        return sentence
-    # Whitespace-collapsed fallback: find the normalized sentence in the
-    # normalized answer, then walk the raw answer to recover the raw substring.
-    s_norm = _norm_for_match(sentence)
-    if not s_norm or s_norm not in answer_norm:
-        return None
-    # Recover the raw span by matching word-by-word against the raw answer.
-    words = sentence.split()
-    if not words:
-        return None
-    pattern = re.compile(r"\s+".join(re.escape(w) for w in words))
-    m = pattern.search(answer)
-    return m.group(0) if m else None
-
-
-def _has_substantive_backed_content(answer: str, original: str) -> bool:
-    """True if the merged answer still has a real (non-gap, non-filler) sentence."""
-    for s in _split_sentences(answer):
-        if "source-backed details on" in s.lower():
-            continue
-        if _sentence_is_exempt(s, False):
-            continue
-        return True
-    return False
-
-
 # Session reuse settings
 SESSION_TTL = 28800  # 8 hours: shorter TTL prevents stale context
 
@@ -1206,10 +979,6 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
     result = {
         "text": "", "chunks": 0, "coverage": 0.0, "citations": [],
         "grounded_corpus": "", "kb_fail": False, "outage": False, "error": None,
-        # (startIndex, endIndex) char-spans of the answer that Gemini's
-        # groundingSupports marked as KB-backed -- used for surgical per-sentence
-        # re-grounding. Indices reference the RAW answer text (result["text"]).
-        "grounded_spans": [],
     }
     try:
         payload = {
@@ -1224,6 +993,17 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
             state_delta["model_preference"] = model
         if memory_context:
             state_delta["memory"] = memory_context
+        # Route greetings/small-talk and personal-identity turns away from the KB
+        # search: the agent's before_model_callback drops the VertexAiSearchTool
+        # when this is True, so the model can't fire a stray search (which stapled
+        # bogus Sources onto a "hi" or "what department am I in?"). NARROW on
+        # purpose -- _is_personal_identity (name/dept/role/email), NOT the broader
+        # _is_personal_recall, which also matches institutional "my F&A rate / my
+        # UEI" that DO live in the KB and must still search. Sent every turn
+        # (True/False) so it can't stick in the persistent in-memory session.
+        state_delta["skip_kb_search"] = (
+            _is_smalltalk(message) or _is_personal_identity(message)
+        )
         if state_delta:
             payload["state_delta"] = state_delta
 
@@ -1289,7 +1069,6 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                         end = seg.get("endIndex", 0)
                         if 0 <= start < end <= total_chars:
                             spans.append((start, end))
-                    result["grounded_spans"] = spans
                     grounded_chars = sum(e - st for st, e in spans)
                     result["coverage"] = grounded_chars / total_chars if total_chars > 0 else 0.0
                 elif chunks:
@@ -1463,29 +1242,6 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     if verdict == "weak" and _is_smalltalk(message):
         verdict = "ok"
 
-    # ---- SURGICAL RE-GROUNDING: fix only the unsupported sentences ----------
-    # Reuse Pass-1's already-retrieved KB text to rewrite just the sentences that
-    # aren't source-backed, instead of throwing the whole answer away and running
-    # a second KB search. Falls through to the full Pass-2 regeneration below
-    # when the per-sentence span data is missing/unusable or the surgical rewrite
-    # can't produce a usable answer.
-    if verdict == "weak":
-        unsupported = _unsupported_sentences(
-            result["text"], result.get("grounded_spans") or [],
-            _is_personal_recall(message),
-        )
-        if unsupported == []:
-            verdict = "ok"  # every fact-stating sentence was actually backed
-        elif unsupported:  # non-empty -> attempt the surgical rewrite
-            yield {"type": "status", "content": "Checking sources sentence by sentence"}
-            merged = _surgical_reground(message, result["text"], unsupported,
-                                        result["grounded_corpus"])
-            if merged:
-                text, verdict = _clean_answer_text(merged), "ok"
-                print(f"   [LAYER3] Surgically re-grounded {len(unsupported)} "
-                      f"sentence(s) ({result['coverage']:.0%} coverage) - no 2nd search")
-        # unsupported is None -> spans unusable; leave verdict 'weak' for Pass 2.
-
     # ---- LATENCY GUARD: skip the expensive Pass-2 when over budget -------
     # If we already have a usable Pass-1 answer but it graded weak, and the turn
     # has spent its latency budget, deliver Pass-1 with a caution note instead of
@@ -1611,22 +1367,9 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
     if verdict == "weak" and _is_smalltalk(message):
         verdict = "ok"
 
-    # Surgical re-grounding: the streamed preview is replaced by the terminal
-    # 'done' event, so we can rewrite just the unsupported sentences here too
-    # (rather than only cautioning). When span data is missing or the rewrite
-    # fails we fall back to the caution note -- we can't re-search mid-stream.
-    if verdict == "weak":
-        unsupported = _unsupported_sentences(
-            result["text"], result.get("grounded_spans") or [],
-            _is_personal_recall(message),
-        )
-        if unsupported == []:
-            verdict = "ok"
-        elif unsupported:
-            merged = _surgical_reground(message, result["text"], unsupported,
-                                        result["grounded_corpus"])
-            if merged:
-                text, verdict = _clean_answer_text(merged), "ok"
+    # A weak streamed answer can't be regenerated (the preview is already on
+    # screen) or re-searched mid-stream, so it ships with a caution note appended
+    # at the end of this function.
 
     # Identity questions are answered from the profile, not the KB — drop any
     # stray real grounding citations so a personal fact never shows KB Sources.
@@ -1651,7 +1394,7 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
                    citations=result["citations"])
     final = _finalize_answer(text, result["grounded_corpus"])
     if verdict == "weak":
-        final = final + _WEAK_NOTE   # spans unusable / surgical failed -> caution
+        final = final + _WEAK_NOTE   # can't regenerate/re-search mid-stream -> caution
     if result["citations"]:
         yield {"type": "citations", "content": result["citations"]}
     yield {"type": "done", "content": final}
