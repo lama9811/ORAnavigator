@@ -278,13 +278,33 @@ _SMALLTALK_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Bot-directed social / personal questions ("do you miss me", "are you real?",
+# "who are you"). These are LANE 1 social chat, not ORA questions — they get a
+# warm Gemini-only reply, so they must skip the KB (routing) AND never be
+# regenerated into a refusal by Layer 3. Kept to clearly-social phrasings that
+# cannot be an ORA fact question (e.g. "do you know me", not "do you know the UEI").
+_SOCIAL_QUESTION_RE = re.compile(
+    r"^\W*(?:"
+    r"do you (?:miss|like|love|remember|know|hate|enjoy|care about) (?:me|us)"
+    r"|will you miss me|i (?:miss(?:ed)?|love|like|appreciate) you"
+    r"|are you (?:real|there|human|alive|sentient|conscious|ok(?:ay)?|happy|lonely|busy|tired"
+    r"|a\s*(?:bot|robot|ai|human|person|machine|computer|friend|real\s*person))"
+    r"|who are you|what are you|what(?:'?s| is) your name|do you have a name"
+    r"|do you have (?:feelings|emotions|a family|friends)"
+    r"|how old are you|where are you(?:\s+from)?|are you my friend|do you dream"
+    r")[\s?!.]*$",
+    re.IGNORECASE,
+)
+
+
 def _is_smalltalk(question: str) -> bool:
-    """True if the message is just a greeting / pleasantry (no ORA content).
-    Such messages get a warm, KB-free reply that Layer 3 must deliver as-is
-    rather than regenerate under the strict prompt and refuse."""
+    """True if the message is just a greeting/pleasantry OR a bot-directed social
+    question (LANE 1). Such messages get a warm, KB-free reply that Layer 3 must
+    deliver as-is rather than regenerate under the strict prompt and refuse."""
     if not question:
         return False
-    return bool(_SMALLTALK_RE.match(question.strip()))
+    q = question.strip()
+    return bool(_SMALLTALK_RE.match(q) or _SOCIAL_QUESTION_RE.match(q))
 
 # =============================================================================
 # FAITHFULNESS GATE: ORA Staff Entity Whitelist

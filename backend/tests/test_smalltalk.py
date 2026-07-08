@@ -57,3 +57,23 @@ def test_praise_and_affirmations_are_smalltalk():
               "makes sense", "sounds good", "got it", "good", "noted",
               "you good?", "later"]:
         assert _is_smalltalk(q), f"expected small talk: {q!r}"
+
+
+# Bot-directed social / personal questions ("do you miss me", "are you real?",
+# "who are you") are LANE 1 social chat: Gemini answers them warmly, so they must
+# skip the KB and never be regenerated into a refusal by Layer 3.
+def test_bot_directed_social_questions_are_smalltalk():
+    for q in ["do you miss me", "do you miss me?", "are you real?", "are you human",
+              "are you a bot", "who are you", "what is your name", "what's your name",
+              "how old are you", "i missed you", "do you like me", "will you miss me",
+              "are you okay?"]:
+        assert _is_smalltalk(q), f"expected LANE 1 social chat: {q!r}"
+
+
+# ...but the widened detector must NOT swallow real ORA questions phrased with
+# "do you..." / "are you..." — those stay LANE 2 and keep their KB search.
+def test_social_widening_does_not_catch_ora_questions():
+    for q in ["do you know the UEI?", "do you have the IRB form?",
+              "are you sure the deadline is Friday?", "what is my F&A rate?",
+              "what are you able to help with for grants?", "who is the IRB contact?"]:
+        assert not _is_smalltalk(q), f"should stay LANE 2 (ORA): {q!r}"
