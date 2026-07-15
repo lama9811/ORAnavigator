@@ -67,6 +67,20 @@ export default function NavBar({ role, onToggleSidebar }) {
     <>
     <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
       <div className="nav-container">
+        {/* Dedicated hamburger, in the header itself (not hidden in the logo).
+            Toggles the sidebar. Shown only when authenticated. */}
+        {isAuthed && (
+          <button
+            type="button"
+            className="navbar-hamburger"
+            onClick={onToggleSidebar}
+            title="Toggle sidebar"
+            aria-label="Toggle sidebar"
+          >
+            <Menu size={22} />
+          </button>
+        )}
+
         {/* Left side - logo and title - CLICKABLE */}
         <div
           className="navbar-left"
@@ -74,37 +88,13 @@ export default function NavBar({ role, onToggleSidebar }) {
           style={{ cursor: 'pointer' }}
           title={isAuthed ? "Go to Chat" : "Return to Home"}
         >
-          {isAuthed && (
-            <button 
-              type="button"
-              className="logo-hamburger-toggle" 
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleSidebar();
-              }}
-              title="Toggle Sidebar" // 🔥 NEW: Hover Text
-              aria-label="Toggle sidebar"
-            >
-              <img 
-                src="/msu_logo.webp" 
-                alt="Morgan State University" 
-                className="nav-logo-image"
-              />
-              <div className="hamburger-overlay">
-                <Menu size={24} />
-              </div>
-            </button>
-          )}
-          
-          {!isAuthed && (
-            <img 
-              src="/msu_logo.webp" 
-              alt="Morgan State University" 
-              className="nav-logo" 
-              title="Return to Home" // 🔥 NEW: Hover Text
-            />
-          )}
-          
+          <img
+            src="/msu_logo.webp"
+            alt="Morgan State University"
+            className="nav-logo"
+            title={isAuthed ? "Go to Chat" : "Return to Home"}
+          />
+
           <div className="nav-title">
             <span className="brand-main">ORA Navigator</span>
             <span className="brand-sub">Office of Research Administration · MSU</span>
@@ -193,21 +183,6 @@ export default function NavBar({ role, onToggleSidebar }) {
       </div>
     </nav>
 
-      {/* Mobile-only floating menu button, just BELOW the logo, so chat history
-          is easy to find (it used to be hidden on the logo itself). Toggles the
-          sidebar; hidden on desktop and while the sidebar is already open. */}
-      {isAuthed && (
-        <button
-          type="button"
-          className="mobile-history-fab"
-          onClick={onToggleSidebar}
-          title="Open menu & chat history"
-          aria-label="Open menu and chat history"
-        >
-          <Menu size={20} />
-          <span className="mobile-history-fab-label">Menu</span>
-        </button>
-      )}
     </>
   );
 }

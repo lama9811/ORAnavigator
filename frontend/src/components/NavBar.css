@@ -1,7 +1,9 @@
 /* ========== Navbar - Glass Morphism ========== */
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   width: 100%;
   background: rgba(255, 255, 255, 0.82);
@@ -26,6 +28,33 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+}
+
+/* Dedicated header hamburger — a clear bordered button, always in the header
+   (no longer hidden behind the logo, no floating sub-header FAB). */
+.navbar-hamburger {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.10);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-main, #202124);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar-hamburger:hover {
+  background: rgba(66, 133, 244, 0.08);
+  border-color: var(--msu-blue, #4285f4);
+}
+
+.navbar-hamburger:active {
+  transform: scale(0.96);
 }
 
 /* ========== Left Side - Logo and Title - CLICKABLE ========== */
@@ -229,10 +258,18 @@ body.dark .navbar-forms-btn:hover {
   color: #ffffff;
 }
 
-/* Hide the label on narrow screens; keep just the icon. */
-@media (max-width: 640px) {
-  .navbar-forms-btn { padding: 0 10px; }
+/* On small laptops / tablets the 4 labelled buttons + hamburger crowd the
+   header, so collapse the buttons to icon-only below 1024px. The icons keep
+   their tooltips (title=) so meaning isn't lost. */
+@media (max-width: 1024px) {
+  .navbar-forms-btn {
+    padding: 0;
+    width: 36px;
+    justify-content: center;
+    gap: 0;
+  }
   .navbar-forms-label { display: none; }
+  .navbar-right { gap: 8px; }
 }
 
 .profile-icon-btn {
@@ -613,45 +650,3 @@ body.dark .navbar-forms-btn:hover {
   }
 }
 
-/* ── Mobile floating "Menu" button (chat history) ──────────────────────────
-   Sits just below the Morgan State logo so the chat-history sidebar is easy to
-   discover. Phones only — on desktop the sidebar is already a visible column. */
-.mobile-history-fab {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  .mobile-history-fab {
-    position: fixed;
-    top: 68px;            /* just below the ~60–65px mobile navbar */
-    left: 10px;
-    z-index: 450;         /* above page content, below the open sidebar (500) */
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 13px 7px 10px;
-    background: var(--msu-blue, #002D72);
-    color: #fff;
-    border: none;
-    border-radius: 999px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobile-history-fab:active {
-    transform: scale(0.96);
-  }
-
-  .mobile-history-fab-label {
-    line-height: 1;
-  }
-
-  /* Hide it while the sidebar is open — the sidebar has its own close button. */
-  body:not(.sidebar-collapsed) .mobile-history-fab {
-    display: none;
-  }
-}

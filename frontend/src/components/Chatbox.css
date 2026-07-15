@@ -24,9 +24,11 @@
   transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1), width 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
 }
 
+/* Collapsed = 60px icon rail (not fully hidden), so the chat area sits beside
+   the rail rather than under it. */
 body.sidebar-collapsed .chat-main {
-  margin-left: 0;
-  width: 100%;
+  margin-left: 60px;
+  width: calc(100% - 60px);
 }
 
 /* Messages area */
@@ -521,7 +523,7 @@ body.dark .message.bot .message-bubble strong {
 }
 
 body.sidebar-collapsed .chat-input-container {
-  left: 0;
+  left: 60px;
 }
 
 .chat-input-wrapper {
@@ -1232,13 +1234,14 @@ body.dark .send-btn:hover:not(:disabled) {
 
 /* iPad Pro Portrait & iPad Landscape (768px - 1023px) */
 @media (max-width: 1023px) and (min-width: 768px) {
+  /* Rail is always present (60px); expanded sidebar overlays. */
   .chat-main {
-    margin-left: 0 !important;
-    width: 100% !important;
+    margin-left: 60px !important;
+    width: calc(100% - 60px) !important;
   }
 
   .chat-input-container {
-    left: 0 !important;
+    left: 60px !important;
   }
 
   .chat-messages {
@@ -1268,15 +1271,16 @@ body.dark .send-btn:hover:not(:disabled) {
 
 /* Mobile responsive (phones) */
 @media (max-width: 767px) {
+  /* Rail is always present (60px) even on phones. */
   .chat-main {
-    margin-left: 0 !important;
-    width: 100% !important;
+    margin-left: 60px !important;
+    width: calc(100% - 60px) !important;
     height: calc(100vh - 70px);
     height: calc(100dvh - 70px); /* Dynamic viewport for mobile */
   }
 
   .chat-input-container {
-    left: 0 !important;
+    left: 60px !important;
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
@@ -2273,7 +2277,8 @@ body.dark .live-mode-btn.active {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  /* Above the fixed navbar (z-index 1000) so it isn't overlapped by the header. */
+  z-index: 1200;
   animation: fadeIn 0.2s ease;
 }
 
