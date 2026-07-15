@@ -4,6 +4,7 @@
 // is shared across users.
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, MoreHorizontal, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
@@ -398,7 +399,10 @@ export default function MyProposals() {
 // ============================================================
 
 function ProposalCard({ sub, onOpen }) {
-  const dleft = daysUntil(sub.deadline);
+  // Count down to the internal ORA deadline (the date a PI must actually hit);
+  // fall back to the sponsor deadline when there's no internal one.
+  const headlineDeadline = sub.internal_deadline || sub.deadline;
+  const dleft = daysUntil(headlineDeadline);
   const overdue = dleft !== null && dleft < 0 && sub.status === "active";
   const urgent = dleft !== null && dleft >= 0 && dleft <= 7 && sub.status === "active";
 
@@ -413,7 +417,10 @@ function ProposalCard({ sub, onOpen }) {
       <div className="proposal-card-title">{sub.title}</div>
       <div className="proposal-card-meta">
         <Calendar size={11} />
-        <span>{formatDeadline(sub.deadline)}</span>
+        <span title={sub.internal_deadline ? "Internal ORA deadline" : "Sponsor deadline"}>
+          {formatDeadline(headlineDeadline)}
+          {sub.internal_deadline && <span className="proposal-card-deadline-tag"> · internal</span>}
+        </span>
         {dleft !== null && sub.status === "active" && (
           <span className={`proposal-card-countdown ${overdue ? "overdue" : urgent ? "urgent" : ""}`}>
             {overdue
@@ -539,7 +546,10 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const done = tasks.filter((t) => t.status === "done").length;
   const total = tasks.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
-  const dleft = daysUntil(submission.deadline);
+  // The internal ORA routing deadline is the date a PI actually has to hit, so
+  // it's the headline + countdown; the sponsor deadline is shown as secondary.
+  const headlineDeadline = submission.internal_deadline || submission.deadline;
+  const dleft = daysUntil(headlineDeadline);
   const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
@@ -665,8 +675,15 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         </div>
         <div className="proposal-detail-meta">
           <div className="proposal-detail-meta-item">
-            <span className="meta-label">Deadline</span>
-            <span className="meta-value">{formatDeadline(submission.deadline)}</span>
+            <span className="meta-label">
+              {submission.internal_deadline ? "Internal ORA deadline" : "Deadline"}
+            </span>
+            <span className="meta-value"
+              title={submission.internal_deadline
+                ? "Morgan ORA needs proposals routed internally before the sponsor's deadline — about 5 business days earlier."
+                : undefined}>
+              {formatDeadline(headlineDeadline)}
+            </span>
             {dleft !== null && submission.status === "active" && (
               <span className="meta-countdown">
                 {dleft < 0 ? `${Math.abs(dleft)} days overdue`
@@ -675,9 +692,8 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               </span>
             )}
             {submission.internal_deadline && (
-              <span className="meta-internal"
-                title="Morgan ORA needs proposals routed internally before the sponsor's deadline — about 5 business days earlier.">
-                Internal ORA deadline: {formatDeadline(submission.internal_deadline)}
+              <span className="meta-internal">
+                Sponsor deadline: {formatDeadline(submission.deadline)}
               </span>
             )}
           </div>
@@ -824,7 +840,7 @@ function CreateModal({ onClose, onSubmit, busy }) {
 
   const dleft = useMemo(() => daysUntil(deadline), [deadline]);
 
-  return (
+  return createPortal(
     <div className="proposals-modal-overlay" onClick={onClose}>
       <div className="proposals-modal" onClick={(e) => e.stopPropagation()}>
         <div className="proposals-modal-header">
@@ -895,6 +911,7 @@ function CreateModal({ onClose, onSubmit, busy }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

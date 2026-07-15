@@ -387,6 +387,12 @@ body.dark .proposal-card-status.status-withdrawn {
   font-variant-numeric: tabular-nums;
 }
 
+/* Subtle tag marking the card date as the internal (vs sponsor) deadline. */
+.proposal-card-deadline-tag {
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
 .proposal-card-countdown {
   margin-left: auto;
   font-weight: 600;

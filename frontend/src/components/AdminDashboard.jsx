@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertCircle, BarChart3, Bot, Bug, CalendarPlus, Check, CheckCircle, CircleHelp, Clock, CloudUpload, Database, Eye, Flag, Gauge, GraduationCap, Inbox, Lightbulb, Link, Loader2, Mic, Pencil, RefreshCw, Save, Search, Server, Settings, ShieldUser, Smile, Square, ThumbsDown, ThumbsUp, Ticket, Trash2, User, Users, X } from "lucide-react";
+import { AlertCircle, BarChart3, Bot, Bug, CalendarPlus, Check, CheckCircle, CircleHelp, Clock, CloudUpload, Database, Flag, Gauge, GraduationCap, Inbox, Lightbulb, Link, Loader2, Mic, Pencil, RefreshCw, Save, Search, Server, Settings, ShieldUser, Smile, Square, ThumbsDown, ThumbsUp, Ticket, Trash2, User, Users, X } from "lucide-react";
 import "./AdminDashboard.css";
 
 import { getApiBase } from "../lib/apiBase";
@@ -1550,10 +1550,9 @@ export default function AdminDashboard() {
                       <span className="ticket-user"><User size={11} />{ticket.user_email || "Unknown"}</span>
                       <span className="ticket-date"><Clock size={11} />{formatDateTime(ticket.created_at)}</span>
                     </div>
-                    {/* Quick actions stop propagation so they don't also open
-                        the modal when the whole card is clickable. */}
+                    {/* The whole card opens the ticket; quick actions stop
+                        propagation so they don't also open the modal. */}
                     <div className="ticket-actions">
-                      <button className="view-btn" onClick={(e) => { e.stopPropagation(); setSelectedTicket(ticket); }} title="View"><Eye size={14} /></button>
                       {ticket.status === "open" && <button className="progress-btn" onClick={(e) => { e.stopPropagation(); updateTicketStatus(ticket.id, "in_progress"); }} title="In Progress"><Clock size={14} /></button>}
                       {ticket.status !== "resolved" && <button className="resolve-btn" onClick={(e) => { e.stopPropagation(); updateTicketStatus(ticket.id, "resolved"); }} title="Resolve"><Check size={14} /></button>}
                     </div>
