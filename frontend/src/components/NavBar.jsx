@@ -5,6 +5,7 @@ import "../index.css";
 import "./NavBar.css";
 
 import { getApiBase } from "../lib/apiBase";
+import { hasValidToken } from "../lib/auth";
 const API_BASE = getApiBase();
 export default function NavBar({ role, onToggleSidebar }) {
   const [scrolled, setScrolled] = useState(false);
@@ -61,7 +62,10 @@ export default function NavBar({ role, onToggleSidebar }) {
   };
 
   const linkClass = ({ isActive }) => "nav-link" + (isActive ? " active" : "");
-  const isAuthed = useMemo(() => Boolean(role), [role]);
+  // Authed only when there's a role AND a still-valid token. Gating on the
+  // token too means an expired session can't leave authed nav chrome (buttons,
+  // Menu) on screen if the role prop lags a render behind the logout.
+  const isAuthed = useMemo(() => Boolean(role) && hasValidToken(), [role]);
 
   return (
     <>
