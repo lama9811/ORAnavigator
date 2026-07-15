@@ -15,6 +15,7 @@
 // guess.
 
 import React, { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { AlertTriangle, ArrowLeft, Check, FileText, MinusCircle, X, XCircle } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./DraftCritiqueModal.css";
@@ -157,7 +158,9 @@ export default function DraftCritiqueModal({ submission, onClose }) {
   const onDragOver = (e) => e.preventDefault();
   const triggerPicker = () => fileInputRef.current?.click();
 
-  return (
+  // Portal to <body> so the fixed overlay centers on the viewport rather than
+  // inside the fixed .page-content wrapper (which would pin it to the top).
+  return createPortal(
     <div className="critique-modal-overlay" onClick={onClose}>
       <div
         className="critique-modal"
@@ -234,7 +237,8 @@ export default function DraftCritiqueModal({ submission, onClose }) {
           <ResultsView result={result} />
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
