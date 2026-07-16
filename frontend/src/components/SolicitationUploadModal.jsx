@@ -13,6 +13,7 @@
 // reviews what the AI pulled out before it becomes a real proposal.
 
 import React, { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeft, Check, FileText, Link as LinkIcon, Quote, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SolicitationUploadModal.css";
@@ -140,7 +141,10 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
     setExtracted((cur) => ({ ...cur, [field]: value }));
   };
 
-  return (
+  // Rendered through a portal to <body> so the fixed overlay centers on the
+  // viewport, not inside the fixed .page-content wrapper (which pinned it to
+  // the top and pushed the bottom off-screen).
+  return createPortal(
     <div className="solicitation-modal-overlay" onClick={onClose}>
       <div className="solicitation-modal" onClick={(e) => e.stopPropagation()}>
         <div className="solicitation-modal-header">
@@ -184,7 +188,8 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
           />
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

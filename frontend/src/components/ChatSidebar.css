@@ -16,15 +16,119 @@
   overflow: hidden;
 }
 
-/* ─── HIDDEN STATE ───
-   The navbar hamburger fully hides the chat history: the sidebar slides
-   off-screen (0 width) and the chat area expands to full width. Click the
-   hamburger again to bring it back. On mobile the sidebar is already a
-   slide-over (see the media queries below) — this matches that on desktop. */
+/* ─── COLLAPSED STATE (icon rail) ───
+   Collapsing no longer hides the sidebar entirely — it shrinks to a narrow
+   icon rail (new chat, open, support, profile) that stays reachable. Chat
+   history only appears in the full sidebar. Click "open" (or the header
+   hamburger) to expand back to 280px. */
 body.sidebar-collapsed .chat-sidebar {
-  width: 0;
-  transform: translateX(-100%);
-  border-right: none;
+  width: 60px;
+}
+
+/* Show the rail, hide the full content, when collapsed. */
+body.sidebar-collapsed .sidebar-full { display: none; }
+body.sidebar-collapsed .sidebar-rail { display: flex; }
+
+/* Default (expanded): full content shown, rail hidden. */
+.sidebar-rail { display: none; }
+
+/* ─── The icon rail ─── */
+.sidebar-rail {
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  width: 60px;
+  padding: 14px 0;
+}
+
+.sidebar-rail-top,
+.sidebar-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Actions group (support + install) sits above a divider; the profile is
+   below the divider — mirroring the full sidebar's layout. */
+.sidebar-rail-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  width: 40px;
+}
+
+.rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  /* The sidebar surface is dark navy, so the rail's icons/borders are light
+     regardless of the app's light theme -- otherwise dark-on-dark = invisible. */
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.rail-btn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* New-chat gets the orange accent, matching the sibling sidebar's + button. */
+.rail-new-chat {
+  background: #e8590c;
+  border-color: #e8590c;
+  color: #fff;
+}
+
+.rail-new-chat:hover {
+  background: #d24e08;
+  border-color: #d24e08;
+}
+
+/* Profile is a filled circle (avatar) at the bottom, like the sibling. */
+.rail-profile {
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.rail-profile:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.rail-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.rail-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* The full sidebar content fills the sidebar when expanded. */
+.sidebar-full {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 /* Top Section - Actions */
@@ -858,12 +962,11 @@ body.dark .chat-history-item.active {
 
 /* Mobile - Tablet */
 @media (max-width: 768px) {
-  .chat-sidebar {
-    transform: translateX(-280px);
-  }
-
+  /* The rail stays present at all sizes so users always see there's something
+     there. Collapsed = the 60px icon rail (on-screen, from the base rule).
+     Expanded = the full 280px sidebar slides over the content. */
   body:not(.sidebar-collapsed) .chat-sidebar {
-    transform: translateX(0);
+    width: 280px;
   }
 
   .sidebar-settings {
@@ -893,14 +996,15 @@ body.dark .chat-history-item.active {
 /* Mobile - Small phones */
 @media (max-width: 480px) {
   .chat-sidebar {
-    width: 85vw;
-    max-width: 280px;
     top: 60px;
     height: calc(100vh - 60px);
   }
 
-  body.sidebar-collapsed .chat-sidebar {
-    transform: translateX(-100%);
+  /* Collapsed keeps the 60px rail on-screen (base rule). Expanded overlays a
+     wider panel above the content. */
+  body:not(.sidebar-collapsed) .chat-sidebar {
+    width: 85vw;
+    max-width: 280px;
   }
 
   /* Add overlay when sidebar is open on mobile */

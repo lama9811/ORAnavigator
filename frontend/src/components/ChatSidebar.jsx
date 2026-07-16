@@ -374,6 +374,83 @@ export default function ChatSidebar({
 
   return (
     <div className="chat-sidebar">
+      {/* Collapsed icon rail — shown only when the sidebar is collapsed.
+          Just the essentials: new chat, expand, profile, support. Chat
+          history lives in the fully-open sidebar only. */}
+      <div className="sidebar-rail" aria-label="Collapsed sidebar">
+        <div className="sidebar-rail-top">
+          <button
+            className="rail-btn rail-new-chat"
+            onClick={onNew}
+            title="New chat"
+            aria-label="New chat"
+          >
+            <Plus size={20} />
+          </button>
+          {onCollapse && (
+            <button
+              className="rail-btn"
+              onClick={onCollapse}
+              title="Open sidebar"
+              aria-label="Open sidebar"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="9" y1="3" x2="9" y2="21"/>
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className="sidebar-rail-bottom">
+          {/* Actions group — mirrors the full sidebar's Contact Support +
+              Install App. The divider sits below this group, above the
+              profile, matching the open sidebar. */}
+          <div className="sidebar-rail-actions">
+            <button
+              className="rail-btn"
+              onClick={() => setShowTicketModal(true)}
+              title="Contact support"
+              aria-label="Contact support"
+            >
+              <LifeBuoy size={20} />
+            </button>
+            <button
+              className="rail-btn"
+              onClick={handleInstallApp}
+              title="Install app"
+              aria-label="Install app"
+            >
+              <Download size={20} />
+            </button>
+          </div>
+          <button
+            className="rail-btn rail-profile"
+            onClick={handleProfileClick}
+            title="Your profile"
+            aria-label="Your profile"
+          >
+            {profileImageUrl ? (
+              <>
+                <img
+                  src={profileImageUrl}
+                  alt="Profile"
+                  className="rail-avatar"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const fb = e.target.nextElementSibling;
+                    if (fb) fb.style.display = 'flex';
+                  }}
+                />
+                <span className="rail-avatar-fallback" style={{ display: 'none' }}><User size={18} /></span>
+              </>
+            ) : (
+              <span className="rail-avatar-fallback"><User size={18} /></span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="sidebar-full">
       <div className="sidebar-top">
         <div className="sidebar-top-row">
           <button
@@ -557,6 +634,7 @@ export default function ChatSidebar({
           </button>
         </div>
       </div>
+      </div>{/* /.sidebar-full */}
 
       {/* 🎫 Support Ticket Modal */}
       {showTicketModal && (

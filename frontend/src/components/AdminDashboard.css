@@ -7,10 +7,21 @@
   background: var(--bg-card);
   border-radius: 16px;
   padding: 32px;
-  margin: 24px auto;
+  margin: 56px auto 24px;
   max-width: 1200px;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
+}
+
+/* Make the admin card's scroll region a flex column so the card's top
+   margin above no longer collapses through the container (it did with the
+   default block layout, so the card rendered flush against the navbar).
+   Scoped via :has() so only the admin page is affected. Does NOT add any
+   padding to the scroll region itself, so the header row can never be
+   pushed out of view when scrolled. */
+.page-content:has(.AdminDashboard) {
+  display: flex;
+  flex-direction: column;
 }
 
 .AdminDashboard .page-header {

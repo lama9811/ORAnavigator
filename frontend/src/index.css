@@ -302,7 +302,7 @@ body.dark ::-webkit-scrollbar-thumb:hover {
 .app-layout {
   display: flex;
   min-height: calc(100vh - 70px);
-  margin-top: 70px;
+  margin-top: 70px;   /* clear the fixed 70px navbar */
   width: 100%;
   max-width: 100vw;
   overflow-x: hidden;
@@ -324,13 +324,14 @@ body.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 body.sidebar-collapsed .page-content {
-  left: 0;
+  left: 60px;
   overflow-x: hidden;
 }
 
 @media (max-width: 768px) {
+  /* Rail is always present (60px), so page content sits beside it. */
   .page-content {
-    left: 0 !important;
+    left: 60px !important;
   }
 }
 
