@@ -1,6 +1,12 @@
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+
+import { parseJwt, isTokenValid, hasValidToken, clearSession } from "./lib/auth";
+import { installAuthFetch, SESSION_EXPIRED_EVENT } from "./lib/authFetch";
+
+// Install the global 401/403 interceptor once, before any component fetches.
+installAuthFetch();
 
 // Eager: always-mounted layout chrome (light, shown on every screen).
 import NavBar         from "./components/NavBar";
@@ -29,27 +35,15 @@ import "./index.css";
 
 import { getApiBase } from "./lib/apiBase";
 const API_BASE = getApiBase();
-function parseJwt(token) {
-  try {
-    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const json = decodeURIComponent(
-      atob(b64)
-        .split("")
-        .map((c) =>
-          "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
-        )
-        .join("")
-    );
-    return JSON.parse(json);
-  } catch {
-    return {};
-  }
-}
-
 function RequireAuth({ children }) {
-  return localStorage.getItem("token")
-    ? children
-    : <Navigate to="/login" replace />;
+  // Check the token is present AND unexpired -- a stale token used to pass this
+  // guard, render the page, then 403 on every API call. An expired token is
+  // cleared here so the app treats it as a clean logout.
+  if (hasValidToken()) return children;
+  // If a token was present but invalid (expired), tell the user why on /login.
+  const hadToken = Boolean(localStorage.getItem("token"));
+  clearSession();
+  return <Navigate to="/login" replace state={hadToken ? { sessionExpired: true } : undefined} />;
 }
 
 // A lazy page chunk can fail to download when a returning (PWA-cached) visitor
@@ -187,7 +181,11 @@ function SidebarLayout({
 export default function App() {
   const navigate = useNavigate();
 
-  const [token, setToken] = useState(() => localStorage.getItem("token"));
+  const [token, setToken] = useState(() => {
+    // Don't start with an already-expired token in state.
+    const t = localStorage.getItem("token");
+    return isTokenValid(t) ? t : null;
+  });
   const [role, setRole]   = useState(null);
   // On phones the sidebar is a slide-over panel, so start it CLOSED (login
   // lands on the welcome screen). On desktop it's a persistent column → open.
@@ -202,15 +200,31 @@ export default function App() {
 
   // sync token ↔ localStorage & extract role
   useEffect(() => {
-    if (token) {
+    if (token && isTokenValid(token)) {
       localStorage.setItem("token", token);
       const { role: r } = parseJwt(token);
       setRole(r || null);
     } else {
-      localStorage.removeItem("token");
+      // No token, or an expired one -> clear session state.
+      if (token) setToken(null);
+      clearSession();
       setRole(null);
     }
   }, [token]);
+
+  // Global "session expired" handler: the fetch interceptor fires this when an
+  // authenticated API call returns 401/403. Drop the token (redirects via
+  // RequireAuth) and tell the user why, instead of a silent 403.
+  useEffect(() => {
+    const onExpired = () => {
+      setToken(null);
+      setRole(null);
+      toast.error("Your session has expired. Please sign in again.");
+      navigate("/login", { replace: true, state: { sessionExpired: true } });
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, [navigate]);
 
   // Dark mode removed — force light and clear any saved dark preference.
   useEffect(() => {
@@ -432,8 +446,7 @@ export default function App() {
   // logout
   const handleLogout = () => {
     setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("chat_sessions");
+    clearSession();
     // Clear UI and reset to a fresh chat
     const freshId = Date.now().toString();
     setSessions([{ id: freshId, title: "New Chat", messages: [], pinned: false, archived: false }]);

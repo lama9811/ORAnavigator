@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthLayout from "./components/auth/AuthLayout";
 import { getApiBase } from "./lib/apiBase";
+import { hasValidToken } from "./lib/auth";
 
 // Modern line icons - with explicit dimensions for proper rendering
 const EnvelopeIcon = (props) => (
@@ -48,9 +49,15 @@ export default function Login({ onLoggedIn }) {
   const API_BASE = getApiBase();
 
   useEffect(() => {
-    if (localStorage.getItem("token")) navigate("/", { replace: true });
-    // Show success message from signup redirect
-    if (location.state?.message) {
+    // Only bounce to the app if the existing token is actually valid -- an
+    // expired token must stay on /login so the user can sign in again.
+    if (hasValidToken()) navigate("/", { replace: true });
+    // A session-expired redirect carries `sessionExpired`; show it as an error.
+    if (location.state?.sessionExpired) {
+      setError("Your session has expired. Please sign in again.");
+      window.history.replaceState({}, document.title);
+    } else if (location.state?.message) {
+      // Show success message from signup redirect
       setSuccess(location.state.message);
       window.history.replaceState({}, document.title);
     }
