@@ -18,6 +18,7 @@ high-level context the user has already volunteered in conversation.
 """
 
 import os
+import re
 import json
 from datetime import datetime, timedelta
 from typing import Optional
@@ -26,6 +27,37 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from db import SessionLocal
+
+
+# ---------------------------------------------------------------------------
+# PII guard (deterministic — see module docstring's privacy promise)
+# ---------------------------------------------------------------------------
+# The extractor prompt ASKS Gemini not to store SSNs, phones, salaries, etc.,
+# but that is advisory. This is the hard gate: any extracted fact matching one
+# of these patterns is DROPPED before it reaches UserMemory. Same signals the
+# popular-questions welcome-screen filter uses, minus the greeting/junk checks
+# (a short clean fact like "New faculty" is legitimate memory content).
+_SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+_LONGNUM_RE = re.compile(r"\b\d{7,}\b")               # SSN w/o dashes, IDs, accounts
+_PHONE_RE = re.compile(r"\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b")
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+_MONEY_RE = re.compile(r"\$\s?\d")
+_PII_PHRASES = (
+    "my salary", "my ssn", "social security", "my phone", "my address",
+    "my email", "my password", "my bank", "my account number",
+)
+
+
+def _contains_pii(text: str) -> bool:
+    """True if a candidate memory holds PII that must never be persisted."""
+    s = (text or "").strip()
+    if not s:
+        return False
+    if (_SSN_RE.search(s) or _LONGNUM_RE.search(s) or _PHONE_RE.search(s)
+            or _EMAIL_RE.search(s) or _MONEY_RE.search(s)):
+        return True
+    low = s.lower()
+    return any(p in low for p in _PII_PHRASES)
 
 
 def fetch_user_memories(user_id: int, db: Session, limit: int = 10) -> list[dict]:
@@ -431,6 +463,11 @@ def _merge_memories(db: Session, user_id: int, new_memories: list[dict], existin
         mtype = mem["memory_type"]
         content = mem["content"].strip()
         if not content:
+            continue
+
+        # Hard PII gate: never persist a fact with an SSN, phone, email,
+        # dollar amount, or personal-financial phrase (see module docstring).
+        if _contains_pii(content):
             continue
 
         type_memories = existing_by_type.get(mtype, [])
