@@ -113,11 +113,24 @@ def test_rank_and_explain_keeps_only_grounded_quotes(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_find_opportunities_builds_rows_with_deadline_and_eligibility(monkeypatch):
+    # The close date MUST be computed relative to today, like the sibling tests
+    # below: _is_open() drops opportunities whose deadline has passed, so a
+    # hard-coded date silently turns this into a time bomb that starts failing
+    # the day it expires (it did -- the old fixture was 07/21/2026).
+    from datetime import datetime, timedelta
+    close_dt = datetime.now() + timedelta(days=120)
+    while close_dt.weekday() >= 5:            # land on a weekday
+        close_dt += timedelta(days=1)
+    close = close_dt.strftime("%m/%d/%Y")
+    # 5 business days before a weekday always spans exactly one weekend,
+    # i.e. 7 calendar days -- derived here independently of the implementation.
+    expected_internal = (close_dt - timedelta(days=7)).strftime("%Y-%m-%d")
+
     monkeypatch.setattr(of, "search_grantsgov", lambda kw, rows=12: [
-        {"id": "1", "title": "AI Cyber Scholarships", "agency": "NSF", "closeDate": "07/21/2026"},
+        {"id": "1", "title": "AI Cyber Scholarships", "agency": "NSF", "closeDate": close},
     ])
     monkeypatch.setattr(of, "fetch_opportunity", lambda oid: {
-        "id": "1", "title": "AI Cyber Scholarships", "agency": "NSF", "closeDate": "07/21/2026",
+        "id": "1", "title": "AI Cyber Scholarships", "agency": "NSF", "closeDate": close,
         "synopsisDesc": "Supports AI and cybersecurity education.",
         "applicant_types": [{"id": "6", "description": "Public and State controlled institutions of higher education"}],
         "applicantEligibilityDesc": "Open to accredited universities.",
@@ -131,8 +144,8 @@ def test_find_opportunities_builds_rows_with_deadline_and_eligibility(monkeypatc
     assert r["id"] == "1"
     assert r["institution_eligibility"] == "eligible"
     assert r["solicitation_url"] == "https://example.gov/opp/1"
-    # internal routing deadline is 5 business days before the 07/21/2026 sponsor close
-    assert r["internal_deadline"].startswith("2026-07-14")
+    # internal routing deadline is 5 business days before the sponsor close
+    assert r["internal_deadline"].startswith(expected_internal)
 
 
 def test_find_opportunities_excludes_past_and_labels_rolling(monkeypatch):
