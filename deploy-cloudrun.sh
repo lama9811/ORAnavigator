@@ -374,7 +374,9 @@ setup_iam() {
     # Grant necessary roles
     ROLES=(
         "roles/aiplatform.user"
-        "roles/discoveryengine.viewer"
+        # editor (not viewer): the admin dashboard writes to the KB datastore
+        # (discoveryengine.documents.update / .delete). viewer-only => 403 on save.
+        "roles/discoveryengine.editor"
         "roles/storage.objectViewer"
         "roles/secretmanager.secretAccessor"
         "roles/run.invoker"
