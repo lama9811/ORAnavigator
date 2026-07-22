@@ -587,7 +587,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           <LifecycleStage label="Build">
             <ToolButton
               icon={Calculator}
-              label={submission.has_budget ? "Edit budget" : "Build budget"}
+              label="Budget draft"
               status={submission.has_budget ? "set" : null}
               statusDone={submission.has_budget}
               primary={next === "budget"}
