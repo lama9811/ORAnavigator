@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>ORA Navigator — Technical Brief</title>
+<style>
+:root{
+  --navy:#0a1f44; --navy2:#13315c; --orange:#f7941e; --ink:#1a1f29;
+  --muted:#5b6472; --line:#d9dee6; --soft:#f3f6fb; --callout:#fff7ec;
+}
+*{box-sizing:border-box;}
+html{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+body{
+  font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink); line-height:1.34; font-size:9.3pt; margin:0;
+}
+@page{ size:Letter; margin:11mm 12mm 10mm; }
+
+.page{ page-break-before:always; break-before:page; }
+.page:first-child{ page-break-before:auto; break-before:auto; }
+
+/* ---------- page header band ---------- */
+.phead{ border-bottom:3px solid var(--orange); padding-bottom:7px; margin-bottom:12px;
+  display:flex; align-items:baseline; justify-content:space-between; gap:14px; }
+.phead h2{ color:var(--navy); font-size:16pt; font-weight:800; margin:0; border:0; padding:0; }
+.phead .pnum{ color:var(--muted); font-size:8.5pt; letter-spacing:.16em;
+  text-transform:uppercase; font-weight:700; white-space:nowrap; }
+.lede{ color:var(--muted); font-size:9.6pt; margin:0 0 9px; }
+
+h3{ color:var(--navy2); font-size:11.4pt; margin:11px 0 4px; font-weight:700; }
+h4{ color:var(--ink); font-size:9.8pt; margin:8px 0 3px; font-weight:700; }
+p{ margin:5px 0; }
+ul,ol{ margin:6px 0 6px 2px; padding-left:19px; }
+li{ margin:2px 0; }
+strong{ color:#11203b; }
+
+code{ font-family:"SF Mono",Menlo,Consolas,monospace; font-size:8.6pt;
+  background:var(--soft); padding:1px 4px; border-radius:4px; color:#1f3a63;
+  word-break:break-word; }
+
+table{ border-collapse:collapse; width:100%; margin:7px 0; font-size:8.1pt; }
+th,td{ border:1px solid var(--line); padding:3.5px 6px; text-align:left;
+  vertical-align:top; overflow-wrap:anywhere; }
+thead th{ background:var(--navy); color:#fff; font-weight:600;
+  overflow-wrap:normal; word-break:normal; white-space:nowrap; }
+td strong, td code{ overflow-wrap:normal; word-break:keep-all; }
+tbody tr:nth-child(even){ background:var(--soft); }
+tr{ page-break-inside:avoid; }
+
+.callout{ background:var(--callout); border-left:4px solid var(--orange);
+  padding:6px 10px; margin:8px 0; border-radius:0 6px 6px 0; font-size:8.6pt;
+  page-break-inside:avoid; }
+.callout strong{ color:#9a5b00; }
+
+/* flow diagram of boxes */
+.flow{ display:flex; align-items:stretch; gap:6px; margin:10px 0; }
+.fbox{ flex:1; background:var(--navy); color:#fff; border-radius:7px; padding:8px 9px; }
+.fbox.alt{ background:var(--orange); color:#3a2100; }
+.fbox b{ display:block; font-size:9.4pt; margin-bottom:3px; }
+.fbox span{ font-size:8.2pt; color:#c9d6ea; line-height:1.3; display:block; }
+.fbox.alt span{ color:#5c3d05; }
+.farrow{ align-self:center; color:var(--muted); font-weight:800; font-size:12pt; }
+
+/* numbered step list */
+.steps{ counter-reset:s; list-style:none; padding:0; margin:9px 0; }
+.steps li{ counter-increment:s; position:relative; padding:3.5px 0 3.5px 28px;
+  border-bottom:1px solid var(--line); font-size:8.8pt; }
+.steps li:last-child{ border-bottom:0; }
+.steps li::before{ content:counter(s); position:absolute; left:0; top:5px;
+  width:20px; height:20px; border-radius:50%; background:var(--navy); color:#fff;
+  font-size:8pt; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.steps li b{ color:var(--navy2); }
+
+.grid2{ display:flex; gap:10px; margin:9px 0; }
+.grid2 > div{ flex:1; background:var(--soft); border-radius:7px; padding:7px 9px; }
+.grid2 h4{ margin-top:0; }
+.grid2 p{ font-size:8.4pt; color:var(--muted); margin:4px 0 0; }
+
+.foot{ position:fixed; bottom:5mm; left:14mm; right:14mm; font-size:7.6pt;
+  color:#96a0b0; border-top:1px solid var(--line); padding-top:4px; }
+</style></head>
+<body>
+<div class="page">
+<div class="phead"><h2>What ORA Navigator Is</h2><div class="pnum">Page 1 of 5</div></div>
+<p class="lede">An AI assistant and proposal toolkit for Morgan State University's Office of
+Research Administration — answering grant, compliance and pre/post-award questions
+<strong>only</strong> from the University's own documents.</p>
+
+<h3>The one-sentence version</h3>
+<p>ORA Navigator is a <strong>search engine over Morgan State's own research-administration
+documents, with an AI that writes the answer in sentences</strong>. It cannot browse the web,
+and it is built to refuse rather than guess. Two consequences follow from that design:
+every answer can be traced to a document, and the system is only ever as good as the
+library the ORA staff maintain.</p>
+
+<h3>Who it serves, and the problem it solves</h3>
+<p>An inexperienced Principal Investigator (PI) faces two separate problems: <em>finding
+out the rules</em>, and <em>actually producing a fundable proposal</em>. ORA Navigator covers
+both — a grounded chat assistant for the first, and a guided proposal workspace for the
+second (budgets, drafting coaching, compliance and pre-submission checks).</p>
+
+<h3>The three services</h3>
+<p>The system is three independently deployed programs, so a failure stays in its lane.
+When Google's model was rate-limited, the proposal toolkit kept working — only chat
+degraded.</p>
+<table>
+  <thead><tr><th>Service</th><th>Stack</th><th>Local&nbsp;port</th><th>Container</th><th>Responsibility</th></tr></thead>
+  <tbody>
+    <tr><td><strong>frontend</strong></td><td>Vite + React 19, PWA</td><td>3001</td><td>8080</td>
+        <td>Everything the user sees: chat, proposals, forms, opportunity finder, admin dashboard.</td></tr>
+    <tr><td><strong>backend</strong></td><td>FastAPI, single-worker uvicorn</td><td>5002</td><td>5000</td>
+        <td>Authentication, the proposal toolkit, caching, safety checks, Cloud SQL + Redis.</td></tr>
+    <tr><td><strong>adk_agent</strong></td><td>Google ADK + Gemini 2.5 Flash (Vertex AI)</td><td>8081</td><td>8080</td>
+        <td>Runs the grounded retrieve-and-cite agent over the knowledge base.</td></tr>
+  </tbody>
+</table>
+
+<h3>Where it runs</h3>
+<p>All three deploy to <strong>Google Cloud Run</strong> in project <code>infra-vertex-494621-v1</code>
+(region <code>us-central1</code>). A push to <code>main</code> triggers Cloud Build, which builds and
+deploys all three. Persistent data lives in <strong>Cloud SQL (MySQL)</strong>; the shared cache is
+<strong>Redis</strong>; the document library is a <strong>Vertex AI Search datastore</strong>.</p>
+
+<div class="callout"><strong>A load-bearing constraint:</strong> the ADK service must stay a
+<em>single</em> instance (<code>--min-instances=1 --max-instances=1</code>). It holds agent sessions
+in memory, so with two instances a session created on one returns 404 on the other and the
+user sees an intermittent error. Never scale it horizontally without first configuring a
+shared session store (<code>ADK_SESSION_DB_URI</code>).</div>
+
+<h3>The four governing rules</h3>
+<ol>
+  <li><strong>AI is advisory; the deterministic core is authoritative.</strong> Budget totals,
+      pass/fail and eligibility verdicts are computed by ordinary code. The model may explain
+      a figure; it may never change one.</li>
+  <li><strong>Ground every claim.</strong> Any "covered" finding must quote its source verbatim;
+      unquotable claims are dropped.</li>
+  <li><strong>Degrade, never fail.</strong> Every AI path has a deterministic fallback for when
+      the model is unavailable.</li>
+  <li><strong>A human reviews before anything is committed.</strong> Extractions, budgets and
+      researched KB additions are proposed, never auto-published.</li>
+</ol>
+</div>
+<div class="page">
+<div class="phead"><h2>The Stack: Front End and Back End</h2><div class="pnum">Page 2 of 5</div></div>
+<p class="lede">What each layer is built from, what it owns, and where the data actually lives.</p>
+
+<h3>Front end</h3>
+<p><strong>Vite + React 19</strong>, shipped as an installable <strong>PWA</strong> (Progressive Web App):
+it precaches its own shell with a Workbox service worker, so it loads instantly and can be
+added to a phone home screen. Routing is client-side; authenticated pages sit behind a
+<code>RequireAuth</code> wrapper.</p>
+<ul>
+  <li><strong>Chat</strong> with streaming answers, sources, and chat history in a sidebar.</li>
+  <li><strong>My Proposals</strong> — the guided pathway and every per-proposal tool modal.</li>
+  <li><strong>Find Funding</strong>, <strong>Samples</strong>, <strong>Forms</strong> — three browse surfaces.</li>
+  <li><strong>Admin dashboard</strong> — seven tabs: Home, Database, Tickets, Feedback, Users, Research, System.</li>
+</ul>
+<div class="callout"><strong>PWA caching caveat:</strong> <code>index.html</code>, <code>sw.js</code> and the
+manifest are served <em>no-cache</em>; only content-hashed files under <code>/assets/</code> get the
+immutable one-year policy. A blanket rule once pinned the old service worker and caused
+chunk 404s for returning users after a deploy.</p>
+
+<h3>Back end</h3>
+<p><strong>FastAPI</strong> on a deliberately <strong>single-worker</strong> uvicorn. It is the only component
+that talks to the database, and it owns every rule that must not be negotiable:</p>
+<ul>
+  <li><strong>Auth</strong> — JWT, with registration gated to <code>@morgan.edu</code> addresses server-side.</li>
+  <li><strong>The proposal toolkit</strong> — solicitation ingestion, budget maths, drafting coach,
+      draft critic, compliance sentinel (all in <code>backend/services/</code>).</li>
+  <li><strong>The safety layer</strong> around chat: grounding verification, citation handling, caching.</li>
+</ul>
+
+<h3>Where each kind of data is stored</h3>
+<table>
+  <thead><tr><th>Store</th><th>Technology</th><th>Holds</th><th>Lifetime</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Knowledge base</strong></td><td>Vertex AI Search datastore <code>oranavigator-kb-v8</code></td>
+        <td>The ORA documents the assistant may answer from.</td><td>Until edited in the admin dashboard</td></tr>
+    <tr><td><strong>Application database</strong></td><td>Cloud SQL (MySQL)</td>
+        <td>Users, proposals, tasks, budgets, tickets, long-term memory.</td><td>Permanent</td></tr>
+    <tr><td><strong>Cache</strong></td><td>Redis + in-process memory</td>
+        <td>Recent answers and their citations.</td><td>24 hours to 7 days</td></tr>
+    <tr><td><strong>Bundled snapshot</strong></td><td><code>backend/kb_structured/</code> (static JSON)</td>
+        <td>Powers the Forms catalog and citation URL mapping.</td><td>Until redeploy</td></tr>
+  </tbody>
+</table>
+
+<h3>A convention worth knowing</h3>
+<p>Structured data is stored as <strong>TEXT columns holding JSON</strong> (<code>budget_json</code>,
+<code>sections_json</code>, <code>compliance_json</code>), and new columns are added by a
+<strong>self-healing migration</strong> at startup — try <code>SELECT</code> the column, and on error
+<code>ALTER TABLE ADD COLUMN</code>. There is no Alembic; this is safe against production MySQL.</p>
+
+<div class="callout"><strong>Two copies, no sync.</strong> The Forms catalog reads the bundled
+<code>kb_structured/_all_documents.jsonl</code> snapshot, <em>not</em> the live datastore. Editing a
+form document in the admin dashboard changes the chatbot's answer but not the Forms page,
+and nothing warns you the two have drifted.</div>
+</div>
+<div class="page">
+<div class="phead"><h2>The ADK Agent and the RAG Pipeline</h2><div class="pnum">Page 3 of 5</div></div>
+<p class="lede">How one question becomes one grounded, cited answer — and the layers that
+stop the model inventing facts.</p>
+
+<h3>What ADK is doing</h3>
+<p><strong>ADK</strong> is Google's Agent Development Kit. The <code>adk_agent</code> service hosts a single
+agent, <code>ora_navigator_unified</code>, which pairs Gemini 2.5 Flash with a
+<code>VertexAiSearchTool</code> pointed at one unified datastore. The backend calls it over
+<code>/run_sse</code> and streams the result back.</p>
+<p>Its generation settings are tuned for a grounded retrieve-and-cite bot rather than a
+creative one: <strong>temperature 0.05</strong>, <strong>max_output_tokens 2048</strong>, and
+<strong>thinking disabled</strong> (<code>thinking_budget=0</code>) — the single biggest latency win,
+since 2.5 Flash reasons by default and that time is wasted on lookup-and-quote work.</p>
+
+<h3>RAG — retrieval before generation</h3>
+<p>A general chatbot answers from what it absorbed in training. This one is forbidden to.
+The retrieval step runs <em>first</em>, and the model is handed the passages:</p>
+<ol class="steps">
+  <li><b>Route the message.</b> Is this small talk, a personal question, or an ORA question?</li>
+  <li><b>Retrieve.</b> The agent searches the datastore. Matching is by meaning, not keywords —
+      "who do I call about human subjects?" finds the IRB contact without the word "IRB".</li>
+  <li><b>Generate.</b> Gemini writes an answer using only those passages.</li>
+  <li><b>Verify.</b> The answer is graded on how much of it is actually supported.</li>
+  <li><b>Deliver</b> — with a Sources line, or regenerate, or refuse.</li>
+</ol>
+
+<h3>Two lanes</h3>
+<div class="grid2">
+  <div><h4>Lane 1 — social chat</h4>
+    <p>"hi", "thanks", "how are you", "who are you". Answered directly and warmly. The search
+    tool is <strong>removed from the model entirely</strong> for these turns, so it physically cannot
+    staple bogus sources onto a greeting.</p></div>
+  <div><h4>Lane 2 — an ORA question</h4>
+    <p>Searched, grounded, cited. When a message could be either, it is treated as Lane 2 and
+    searched — erring toward retrieval is safer than answering from memory. A non-ORA
+    <em>knowledge</em> question is refused, not chatted.</p></div>
+</div>
+
+<h3>The grounding layers — three, in order</h3>
+<table>
+  <thead><tr><th>#</th><th>Layer</th><th>When</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>The instruction</strong></td><td>Before</td>
+        <td>Answer only from retrieved passages; never state a rate, deadline, name or ID that isn't in front of you.</td></tr>
+    <tr><td>2</td><td><strong>Evidence verification</strong></td><td>During</td>
+        <td>Every "covered" claim must quote the source verbatim. The check collapses whitespace on both sides, so a hard-wrapped draft still matches. No verifiable quote &rarr; the claim is demoted and the quote dropped.</td></tr>
+    <tr><td>3</td><td><strong>The grounding verdict</strong></td><td>After</td>
+        <td>Coverage is graded: at least 50% of the answer backed by retrieval passes. Otherwise regenerate once, strictly; if still weak, refuse.</td></tr>
+  </tbody>
+</table>
+
+<h3>What happens to a weak answer</h3>
+<p><strong>Grade &rarr; exempt Lane 1 and personal recall &rarr; check the latency budget &rarr;
+regenerate once &rarr; refuse.</strong> If the turn has already spent its time budget
+(<code>CHAT_LATENCY_BUDGET_S</code>, 5 seconds in production), a usable first answer ships with a
+caution note instead of making the user wait for a second round-trip. Speed and caution are
+traded deliberately.</p>
+
+<div class="callout"><strong>Measured, then deleted:</strong> an earlier fourth layer rewrote
+individual unsupported sentences. Log analysis showed it fired <em>0 times in 148 production
+turns</em>, so roughly 220 lines were removed. The lesson is in the codebase: instrument the
+pipeline, then delete what never runs.</div>
+</div>
+<div class="page">
+<div class="phead"><h2>Caching: Layers, Lifetimes and Limits</h2><div class="pnum">Page 4 of 5</div></div>
+<p class="lede">Caching exists to dodge two real costs — the Gemini call and a networked
+database read from a single-worker backend. The rule: <strong>cache the expensive, never the
+authoritative.</strong></p>
+
+<h3>The chat answer cache — three tiers</h3>
+<p>All three sit behind one interface (<code>query_cache.get/set</code>), keyed on
+<code>md5(normalized_query : model)</code>.</p>
+<table>
+  <thead><tr><th>Tier</th><th>Technology</th><th>Lifetime</th><th>Size</th><th>Scope</th></tr></thead>
+  <tbody>
+    <tr><td><strong>L1 — in-memory</strong></td><td><code>cachetools.TTLCache</code></td><td>24 hours</td>
+        <td>500 entries</td><td>One server instance</td></tr>
+    <tr><td><strong>L2 — shared</strong></td><td>Redis</td><td>7 days</td><td>—</td>
+        <td>All instances; survives restarts. Degrades gracefully if Redis is down.</td></tr>
+    <tr><td><strong>L3 — semantic</strong></td><td>Google <code>text-embedding-004</code>, 256-dim</td>
+        <td>7 days</td><td>100 in memory</td>
+        <td>Matches re-worded questions at cosine similarity <strong>&ge; 0.95</strong>.</td></tr>
+  </tbody>
+</table>
+<p>L3 is the clever one: ask "what's the indirect cost rate" after someone asked "what's the
+F&amp;A rate" and it recognises them as the same question. The threshold is deliberately high —
+0.95 admits only near-identical meaning, preventing cross-topic false positives.</p>
+<p><strong>Citations ride along</strong> under a parallel <code>cit:</code> key, so a cache hit still
+shows its Sources.</p>
+
+<h3>The other caches</h3>
+<table>
+  <thead><tr><th>What</th><th>Where</th><th>Lifetime</th></tr></thead>
+  <tbody>
+    <tr><td>Popular questions (welcome-screen chips)</td><td>In-process + Redis</td><td>6 hours / 7 days, refreshed by a daily cron</td></tr>
+    <tr><td>Forms catalog</td><td><code>@lru_cache</code> in the backend process</td><td>Process lifetime — until redeploy</td></tr>
+    <tr><td>App shell</td><td>PWA service worker (Workbox)</td><td>Until the next deploy</td></tr>
+    <tr><td>Google Fonts</td><td>Browser, CacheFirst</td><td>1 year</td></tr>
+    <tr><td>Token and theme</td><td><code>localStorage</code></td><td>Until logout</td></tr>
+  </tbody>
+</table>
+
+<h3>What is never cached — and why it matters</h3>
+<ul>
+  <li><strong>Personal-recall answers.</strong> "What department am I in?" must never be replayed to
+      somebody else.</li>
+  <li><strong>Errors, outages and "busy, try again" messages.</strong> Caching one poisons the entry
+      for its whole lifetime.</li>
+  <li><strong>Refusals.</strong> Same reason.</li>
+  <li><strong>Any personalised greeting.</strong> The cache key contains <em>no user id</em>, so an answer
+      opening "Hello Maria!" would greet every later asker by that name. A leading salutation
+      addressed to a proper name is stripped on both write and read.</li>
+</ul>
+
+<div class="callout"><strong>The operational consequence:</strong> after editing a knowledge-base
+document, the old answer is still cached. Press <strong>Sync</strong> in the admin dashboard to clear
+the saved copies — otherwise you will re-ask, see the old answer, and conclude your edit
+failed. Edit &rarr; Save &rarr; Sync &rarr; re-ask.</div>
+</div>
+<div class="page">
+<div class="phead"><h2>Features and Scheduled Work</h2><div class="pnum">Page 5 of 5</div></div>
+<p class="lede">What the system actually does for a PI, and what it does on its own overnight.</p>
+
+<h3>The proposal toolkit</h3>
+<p>Each proposal carries a staged pathway — <strong>Set up &rarr; Build &rarr; Review &amp; submit</strong> —
+with one recommended next action highlighted, so a first-timer is never staring at a flat
+toolbar of equal options.</p>
+<table>
+  <thead><tr><th>Tool</th><th>What it does</th><th>Deterministic core</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Solicitation ingestion</strong></td>
+        <td>Upload the funder's PDF or paste a URL; extracts deadlines, page limits, budget caps, required attachments, eligibility — and seeds the checklist.</td>
+        <td>Quotes verified against the source; fabricated quotes flagged.</td></tr>
+    <tr><td><strong>Budget draft</strong></td>
+        <td>F&amp;A, MTDC and fringe maths at Morgan's real rates, sponsor-cap check, multi-year projection with escalation, CSV export, drafted justification prose.</td>
+        <td>All arithmetic in code. AI polishes wording only and cannot change a figure.</td></tr>
+    <tr><td><strong>Drafting coach</strong></td>
+        <td>Per-section outline, then advisory feedback on the PI's own draft against that sponsor's review criteria.</td>
+        <td>Coverage claims must quote the draft. Never writes prose for the author.</td></tr>
+    <tr><td><strong>Compliance sentinel</strong></td>
+        <td>IRB, IACUC, conflict of interest, RCR training and export-control rules.</td>
+        <td>Rule-based.</td></tr>
+    <tr><td><strong>Draft critic</strong></td>
+        <td>Whole-package pre-submission check: page limits, required sections and attachments, budget against cap.</td>
+        <td>A direct read of the PDF — no AI guessing.</td></tr>
+  </tbody>
+</table>
+
+<h3>Three standalone surfaces</h3>
+<div class="grid2">
+  <div><h4>Find Funding</h4>
+    <p>Describe your research in plain English; returns live, open federal opportunities from
+    the Grants.gov API across all 26 agencies, with a grounded fit explanation and a
+    deterministic eligibility gate against Morgan's institutional profile.</p></div>
+  <div><h4>Samples &amp; Forms</h4>
+    <p>19 hand-verified <em>funded</em> proposals (including six of Morgan's own awards), rankable
+    against your research interests; plus the browsable ORA forms and templates catalog.</p></div>
+</div>
+
+<h3>Memory — two tiers</h3>
+<p><strong>Short-term</strong> is the current conversation. <strong>Long-term</strong> is a set of facts about
+the user — department, role, active grant, interests — consolidated overnight from chat.
+The saved profile is injected into every turn directly from the user record, so "what
+department am I in?" always works regardless of what memory selection returns. A hard
+<strong>PII gate</strong> screens the long-term write path.</p>
+
+<h3>Scheduled work — six internal endpoints</h3>
+<p>Cloud Scheduler calls these, authenticated by a shared secret header. Five recur; one is a
+one-off maintenance task.</p>
+<table>
+  <thead><tr><th>Job</th><th>Schedule</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>research/run</code></td><td>Daily, ~2am</td><td>Research real knowledge-base gaps and draft suggestions for human review.</td></tr>
+    <tr><td><code>memory/consolidate</code></td><td>Daily, ~3am</td><td>Roll conversation facts into long-term memory.</td></tr>
+    <tr><td><code>memory/idle-sweep</code></td><td>Every 5 minutes</td><td>Close out idle sessions.</td></tr>
+    <tr><td><code>deadlines/check</code></td><td>Daily</td><td>Personalised deadline reminder emails. Idempotent, so a retry never double-sends.</td></tr>
+    <tr><td><code>popular-questions/recompute</code></td><td>Daily</td><td>Refresh the welcome-screen chips from real user questions, PII-filtered.</td></tr>
+    <tr><td><code>memory/backfill-profiles</code></td><td>Manual, one-off</td><td>Backfill profile-derived memories.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout"><strong>The self-healing loop:</strong> a question the assistant cannot answer is
+logged as a genuine library gap (personal questions are excluded — a personal miss is not a
+gap). The overnight research job drafts a candidate document. An administrator then
+reviews, approves, and pushes it to the knowledge base. The machine may propose; only a
+person publishes.</div>
+</div>
+</body></html>
