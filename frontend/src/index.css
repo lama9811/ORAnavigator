@@ -332,6 +332,25 @@ body.sidebar-collapsed .page-content {
   .page-content {
     left: 0 !important;
   }
+
+  /* Clear the floating "Menu" FAB (.mobile-history-fab, NavBar.css) — it is
+     position:fixed at top:68px and ~34px tall, so it lands on the first ~32px
+     of .page-content (which starts at top:70px) and covered every page's H1,
+     and the "All Proposals" / "Back to Chat" buttons outright.
+     Scoped to the page roots that render a header, NOT the chat page:
+     .chatbox-container is sized `height: calc(100vh - 70px)`, so padding its
+     wrapper would push the composer off-screen. Two-class selectors (plus the
+     body scope) outrank each component's own `.root { padding: ... }` mobile
+     shorthand regardless of stylesheet import order. Mirrors the FAB's own
+     visibility condition, so no dead space while the sidebar is open. */
+  body.sidebar-collapsed .page-content .proposals,
+  body.sidebar-collapsed .page-content .oppf,
+  body.sidebar-collapsed .page-content .samples-library,
+  body.sidebar-collapsed .page-content .forms-catalog,
+  body.sidebar-collapsed .page-content .profile-page,
+  body.sidebar-collapsed .page-content .mytickets {
+    padding-top: 46px;
+  }
 }
 
 /* ============================================================

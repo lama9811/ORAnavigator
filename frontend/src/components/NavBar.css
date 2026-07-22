@@ -654,4 +654,27 @@ body.dark .navbar-forms-btn:hover {
   body:not(.sidebar-collapsed) .mobile-history-fab {
     display: none;
   }
+
+  /* Hide it while ANY modal is open. Not cosmetic: the FAB was intercepting
+     taps meant for the modal (elementFromPoint over the Draft Critique "Back"
+     button returned .mobile-history-fab), making that button unclickable on a
+     phone.
+
+     Why a z-index bump does NOT fix this: every overlay below is already
+     z-index 1000-1200, far above the FAB's 450 — but they render INSIDE
+     .page-content, which is `position: fixed; z-index: 1` (index.css) and so
+     opens its own stacking context. Their 1200 is scoped to that context, and
+     the whole context sits below the root-level FAB. The real alternative is
+     portalling every modal to <body>, which is a much larger refactor; hiding
+     the FAB is correct anyway, since it is unreachable while a modal is up.
+
+     :has() is Safari 15.4+ / Chrome 105+; older browsers simply keep the old
+     (overlapping) behavior rather than breaking. Keep this list in sync when
+     adding a modal. */
+  body:has(.bh-overlay, .cs-overlay, .sc-overlay, .critique-modal-overlay,
+           .solicitation-modal-overlay, .proposals-modal-overlay,
+           .ticket-modal-overlay, .report-modal-overlay, .cmdk-overlay)
+    .mobile-history-fab {
+    display: none;
+  }
 }
