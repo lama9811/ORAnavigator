@@ -36,7 +36,7 @@
     <tr><td><strong>Refusal / deflection</strong></td><td>When the bot honestly says it doesn't have the info and points you to ORA, instead of guessing.</td></tr>
     <tr><td><strong>SSE (Server-Sent Events)</strong></td><td>A way to stream an answer to the browser piece-by-piece so you see it appear gradually.</td></tr>
     <tr><td><strong>Reference context (fact-check only)</strong></td><td>The prefetched KB excerpts, labeled so the model treats them as a hallucination guard, not its answer — it must not answer from or cite them (Grounding Rule 8).</td></tr>
-    <tr><td><strong>Surgical re-grounding</strong></td><td>Rewriting only the few sentences of a draft answer that aren't backed by the KB, instead of regenerating the whole thing.</td></tr>
+    <tr><td><strong>Surgical re-grounding</strong></td><td><em>(Removed 2026-07.)</em> Rewriting only the few sentences of a draft answer that aren't backed by the KB, instead of regenerating the whole thing. Deleted after logs showed it fired 0 times in 148 production turns; a weak answer is now either shipped with a caution note or fully regenerated once, then refused.</td></tr>
     <tr><td><strong>Latency budget</strong></td><td>A per-turn time limit (default 7s) that delivers a usable first answer plus a caution note instead of paying for a slow second regeneration.</td></tr>
   </tbody>
 </table>

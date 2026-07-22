@@ -42,6 +42,13 @@
       <td>Fact rows in <code>user_memories</code> (deduped, capped 5 per type). <strong>Never touches chat history.</strong></td>
     </tr>
     <tr>
+      <td>Popular-questions refresh</td>
+      <td>Cloud Scheduler, <strong>daily</strong></td>
+      <td>POST <code>/api/internal/popular-questions/recompute</code></td>
+      <td>Rebuilds the suggested-question chips on the welcome screen from what people <em>actually</em> asked, cleans up the wording with one Gemini call, and filters out anything personal (salaries, SSNs, emails, greetings). Running it on a schedule is what keeps the chips off the page-load path.</td>
+      <td>The cached popular-questions list (in-process 6h + Redis 7 days).</td>
+    </tr>
+    <tr>
       <td>Memory idle-sweep</td>
       <td>Cloud Scheduler, <strong>every 5 minutes</strong></td>
       <td>POST <code>/api/internal/memory/idle-sweep</code> → <code>consolidate_idle_users(5, 10)</code></td>

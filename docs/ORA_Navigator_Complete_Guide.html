@@ -88,7 +88,7 @@ a{ color:#1f5fae; }
   <div class="meta">
     AI Assistant for the Office of Research Administration<br>
     <b>Morgan State University</b> &nbsp;&middot;&nbsp; ora.inavigator.ai<br><br>
-    Compiled from the live codebase &nbsp;&middot;&nbsp; <b>June 25, 2026</b>
+    Compiled from the live codebase &nbsp;&middot;&nbsp; <b>July 22, 2026</b>
   </div>
   <div class="tag">Three services (Frontend / Backend / ADK Agent) &nbsp;&middot;&nbsp;
      Google Cloud (Cloud Run, Cloud SQL, Vertex AI Search) &nbsp;&middot;&nbsp;
@@ -420,8 +420,7 @@ LAYER 2 - the receipt
    |
    v
 LAYER 3 - the fact-checker  (vertex_agent.py _run_verified)
-  grade ok / weak    (greeting / small talk is never graded weak)
-    weak -> surgically re-ground ONLY the unsupported sentences (no 2nd search)
+  grade ok / weak    (LANE 1 small talk + "about me" are never graded weak)
     weak + over latency budget -> deliver Pass-1 + caution note (skip Pass-2)
     weak (otherwise) -> redo once, strictly "KB-only" (_STRICT_PREFIX)
     still nothing -> REFUSE ("contact ORA")
@@ -459,6 +458,36 @@ SAVE to cache  ->  SEND the answer + Sources
 </ul>
 <p>There is also a "topicless" safety rule: if the phrasing is browse-y but no specific topic matched, it only dumps the whole 9-section index for a STRONG request on a fresh turn — otherwise it defers to the AI. This fix stopped a real question like "what forms do I need to add a co-investigator?" from dumping the entire KB tree. A sibling function <code>browse_citations</code> returns the listed docs' titles and URLs so even these instant menus get a "Sources" block.</p>
 <div class="callout"><strong>Why this lives in the backend, not the AI:</strong> Google's tool API will not let the AI use the KB-search tool and a custom "list the tree" tool at the same time. So the backend detects browse phrasing first and answers it deterministically — which also means these answers are impossible to hallucinate.</div>
+
+<h3>2.1b Two lanes — chatting versus asking</h3>
+<p>Not everything typed into a chat box is a question about ORA, and treating it as one used to
+produce something silly: you said "thanks!" and the assistant stapled a list of policy documents
+underneath its reply. So every incoming message is now sorted into one of two lanes before
+anything else happens.</p>
+
+<p><strong>Lane 1 — social chat.</strong> "Hi", "thanks", "how are you", "very good", and remarks
+aimed at the bot itself ("who are you?", "are you real?"). These get a warm, ordinary reply written
+by Gemini in its own words. Crucially, the knowledge base is <strong>not searched at all</strong>
+— the search tool is physically removed from the model for that turn (<code>skip_kb_search</code>),
+so it <em>cannot</em> attach sources to a greeting even if it wanted to. No Sources line appears,
+because none would be honest.</p>
+
+<p><strong>Lane 2 — a real ORA question.</strong> Searched, grounded, cited, fact-checked — the
+whole pipeline below. <strong>When a message could plausibly be either, it is treated as Lane 2 and
+searched.</strong> That default matters: erring toward looking it up is safe, while erring toward
+answering from the model's own memory is exactly how a wrong F&amp;A rate reaches a PI.</p>
+
+<p><strong>Everything else is refused.</strong> "Write my cover letter", "who won the game", "explain
+photosynthesis" — a substantive question that isn't about ORA is politely declined. That is a
+deliberate boundary, not a gap in the assistant's knowledge, and staff should not report it as a
+bug.</p>
+
+<div class="callout"><strong>The line is deliberately narrow.</strong> "Do you know my UEI?" and
+"what's my F&amp;A rate?" <em>sound</em> personal, but they are institutional facts that live in the
+knowledge base — so they stay in Lane 2 and keep their Sources. Only genuinely personal
+identity questions ("what department am I in?", "who am I?") are answered from your profile
+instead, and those deliberately get no citations, because no KB document is where the answer
+came from.</div>
 
 <h3>2.2 Layer 1 — the TF-IDF keyword prefetch (a head start, still no AI judgment)</h3>
 <p>If none of the quick checks fired, this is a real ORA question and the AI will be called. But first, Layer 1 gives the AI a "head start" by stuffing some likely-relevant documents into the AI's instructions in advance.</p>
@@ -505,8 +534,8 @@ SAVE to cache  ->  SEND the answer + Sources
 <p>After Pass 1, the answer is graded by <code>_evaluate_grounding</code>. It is graded <strong>"ok"</strong> (deliver it) if any of these are true: it's a greeting/security/outage reply (no KB needed); it's already an honest "I don't have this" deflection; it was answered from an uploaded file or profile the user attached; it cited at least 2 KB documents; or at least 30% of the answer text is backed by KB passages. Otherwise it is graded <strong>"weak"</strong> and must be redone.</p>
 <p>Two special cases bypass the grade. <strong>Personal-recall questions</strong> ("what's my deadline?" / "what department am I in?", detected by <code>_is_personal_recall</code>) flip a weak grade to "ok" — that answer correctly came from chat history, not the KB, and a KB-only redo would wrongly erase it. <strong>Greetings and small talk</strong> (detected by <code>_is_smalltalk</code>) do the same — a warm "I'm doing well!" must never be regraded weak and regenerated under the strict KB prompt, which would turn it back into a refusal.</p>
 
-<h4>Step B — try a surgical re-ground, and honor the latency budget</h4>
-<p>Before paying for a whole second answer, the backend tries to fix only what's broken. Using Gemini's grounded character-spans, <code>_unsupported_sentences</code> finds the specific fact-stating sentences that <em>aren't</em> backed by the retrieved KB text. If only a few sentences are unsupported, <code>_surgical_reground</code> rewrites <strong>only those sentences</strong> strictly from the already-retrieved text (no second KB search), and the rest of the good answer is kept as-is — far faster than regenerating everything.</p>
+<h4>Step B — honor the latency budget</h4>
+<p><strong>An earlier step here was measured and then deleted — worth knowing why.</strong> The pipeline used to try a "surgical re-ground": rather than pay for a whole second answer, it found the individual sentences that were not backed by the retrieved text and rewrote only those. It was a good idea that never fired. A log analysis (<code>scripts/analyze_layer3_logs.py</code>) showed it triggered <strong>0 times in 148 production turns</strong>, so roughly 220 lines were removed. In plain terms: answers were either well grounded or badly grounded, essentially never "90% fine with two stray sentences". Do not re-add it. What remains is simpler — if the answer is weak, the system either ships it with a caution note (when it has run out of time) or redoes the whole thing strictly.</p>
 <p>There is also a hard <strong>latency budget</strong>. A turn that stacks a full Pass-2 regeneration on top of Pass-1 can blow past the &lt;10-second target. So <code>_over_latency_budget(elapsed)</code> (controlled by <code>CHAT_LATENCY_BUDGET_S</code>, default <strong>7 seconds</strong>) checks whether the turn has already spent its budget. If a <em>usable</em> (non-empty) Pass-1 answer graded weak and the budget is spent, the backend delivers Pass-1 with a short caution note instead of regenerating — skipping the second round-trip entirely. (An <em>empty</em> Pass-1 still regenerates; the streaming path already skips Pass-2 because the answer is already on screen.) A per-turn <code>[LATENCY]</code> log records the milliseconds, the verdict, and the chunk count so the &lt;10s target is measurable.</p>
 <div class="callout"><strong>Note (the bigger lever was warm instances):</strong> the latency budget trims the worst-case turn, but the dominant cause of a slow <em>first</em> answer was never the pipeline — it was the 30–60-second Cloud Run cold start. Keeping the ADK and backend warm (Chapter 1) is what actually removed the ~40-second waits; the budget guard is the secondary lever.</div>
 
@@ -1381,6 +1410,13 @@ USER ASKS A QUESTION
       <td>Fact rows in <code>user_memories</code> (deduped, capped 5 per type). <strong>Never touches chat history.</strong></td>
     </tr>
     <tr>
+      <td>Popular-questions refresh</td>
+      <td>Cloud Scheduler, <strong>daily</strong></td>
+      <td>POST <code>/api/internal/popular-questions/recompute</code></td>
+      <td>Rebuilds the suggested-question chips on the welcome screen from what people <em>actually</em> asked, cleans up the wording with one Gemini call, and filters out anything personal (salaries, SSNs, emails, greetings). Running it on a schedule is what keeps the chips off the page-load path.</td>
+      <td>The cached popular-questions list (in-process 6h + Redis 7 days).</td>
+    </tr>
+    <tr>
       <td>Memory idle-sweep</td>
       <td>Cloud Scheduler, <strong>every 5 minutes</strong></td>
       <td>POST <code>/api/internal/memory/idle-sweep</code> → <code>consolidate_idle_users(5, 10)</code></td>
@@ -1498,7 +1534,7 @@ USER ASKS A QUESTION
 
 <p>Each document is a small <code>.json</code> file. (<strong>JSON</strong> means "JavaScript Object Notation" &mdash; just a plain-text way of writing down labeled information, like a form with named boxes.) For example, one real document is <code>about/ora_about.json</code>. Opening it, you see labeled fields like a title, a source URL pointing back to the live Morgan State website, a <code>key_facts</code> box (e.g. <code>msu_founded: 1867</code>, <code>msu_annual_research_funding: "$50 million+"</code>), and a long <code>content</code> field with the actual paragraph text (verified at <code>backend/kb_structured/about/ora_about.json</code>). So a "document" is not a PDF &mdash; it is a structured note holding the real text plus where it came from.</p>
 
-<div class="callout"><strong>Note:</strong> The KB folder mirrors the <strong>navigation menu of the live ORA website</strong> (<code>morgan.edu/office-of-research-administration</code>). The folders match the website's left-sidebar sections one-for-one. So "where a fact lives on the website" and "which folder its document lives in" are the same shape. This is why the bot's enumeration menus feel like browsing the real site.</p>
+<div class="callout"><strong>Note:</strong> The KB folder mirrors the <strong>navigation menu of the live ORA website</strong> (<code>morgan.edu/office-of-research-administration</code>). The folders match the website's left-sidebar sections one-for-one. So "where a fact lives on the website" and "which folder its document lives in" are the same shape. This is why the bot's enumeration menus feel like browsing the real site.</div>
 
 <p>There are also two special "index" files that sit alongside the 382 documents, both confirmed present in <code>backend/kb_structured/</code>:</p>
 <ul>
@@ -2071,7 +2107,7 @@ USER ASKS A QUESTION
     <tr><td><strong>Refusal / deflection</strong></td><td>When the bot honestly says it doesn't have the info and points you to ORA, instead of guessing.</td></tr>
     <tr><td><strong>SSE (Server-Sent Events)</strong></td><td>A way to stream an answer to the browser piece-by-piece so you see it appear gradually.</td></tr>
     <tr><td><strong>Reference context (fact-check only)</strong></td><td>The prefetched KB excerpts, labeled so the model treats them as a hallucination guard, not its answer — it must not answer from or cite them (Grounding Rule 8).</td></tr>
-    <tr><td><strong>Surgical re-grounding</strong></td><td>Rewriting only the few sentences of a draft answer that aren't backed by the KB, instead of regenerating the whole thing.</td></tr>
+    <tr><td><strong>Surgical re-grounding</strong></td><td><em>(Removed 2026-07.)</em> Rewriting only the few sentences of a draft answer that aren't backed by the KB, instead of regenerating the whole thing. Deleted after logs showed it fired 0 times in 148 production turns; a weak answer is now either shipped with a caution note or fully regenerated once, then refused.</td></tr>
     <tr><td><strong>Latency budget</strong></td><td>A per-turn time limit (default 7s) that delivers a usable first answer plus a caution note instead of paying for a slow second regeneration.</td></tr>
   </tbody>
 </table>
