@@ -1092,8 +1092,16 @@ def _do_agent_pass(message: str, user_id: str, session_id: str, context: str = "
                     grounded_chars = sum(e - st for st, e in spans)
                     result["coverage"] = grounded_chars / total_chars if total_chars > 0 else 0.0
                 elif chunks:
-                    result["coverage"] = 0.5  # chunks present but no segment data
-                    print(f"   [GROUNDING] Chunks present ({result['chunks']}) but no segment data - using conservative 0.5 coverage")
+                    # Chunks came back but Gemini gave no groundingSupports, so
+                    # NOTHING about this answer was actually measured. This used
+                    # to be set to 0.5 and labelled "conservative" -- but the gate
+                    # is `coverage >= _GROUNDING_MIN_COVERAGE` (0.5), so it passed
+                    # on a `>=` boundary and silently claimed verification it had
+                    # never performed. Unmeasured must fail closed: score it 0.0
+                    # and let the answer grade "weak" (caution note on the stream
+                    # path, strict regeneration on /chat).
+                    result["coverage"] = 0.0
+                    print(f"   [GROUNDING] Chunks present ({result['chunks']}) but no segment data - scoring 0.0 (unverified)")
 
             content = event.get("content", {})
             if not isinstance(content, dict):
