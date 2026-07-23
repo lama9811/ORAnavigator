@@ -730,3 +730,49 @@ def test_persistent_rate_limit_surfaces_outage_not_busy_text(monkeypatch):
     assert result["outage"] is True
     assert result["text"] == ""
     assert n_calls == 3  # initial attempt + len(_RATE_LIMIT_BACKOFFS) retries
+
+
+# ===========================================================================
+# Coverage scoring: "chunks but no groundingSupports" must fail closed
+# ===========================================================================
+def _sse_grounding(chunks, supports=None):
+    """One SSE 'data:' line carrying groundingMetadata."""
+    gm = {"groundingChunks": chunks}
+    if supports is not None:
+        gm["groundingSupports"] = supports
+    return ["data: " + _json.dumps({"groundingMetadata": gm})]
+
+
+_CHUNK = [{"retrievedContext": {"title": "F&A Rates",
+                                "uri": "https://www.morgan.edu/ora/rates",
+                                "text": "The on-campus research F&A rate is 48% MTDC."}}]
+
+
+def test_chunks_without_supports_score_zero_coverage(monkeypatch):
+    """Gemini returned retrieved chunks but NO groundingSupports segments, so
+    nothing about the answer was actually measured. That must score 0.0 and
+    grade 'weak' -- it used to be set to 0.5, which passed the
+    `coverage >= _GROUNDING_MIN_COVERAGE` (0.5) gate on the `>=` boundary and
+    silently claimed a verification that never ran."""
+    answer = "The on-campus research F&A rate is 48% MTDC."
+    result, _ = _drive_pass(monkeypatch, [
+        _sse_grounding(_CHUNK) + _sse_model_text(answer),
+    ])
+    assert result["chunks"] == 1
+    assert result["coverage"] == 0.0
+    # ...and the verdict that follows from it (no attached context -> guest path)
+    assert _evaluate_grounding(result["text"], result["chunks"],
+                               result["coverage"], False) == "weak"
+
+
+def test_real_supports_still_compute_a_real_coverage(monkeypatch):
+    """The fail-closed change must not disturb the measured path: when Gemini
+    DOES return segments, coverage is still grounded_chars / len(answer)."""
+    answer = "0123456789" * 10          # 100 chars
+    result, _ = _drive_pass(monkeypatch, [
+        _sse_model_text(answer) + _sse_grounding(
+            _CHUNK, supports=[{"segment": {"startIndex": 0, "endIndex": 70}}]),
+    ])
+    assert result["coverage"] == 0.7
+    assert _evaluate_grounding(result["text"], result["chunks"],
+                               result["coverage"], False) == "ok"
