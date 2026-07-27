@@ -1,8 +1,14 @@
 """
 KB Prefetch - Belt-and-Suspenders Grounding
 ============================================
-Pre-fetches KB docs and searches them with TF-IDF-ish scoring so we can
+Pre-fetches KB docs and searches them with TF-IDF scoring so we can
 inject relevant context into the system instruction via before_model_callback.
+
+The injected block is a FACT-CHECK guard only (see prefetch_kb_context): the
+model is told not to answer from it and not to cite it. Answers and Sources
+must still come from the model's own VertexAiSearchTool retrieval — labelling
+this block as a grounding source is what previously emptied groundingMetadata
+and cost every answer its citations.
 
 Even if Gemini skips the VertexAiSearchTool, the KB docs are already
 in the prompt. Typical latency: <30ms for 382 docs (ORA corpus).
@@ -15,6 +21,7 @@ ORA tuning:
 
 import os
 import re
+import math
 import time
 import threading
 import logging
@@ -43,6 +50,14 @@ _cache: dict[str, dict] = {}
 _cache_lock = threading.Lock()
 _cache_ts: float = 0
 _CACHE_TTL = 300  # 5 min
+
+# Document-frequency index for the IDF half of TF-IDF. Derived from _cache and
+# rebuilt whenever it changes (see _document_frequencies). Separate lock so it
+# never nests with _cache_lock.
+_df_cache: dict[str, int] = {}
+_df_cache_ts: float = -1.0
+_df_cache_n: int = -1
+_df_lock = threading.Lock()
 
 _STOPWORDS = {
     "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
@@ -152,11 +167,49 @@ def _extract_entities(query: str) -> list[str]:
     return out
 
 
+def _document_frequencies(docs: dict[str, dict]) -> tuple[dict[str, int], int]:
+    """Term -> how many docs contain it, plus the doc count. Memoized per cache load.
+
+    Recomputed only when the doc cache changes (its timestamp or size), so the
+    per-query cost stays the same as before — the scoring loop already tokenizes
+    every doc on every query.
+    """
+    global _df_cache, _df_cache_ts, _df_cache_n
+    with _df_lock:
+        if _df_cache_ts == _cache_ts and _df_cache_n == len(docs):
+            return _df_cache, _df_cache_n
+
+    df: dict[str, int] = {}
+    for data in docs.values():
+        text = f"{data.get('title', '')} {data.get('content', '')}"
+        for term in set(_tokenize(text)):
+            df[term] = df.get(term, 0) + 1
+
+    with _df_lock:
+        _df_cache, _df_cache_ts, _df_cache_n = df, _cache_ts, len(docs)
+    return df, len(docs)
+
+
+def _idf(term: str, df_map: dict[str, int], n_docs: int) -> float:
+    """Inverse document frequency, log(N / df).
+
+    A term in every doc scores 0 (it cannot discriminate); a term in one doc of
+    382 scores ~5.9. Callers only reach this for terms present in the doc, so
+    df >= 1; the guard is for an empty/stale frequency map.
+    """
+    df = df_map.get(term, 0)
+    if df <= 0 or n_docs <= 0:
+        return 0.0
+    return math.log(n_docs / df)
+
+
 def prefetch_kb_context(query: str, top_k: int = 5) -> str:
     """Search cached KB docs with TF-IDF scoring, return formatted context."""
     docs = _load_cache()
     if not docs:
         return ""
+
+    df_map, n_docs = _document_frequencies(docs)
 
     query_tokens = _tokenize(query)
     entities = _extract_entities(query)
@@ -183,7 +236,8 @@ def prefetch_kb_context(query: str, top_k: int = 5) -> str:
 
         for token, qf in query_counter.items():
             if token in doc_counter:
-                score += (doc_counter[token] / doc_len) * qf * 2.0
+                tf = doc_counter[token] / doc_len
+                score += tf * qf * _idf(token, df_map, n_docs) * 2.0
 
         for token in query_tokens:
             if token in title.lower():
