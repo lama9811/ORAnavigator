@@ -1,0 +1,357 @@
+"""
+Cloud Run Job entrypoint: crawl, compare, adjudicate, apply.
+
+Why a Job and not a background task in the backend — all three of these are
+load-bearing:
+
+  * The backend runs with CPU throttled outside requests, so a detached asyncio
+    task stalls the moment the response closes.
+  * Cloud Run caps a request at 300s. A 382-page crawl does not fit.
+  * The backend runs --max-instances=20 with no session affinity, so in-process
+    job state is invisible to a progress poll routed elsewhere.
+
+A Job has CPU for its whole life, no request deadline, and writes its progress
+to Cloud SQL — where any of the 20 backend instances can read it.
+
+Usage:
+    python run.py --run-id 12          # normal, invoked by the Job
+    python run.py --dry-run            # crawl and report, write nothing
+    python run.py --dry-run --limit 20 # quick smoke test
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import sys
+from datetime import datetime, timezone
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend"))
+
+from adjudicator import adjudicate                                    # noqa: E402
+from crawler import SEED_URLS, crawl                                  # noqa: E402
+from fingerprint import summarize_diff                                # noqa: E402
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", stream=sys.stdout
+)
+log = logging.getLogger("kb_scraper")
+
+PROGRESS_EVERY = 5      # rows are cheap, but not one write per page
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def _load_url_index():
+    """morgan.edu URL -> [doc_id, ...] and doc_id -> stored content.
+
+    The URLs come from the committed snapshot, NOT from the datastore. This is
+    not a preference — the seeded documents have no source_url in struct_data at
+    all (setup_kb_datastore_v8.py writes doc_id/title/category/subcategory/
+    source_file/file_path/playwright_verified and stops), so a datastore-only
+    index maps zero pages and every page reports as brand new.
+
+    struct_data IS consulted, but only as an overlay for documents authored in
+    the admin dashboard after the snapshot was generated — those do carry a
+    source_url. Live documents remain the source of truth for CONTENT; the
+    snapshot only answers "which page did this come from".
+    """
+    import json as _json
+    from pathlib import Path
+
+    from datastore_manager import get_document_content, list_datastore_documents
+
+    docs: dict[str, dict] = {d["id"]: d for d in list_datastore_documents()}
+
+    url_of: dict[str, str] = {}
+    snapshot = Path(__file__).resolve().parent.parent / "backend" / "kb_structured" / "_all_documents.jsonl"
+    try:
+        for line in snapshot.read_text().splitlines():
+            if not line.strip():
+                continue
+            row = _json.loads(line)
+            url = (row.get("source_url") or "").strip().rstrip("/")
+            if url:
+                url_of[row["doc_id"]] = url
+        log.info("Snapshot: %d doc_id -> URL mappings", len(url_of))
+    except Exception as e:
+        log.warning("Could not read the KB snapshot (%s); falling back to struct_data only", e)
+
+    for doc_id, d in docs.items():
+        live_url = (d.get("source_url") or "").strip().rstrip("/")
+        if live_url:
+            url_of[doc_id] = live_url
+
+    # Only map documents that actually exist in the datastore — a snapshot entry
+    # for a deleted document would otherwise resurrect it in the change report.
+    by_url: dict[str, list[str]] = {}
+    unmapped = 0
+    for doc_id in docs:
+        url = url_of.get(doc_id)
+        if url:
+            by_url.setdefault(url, []).append(doc_id)
+        else:
+            unmapped += 1
+
+    log.info(
+        "Datastore: %d documents, %d distinct source URLs, %d unmapped",
+        len(docs), len(by_url), unmapped,
+    )
+    return by_url, docs, get_document_content
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run-id", type=int, default=int(os.getenv("SCRAPE_RUN_ID") or 0))
+    ap.add_argument("--dry-run", action="store_true", help="crawl and report; write nothing")
+    ap.add_argument("--limit", type=int, default=0, help="stop after N pages (smoke test)")
+    ap.add_argument("--seed", action="append", default=[], help="override seed URL(s)")
+    args = ap.parse_args()
+
+    from crawler import MAX_PAGES
+
+    max_pages = args.limit or MAX_PAGES
+    seeds = args.seed or SEED_URLS
+
+    session = None
+    run = None
+    if not args.dry_run:
+        from db import SessionLocal
+        from models import KbPageFingerprint, ScrapeChange, ScrapeRun
+
+        session = SessionLocal()
+        run = session.query(ScrapeRun).filter(ScrapeRun.id == args.run_id).first()
+        if not run:
+            log.error("No ScrapeRun with id=%s", args.run_id)
+            return 2
+        run.status = "running"
+        run.started_at = _now()
+        session.commit()
+
+    by_url, docs, get_content = _load_url_index()
+
+    # Baseline from the previous run. Empty on run 1, which is why run 1
+    # adjudicates everything and every run after touches only what moved.
+    prior: dict[str, str] = {}
+    if not args.dry_run:
+        from models import KbPageFingerprint
+        prior = {
+            f.url: f.fingerprint for f in session.query(KbPageFingerprint).all()
+        }
+    log.info("Baseline: %d known page fingerprints", len(prior))
+
+    stats = {"pages": 0, "unreadable": 0, "unchanged": 0, "cosmetic": 0,
+             "applied": 0, "needs_review": 0, "new": 0}
+    seen_urls: set[str] = set()
+
+    def should_stop() -> bool:
+        if args.dry_run:
+            return False
+        session.refresh(run)
+        return bool(run.cancel_requested)
+
+    def on_page(result, done, found):
+        if args.dry_run:
+            return
+        # Write every Nth page, and always on the last one, so the bar lands on
+        # 100% rather than stopping at 380/382.
+        if done % PROGRESS_EVERY != 0 and done != found:
+            return
+        run.pages_done = done
+        run.pages_found = found
+        run.current_url = result.url[:500]
+        session.commit()
+
+    for result in crawl(seeds=seeds, max_pages=max_pages, on_page=on_page, should_stop=should_stop):
+        stats["pages"] += 1
+        url = result.url.rstrip("/")
+        seen_urls.add(url)
+        doc_ids = by_url.get(url, [])
+
+        # --- Unreadable is NOT a change. Leave the document alone. -----------
+        if result.unreadable:
+            stats["unreadable"] += 1
+            log.warning("Unreadable (%s): %s", result.status or result.error[:60], url)
+            if not args.dry_run:
+                run.pages_failed = stats["unreadable"]
+                session.add(ScrapeChange(
+                    run_id=run.id, url=url, page_title=result.title,
+                    change_type="unreadable", status="skipped",
+                    doc_id=doc_ids[0] if len(doc_ids) == 1 else None,
+                    affected_doc_ids=json.dumps(doc_ids) if doc_ids else None,
+                    what_changed=f"Could not read the page (status {result.status}). "
+                                 f"Document left unchanged.",
+                ))
+                session.commit()
+            continue
+
+        digest = result.digest
+        known = prior.get(url)
+
+        if known == digest:
+            stats["unchanged"] += 1
+            if not args.dry_run:
+                fp = session.query(KbPageFingerprint).filter(KbPageFingerprint.url == url).first()
+                if fp:
+                    fp.last_seen_at = _now()
+                    session.commit()
+            continue
+
+        # --- Something moved. -------------------------------------------------
+        is_new_page = known is None and not doc_ids
+        stored = get_content(doc_ids[0]) if len(doc_ids) == 1 else ""
+
+        if args.dry_run:
+            # The mapping shape is the thing worth learning from a dry run: a
+            # page feeding exactly one document can be updated automatically,
+            # one feeding many never can.
+            if is_new_page:
+                label, bucket = "NEW PAGE — no document", "new"
+            elif len(doc_ids) == 1:
+                label, bucket = f"1 doc: {doc_ids[0]}", "auto"
+            else:
+                label, bucket = f"{len(doc_ids)} docs — manual", "manual"
+            log.info("  %-46s %s", label, url.replace("https://www.morgan.edu", ""))
+            stats[bucket] = stats.get(bucket, 0) + 1
+            continue
+
+        verdict = adjudicate(result.text, stored, result.title)
+
+        change = ScrapeChange(
+            run_id=run.id, url=url, page_title=result.title,
+            doc_id=doc_ids[0] if len(doc_ids) == 1 else None,
+            affected_doc_ids=json.dumps(doc_ids) if doc_ids else None,
+            what_changed=verdict.what_changed or summarize_diff("", result.text),
+            evidence_quote=verdict.quote or None,
+            confidence=verdict.confidence,
+        )
+
+        if is_new_page:
+            change.change_type = "new"
+            change.status = "needs_review"
+            change.new_content = result.text[:60000]
+            change.what_changed = "New page on morgan.edu with no knowledge base document."
+            stats["new"] += 1
+
+        elif not verdict.material:
+            # Fingerprint moved but the meaning did not. Record it, update the
+            # baseline, and never mention it again.
+            change.change_type = "modified"
+            change.status = "cosmetic"
+            stats["cosmetic"] += 1
+
+        elif len(doc_ids) > 1:
+            # One page, many documents — the IACUC SOPs page became 52. Splitting
+            # a changed page back across them unattended would corrupt all of
+            # them, so this is always a human decision.
+            change.change_type = "modified"
+            change.status = "needs_review"
+            change.what_changed = (
+                f"{verdict.what_changed} — {len(doc_ids)} documents derive from this "
+                f"page, so the update was not applied automatically."
+            )
+            stats["needs_review"] += 1
+
+        elif verdict.applicable and len(doc_ids) == 1:
+            from datastore_manager import update_document, update_review_flag
+
+            change.change_type = "modified"
+            change.previous_content = stored
+            change.new_content = verdict.new_content
+            result_write = update_document(doc_ids[0], verdict.new_content.encode("utf-8"))
+            if result_write.get("success"):
+                update_review_flag(
+                    doc_ids[0], needs_review=True, what_changed=verdict.what_changed,
+                    changed_at=_now().date().isoformat(),
+                )
+                change.status = "applied"
+                stats["applied"] += 1
+                log.info("APPLIED %s -> %s", url, doc_ids[0])
+            else:
+                change.status = "needs_review"
+                change.what_changed = f"{verdict.what_changed} — write failed: {result_write.get('message')}"
+                stats["needs_review"] += 1
+
+        else:
+            # Material, but the AI could not ground it or had low confidence.
+            change.change_type = "modified"
+            change.status = "needs_review"
+            stats["needs_review"] += 1
+
+        session.add(change)
+
+        # Baseline advances for everything we successfully READ, including
+        # cosmetic changes — otherwise the same immaterial edit is re-judged,
+        # and re-paid for, on every future run.
+        fp = session.query(KbPageFingerprint).filter(KbPageFingerprint.url == url).first()
+        if not fp:
+            fp = KbPageFingerprint(url=url, fingerprint=digest, created_at=_now())
+            session.add(fp)
+        fp.fingerprint = digest
+        fp.title = (result.title or "")[:500]
+        fp.doc_ids = json.dumps(doc_ids)
+        fp.char_count = len(result.text)
+        fp.last_seen_at = _now()
+        fp.last_changed_at = _now()
+
+        run.changes_found = stats["applied"] + stats["needs_review"] + stats["new"]
+        run.changes_applied = stats["applied"]
+        session.commit()
+
+    # --- Pages that vanished from the site --------------------------------
+    if not args.dry_run and not run.cancel_requested:
+        gone = [u for u in prior if u not in seen_urls]
+        for url in gone:
+            doc_ids = by_url.get(url, [])
+            session.add(ScrapeChange(
+                run_id=run.id, url=url, change_type="removed", status="needs_review",
+                doc_id=doc_ids[0] if len(doc_ids) == 1 else None,
+                affected_doc_ids=json.dumps(doc_ids) if doc_ids else None,
+                what_changed="This page is no longer on morgan.edu. "
+                             "Documents are never deleted automatically.",
+            ))
+            stats["needs_review"] += 1
+        if gone:
+            log.info("%d page(s) no longer on the site", len(gone))
+        session.commit()
+
+    log.info("Done: %s", stats)
+
+    if not args.dry_run:
+        run.status = "cancelled" if run.cancel_requested else "succeeded"
+        run.finished_at = _now()
+        run.changes_found = stats["applied"] + stats["needs_review"] + stats["new"]
+        run.changes_applied = stats["applied"]
+        run.pages_failed = stats["unreadable"]
+        session.commit()
+        session.close()
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception as exc:                    # never die without recording why
+        log.exception("Scrape failed")
+        try:
+            from db import SessionLocal
+            from models import ScrapeRun
+            rid = int(os.getenv("SCRAPE_RUN_ID") or 0)
+            if rid:
+                s = SessionLocal()
+                r = s.query(ScrapeRun).filter(ScrapeRun.id == rid).first()
+                if r:
+                    r.status, r.error, r.finished_at = "failed", str(exc)[:2000], _now()
+                    s.commit()
+                s.close()
+        except Exception:
+            pass
+        raise SystemExit(1)

@@ -289,3 +289,100 @@ class KBSuggestion(Base):
     reviewed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+# =============================================================================
+# KB web scrape — see kb_scraper/
+#
+# State lives in the database, NOT in process memory, because the backend runs
+# --max-instances=20 with no session affinity: a run started on one instance
+# would be invisible to a progress poll routed to another. That is the same
+# failure that took the ADK service down (see CLAUDE.md) and it is why progress
+# is polled from ScrapeRun rather than streamed or held in a module global.
+# =============================================================================
+
+
+class KbPageFingerprint(Base):
+    """One row per crawled morgan.edu page — the baseline a run compares against.
+
+    Survives runs. Without it every page looks changed, because the stored KB
+    `content` is an LLM summary of a page, not the page text, so the two can
+    never be diffed directly. We compare scrape-to-scrape instead.
+    """
+    __tablename__ = "kb_page_fingerprints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String(500), nullable=False, unique=True, index=True)
+    # SHA-256 of the normalized extracted text.
+    fingerprint = Column(String(64), nullable=False)
+    # JSON list of doc_ids derived from this page. Usually one — but the IACUC
+    # SOPs page produced 52 and D-RED seminars 49, which is why a change here
+    # cannot always be auto-applied.
+    doc_ids = Column(Text, nullable=True)
+    title = Column(String(500), nullable=True)
+    char_count = Column(Integer, default=0)
+    last_seen_at = Column(DateTime, nullable=True)
+    last_changed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class ScrapeRun(Base):
+    """One crawl. The progress bar polls this row."""
+    __tablename__ = "scrape_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # queued -> running -> succeeded | failed | cancelled
+    status = Column(String(20), default="queued", index=True)
+    # Cloud Run Jobs execution name, so a stuck run can be traced in GCP.
+    execution_name = Column(String(255), nullable=True)
+    triggered_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    pages_found = Column(Integer, default=0)     # discovered so far (the denominator grows during a BFS crawl)
+    pages_done = Column(Integer, default=0)
+    pages_failed = Column(Integer, default=0)    # unreadable: 404, empty render, timeout
+    changes_found = Column(Integer, default=0)
+    changes_applied = Column(Integer, default=0)
+    current_url = Column(String(500), nullable=True)
+
+    started_at = Column(DateTime, nullable=True)
+    finished_at = Column(DateTime, nullable=True)
+    # Set by the API; the job polls it so Cancel actually stops the crawl.
+    cancel_requested = Column(Boolean, default=False)
+    error = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
+class ScrapeChange(Base):
+    """A single detected change, and what was done about it."""
+    __tablename__ = "scrape_changes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    run_id = Column(Integer, ForeignKey("scrape_runs.id"), index=True)
+    url = Column(String(500), nullable=False)
+    page_title = Column(String(500), nullable=True)
+
+    # modified | new | removed | unreadable
+    change_type = Column(String(20), default="modified")
+    doc_id = Column(String(255), nullable=True, index=True)
+    # JSON list — populated instead of doc_id when a page feeds many documents.
+    affected_doc_ids = Column(Text, nullable=True)
+
+    # applied     — content was auto-updated, document flagged for review
+    # needs_review— a real change we would not apply unattended (many documents
+    #               derive from the page, or the AI could not ground its draft)
+    # cosmetic    — fingerprint moved, AI judged it immaterial; nothing written
+    # skipped     — page unreadable, so NOT a change; document left alone
+    status = Column(String(20), default="needs_review", index=True)
+    what_changed = Column(Text, nullable=True)
+    evidence_quote = Column(Text, nullable=True)     # verified verbatim against the live page
+    confidence = Column(String(20), nullable=True)   # high | medium | low
+
+    previous_content = Column(Text, nullable=True)   # what revert restores
+    new_content = Column(Text, nullable=True)
+
+    # Admin disposition of the auto-applied change.
+    reviewed = Column(Boolean, default=False)
+    reverted = Column(Boolean, default=False)
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
