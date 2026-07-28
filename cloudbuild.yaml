@@ -157,14 +157,27 @@ steps:
           --concurrency=100 \
           --allow-unauthenticated \
           --service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
-          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,ALGORITHM=HS256,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=noreplyinavigator@gmail.com,FROM_EMAIL=noreplyinavigator@gmail.com,APP_URL=https://ora.inavigator.ai,API_URL=https://oranavigator-backend-ollhkgeova-uc.a.run.app,ALLOW_TEST_EMAILS=false,SKIP_EMAIL_VERIFICATION=true,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false,CHAT_LATENCY_BUDGET_S=5" \
-          --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest,FIRECRAWL_API_KEY=ora-firecrawl-api-key:latest"
-        # SMTP_PASS (Gmail App Password, from the ora-smtp secret) is intentionally
-        # NOT mounted right now: the ora-smtp secret was removed from the project and
-        # email verification is bypassed (SKIP_EMAIL_VERIFICATION=true), so the backend
-        # doesn't need it. email_service._send_email no-ops gracefully when SMTP_PASS is
-        # empty. To restore email later: recreate the ora-smtp secret, then re-add
-        # ",SMTP_PASS=ora-smtp:latest" to --set-secrets above (and flip SKIP_EMAIL_VERIFICATION).
+          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,ALGORITHM=HS256,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,REPLY_TO=oranav@morgan.edu,APP_URL=https://ora.inavigator.ai,API_URL=https://oranavigator-backend-ollhkgeova-uc.a.run.app,ALLOW_TEST_EMAILS=false,SKIP_EMAIL_VERIFICATION=true,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false,CHAT_LATENCY_BUDGET_S=5" \
+          --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest,FIRECRAWL_API_KEY=ora-firecrawl-api-key:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASS=SMTP_PASS:latest"
+        # Email sending (restored 2026-07-28). SMTP_USER/SMTP_PASS come from the
+        # SMTP_USER + SMTP_PASS secrets (note: NOT the ora-* naming of the older
+        # secrets; the retired ora-smtp secret is gone). SMTP_USER is a Gmail App
+        # Password login for a real mailbox — a Google GROUP can never be used here,
+        # it has no password.
+        #
+        # FROM_EMAIL is deliberately NOT set: email_service.py falls back to
+        # SMTP_USER, and Gmail only permits a From it has authenticated as (or a
+        # verified send-as alias). Hardcoding a different address here is what made
+        # the old config wrong — it authenticated as one account and claimed another.
+        # To send as oranav@morgan.edu, first verify it as a send-as alias on the
+        # SMTP_USER account, THEN add FROM_EMAIL=oranav@morgan.edu to --set-env-vars.
+        #
+        # REPLY_TO=oranav@morgan.edu needs no verification anywhere, so replies reach
+        # the shared group today regardless of the alias question.
+        #
+        # SKIP_EMAIL_VERIFICATION is still true. Flip it to false only AFTER a live
+        # send to a non-Morgan address succeeds — _send_email returns True without
+        # sending when creds are missing, so a broken setup looks healthy.
         # NOTE: RESEARCH_SECRET (cron auth) is still set manually on the service — the crons
         # (research/memory/deadlines) 403 after every deploy until it's migrated to a secret too:
         #   gcloud run services update oranavigator-backend --update-env-vars="RESEARCH_SECRET=<secret>"

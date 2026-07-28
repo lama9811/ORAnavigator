@@ -19,6 +19,9 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER or "noreply@inavigator.ai")
+# Where human replies should go. Needs no sender verification anywhere (unlike
+# From), so this can be a Google Group address the sending account doesn't own.
+REPLY_TO = os.getenv("REPLY_TO", "")
 APP_URL = os.getenv("APP_URL", "https://ora.inavigator.ai")
 API_URL = os.getenv("API_URL", "https://api.inavigator.ai")
 
@@ -40,6 +43,8 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
         msg["Subject"] = subject
         msg["From"] = f"ORA Navigator <{FROM_EMAIL}>"
         msg["To"] = to_email
+        if REPLY_TO:
+            msg["Reply-To"] = REPLY_TO
         msg.attach(MIMEText(html_body, "html"))
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
