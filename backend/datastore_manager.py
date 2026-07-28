@@ -13,6 +13,7 @@ import threading
 import logging
 from google.cloud import discoveryengine_v1 as discoveryengine
 from google.api_core.client_options import ClientOptions
+from google.api_core.exceptions import NotFound
 from google.protobuf.struct_pb2 import Struct
 
 log = logging.getLogger(__name__)
@@ -102,6 +103,21 @@ def list_datastore_documents() -> list[dict]:
                 "modified": "",
                 "title": data.get("title", doc_id),
                 "category": data.get("category", ""),
+                "subcategory": data.get("subcategory", ""),
+                # Placement in the morgan.edu-mirroring nav tree, e.g.
+                # "research_compliance/animal_research/iacuc_sops". Empty means
+                # unfiled — the admin tree surfaces those rather than hiding them.
+                "kb_path": data.get("kb_path", ""),
+                # Resolved into the chat's "Sources" links; see
+                # vertex_agent._get_kb_url_map, which overlays these onto the
+                # committed snapshot so documents added after it was generated
+                # are still citable with a link.
+                "source_url": data.get("source_url", ""),
+                # Set by the scrape job when it auto-updates a document. Drives
+                # the amber badge in the admin tree; never indexed as content.
+                "needs_review": bool(data.get("needs_review", False)),
+                "last_auto_updated": data.get("last_auto_updated", ""),
+                "what_changed": data.get("what_changed", ""),
             })
     except Exception as e:
         log.error(f"Failed to list documents: {e}")
@@ -205,20 +221,15 @@ def upload_document(filename: str, content: bytes, content_type: str = "text/pla
     base = filename.rsplit(".", 1)[0] if "." in filename else filename
     doc_id = re.sub(r'[^a-zA-Z0-9_-]', '_', base)
 
-    # Determine category from filename
-    category = "general"
-    for cat in ["academic", "career", "financial"]:
-        if doc_id.startswith(cat):
-            category = cat
-            break
-
-    text_content = content.decode("utf-8") if isinstance(content, bytes) else content
-
+    # No category guessing. This used to infer one from an "academic|career|
+    # financial" prefix list inherited from a different KB — no ORA document has
+    # ever matched it, so every upload landed as category "general" with the
+    # doc_id repeated as its subcategory. A wrong label is worse than none: an
+    # upload with no kb_path shows up under "Unfiled" in the admin tree, which is
+    # visible and fixable in one click.
     struct = Struct()
     struct.update({
         "title": " ".join(base.split("_")).title(),
-        "category": category,
-        "subcategory": doc_id.replace(f"{category}_", ""),
     })
 
     client = _get_doc_client()
@@ -261,12 +272,21 @@ def update_document(doc_id: str, content: bytes, content_type: str = "text/plain
 
     text_content = content.decode("utf-8") if isinstance(content, bytes) else content
 
-    # Get existing doc to preserve metadata
+    # Get existing doc to preserve metadata.
+    #
+    # A missing document is a legitimate create (allow_missing=True below), so an
+    # empty metadata dict is correct there. Any OTHER read failure is NOT: this
+    # used to swallow every exception and patch {} over struct_data, silently
+    # erasing title/category/kb_path/file_path on one transient blip. Fail loudly
+    # instead — a failed save is recoverable, a wiped document is not.
     try:
         existing = client.get_document(name=doc_name)
         data = dict(existing.struct_data) if existing.struct_data else {}
-    except Exception:
+    except NotFound:
         data = {}
+    except Exception as e:
+        log.error(f"Refusing to update {doc_id}: could not read existing metadata: {e}")
+        return {"success": False, "message": f"Could not read existing document metadata: {e}"}
 
     # Remove content from struct_data (it goes in content.raw_bytes for search)
     data.pop("content", None)
@@ -291,6 +311,183 @@ def update_document(doc_id: str, content: bytes, content_type: str = "text/plain
         return {"success": True, "message": f"Updated: {doc_id} (instant)"}
     except Exception as e:
         return {"success": False, "message": f"Failed to update: {e}"}
+
+
+def update_review_flag(
+    doc_id: str,
+    needs_review: bool,
+    what_changed: str = "",
+    changed_at: str = "",
+) -> dict:
+    """Flag (or clear) a document as auto-updated and awaiting human review.
+
+    Written to struct_data, NEVER to the document body. If this text went into
+    `content`, Vertex would index it and Gemini could quote it back — a PI
+    asking about F&A rates would get "this document was auto-updated, please
+    review" mixed into their answer. The admin UI reads these fields; the
+    chatbot never sees them.
+    """
+    client = _get_doc_client()
+    doc_name = f"{BRANCH}/documents/{doc_id}"
+
+    try:
+        existing = client.get_document(name=doc_name)
+    except NotFound:
+        return {"success": False, "message": f"Document not found: {doc_id}"}
+    except Exception as e:
+        return {"success": False, "message": f"Could not read document: {e}"}
+
+    data = dict(existing.struct_data) if existing.struct_data else {}
+    data.pop("content", None)
+
+    if needs_review:
+        data["needs_review"] = True
+        data["last_auto_updated"] = changed_at
+        if what_changed:
+            data["what_changed"] = what_changed[:1000]
+    else:
+        for key in ("needs_review", "what_changed"):
+            data.pop(key, None)
+        data["reviewed_at"] = changed_at
+
+    struct = Struct()
+    struct.update(data)
+
+    doc = discoveryengine.Document(name=doc_name, struct_data=struct)
+    if existing.content and existing.content.raw_bytes:
+        doc.content = discoveryengine.Document.Content(
+            raw_bytes=existing.content.raw_bytes,
+            mime_type=existing.content.mime_type or "text/plain",
+        )
+
+    try:
+        client.update_document(request=discoveryengine.UpdateDocumentRequest(document=doc))
+        invalidate_content_cache()
+        return {"success": True, "message": f"Review flag set on {doc_id}"}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to set review flag: {e}"}
+
+
+def document_exists(doc_id: str) -> bool:
+    try:
+        _get_doc_client().get_document(name=f"{BRANCH}/documents/{doc_id}")
+        return True
+    except NotFound:
+        return False
+
+
+def create_kb_document(
+    doc_id: str,
+    title: str,
+    content: str,
+    kb_path: str = "",
+    source_url: str = "",
+) -> dict:
+    """Author a new KB document directly in the datastore.
+
+    Unlike upload_document (which takes a file and knows nothing about the tree),
+    this writes the full metadata set a seeded document carries, so an authored
+    document is indistinguishable from a scraped one: title, category derived
+    from the tree path, kb_path, and the source_url the chatbot cites.
+
+    Refuses to overwrite an existing doc_id — update_document is the edit path.
+    """
+    if not doc_id:
+        return {"success": False, "message": "doc_id required"}
+    if not title.strip():
+        return {"success": False, "message": "Title required"}
+    if not content.strip():
+        return {"success": False, "message": "Content required"}
+
+    if document_exists(doc_id):
+        return {"success": False, "message": f"A document with id '{doc_id}' already exists"}
+
+    data = {
+        "doc_id": doc_id,
+        "title": title.strip(),
+        "authored_in_dashboard": True,   # distinguishes these from scraped docs
+    }
+    if kb_path:
+        data["kb_path"] = kb_path
+        # The badge and any category filter read this; derive it rather than
+        # asking the admin for something the tree position already determines.
+        data["category"] = kb_path.split("/")[0]
+        parts = kb_path.split("/")
+        if len(parts) > 1:
+            data["subcategory"] = parts[-1]
+    if source_url.strip():
+        data["source_url"] = source_url.strip()
+
+    struct = Struct()
+    struct.update(data)
+
+    doc = discoveryengine.Document(
+        name=f"{BRANCH}/documents/{doc_id}",
+        struct_data=struct,
+        content=discoveryengine.Document.Content(
+            raw_bytes=content.encode("utf-8"),
+            mime_type="text/plain",
+        ),
+    )
+
+    try:
+        _get_doc_client().update_document(
+            request=discoveryengine.UpdateDocumentRequest(document=doc, allow_missing=True)
+        )
+        invalidate_content_cache()
+        return {
+            "success": True,
+            "doc_id": doc_id,
+            "kb_path": kb_path,
+            "message": f"Created: {title.strip()}",
+        }
+    except Exception as e:
+        return {"success": False, "message": f"Failed to create document: {e}"}
+
+
+def update_placement(doc_id: str, kb_path: str) -> dict:
+    """Set a document's kb_path (its position in the nav tree).
+
+    Metadata-only: reads the document, rewrites struct_data with the new
+    kb_path, and writes the EXISTING content back untouched. Callers must
+    validate kb_path against kb_tree.node_paths() first — this function does not
+    know which nodes exist.
+    """
+    client = _get_doc_client()
+    doc_name = f"{BRANCH}/documents/{doc_id}"
+
+    try:
+        existing = client.get_document(name=doc_name)
+    except NotFound:
+        return {"success": False, "message": f"Document not found: {doc_id}"}
+    except Exception as e:
+        return {"success": False, "message": f"Could not read document: {e}"}
+
+    data = dict(existing.struct_data) if existing.struct_data else {}
+    data.pop("content", None)
+    if kb_path:
+        data["kb_path"] = kb_path
+    else:
+        data.pop("kb_path", None)   # unfile
+
+    struct = Struct()
+    struct.update(data)
+
+    # Carry the existing content through verbatim; omitting it would blank the
+    # searchable body.
+    doc = discoveryengine.Document(name=doc_name, struct_data=struct)
+    if existing.content and existing.content.raw_bytes:
+        doc.content = discoveryengine.Document.Content(
+            raw_bytes=existing.content.raw_bytes,
+            mime_type=existing.content.mime_type or "text/plain",
+        )
+
+    try:
+        client.update_document(request=discoveryengine.UpdateDocumentRequest(document=doc))
+        invalidate_content_cache()
+        return {"success": True, "message": f"Placed {doc_id} in {kb_path or '(unfiled)'}", "kb_path": kb_path}
+    except Exception as e:
+        return {"success": False, "message": f"Failed to set placement: {e}"}
 
 
 def sync_datastore() -> dict:

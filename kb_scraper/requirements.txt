@@ -1,0 +1,16 @@
+# Kept deliberately small — this image only crawls, hashes, judges and writes.
+playwright==1.49.0
+
+# Shared with the backend. Versions MUST match backend/requirements.txt: this
+# image reuses backend/db.py, models.py and datastore_manager.py directly, and a
+# SQLAlchemy or client drift would mean the job and the API disagree about the
+# same tables and the same datastore.
+SQLAlchemy==2.0.41            # backend/requirements.txt:60
+python-dotenv==1.1.0          # backend/requirements.txt:52
+google-genai==1.14.0          # backend/requirements.txt:77
+google-cloud-discoveryengine==0.13.5   # backend/requirements.txt:79
+PyMySQL                       # backend/requirements.txt:80 (unpinned there too)
+
+# PyMySQL needs this for MySQL 8's caching_sha2_password. The backend gets it
+# transitively via python-jose[cryptography]; here it has to be explicit.
+cryptography

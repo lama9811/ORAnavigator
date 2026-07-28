@@ -77,6 +77,8 @@ redis==5.2.1
 google-genai==1.14.0
 google-cloud-storage==2.19.0
 google-cloud-discoveryengine==0.13.5
+# Starts the KB web-scrape Cloud Run Job from the admin button (run_v2.JobsClient).
+google-cloud-run==0.10.18
 PyMySQL
 python-jose[cryptography]
 passlib[bcrypt]

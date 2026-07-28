@@ -425,6 +425,28 @@ def _get_kb_url_map() -> dict:
         print(f"   [CITATIONS] Loaded {len(_kb_url_map)} KB title->URL mappings")
     except Exception as e:
         print(f"   [CITATIONS] Failed to load KB URL map: {e}")
+
+    # The snapshot above is a committed file, so it only knows the documents that
+    # existed when it was generated. Anything authored in the admin dashboard —
+    # or otherwise added to the datastore since — would be cited with NO link at
+    # all, silently. Overlay the live datastore's own source_url values.
+    #
+    # Lazy and once per process: this runs on the first citation of a process's
+    # life, not per turn, and never overwrites a snapshot entry. A failure here
+    # must not break citations, so it degrades to the snapshot alone.
+    try:
+        from datastore_manager import list_datastore_documents
+        overlay = 0
+        for data in list_datastore_documents():
+            title, url = data.get("title"), data.get("source_url")
+            if title and url and _norm_title(title) not in _kb_url_map:
+                _kb_url_map[_norm_title(title)] = url
+                overlay += 1
+        if overlay:
+            print(f"   [CITATIONS] +{overlay} title->URL from the live datastore")
+    except Exception as e:
+        print(f"   [CITATIONS] Live datastore overlay skipped: {e}")
+
     return _kb_url_map
 
 

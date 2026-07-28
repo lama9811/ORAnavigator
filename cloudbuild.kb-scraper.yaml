@@ -1,0 +1,100 @@
+# =============================================================================
+# Cloud Build config for the KB web-scrape Job.
+#
+# DELIBERATELY SEPARATE from cloudbuild.yaml. That file is on the critical path
+# for every merge to main, and CLAUDE.md records that a one-character typo in it
+# silently blocks every deploy. This image is ~1.5GB (Playwright + Chromium) and
+# changes rarely, so building it on every backend push would add minutes to each
+# deploy for no benefit and widen that blast radius.
+#
+# Build and deploy on demand:
+#   gcloud builds submit --config=cloudbuild.kb-scraper.yaml .
+#
+# Run it by hand (the admin button does this via the API):
+#   gcloud run jobs execute oranavigator-kb-scraper --region=us-central1
+#
+# ---------------------------------------------------------------------------
+# One-time IAM, both required:
+#
+#   # the Job needs Cloud SQL, Vertex (Gemini) and the datastore
+#   gcloud projects add-iam-policy-binding $PROJECT_ID \
+#     --member=serviceAccount:oranavigator-backend@$PROJECT_ID.iam.gserviceaccount.com \
+#     --role=roles/cloudsql.client
+#
+#   # the BACKEND needs permission to start the Job when the admin clicks the button
+#   gcloud run jobs add-iam-policy-binding oranavigator-kb-scraper \
+#     --region=us-central1 \
+#     --member=serviceAccount:oranavigator-backend@$PROJECT_ID.iam.gserviceaccount.com \
+#     --role=roles/run.invoker
+#
+# The second one is the easy one to miss: without it the button returns 403 and
+# the run sits in "queued" forever with no error anywhere in the app logs.
+# =============================================================================
+
+substitutions:
+  _REGION: us-central1
+  _REPO_NAME: oranavigator
+  _JOB_NAME: oranavigator-kb-scraper
+  _SQL_INSTANCE: oranavigator-db
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+  # Build context is the REPO ROOT, not kb_scraper/ — the image reuses
+  # backend/db.py, models.py and datastore_manager.py rather than duplicating
+  # them, so it needs both directories in scope.
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-scraper'
+    args:
+      - 'build'
+      - '--platform=linux/amd64'
+      - '-f'
+      - 'kb_scraper/Dockerfile'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/kb-scraper:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/kb-scraper:latest'
+      - '.'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-scraper'
+    args: ['push', '--all-tags', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/kb-scraper']
+    waitFor: ['build-scraper']
+
+  # `jobs deploy` creates the job the first time and updates it after.
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-scraper-job'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'jobs'
+      - 'deploy'
+      - '${_JOB_NAME}'
+      - '--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/kb-scraper:${SHORT_SHA}'
+      - '--region=${_REGION}'
+      # Chromium is memory-hungry; 1Gi OOM-kills partway through a long crawl.
+      - '--memory=2Gi'
+      - '--cpu=2'
+      # A Job's ceiling, not the backend service's 300s request cap — that
+      # difference is the entire reason this is a Job.
+      - '--task-timeout=3600'
+      # No automatic retry. A retried task would re-crawl and could re-apply
+      # changes already written; the ScrapeRun row records the failure instead.
+      - '--max-retries=0'
+      - '--parallelism=1'
+      - '--tasks=1'
+      - '--set-cloudsql-instances=${PROJECT_ID}:${_REGION}:${_SQL_INSTANCE}'
+      - '--service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com'
+      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,SCRAPE_MODEL=gemini-2.5-flash,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8'
+      - '--set-secrets=DATABASE_URL=ora-database-url:latest'
+    waitFor: ['push-scraper']
+
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/kb-scraper:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/kb-scraper:latest'
+
+# The Playwright base image plus `playwright install chromium` is slow to pull
+# and build; the default 600s is not enough.
+timeout: 2700s

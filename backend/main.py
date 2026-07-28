@@ -2338,6 +2338,10 @@ async def upload_cloud_kb_doc(
         raise HTTPException(status_code=500, detail=result["message"])
     # Auto-clear cache so chatbot uses fresh data
     cleared = query_cache.clear()
+    # ...and the listing cache, or the new document stays invisible to the flat
+    # list AND the tree's Unfiled bucket for up to 60s.
+    _cloud_kb_cache["docs"] = None
+    _cloud_kb_cache["ts"] = 0
     result["cache_cleared"] = cleared
     return result
 
@@ -2383,8 +2387,312 @@ async def delete_cloud_kb_doc(doc_id: str, uri: str = "", user: dict = Depends(g
         raise HTTPException(status_code=500, detail=result["message"])
     # Auto-clear cache so chatbot uses fresh data
     cleared = query_cache.clear()
+    _cloud_kb_cache["docs"] = None
+    _cloud_kb_cache["ts"] = 0
     result["cache_cleared"] = cleared
     return result
+
+# =============================================================================
+# KB WEB SCRAPE — trigger, progress, change review
+# The crawl runs in a Cloud Run Job; these endpoints only start it and read the
+# rows it writes. See kb_scrape_service.py for why it cannot run in-process.
+# =============================================================================
+
+@app.post("/api/admin/kb-scrape/run")
+async def start_kb_scrape(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Kick off a scrape of morgan.edu/office-of-research-administration."""
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        run = await asyncio.to_thread(scrape.start_run, db, user.get("id"))
+    except RuntimeError as e:
+        # Already running — a conflict, not a server fault.
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not start scrape: {e}")
+    return scrape.run_to_dict(run)
+
+
+@app.get("/api/admin/kb-scrape/status")
+async def kb_scrape_status(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Polled by the progress bar. Cheap by design — one indexed row read."""
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    run = scrape.active_run(db) or scrape.last_finished_run(db)
+    return {
+        "run": scrape.run_to_dict(run),
+        "baseline_pages": scrape.baseline_size(db),
+    }
+
+
+@app.post("/api/admin/kb-scrape/cancel")
+async def cancel_kb_scrape(user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Ask the running job to stop. It checks this flag between pages, so a
+    cancel takes effect within a page or two rather than instantly."""
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    run = scrape.active_run(db)
+    if not run:
+        raise HTTPException(status_code=404, detail="No scrape is running")
+    run.cancel_requested = True
+    db.commit()
+    return {"success": True, "message": "Cancelling after the current page"}
+
+
+@app.get("/api/admin/kb-scrape/changes")
+async def list_kb_scrape_changes(
+    run_id: int = 0,
+    status: str = "",
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The change report for a run (defaults to the most recent one)."""
+    import kb_scrape_service as scrape
+    from models import ScrapeChange
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    if not run_id:
+        latest = scrape.active_run(db) or scrape.last_finished_run(db)
+        if not latest:
+            return {"changes": [], "run_id": None, "counts": {}}
+        run_id = latest.id
+
+    query = db.query(ScrapeChange).filter(ScrapeChange.run_id == run_id)
+    if status:
+        query = query.filter(ScrapeChange.status == status)
+
+    # Applied changes first — those are already live and most deserve a look.
+    order = {"applied": 0, "needs_review": 1, "skipped": 2, "cosmetic": 3}
+    rows = query.order_by(ScrapeChange.id.desc()).limit(500).all()
+    rows.sort(key=lambda c: order.get(c.status, 9))
+
+    counts: dict = {}
+    for c in db.query(ScrapeChange).filter(ScrapeChange.run_id == run_id).all():
+        counts[c.status] = counts.get(c.status, 0) + 1
+
+    return {
+        "run_id": run_id,
+        "changes": [scrape.change_to_dict(c) for c in rows],
+        "counts": counts,
+    }
+
+
+@app.get("/api/admin/kb-scrape/changes/{change_id}/diff")
+async def kb_scrape_change_diff(
+    change_id: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    from models import ScrapeChange
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    change = db.query(ScrapeChange).filter(ScrapeChange.id == change_id).first()
+    if not change:
+        raise HTTPException(status_code=404, detail="Change not found")
+    return {
+        "id": change.id,
+        "url": change.url,
+        "doc_id": change.doc_id,
+        "what_changed": change.what_changed or "",
+        "evidence_quote": change.evidence_quote or "",
+        "previous_content": change.previous_content or "",
+        "new_content": change.new_content or "",
+    }
+
+
+@app.post("/api/admin/kb-scrape/changes/{change_id}/revert")
+async def revert_kb_scrape_change(
+    change_id: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Restore the content an auto-applied change replaced."""
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    result = await asyncio.to_thread(scrape.revert_change, db, change_id, user.get("id"))
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    result["cache_cleared"] = query_cache.clear()
+    _cloud_kb_cache["docs"] = None
+    _cloud_kb_cache["ts"] = 0
+    return result
+
+
+@app.post("/api/admin/kb-scrape/changes/{change_id}/reviewed")
+async def mark_kb_scrape_change_reviewed(
+    change_id: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Keep the auto-applied content and clear the review badge."""
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    result = await asyncio.to_thread(scrape.mark_reviewed, db, change_id, user.get("id"))
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    _cloud_kb_cache["docs"] = None
+    _cloud_kb_cache["ts"] = 0
+    return result
+
+
+@app.post("/api/internal/kb-scrape/run")
+async def internal_kb_scrape(request: Request, db: Session = Depends(get_db)):
+    """Same scrape on a schedule, for Cloud Scheduler. Same shared-secret auth
+    as the other /api/internal endpoints."""
+    import kb_scrape_service as scrape
+
+    secret = request.headers.get("X-Research-Secret", "")
+    expected = os.getenv("RESEARCH_SECRET", "")
+    if not expected or secret != expected:
+        raise HTTPException(status_code=403, detail="Invalid research secret")
+    try:
+        run = await asyncio.to_thread(scrape.start_run, db, None)
+    except RuntimeError as e:
+        return {"skipped": True, "reason": str(e)}
+    return scrape.run_to_dict(run)
+
+
+@app.post("/api/admin/cloud-kb/documents")
+async def create_cloud_kb_doc(request: Request, user: dict = Depends(get_current_user)):
+    """Author a new KB document straight into a tree node.
+
+    Body: {title, content, kb_path?, source_url?, doc_id?}. doc_id is derived
+    from the title when not supplied; creation fails rather than overwrites if
+    it collides.
+    """
+    from kb_tree import node_paths, suggest_doc_id
+    from datastore_manager import create_kb_document
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    body = await request.json()
+    title = (body.get("title") or "").strip()
+    content = (body.get("content") or "").strip()
+    kb_path = (body.get("kb_path") or "").strip().strip("/")
+    source_url = (body.get("source_url") or "").strip()
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Title is required")
+    if not content:
+        raise HTTPException(status_code=400, detail="Content is required")
+    if kb_path and kb_path not in node_paths():
+        raise HTTPException(status_code=400, detail=f"Unknown tree path: {kb_path}")
+
+    doc_id = (body.get("doc_id") or "").strip() or suggest_doc_id(title, kb_path)
+    if not doc_id:
+        raise HTTPException(status_code=400, detail="Could not derive a document id from that title")
+
+    result = await asyncio.to_thread(
+        create_kb_document, doc_id, title, content, kb_path, source_url
+    )
+    if not result["success"]:
+        # A colliding id is the caller's problem to fix, not a server fault.
+        status = 409 if "already exists" in result["message"] else 500
+        raise HTTPException(status_code=status, detail=result["message"])
+
+    # A new document changes what the chatbot can answer, so drop the answer
+    # cache as well as the listing cache.
+    result["cache_cleared"] = query_cache.clear()
+    _cloud_kb_cache["docs"] = None
+    _cloud_kb_cache["ts"] = 0
+    try:
+        import vertex_agent
+        vertex_agent._kb_url_map = None      # so the new source_url resolves in citations
+        vertex_agent._session_cache.clear()
+    except Exception:
+        pass
+    return result
+
+
+@app.get("/api/admin/cloud-kb/doc-id")
+async def preview_cloud_kb_doc_id(
+    title: str = "", kb_path: str = "", user: dict = Depends(get_current_user)
+):
+    """Live preview of the doc_id a title will produce, plus a collision check."""
+    from kb_tree import suggest_doc_id
+    from datastore_manager import document_exists
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    doc_id = suggest_doc_id(title, kb_path.strip().strip("/"))
+    taken = bool(doc_id) and await asyncio.to_thread(document_exists, doc_id)
+    return {"doc_id": doc_id, "taken": taken}
+
+
+@app.get("/api/admin/cloud-kb/tree")
+async def get_cloud_kb_tree(user: dict = Depends(get_current_user), refresh: bool = False):
+    """The KB as a browsable hierarchy mirroring morgan.edu/ora.
+
+    Shape and titles come from the bundled manifest; placement comes from each
+    document's own kb_path; counts are computed from the live datastore.
+    Documents that are unplaced — or placed at a node that no longer exists —
+    are returned in `unfiled` rather than being dropped.
+    """
+    import time as _t
+    from kb_tree import build_tree, flat_paths
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        if not refresh and _cloud_kb_cache["docs"] and _t.time() - _cloud_kb_cache["ts"] < 60:
+            docs = _cloud_kb_cache["docs"]
+        else:
+            docs = await asyncio.to_thread(list_datastore_documents)
+            _cloud_kb_cache["docs"] = docs
+            _cloud_kb_cache["ts"] = _t.time()
+        result = build_tree(docs)
+        result["paths"] = flat_paths()
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to build KB tree: {e}")
+
+
+@app.put("/api/admin/cloud-kb/documents/{doc_id}/placement")
+async def set_cloud_kb_placement(
+    doc_id: str,
+    request: Request,
+    user: dict = Depends(get_current_user),
+):
+    """File a document into a tree node by setting its kb_path.
+
+    Only paths that exist in the manifest are accepted — you can file a document
+    anywhere in the tree, but you cannot invent a node. That is what keeps the
+    tree mirroring morgan.edu. An empty kb_path unfiles the document.
+    """
+    from kb_tree import node_paths
+    from datastore_manager import update_placement
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    body = await request.json()
+    kb_path = (body.get("kb_path") or "").strip().strip("/")
+    if kb_path and kb_path not in node_paths():
+        raise HTTPException(status_code=400, detail=f"Unknown tree path: {kb_path}")
+
+    result = await asyncio.to_thread(update_placement, doc_id, kb_path)
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["message"])
+
+    # The listing cache backs both the flat list and the tree; a stale entry
+    # would show the document in its old node for up to 60s.
+    _cloud_kb_cache["docs"] = None
+    _cloud_kb_cache["ts"] = 0
+    return result
+
 
 @app.post("/api/admin/cloud-kb/sync")
 async def sync_cloud_kb(user: dict = Depends(get_current_user)):

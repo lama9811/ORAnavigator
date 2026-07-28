@@ -2,7 +2,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { AlertCircle, BarChart3, Bot, Bug, CalendarPlus, Check, CheckCircle, CircleHelp, Clock, CloudUpload, Database, Flag, Gauge, GraduationCap, Inbox, Lightbulb, Link, Loader2, Mic, Pencil, RefreshCw, Save, Search, Server, Settings, ShieldUser, Smile, Square, ThumbsDown, ThumbsUp, Ticket, Trash2, User, Users, X } from "lucide-react";
+import { AlertCircle, BarChart3, Bot, Bug, CalendarPlus, Check, CheckCircle, CircleHelp, Clock, CloudUpload, Database, Flag, Gauge, GraduationCap, Inbox, Lightbulb, Link, Loader2, Mic, Pencil, Plus, RefreshCw, Save, Search, Server, Settings, ShieldUser, Smile, Square, ThumbsDown, ThumbsUp, Ticket, Trash2, User, Users, X } from "lucide-react";
+import KbTree from "./KbTree";
+import KbScrapePanel from "./KbScrapePanel";
 import "./AdminDashboard.css";
 
 import { getApiBase } from "../lib/apiBase";
@@ -75,12 +77,24 @@ export default function AdminDashboard() {
       .join(" ");
   };
 
-  // Get category badge color
-  const getCategoryColor = (id) => {
-    if (id.startsWith("academic")) return { bg: "#e8f5e9", color: "#2e7d32", label: "Academic" };
-    if (id.startsWith("career")) return { bg: "#e3f2fd", color: "#1565c0", label: "Career" };
-    if (id.startsWith("financial")) return { bg: "#fff3e0", color: "#e65100", label: "Financial" };
-    return { bg: "#f3e5f5", color: "#6a1b9a", label: "General" };
+  // Category badge, driven by the document's real `category` from struct_data.
+  // This used to guess from an "academic|career|financial" doc_id prefix list
+  // inherited from a different KB — no ORA document has ever matched it, so all
+  // 382 fell through to a "General" badge that told you nothing.
+  const CATEGORY_STYLES = {
+    about:                  { bg: "#e8eaf6", color: "#283593", label: "About" },
+    funding_sources:        { bg: "#e0f7fa", color: "#00695c", label: "Funding Sources" },
+    pre_award:              { bg: "#e3f2fd", color: "#1565c0", label: "Pre-Award" },
+    post_award:             { bg: "#e8f5e9", color: "#2e7d32", label: "Post-Award" },
+    policies_and_guidelines:{ bg: "#fff3e0", color: "#e65100", label: "Policies" },
+    research_compliance:    { bg: "#fce4ec", color: "#ad1457", label: "Compliance" },
+    trainings:              { bg: "#f3e5f5", color: "#6a1b9a", label: "Trainings" },
+    resources:              { bg: "#fffde7", color: "#f57f17", label: "Resources" },
+    ora_announcements:      { bg: "#eceff1", color: "#37474f", label: "Announcements" },
+  };
+  const getCategoryColor = (doc) => {
+    const cat = typeof doc === "string" ? doc : (doc?.category || "");
+    return CATEGORY_STYLES[cat] || { bg: "#f5f5f5", color: "#616161", label: "Unfiled" };
   };
 
   // Research Agent State
@@ -119,6 +133,11 @@ export default function AdminDashboard() {
   const [cloudKbSearchResults, setCloudKbSearchResults] = useState(null); // null = no search, [] = no results
   const [cloudKbSearching, setCloudKbSearching] = useState(false);
   const [cloudKbStats, setCloudKbStats] = useState({ total_documents: 0, total_size: 0, last_modified: "" });
+  const [cloudKbTree, setCloudKbTree] = useState({ tree: [], unfiled: [], paths: [], total: 0 });
+  const [showNewDoc, setShowNewDoc] = useState(false);
+  const [newDoc, setNewDoc] = useState({ title: "", content: "", kb_path: "", source_url: "" });
+  const [newDocId, setNewDocId] = useState({ doc_id: "", taken: false });
+  const [newDocSaving, setNewDocSaving] = useState(false);
   const [cloudKbDragActive, setCloudKbDragActive] = useState(false);
   const cloudKbFileRef = useRef(null);
   const cloudKbSearchTimer = useRef(null);
@@ -261,13 +280,88 @@ export default function AdminDashboard() {
   const loadCloudKbDocs = async () => {
     setCloudKbLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/cloud-kb/documents`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
+      // Both come off the same 60s server-side listing cache, so the tree costs
+      // no extra datastore round-trip. Fetching them together keeps the flat
+      // search results and the tree from ever disagreeing.
+      const [docsRes, treeRes] = await Promise.all([
+        fetch(`${API_BASE}/api/admin/cloud-kb/documents`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE}/api/admin/cloud-kb/tree`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (docsRes.ok) {
+        const data = await docsRes.json();
         setCloudKbDocs(data.documents || []);
+      }
+      if (treeRes.ok) {
+        setCloudKbTree(await treeRes.json());
       }
     } catch (err) { console.error("Failed to load cloud KB:", err); }
     finally { setCloudKbLoading(false); }
+  };
+
+  // Live doc_id preview + collision check, debounced so typing a title doesn't
+  // fire a request per keystroke.
+  useEffect(() => {
+    if (!showNewDoc || !newDoc.title.trim()) { setNewDocId({ doc_id: "", taken: false }); return; }
+    const t = setTimeout(async () => {
+      try {
+        const qs = new URLSearchParams({ title: newDoc.title, kb_path: newDoc.kb_path });
+        const res = await fetch(`${API_BASE}/api/admin/cloud-kb/doc-id?${qs}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) setNewDocId(await res.json());
+      } catch { /* preview only — the create call is what actually validates */ }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [showNewDoc, newDoc.title, newDoc.kb_path, token]);
+
+  const handleCreateDoc = async () => {
+    if (!newDoc.title.trim() || !newDoc.content.trim()) {
+      toast.error("Title and content are both required");
+      return;
+    }
+    setNewDocSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/cloud-kb/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(newDoc),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const where = cloudKbTree.paths?.find((p) => p.path === newDoc.kb_path)?.title || "Unfiled";
+        toast.success("Document created", { description: `${newDoc.title} → ${where}. Indexed instantly.` });
+        setShowNewDoc(false);
+        setNewDoc({ title: "", content: "", kb_path: "", source_url: "" });
+        await loadCloudKbDocs();
+        loadCloudKbStats();
+      } else {
+        toast.error(res.status === 409 ? "That document already exists" : "Could not create document", {
+          description: data.detail || "Unknown error",
+        });
+      }
+    } catch (err) { toast.error("Create error: " + err.message); }
+    finally { setNewDocSaving(false); }
+  };
+
+  const handlePlaceDoc = async (doc, kbPath) => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/admin/cloud-kb/documents/${doc.id}/placement`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ kb_path: kbPath }),
+        }
+      );
+      if (res.ok) {
+        const label = cloudKbTree.paths?.find((p) => p.path === kbPath)?.title || kbPath;
+        toast.success("Document filed", { description: `${doc.title || doc.id} → ${label}` });
+        loadCloudKbDocs();
+      } else {
+        const data = await res.json();
+        toast.error("Could not file document", { description: data.detail || "Unknown error" });
+      }
+    } catch (err) { toast.error("Placement error: " + err.message); }
   };
 
   const loadCloudKbStats = async () => {
@@ -1723,6 +1817,13 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Web scrape — keep morgan.edu and the KB in step */}
+          <KbScrapePanel
+            apiBase={API_BASE}
+            token={token}
+            onDocsChanged={() => { loadCloudKbDocs(); loadCloudKbStats(); }}
+          />
+
           {/* Drag & Drop Zone */}
           <div
             className={`kb-drop-zone ${cloudKbDragActive ? "active" : ""}`}
@@ -1781,10 +1882,18 @@ export default function AdminDashboard() {
                   <button className="action-btn" onClick={loadCloudKbDocs} disabled={cloudKbLoading} title="Refresh" style={{ padding: "4px 8px" }}>
                     <RefreshCw size={12} className={cloudKbLoading ? "spinning" : ""} />
                   </button>
-                  <label className="action-btn" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px" }} title="Upload new document">
+                  <label className="action-btn" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px" }} title="Upload a file">
                     <CalendarPlus size={12} />
                     <input type="file" ref={cloudKbFileRef} accept=".txt,.pdf,.html,.csv,.json" onChange={handleCloudKbUpload} style={{ display: "none" }} />
                   </label>
+                  <button
+                    className="action-btn primary"
+                    onClick={() => setShowNewDoc(true)}
+                    title="Write a new knowledge base document"
+                    style={{ padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  >
+                    <Plus size={12} /> New
+                  </button>
                 </div>
               </div>
               {cloudKbLoading || cloudKbSearching ? (
@@ -1816,28 +1925,16 @@ export default function AdminDashboard() {
                   })
                 )
               ) : (
-                // Show all files when not searching
-                cloudKbDocs.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className={`kb-file-item ${cloudKbSelected?.id === doc.id ? "active" : ""}`}
-                    onClick={() => loadCloudKbContent(doc)}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", flex: 1, minWidth: 0 }}>
-                      <span className="kb-filename">{formatDocName(doc.filename)}</span>
-                      <span style={{
-                        fontSize: "10px",
-                        padding: "1px 6px",
-                        borderRadius: "8px",
-                        width: "fit-content",
-                        background: getCategoryColor(doc.id).bg,
-                        color: getCategoryColor(doc.id).color,
-                        fontWeight: 600
-                      }}>{getCategoryColor(doc.id).label}</span>
-                    </div>
-                    <span className="kb-filesize">{doc.size > 0 ? formatBytes(doc.size) : ""}</span>
-                  </div>
-                ))
+                // Browse view: the morgan.edu-mirroring hierarchy. Searching
+                // still falls back to the flat match list above.
+                <KbTree
+                  tree={cloudKbTree.tree}
+                  unfiled={cloudKbTree.unfiled}
+                  paths={cloudKbTree.paths}
+                  selected={cloudKbSelected}
+                  onSelect={loadCloudKbContent}
+                  onPlace={handlePlaceDoc}
+                />
               )}
             </div>
 
@@ -1852,10 +1949,10 @@ export default function AdminDashboard() {
                         fontSize: "11px",
                         padding: "2px 8px",
                         borderRadius: "10px",
-                        background: getCategoryColor(cloudKbSelected.id).bg,
-                        color: getCategoryColor(cloudKbSelected.id).color,
+                        background: getCategoryColor(cloudKbSelected).bg,
+                        color: getCategoryColor(cloudKbSelected).color,
                         fontWeight: 600
-                      }}>{getCategoryColor(cloudKbSelected.id).label}</span>
+                      }}>{getCategoryColor(cloudKbSelected).label}</span>
                     </div>
                     <div className="kb-editor-actions">
                       <button
@@ -1990,6 +2087,80 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+
+          {/* New document — authored straight into a tree node */}
+          {showNewDoc && (
+            <div className="newdoc-backdrop" onClick={() => !newDocSaving && setShowNewDoc(false)}>
+              <div className="newdoc-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="newdoc-head">
+                  <h3>New knowledge base document</h3>
+                  <button className="newdoc-close" onClick={() => setShowNewDoc(false)} disabled={newDocSaving}>
+                    <X size={14} />
+                  </button>
+                </div>
+
+                <label className="newdoc-label">Section</label>
+                <select
+                  className="newdoc-input"
+                  value={newDoc.kb_path}
+                  onChange={(e) => setNewDoc({ ...newDoc, kb_path: e.target.value })}
+                >
+                  <option value="">Unfiled — decide later</option>
+                  {(cloudKbTree.paths || []).map((p) => (
+                    <option key={p.path} value={p.path}>{p.label}</option>
+                  ))}
+                </select>
+
+                <label className="newdoc-label">Title</label>
+                <input
+                  className="newdoc-input"
+                  autoFocus
+                  value={newDoc.title}
+                  placeholder="e.g. Cost Sharing Guidance"
+                  onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
+                />
+                {newDocId.doc_id && (
+                  <div className={`newdoc-id ${newDocId.taken ? "taken" : ""}`}>
+                    {newDocId.taken
+                      ? `⚠ "${newDocId.doc_id}" already exists — change the title`
+                      : `Will be created as: ${newDocId.doc_id}`}
+                  </div>
+                )}
+
+                <label className="newdoc-label">
+                  Source URL <span className="newdoc-hint">optional — the clickable "Source" the chatbot shows</span>
+                </label>
+                <input
+                  className="newdoc-input"
+                  value={newDoc.source_url}
+                  placeholder="https://www.morgan.edu/office-of-research-administration/..."
+                  onChange={(e) => setNewDoc({ ...newDoc, source_url: e.target.value })}
+                />
+
+                <label className="newdoc-label">Content</label>
+                <textarea
+                  className="newdoc-input newdoc-textarea"
+                  value={newDoc.content}
+                  placeholder="Write the document. This is exactly what the chatbot will search and quote from."
+                  onChange={(e) => setNewDoc({ ...newDoc, content: e.target.value })}
+                />
+
+                <div className="newdoc-actions">
+                  <span className="newdoc-note">Indexed instantly. Answer cache is cleared on save.</span>
+                  <button className="action-btn" onClick={() => setShowNewDoc(false)} disabled={newDocSaving}>
+                    Cancel
+                  </button>
+                  <button
+                    className="action-btn primary"
+                    onClick={handleCreateDoc}
+                    disabled={newDocSaving || newDocId.taken || !newDoc.title.trim() || !newDoc.content.trim()}
+                  >
+                    {newDocSaving ? "Creating..." : "Create document"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
