@@ -157,7 +157,7 @@ steps:
           --concurrency=100 \
           --allow-unauthenticated \
           --service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com \
-          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,ALGORITHM=HS256,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,REPLY_TO=oranav@morgan.edu,APP_URL=https://ora.inavigator.ai,API_URL=https://oranavigator-backend-ollhkgeova-uc.a.run.app,ALLOW_TEST_EMAILS=false,SKIP_EMAIL_VERIFICATION=true,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false,CHAT_LATENCY_BUDGET_S=5" \
+          --set-env-vars="USE_VERTEX_AGENT=true,ADK_BASE_URL=$$ADK_URL,ADK_APP_NAME=ora_navigator_unified,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,AGENT_MODEL=gemini-2.5-flash,UNIFIED_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8,ALGORITHM=HS256,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,FROM_EMAIL=oranav@morgan.edu,REPLY_TO=oranav@morgan.edu,APP_URL=https://ora.inavigator.ai,API_URL=https://oranavigator-backend-ollhkgeova-uc.a.run.app,ALLOW_TEST_EMAILS=false,SKIP_EMAIL_VERIFICATION=true,ACCESS_TOKEN_EXPIRE_MINUTES=240,SHOW_DASHBOARD_LOGS=false,CHAT_LATENCY_BUDGET_S=5" \
           --set-secrets="DATABASE_URL=ora-database-url:latest,JWT_SECRET=ora-jwt-secret:latest,ADMIN_EMAIL=ora-admin-email:latest,ADMIN_PASSWORD=ora-admin-password:latest,REDIS_URL=ora-redis-url:latest,FIRECRAWL_API_KEY=ora-firecrawl-api-key:latest,SMTP_USER=SMTP_USER:latest,SMTP_PASS=SMTP_PASS:latest"
         # Email sending (restored 2026-07-28). SMTP_USER/SMTP_PASS come from the
         # SMTP_USER + SMTP_PASS secrets (note: NOT the ora-* naming of the older
@@ -165,15 +165,21 @@ steps:
         # Password login for a real mailbox — a Google GROUP can never be used here,
         # it has no password.
         #
-        # FROM_EMAIL is deliberately NOT set: email_service.py falls back to
-        # SMTP_USER, and Gmail only permits a From it has authenticated as (or a
-        # verified send-as alias). Hardcoding a different address here is what made
-        # the old config wrong — it authenticated as one account and claimed another.
-        # To send as oranav@morgan.edu, first verify it as a send-as alias on the
-        # SMTP_USER account, THEN add FROM_EMAIL=oranav@morgan.edu to --set-env-vars.
+        # FROM_EMAIL=oranav@morgan.edu makes mail read "ORA Navigator
+        # <oranav@morgan.edu>" instead of exposing an individual's mailbox. This only
+        # works because Gmail accepts that From for the SMTP_USER account and does NOT
+        # rewrite it — VERIFIED 2026-07-28 by sending a live test and inspecting the
+        # delivered header. Gmail silently rewrites From to the authenticated account
+        # when it disallows the address, so if this address ever changes, re-test by
+        # sending and READING the delivered header. An accepted SMTP handshake proves
+        # nothing on its own.
         #
-        # REPLY_TO=oranav@morgan.edu needs no verification anywhere, so replies reach
-        # the shared group today regardless of the alias question.
+        # Do not point FROM_EMAIL at an address unrelated to SMTP_USER (the old config
+        # named noreplyinavigator@gmail.com while authenticating as a morgan.edu
+        # account) — that is the mismatch this replaced.
+        #
+        # REPLY_TO needs no verification anywhere, so replies reach the shared group
+        # regardless of the send-as alias question.
         #
         # SKIP_EMAIL_VERIFICATION is still true. Flip it to false only AFTER a live
         # send to a non-Morgan address succeeds — _send_email returns True without
