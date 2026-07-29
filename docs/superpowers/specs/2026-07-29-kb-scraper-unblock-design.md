@@ -123,13 +123,47 @@ Evidence required before calling this done:
 - After a real run: `scrape_changes` rows exist and **no** KB document was modified
   (propose-only invariant).
 
+## Amendment (2026-07-29): the fetch engine is Gemini, by product decision
+
+The scrape engine is `gemini-3.6-flash` via the URL Context tool
+(`kb_scraper/gemini_crawler.py`, `SCRAPE_ENGINE=gemini`, the default). Playwright
+remains available as `--engine=playwright` but is not what the button runs.
+
+Measured on all 59 live ORA URLs before deploying:
+
+| | Gemini engine | Playwright engine |
+|---|---|---|
+| Pages readable | 33 / 59 | 59 / 59 |
+| Blocked | **26 (all RECITATION)** | 0 |
+| Text | model extraction | verbatim |
+| Same page ×3, temp 0 | 1444 / 1466 / 1478 chars | identical SHA-256 |
+
+The 26 blocked pages are the compliance core: all of research-compliance, most of
+pre-award, post-award reporting, the PI handbooks, and `/ora`. **Those pages are
+not monitored.** A change to the IRB, COI, or budget-development page will not be
+detected. The pages that do work are About, Mission & Vision, Announcements, Staff
+Directory and Funding Sources.
+
+Consequences accepted with this choice:
+
+- **No fingerprint gate.** The extraction is not byte-stable, so `run.py` forces
+  `--audit` for this engine rather than reporting that every page moved on every
+  run. Every readable page is adjudicated every run — ~2 model calls per page.
+- **Weaker grounding.** `_quote_in` verifies the adjudicator's quote against the
+  model's own extraction rather than against the page, so golden rule 2 holds more
+  loosely here than on the Playwright engine.
+- **No discovery.** The work list is the KB's 59 known URLs; a new page on
+  morgan.edu is invisible to this engine.
+
+A Gemini-first / Playwright-fallback hybrid was offered and declined; it would have
+given 59/59 coverage with Gemini still doing the scraping wherever it can. Revisit
+by setting `SCRAPE_ENGINE=playwright`, which needs no code change.
+
 ## Out of scope
 
 - Widening reach beyond the 28 single-URL documents (the 31 multi-document pages
   stay report-only).
 - Any change to the chat path's model, including the `gemini-3.6-flash` question.
-- Replacing Playwright with Gemini's URL Context tool: its index-cache-first fetch
-  makes page text non-deterministic, which breaks the SHA-256 fingerprint gate, and
-  it does not render the JS accordions the IRB/IACUC content lives behind.
+- Widening coverage beyond the 33 pages the Gemini engine can read (see below).
 - Scheduling the scrape via Cloud Scheduler (`/api/internal/kb-scrape/run` still has
   no schedule).
