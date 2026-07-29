@@ -127,7 +127,26 @@ def main() -> int:
     )
     ap.add_argument("--limit", type=int, default=0, help="stop after N pages (smoke test)")
     ap.add_argument("--seed", action="append", default=[], help="override seed URL(s)")
+    ap.add_argument(
+        "--engine", choices=("gemini", "playwright"),
+        default=os.getenv("SCRAPE_ENGINE", "gemini"),
+        help="who reads the pages. gemini: gemini-3.6-flash via the URL Context "
+             "tool, no browser, works only on URLs the KB already knows. "
+             "playwright: headless Chromium, walks the site and finds new pages, "
+             "and returns the page verbatim so quotes can be verified against it.",
+    )
     args = ap.parse_args()
+
+    # The Gemini engine's page text is a model rendering, not a transcript, so it
+    # is NOT byte-stable: the same unchanged page read three times at
+    # temperature 0 measured 1444, 1466 and 1478 chars — three different hashes.
+    # A fingerprint that never matches cannot gate anything, and leaving the gate
+    # in would mean silently claiming "this page moved" on every page of every
+    # run. Adjudicate everything instead and let the model be the change signal,
+    # which is what this engine actually offers.
+    if args.engine == "gemini" and not args.audit:
+        args.audit = True
+        log.info("Gemini engine: fingerprint gate disabled (extraction is not byte-stable)")
 
     from crawler import MAX_PAGES
 
@@ -184,7 +203,24 @@ def main() -> int:
         run.current_url = result.url[:500]
         session.commit()
 
-    for result in crawl(seeds=seeds, max_pages=max_pages, on_page=on_page, should_stop=should_stop):
+    # The Gemini engine cannot discover links, so its work list is the KB's own
+    # known morgan.edu URLs rather than a walk of the site. That also means it
+    # can never surface a page the KB has no document for — use the playwright
+    # engine when the question is "what is new on the site".
+    if args.engine == "gemini":
+        from gemini_crawler import crawl as engine_crawl
+
+        page_source = engine_crawl(
+            urls=sorted(by_url), max_pages=max_pages, on_page=on_page, should_stop=should_stop
+        )
+        log.info("Engine: gemini (%d known URLs, no link discovery)", len(by_url))
+    else:
+        page_source = crawl(
+            seeds=seeds, max_pages=max_pages, on_page=on_page, should_stop=should_stop
+        )
+        log.info("Engine: playwright (crawling from %d seed(s))", len(seeds))
+
+    for result in page_source:
         stats["pages"] += 1
         url = result.url.rstrip("/")
         seen_urls.add(url)
