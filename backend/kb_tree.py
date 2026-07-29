@@ -137,7 +137,11 @@ def manifest_placements() -> dict[str, str]:
     return out
 
 
-def build_tree(docs: list[dict], fallback_to_manifest: bool = True) -> dict:
+def build_tree(
+    docs: list[dict],
+    fallback_to_manifest: bool = True,
+    pending: dict[str, dict] | None = None,
+) -> dict:
     """Join live documents onto the manifest shape.
 
     `docs` are rows from datastore_manager.list_datastore_documents().
@@ -157,16 +161,20 @@ def build_tree(docs: list[dict], fallback_to_manifest: bool = True) -> dict:
     _load()
     valid = set(_NODES)
     inherited = manifest_placements() if fallback_to_manifest else {}
+    # doc_id -> pending scrape proposal. Joined at render time rather than
+    # stored on the document, so an unapproved proposal leaves the document
+    # completely untouched.
+    pending = pending or {}
 
     by_path: dict[str, list[dict]] = {}
     unfiled: list[dict] = []
-    pending = 0
+    backfill_pending = 0        # distinct from `pending`, which is scrape proposals
     for d in docs:
         kb_path = (d.get("kb_path") or "").strip("/")
         if not kb_path:
             kb_path = inherited.get(d["id"], "")
             if kb_path:
-                pending += 1
+                backfill_pending += 1
         if kb_path and kb_path in valid:
             by_path.setdefault(kb_path, []).append(d)
         else:
@@ -189,19 +197,17 @@ def build_tree(docs: list[dict], fallback_to_manifest: bool = True) -> dict:
                     "title": d.get("title") or d["id"],
                     "size": d.get("size", 0),
                     "category": d.get("category", ""),
-                    "needs_review": bool(d.get("needs_review")),
-                    "last_auto_updated": d.get("last_auto_updated", ""),
-                    "what_changed": d.get("what_changed", ""),
+                    "pending_change": pending.get(d["id"]),
                 }
                 for d in here
             ],
             "children": children,
             # Recursive live count — what is actually in the datastore right now.
             "count": len(here) + sum(c["count"] for c in children),
-            # Recursive count of auto-updated documents awaiting review, so a
-            # collapsed section still shows there is something to look at.
-            "review_count": sum(1 for d in here if d.get("needs_review"))
-                            + sum(c["review_count"] for c in children),
+            # Recursive count of documents with an unapproved scrape proposal, so
+            # a collapsed section still shows there is something to look at.
+            "pending_count": sum(1 for d in here if pending.get(d["id"]))
+                             + sum(c["pending_count"] for c in children),
         }
 
     roots = _sorted_children("", _load().get("tree", []))
@@ -219,17 +225,15 @@ def build_tree(docs: list[dict], fallback_to_manifest: bool = True) -> dict:
                     "title": d.get("title") or d["id"],
                     "size": d.get("size", 0),
                     "category": d.get("category", ""),
-                    "needs_review": bool(d.get("needs_review")),
-                    "last_auto_updated": d.get("last_auto_updated", ""),
-                    "what_changed": d.get("what_changed", ""),
+                    "pending_change": pending.get(d["id"]),
                 }
                 for d in unfiled
             ),
             key=lambda d: d["title"],
         ),
         "total": len(docs),
-        "pending_backfill": pending,
-        "needs_review_total": sum(1 for d in docs if d.get("needs_review")),
+        "pending_backfill": backfill_pending,
+        "pending_total": sum(1 for d in docs if pending.get(d["id"])),
     }
 
 

@@ -2471,8 +2471,8 @@ async def list_kb_scrape_changes(
     if status:
         query = query.filter(ScrapeChange.status == status)
 
-    # Applied changes first — those are already live and most deserve a look.
-    order = {"applied": 0, "needs_review": 1, "skipped": 2, "cosmetic": 3}
+    # Pending first — those are the ones waiting on a decision.
+    order = {"pending": 0, "approved": 1, "rejected": 2, "skipped": 3, "cosmetic": 4}
     rows = query.order_by(ScrapeChange.id.desc()).limit(500).all()
     rows.sort(key=lambda c: order.get(c.status, 9))
 
@@ -2529,21 +2529,47 @@ async def revert_kb_scrape_change(
     return result
 
 
-@app.post("/api/admin/kb-scrape/changes/{change_id}/reviewed")
-async def mark_kb_scrape_change_reviewed(
+@app.post("/api/admin/kb-scrape/changes/{change_id}/approve")
+async def approve_kb_scrape_change(
     change_id: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    """Keep the auto-applied content and clear the review badge."""
+    """Apply a proposed change. This is the ONLY path by which a scrape reaches a
+    knowledge base document — until it runs, the crawl has written nothing."""
     import kb_scrape_service as scrape
 
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
-    result = await asyncio.to_thread(scrape.mark_reviewed, db, change_id, user.get("id"))
+    result = await asyncio.to_thread(scrape.approve_change, db, change_id, user.get("id"))
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
+
+    # The document's content changed, so the chatbot's cached answers and any
+    # live ADK sessions are now stale.
+    result["cache_cleared"] = query_cache.clear()
+    try:
+        from vertex_agent import _session_cache
+        _session_cache.clear()
+    except Exception:
+        pass
     _cloud_kb_cache["docs"] = None
     _cloud_kb_cache["ts"] = 0
+    return result
+
+
+@app.post("/api/admin/kb-scrape/changes/{change_id}/reject")
+async def reject_kb_scrape_change(
+    change_id: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Dismiss a proposal. Nothing was ever written, so nothing is undone."""
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    result = await asyncio.to_thread(scrape.reject_change, db, change_id, user.get("id"))
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
     return result
 
 
@@ -2633,7 +2659,11 @@ async def preview_cloud_kb_doc_id(
 
 
 @app.get("/api/admin/cloud-kb/tree")
-async def get_cloud_kb_tree(user: dict = Depends(get_current_user), refresh: bool = False):
+async def get_cloud_kb_tree(
+    user: dict = Depends(get_current_user),
+    refresh: bool = False,
+    db: Session = Depends(get_db),
+):
     """The KB as a browsable hierarchy mirroring morgan.edu/ora.
 
     Shape and titles come from the bundled manifest; placement comes from each
@@ -2642,6 +2672,7 @@ async def get_cloud_kb_tree(user: dict = Depends(get_current_user), refresh: boo
     are returned in `unfiled` rather than being dropped.
     """
     import time as _t
+    from kb_scrape_service import pending_by_doc
     from kb_tree import build_tree, flat_paths
 
     if user.get("role") != "admin":
@@ -2653,7 +2684,10 @@ async def get_cloud_kb_tree(user: dict = Depends(get_current_user), refresh: boo
             docs = await asyncio.to_thread(list_datastore_documents)
             _cloud_kb_cache["docs"] = docs
             _cloud_kb_cache["ts"] = _t.time()
-        result = build_tree(docs)
+        # Badges come from this join, not from the documents — an unapproved
+        # proposal must leave no mark on the document itself. Never cached with
+        # the doc list: approving a change has to clear the badge immediately.
+        result = build_tree(docs, pending=pending_by_doc(db))
         result["paths"] = flat_paths()
         return result
     except Exception as e:

@@ -269,3 +269,72 @@ def test_generated_ids_do_not_collide_with_seeded_ones():
     create time; this checks the prefix scheme keeps that rare."""
     existing = set(kb_tree.manifest_placements())
     assert kb_tree.suggest_doc_id("Cost Sharing Guidance", "pre_award") not in existing
+
+
+# ---------------------------------------------------------------------------
+# Pending scrape proposals — badged by joining, never by touching the document
+# ---------------------------------------------------------------------------
+
+def _proposal(what="Rate changed 26% -> 27%", draft=True):
+    return {"change_id": 1, "what_changed": what, "confidence": "high",
+            "has_draft": draft, "url": "https://www.morgan.edu/ora"}
+
+
+def test_pending_proposal_is_attached_to_its_document():
+    docs = [_doc("ora_history", "about/history")]
+    result = kb_tree.build_tree(docs, pending={"ora_history": _proposal()})
+    about = next(n for n in result["tree"] if n["path"] == "about")
+    history = next(c for c in about["children"] if c["slug"] == "history")
+    assert history["docs"][0]["pending_change"]["what_changed"].startswith("Rate changed")
+
+
+def test_documents_without_a_proposal_carry_none():
+    result = kb_tree.build_tree([_doc("ora_history", "about/history")], pending={})
+    about = next(n for n in result["tree"] if n["path"] == "about")
+    history = next(c for c in about["children"] if c["slug"] == "history")
+    assert history["docs"][0]["pending_change"] is None
+
+
+def test_pending_count_rolls_up_so_a_collapsed_section_still_shows_it():
+    docs = [
+        _doc("a", "research_compliance/animal_research/iacuc_sops"),
+        _doc("b", "research_compliance/animal_research/iacuc_forms"),
+        _doc("c", "research_compliance/human_subjects_research"),
+    ]
+    result = kb_tree.build_tree(docs, pending={"a": _proposal(), "b": _proposal()})
+    rc = next(n for n in result["tree"] if n["path"] == "research_compliance")
+    animal = next(c for c in rc["children"] if c["slug"] == "animal_research")
+    assert animal["pending_count"] == 2
+    assert rc["pending_count"] == 2          # rolls up from two different leaves
+    assert result["pending_total"] == 2
+
+
+def test_pending_total_ignores_proposals_for_documents_that_are_gone():
+    """A proposal against a deleted document must not inflate the badge count."""
+    result = kb_tree.build_tree(
+        [_doc("ora_history", "about/history")],
+        pending={"ora_history": _proposal(), "deleted_doc": _proposal()},
+    )
+    assert result["pending_total"] == 1
+
+
+def test_a_proposal_does_not_alter_the_document_row_itself():
+    """The badge is a join. Nothing about the document changes until approval —
+    that is the whole contract of the review-then-approve design."""
+    docs = [_doc("ora_history", "about/history", title="ORA History", size=1234)]
+    result = kb_tree.build_tree(docs, pending={"ora_history": _proposal()})
+    about = next(n for n in result["tree"] if n["path"] == "about")
+    row = next(c for c in about["children"] if c["slug"] == "history")["docs"][0]
+    assert row["title"] == "ORA History"
+    assert row["size"] == 1234
+    assert row["id"] == "ora_history"
+
+
+def test_pending_backfill_and_pending_proposals_are_different_things():
+    """Both were briefly called `pending` in the same function and collided."""
+    result = kb_tree.build_tree(
+        [_doc("ora_history")],                      # no kb_path -> manifest fallback
+        pending={"ora_history": _proposal()},
+    )
+    assert result["pending_backfill"] == 1          # relying on the manifest
+    assert result["pending_total"] == 1             # has a scrape proposal

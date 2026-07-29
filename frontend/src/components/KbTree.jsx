@@ -21,15 +21,17 @@ const formatBytes = (b) => {
 function DocRow({ doc, selected, onSelect }) {
   return (
     <div
-      className={`kb-tree-doc ${selected ? "active" : ""} ${doc.needs_review ? "review" : ""}`}
+      className={`kb-tree-doc ${selected ? "active" : ""} ${doc.pending_change ? "review" : ""}`}
       onClick={() => onSelect(doc)}
       title={
-        doc.needs_review
-          ? `Auto-updated ${doc.last_auto_updated || ""} — ${doc.what_changed || "needs review"}`
+        doc.pending_change
+          ? `Proposed update awaiting approval — ${doc.pending_change.what_changed}`
           : doc.id
       }
     >
-      {doc.needs_review && <AlertTriangle size={11} className="kb-tree-doc-warn" />}
+      {/* The document itself is unchanged; this badge is a join against pending
+          scrape proposals, cleared the moment one is approved or dismissed. */}
+      {doc.pending_change && <AlertTriangle size={11} className="kb-tree-doc-warn" />}
       <span className="kb-tree-doc-title">{doc.title || doc.id}</span>
       <span className="kb-tree-doc-size">{formatBytes(doc.size)}</span>
     </div>
@@ -50,9 +52,12 @@ function TreeNode({ node, depth, expanded, toggle, selected, onSelect }) {
         <span className="kb-tree-branch-title">{node.title}</span>
         {/* Recursive, so a collapsed section still shows there's something to
             look at inside it. */}
-        {node.review_count > 0 && (
-          <span className="kb-tree-count review" title={`${node.review_count} auto-updated, awaiting review`}>
-            ⚠ {node.review_count}
+        {node.pending_count > 0 && (
+          <span
+            className="kb-tree-count review"
+            title={`${node.pending_count} proposed update(s) awaiting approval`}
+          >
+            ⚠ {node.pending_count}
           </span>
         )}
         <span className="kb-tree-count">{node.count}</span>

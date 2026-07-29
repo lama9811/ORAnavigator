@@ -184,19 +184,81 @@ def change_to_dict(change: ScrapeChange) -> dict:
     }
 
 
-def revert_change(db: Session, change_id: int, user_id: int | None) -> dict:
-    """Undo an auto-applied change, restoring the content the scrape replaced.
+def approve_change(db: Session, change_id: int, user_id: int | None) -> dict:
+    """Apply a proposed change — the ONLY path by which a scrape reaches a document.
 
-    This is what makes auto-apply acceptable at all: every automatic write is
-    one click from being undone.
+    Until this runs, the scrape has written nothing to the datastore: the
+    document, its content and its metadata are exactly as they were before the
+    crawl. The previous content is captured here (re-read live, not trusted from
+    the proposal) so an approval is still undoable.
     """
-    from datastore_manager import update_document, update_review_flag
+    from datastore_manager import create_kb_document, get_document_content, update_document
 
     change = db.query(ScrapeChange).filter(ScrapeChange.id == change_id).first()
     if not change:
         return {"success": False, "message": "Change not found"}
-    if change.status != "applied":
-        return {"success": False, "message": "Only auto-applied changes can be reverted"}
+    if change.status != "pending":
+        return {"success": False, "message": f"Only pending changes can be approved (this one is {change.status})"}
+    if not (change.new_content or "").strip():
+        return {
+            "success": False,
+            "message": "This change has no proposed content — it is a pointer to review the "
+                       "page by hand, not something that can be approved.",
+        }
+
+    if change.change_type == "new":
+        return {
+            "success": False,
+            "message": "This is a new page with no document. Create one with the New button, "
+                       "choosing where it belongs in the tree.",
+        }
+
+    if not change.doc_id:
+        return {"success": False, "message": "No single document to update for this page"}
+
+    # Re-read the live content rather than trusting what the crawl captured: the
+    # document may have been edited by hand between the scrape and this click,
+    # and that edit is what a revert must restore.
+    change.previous_content = get_document_content(change.doc_id)
+
+    result = update_document(change.doc_id, change.new_content.encode("utf-8"))
+    if not result.get("success"):
+        return {"success": False, "message": result.get("message", "Update failed")}
+
+    change.status = "approved"
+    change.reviewed = True
+    change.reviewed_by = user_id
+    change.reviewed_at = _now()
+    db.commit()
+    return {"success": True, "message": f"Approved — {change.doc_id} updated", "doc_id": change.doc_id}
+
+
+def reject_change(db: Session, change_id: int, user_id: int | None) -> dict:
+    """Dismiss a proposal. The document was never touched, so there is nothing
+    to undo — this only clears it from the review queue and the tree badge."""
+    change = db.query(ScrapeChange).filter(ScrapeChange.id == change_id).first()
+    if not change:
+        return {"success": False, "message": "Change not found"}
+    if change.status not in ("pending",):
+        return {"success": False, "message": f"Only pending changes can be rejected (this one is {change.status})"}
+
+    change.status = "rejected"
+    change.reviewed = True
+    change.reviewed_by = user_id
+    change.reviewed_at = _now()
+    db.commit()
+    return {"success": True, "message": "Dismissed"}
+
+
+def revert_change(db: Session, change_id: int, user_id: int | None) -> dict:
+    """Undo an approval, restoring the content that was there before it."""
+    from datastore_manager import update_document
+
+    change = db.query(ScrapeChange).filter(ScrapeChange.id == change_id).first()
+    if not change:
+        return {"success": False, "message": "Change not found"}
+    if change.status != "approved":
+        return {"success": False, "message": "Only approved changes can be reverted"}
     if change.reverted:
         return {"success": False, "message": "Already reverted"}
     if not change.previous_content:
@@ -206,31 +268,36 @@ def revert_change(db: Session, change_id: int, user_id: int | None) -> dict:
     if not result.get("success"):
         return {"success": False, "message": result.get("message", "Restore failed")}
 
-    update_review_flag(change.doc_id, needs_review=False, changed_at=_now().date().isoformat())
     change.reverted = True
-    change.reviewed = True
     change.reviewed_by = user_id
     change.reviewed_at = _now()
     db.commit()
     return {"success": True, "message": f"Reverted {change.doc_id}"}
 
 
-def mark_reviewed(db: Session, change_id: int, user_id: int | None) -> dict:
-    """Accept an auto-applied change: keep the content, clear the ⚠ badge."""
-    from datastore_manager import update_review_flag
+def pending_by_doc(db: Session) -> dict[str, dict]:
+    """doc_id -> the pending proposal against it, for the tree's badge.
 
-    change = db.query(ScrapeChange).filter(ScrapeChange.id == change_id).first()
-    if not change:
-        return {"success": False, "message": "Change not found"}
-
-    if change.doc_id:
-        update_review_flag(change.doc_id, needs_review=False, changed_at=_now().date().isoformat())
-
-    change.reviewed = True
-    change.reviewed_by = user_id
-    change.reviewed_at = _now()
-    db.commit()
-    return {"success": True, "message": "Marked as reviewed"}
+    This join is why an unapproved proposal leaves NO trace on the document
+    itself — the badge is computed at render time from these rows rather than
+    written into struct_data.
+    """
+    out: dict[str, dict] = {}
+    rows = (
+        db.query(ScrapeChange)
+        .filter(ScrapeChange.status == "pending", ScrapeChange.doc_id.isnot(None))
+        .order_by(ScrapeChange.id.desc())
+        .all()
+    )
+    for c in rows:
+        out.setdefault(c.doc_id, {
+            "change_id": c.id,
+            "what_changed": c.what_changed or "",
+            "confidence": c.confidence or "",
+            "has_draft": bool((c.new_content or "").strip()),
+            "url": c.url,
+        })
+    return out
 
 
 def last_finished_run(db: Session):
