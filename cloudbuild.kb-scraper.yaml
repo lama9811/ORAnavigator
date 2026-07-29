@@ -7,8 +7,11 @@
 # changes rarely, so building it on every backend push would add minutes to each
 # deploy for no benefit and widen that blast radius.
 #
-# Build and deploy on demand:
-#   gcloud builds submit --config=cloudbuild.kb-scraper.yaml .
+# Build and deploy on demand. The SHORT_SHA substitution is REQUIRED: it is
+# populated only for repo-triggered builds, so on a local directory submit it is
+# empty and the image tag becomes the invalid "kb-scraper:".
+#   gcloud builds submit --config=cloudbuild.kb-scraper.yaml . \
+#     --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
 #
 # Run it by hand (the admin button does this via the API):
 #   gcloud run jobs execute oranavigator-kb-scraper --region=us-central1
@@ -25,10 +28,18 @@
 #   gcloud run jobs add-iam-policy-binding oranavigator-kb-scraper \
 #     --region=us-central1 \
 #     --member=serviceAccount:oranavigator-backend@$PROJECT_ID.iam.gserviceaccount.com \
-#     --role=roles/run.invoker
+#     --role=roles/run.jobsExecutorWithOverrides
 #
 # The second one is the easy one to miss: without it the button returns 403 and
 # the run sits in "queued" forever with no error anywhere in the app logs.
+#
+# It must be roles/run.jobsExecutorWithOverrides, NOT roles/run.invoker — this
+# file said run.invoker until 2026-07-29 and it is WRONG. run.invoker grants
+# run.jobs.run but NOT run.jobs.runWithOverrides, and kb_scrape_service.py passes
+# a container override to inject SCRAPE_RUN_ID. The backend SA already holds
+# run.invoker project-wide, so following the old instruction granted nothing and
+# left the identical 403 in place. roles/run.developer also works but carries
+# ~80 permissions including run.services.delete; this role is exactly three.
 # =============================================================================
 
 substitutions:
@@ -87,7 +98,13 @@ steps:
       - '--tasks=1'
       - '--set-cloudsql-instances=${PROJECT_ID}:${_REGION}:${_SQL_INSTANCE}'
       - '--service-account=oranavigator-backend@${PROJECT_ID}.iam.gserviceaccount.com'
-      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,SCRAPE_MODEL=gemini-2.5-flash,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8'
+      # SCRAPE_MODEL/_LOCATION are read ONLY by kb_scraper/adjudicator.py, so the
+      # newer model reaches the scraper and nothing else — the chat agent,
+      # coaching and opportunity ranking stay on gemini-2.5-flash in ${_REGION}.
+      # SCRAPE_MODEL_LOCATION=global is REQUIRED, not a preference:
+      # gemini-3.6-flash 404s in us-central1 and answers only on `global`, and a
+      # 404 here degrades silently to "no changes found" (golden rule 3).
+      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,SCRAPE_MODEL=gemini-3.6-flash,SCRAPE_MODEL_LOCATION=global,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8'
       - '--set-secrets=DATABASE_URL=ora-database-url:latest'
     waitFor: ['push-scraper']
 

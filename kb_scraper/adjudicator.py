@@ -145,7 +145,15 @@ def adjudicate(page_text: str, stored_content: str, title: str = "") -> Verdict:
         client = genai.Client(
             vertexai=True,
             project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-            location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+            # The scraper's model is pinned independently of every other Gemini
+            # caller, because gemini-3.6-flash is NOT served from us-central1 —
+            # it 404s there and answers only on `global`. Left on the shared
+            # GOOGLE_CLOUD_LOCATION, every adjudication would 404, and since a
+            # model failure falls back to "not material" (golden rule 3), the
+            # run would report zero changes and look like a clean crawl.
+            location=os.getenv(
+                "SCRAPE_MODEL_LOCATION", os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+            ),
         )
         response = client.models.generate_content(
             model=MODEL,
