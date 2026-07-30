@@ -113,11 +113,6 @@ def list_datastore_documents() -> list[dict]:
                 # committed snapshot so documents added after it was generated
                 # are still citable with a link.
                 "source_url": data.get("source_url", ""),
-                # Set by the scrape job when it auto-updates a document. Drives
-                # the amber badge in the admin tree; never indexed as content.
-                "needs_review": bool(data.get("needs_review", False)),
-                "last_auto_updated": data.get("last_auto_updated", ""),
-                "what_changed": data.get("what_changed", ""),
             })
     except Exception as e:
         log.error(f"Failed to list documents: {e}")
@@ -311,61 +306,6 @@ def update_document(doc_id: str, content: bytes, content_type: str = "text/plain
         return {"success": True, "message": f"Updated: {doc_id} (instant)"}
     except Exception as e:
         return {"success": False, "message": f"Failed to update: {e}"}
-
-
-def update_review_flag(
-    doc_id: str,
-    needs_review: bool,
-    what_changed: str = "",
-    changed_at: str = "",
-) -> dict:
-    """Flag (or clear) a document as auto-updated and awaiting human review.
-
-    Written to struct_data, NEVER to the document body. If this text went into
-    `content`, Vertex would index it and Gemini could quote it back — a PI
-    asking about F&A rates would get "this document was auto-updated, please
-    review" mixed into their answer. The admin UI reads these fields; the
-    chatbot never sees them.
-    """
-    client = _get_doc_client()
-    doc_name = f"{BRANCH}/documents/{doc_id}"
-
-    try:
-        existing = client.get_document(name=doc_name)
-    except NotFound:
-        return {"success": False, "message": f"Document not found: {doc_id}"}
-    except Exception as e:
-        return {"success": False, "message": f"Could not read document: {e}"}
-
-    data = dict(existing.struct_data) if existing.struct_data else {}
-    data.pop("content", None)
-
-    if needs_review:
-        data["needs_review"] = True
-        data["last_auto_updated"] = changed_at
-        if what_changed:
-            data["what_changed"] = what_changed[:1000]
-    else:
-        for key in ("needs_review", "what_changed"):
-            data.pop(key, None)
-        data["reviewed_at"] = changed_at
-
-    struct = Struct()
-    struct.update(data)
-
-    doc = discoveryengine.Document(name=doc_name, struct_data=struct)
-    if existing.content and existing.content.raw_bytes:
-        doc.content = discoveryengine.Document.Content(
-            raw_bytes=existing.content.raw_bytes,
-            mime_type=existing.content.mime_type or "text/plain",
-        )
-
-    try:
-        client.update_document(request=discoveryengine.UpdateDocumentRequest(document=doc))
-        invalidate_content_cache()
-        return {"success": True, "message": f"Review flag set on {doc_id}"}
-    except Exception as e:
-        return {"success": False, "message": f"Failed to set review flag: {e}"}
 
 
 def document_exists(doc_id: str) -> bool:

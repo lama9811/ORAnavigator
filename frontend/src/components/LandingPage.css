@@ -1,7 +1,13 @@
 /* Landing Page — editorial paper backdrop, subtle rule lines */
 
+/* The navbar is `position: fixed`, so it is out of flow. LandingPage renders as
+   a SIBLING of <NavBar> (not inside `.app-layout`, which carries the offset for
+   every other route), so without this margin the page starts at viewport y=0 and
+   its top --nav-h sits permanently UNDER the navbar: the message list can be
+   scrolled to scrollTop=0 and the first question bubble is still occluded. */
 .landing-page {
-  height: calc(100vh - 70px);
+  margin-top: var(--nav-h);
+  height: calc(100vh - var(--nav-h));
   width: 100%;
   background: var(--bg-body);
   background-image: var(--gradient-mesh);

@@ -3,7 +3,10 @@
 .guest-chat-main {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 70px);
+  /* Fill the wrapper. `.landing-page` already subtracts the navbar height, so
+     subtracting it a second time here would overflow the parent. */
+  height: 100%;
+  min-height: 0;
   background: var(--bg-body);
   overflow: hidden;
   width: 100%;

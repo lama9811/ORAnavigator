@@ -97,6 +97,29 @@ _OUTAGE_MSG = (
 # correct, grounded answer), so the gate is the coverage score alone.
 _GROUNDING_MIN_CHUNKS = 2          # (legacy) count of cited KB docs; not a gate
 _GROUNDING_MIN_COVERAGE = 0.5      # >= 50% of the answer backed by KB text -> deliver as-is
+#
+# ...EXCEPT that coverage cannot be computed at all when Gemini returns
+# groundingChunks without groundingSupports, which in production is ALWAYS.
+# Measured 2026-07-30 over 14 days of backend logs: 43 of 43 grounding events hit
+# the "chunks present, no segment data" branch and scored 0.0, and every coverage
+# value ever logged is 0% -- never once a partial score. Retrieval is healthy
+# (9-21 chunks/turn); it is the span metadata that Gemini omits.
+#
+# So the coverage gate has never measured anything, and every guest turn graded
+# "weak": a 100% false-positive rate that cost a needless strict regeneration
+# (10 of 14 weak events) or the _WEAK_NOTE caution (the other 4). This surfaced
+# only when the no-segment branch was correctly changed 2026-07-23 to fail closed
+# (0.0) instead of silently passing on the 0.5 `>=` boundary -- the right fix,
+# which turned "always silently pass" into "always weak".
+#
+# Resolved CITATIONS are therefore an additional pass condition. A citation is
+# backend-computed, not model-asserted: _extract_citations keeps only chunks that
+# resolve to a real ORA URL, and falls back to retrieval order when supports are
+# absent, so it is populated on exactly the turns coverage is not. Weaker than
+# the original intent (a bibliography proves the docs were retrieved, not that
+# every sentence came from them) but strictly stronger than a check that measures
+# nothing while claiming to. Coverage stays in place for the day Gemini emits
+# supports; it is simply no longer the ONLY gate.
 
 # Shown instead of an ungrounded answer when regeneration also fails.
 _REFUSAL_MSG = (
@@ -358,7 +381,8 @@ def _check_faculty_faithfulness(text: str) -> list[str]:
     return hallucinated
 
 
-def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_context: bool) -> str:
+def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_context: bool,
+                        citations: Optional[list] = None) -> str:
     """Classify an answer's KB grounding as 'ok' or 'weak'.
 
     'weak' means the answer is not backed by the knowledge base and should be
@@ -368,12 +392,17 @@ def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_co
       - it is a greeting / security / outage reply (no KB needed),
       - it is already an honest "I don't have this" deflection,
       - it was answered from attached context (uploaded file / profile),
-      - >= _GROUNDING_MIN_COVERAGE of it is backed by retrieved KB text.
+      - >= _GROUNDING_MIN_COVERAGE of it is backed by retrieved KB text,
+      - it resolved at least one real KB citation.
 
     NOTE: the chunk count is deliberately NOT a pass condition -- Gemini reports
-    it unreliably. The single "% backed" coverage score is the gate. A 'weak'
-    verdict triggers a single strict KB-only regeneration in _run_verified, and
-    only an outright refusal if that also comes back ungrounded.
+    it unreliably. Resolved CITATIONS are a different signal and DO pass: unlike
+    the raw count they are backend-computed (only chunks resolving to a real ORA
+    URL survive _extract_citations), and unlike coverage they are actually
+    present in production -- see the measurement note at _GROUNDING_MIN_COVERAGE.
+    A 'weak' verdict triggers a single strict KB-only regeneration in
+    _run_verified, and only an outright refusal if that also comes back
+    ungrounded.
     """
     if not text:
         return "weak"
@@ -384,6 +413,8 @@ def _evaluate_grounding(text: str, chunks: int, coverage: float, has_attached_co
     if has_attached_context:
         return "ok"
     if coverage >= _GROUNDING_MIN_COVERAGE:
+        return "ok"
+    if citations:
         return "ok"
     return "weak"
 
@@ -1280,7 +1311,8 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
         verdict = "weak"
     else:
         has_data = bool(context)
-        verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data)
+        verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], has_data,
+                                      result["citations"])
 
     # Personal-recall questions ("what department am I in?", "what's my
     # deadline?") are answered from the chat history, not the KB. The strict
@@ -1411,7 +1443,8 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
         yield {"type": "done", "content": _REFUSAL_MSG}
         return
 
-    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], bool(context))
+    verdict = _evaluate_grounding(text, result["chunks"], result["coverage"], bool(context),
+                                  result["citations"])
     if verdict == "weak" and _is_personal_recall(message):
         verdict = "ok"
     if verdict == "weak" and _is_smalltalk(message):

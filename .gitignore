@@ -2,6 +2,13 @@
 .env
 backend/.env
 frontend/.env
+# Backups of the above hold the SAME secrets. Bare `.env` matches only the exact
+# name, so a `.env.bak-1405` left by an edit was untracked-but-committable and
+# `git add -A` would have swept it into the repo.
+.env.*
+!.env.example
+backend/.env.*
+frontend/.env.*
 
 # Cloud Run service URLs written by deploy script
 .adk-url

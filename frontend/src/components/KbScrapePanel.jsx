@@ -28,10 +28,11 @@ const TYPE_LABEL = {
 };
 
 const STATUS_META = {
-  applied: { label: "Applied", cls: "applied", hint: "Content updated automatically. Review it." },
-  needs_review: { label: "Needs review", cls: "review", hint: "Not applied — decide by hand." },
-  skipped: { label: "Skipped", cls: "skipped", hint: "Page unreadable; document left alone." },
-  cosmetic: { label: "Cosmetic", cls: "cosmetic", hint: "Immaterial change; nothing written." },
+  pending:  { label: "Awaiting approval", cls: "review" },
+  approved: { label: "Approved", cls: "applied" },
+  rejected: { label: "Dismissed", cls: "skipped" },
+  skipped:  { label: "Couldn't read", cls: "skipped" },
+  cosmetic: { label: "Cosmetic", cls: "cosmetic" },
 };
 
 export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
@@ -133,6 +134,7 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
 
   const running = run?.status === "running" || run?.status === "queued";
   const visible = changes.filter((c) => c.status !== "cosmetic");
+  const pendingCount = changes.filter((c) => c.status === "pending").length;
 
   return (
     <div className="scrape-panel">
@@ -140,8 +142,9 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
         <div>
           <h3><Globe size={14} /> Web scrape</h3>
           <p>
-            Crawls morgan.edu/office-of-research-administration and updates documents
-            whose page actually changed.
+            Crawls morgan.edu/office-of-research-administration and proposes updates
+            for documents whose page changed. <strong>Nothing is written until you
+            approve it.</strong>
             {baseline > 0
               ? ` ${baseline} pages tracked.`
               : " First run establishes the baseline, so it checks every page."}
@@ -180,7 +183,7 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
             {run.eta_s != null && <span>~{fmtDuration(run.eta_s)} left</span>}
             {run.changes_found > 0 && (
               <span className="scrape-live-count">
-                {run.changes_found} changed · {run.changes_applied} applied
+                {run.changes_found} to review
               </span>
             )}
           </div>
@@ -204,10 +207,10 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
           {run.status === "succeeded" && (
             <>
               <Check size={14} /> Checked <strong>{run.pages_done}</strong> pages in{" "}
-              {fmtDuration(run.elapsed_s)} — <strong>{run.changes_applied}</strong> updated,{" "}
-              <strong>{(run.changes_found || 0) - (run.changes_applied || 0)}</strong> need a
-              look
-              {run.pages_failed > 0 && <>, {run.pages_failed} unreadable</>}.
+              {fmtDuration(run.elapsed_s)} — <strong>{pendingCount}</strong>{" "}
+              {pendingCount === 1 ? "change awaits" : "changes await"} your approval
+              {run.pages_failed > 0 && <>, {run.pages_failed} unreadable</>}. Nothing has
+              been changed yet.
             </>
           )}
           {run.status === "failed" && (
@@ -265,25 +268,40 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
                   {c.has_diff && (
                     <button className="scrape-linkbtn" onClick={() => showDiff(c)}>diff</button>
                   )}
-                  {c.status === "applied" && !c.reviewed && (
+                  {c.status === "pending" && (
                     <>
-                      <button
-                        className="scrape-linkbtn ok"
-                        disabled={busyId === c.id}
-                        onClick={() => act(c, "reviewed")}
-                        title="Keep this change and clear the badge"
-                      >
-                        <Check size={12} /> Looks good
-                      </button>
+                      {/* Only offered when there is an actual draft to apply. A
+                          multi-document page has no single replacement, so it
+                          gets Dismiss only. */}
+                      {c.has_diff && (
+                        <button
+                          className="scrape-linkbtn ok"
+                          disabled={busyId === c.id}
+                          onClick={() => act(c, "approve")}
+                          title="Save the proposed content as the new document"
+                        >
+                          <Check size={12} /> Approve
+                        </button>
+                      )}
                       <button
                         className="scrape-linkbtn undo"
                         disabled={busyId === c.id}
-                        onClick={() => act(c, "revert")}
-                        title="Restore the previous content"
+                        onClick={() => act(c, "reject")}
+                        title="Dismiss — the document was never changed"
                       >
-                        <RotateCcw size={12} /> Revert
+                        <X size={12} /> Dismiss
                       </button>
                     </>
+                  )}
+                  {c.status === "approved" && !c.reverted && (
+                    <button
+                      className="scrape-linkbtn undo"
+                      disabled={busyId === c.id}
+                      onClick={() => act(c, "revert")}
+                      title="Restore the content this replaced"
+                    >
+                      <RotateCcw size={12} /> Undo
+                    </button>
                   )}
                 </div>
               </div>

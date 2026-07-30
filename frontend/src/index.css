@@ -93,7 +93,18 @@
   --radius-xl: 14px;
   --radius-2xl: 18px;
   --radius-full: 9999px;
+
+  /* Height of the fixed navbar. MUST track the `.navbar` height rules in
+     NavBar.css breakpoint-for-breakpoint — any layout that offsets for the
+     navbar reads this instead of hardcoding a pixel value. */
+  --nav-h: 70px;
 }
+
+@media (min-width: 1440px)                        { :root { --nav-h: 75px; } }
+@media (max-width: 1023px) and (min-width: 768px) { :root { --nav-h: 65px; } }
+@media (max-width: 767px)                         { :root { --nav-h: 60px; } }
+@media (max-width: 480px)                         { :root { --nav-h: 56px; } }
+@media (max-width: 374px)                         { :root { --nav-h: 52px; } }
 
 /* Dark Mode — Midnight library theme */
 body.dark {

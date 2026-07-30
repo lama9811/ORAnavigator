@@ -38,6 +38,34 @@ def test_coverage_bar_is_fifty_percent():
     assert _evaluate_grounding("Pre-award proposals are due Friday.", 9, 0.45, False) == "weak"
 
 
+def test_resolved_citations_clear_the_bar_when_coverage_cannot_be_computed():
+    """THE production case. Gemini returns groundingChunks but never
+    groundingSupports (43/43 events over 14 days, 2026-07-30), so coverage is
+    always 0.0 and every guest answer graded 'weak' -- a 100% false positive that
+    bought a needless regeneration or a wrong "couldn't verify" caution note.
+
+    A resolved citation passes instead. It is NOT the raw chunk count above: only
+    chunks resolving to a real ORA URL survive _extract_citations, so this is a
+    backend-computed signal rather than a model-asserted one."""
+    text = "Full-time tenure-track faculty automatically qualify as PI/PD."
+    cites = [{"title": "Pre-Award — Role of Principal Investigator",
+              "url": "https://www.morgan.edu/office-of-research-administration/"
+                     "pre-award/role-of-principal-investigator"}]
+    assert _evaluate_grounding(text, 14, 0.0, False, cites) == "ok"
+
+
+def test_no_citations_still_weak_without_coverage():
+    """The gate must still bite. Chunks retrieved but nothing resolved to a real
+    ORA URL, and no coverage -> genuinely unverified."""
+    assert _evaluate_grounding("Pre-award proposals are due Friday.",
+                               14, 0.0, False, []) == "weak"
+
+
+def test_citations_default_to_none_for_existing_callers():
+    """The parameter is optional -- omitting it must behave exactly as before."""
+    assert _evaluate_grounding("Pre-award proposals are due Friday.", 14, 0.0, False) == "weak"
+
+
 def test_attached_context_is_ok():
     """An answer drawing on an uploaded file / profile is not a KB hallucination."""
     assert _evaluate_grounding("Your uploaded budget lists $50,000.", 0, 0.0, True) == "ok"
