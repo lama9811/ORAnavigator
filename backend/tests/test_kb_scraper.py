@@ -297,3 +297,96 @@ def test_playwright_does_not_force_audit():
 
 def test_explicit_audit_flag_is_honoured_on_playwright():
     assert run.resolve_audit("playwright", True) is True
+
+
+# ---------------------------------------------------------------------------
+# Baseline reads and fingerprint writes are scoped to the engine that ran, so
+# switching engines re-baselines silently instead of reporting every page as
+# changed — and instead of reporting every old URL as removed from the site.
+# ---------------------------------------------------------------------------
+
+def _fp(session, url, digest, engine):
+    from models import KbPageFingerprint
+    session.add(KbPageFingerprint(url=url, fingerprint=digest, engine=engine))
+    session.commit()
+
+
+def test_baseline_ignores_rows_written_by_another_engine(db_session):
+    _fp(db_session, "https://www.morgan.edu/ora", "g" * 64, "gemini")
+
+    assert run.load_baseline(db_session, "playwright") == {}
+
+
+def test_baseline_returns_rows_written_by_this_engine(db_session):
+    _fp(db_session, "https://www.morgan.edu/ora", "p" * 64, "playwright")
+
+    assert run.load_baseline(db_session, "playwright") == {
+        "https://www.morgan.edu/ora": "p" * 64
+    }
+
+
+def test_baseline_ignores_pre_migration_rows_with_no_engine(db_session):
+    _fp(db_session, "https://www.morgan.edu/ora", "n" * 64, None)
+
+    assert run.load_baseline(db_session, "playwright") == {}
+
+
+def test_a_gemini_era_url_is_not_reported_as_removed_from_the_site(db_session):
+    """The removed-page sweep is `prior` minus the URLs seen this run. Scoping
+    `prior` by engine is what stops a switch from proposing that every page was
+    deleted."""
+    _fp(db_session, "https://www.morgan.edu/ora", "g" * 64, "gemini")
+
+    prior = run.load_baseline(db_session, "playwright")
+    seen = set()  # nothing crawled yet
+    assert [u for u in prior if u not in seen] == []
+
+
+def test_upsert_updates_a_row_written_by_the_other_engine(db_session):
+    """url is unique=True, so a bare INSERT would raise IntegrityError here."""
+    from models import KbPageFingerprint
+
+    _fp(db_session, "https://www.morgan.edu/ora", "g" * 64, "gemini")
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora", digest="p" * 64,
+        engine="playwright", title="ORA", doc_ids=["about_ora"],
+        char_count=2128, changed=False,
+    )
+    db_session.commit()
+
+    rows = db_session.query(KbPageFingerprint).all()
+    assert len(rows) == 1
+    assert rows[0].fingerprint == "p" * 64
+    assert rows[0].engine == "playwright"
+    assert rows[0].char_count == 2128
+
+
+def test_upsert_inserts_when_the_page_is_new(db_session):
+    from models import KbPageFingerprint
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora/new", digest="p" * 64,
+        engine="playwright", title="New", doc_ids=[], char_count=10, changed=False,
+    )
+    db_session.commit()
+
+    assert db_session.query(KbPageFingerprint).count() == 1
+
+
+def test_upsert_only_stamps_last_changed_when_the_page_changed(db_session):
+    from models import KbPageFingerprint
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora", digest="p" * 64,
+        engine="playwright", title="ORA", doc_ids=[], char_count=1, changed=False,
+    )
+    db_session.commit()
+    assert db_session.query(KbPageFingerprint).one().last_changed_at is None
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora", digest="q" * 64,
+        engine="playwright", title="ORA", doc_ids=[], char_count=1, changed=True,
+    )
+    db_session.commit()
+    assert db_session.query(KbPageFingerprint).one().last_changed_at is not None

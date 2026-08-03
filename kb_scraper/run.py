@@ -162,6 +162,56 @@ def resolve_audit(engine: str, audit: bool) -> bool:
     return audit
 
 
+def load_baseline(session, engine: str) -> dict[str, str]:
+    """{url: fingerprint} for pages THIS engine has read before.
+
+    Scoped by engine on purpose. A fingerprint is a hash of the extracted text,
+    and the two engines extract the same unchanged page differently — so a hash
+    written by the other engine is not a baseline, it is noise that would make
+    every page look changed. Rows with engine NULL predate the column and are
+    treated the same way.
+
+    This also scopes the removed-page sweep at the end of a run, which is
+    `prior` minus the URLs seen: without the filter, switching engines would
+    propose that every previously-known page had been deleted from the site.
+    """
+    from models import KbPageFingerprint
+
+    rows = (
+        session.query(KbPageFingerprint)
+        .filter(KbPageFingerprint.engine == engine)
+        .all()
+    )
+    return {r.url: r.fingerprint for r in rows}
+
+
+def upsert_fingerprint(session, *, url: str, digest: str, engine: str, title: str,
+                       doc_ids: list, char_count: int, changed: bool):
+    """Record what this engine saw at this URL, updating the row if one exists.
+
+    Must be an upsert rather than an insert: `url` is unique, so a page that
+    already carries another engine's row would raise IntegrityError on a bare
+    add. `last_changed_at` is only stamped when the page actually moved, so it
+    keeps meaning "when did this page last change" rather than "when did we
+    last look".
+    """
+    from models import KbPageFingerprint
+
+    fp = session.query(KbPageFingerprint).filter(KbPageFingerprint.url == url).first()
+    if fp is None:
+        fp = KbPageFingerprint(url=url, created_at=_now())
+        session.add(fp)
+    fp.fingerprint = digest
+    fp.engine = engine
+    fp.title = (title or "")[:500]
+    fp.doc_ids = json.dumps(doc_ids)
+    fp.char_count = char_count
+    fp.last_seen_at = _now()
+    if changed:
+        fp.last_changed_at = _now()
+    return fp
+
+
 def main() -> int:
     args = build_parser().parse_args()
 
@@ -197,11 +247,8 @@ def main() -> int:
     # what actually moved.
     prior: dict[str, str] = {}
     if not args.dry_run:
-        from models import KbPageFingerprint
-        prior = {
-            f.url: f.fingerprint for f in session.query(KbPageFingerprint).all()
-        }
-    log.info("Baseline: %d known page fingerprints", len(prior))
+        prior = load_baseline(session, args.engine)
+    log.info("Baseline: %d known page fingerprints for engine=%s", len(prior), args.engine)
 
     stats = {"pages": 0, "unreadable": 0, "unchanged": 0, "cosmetic": 0,
              "pending": 0, "new": 0}
@@ -292,12 +339,11 @@ def main() -> int:
         if known is None and doc_ids and not args.audit:
             stats["baselined"] = stats.get("baselined", 0) + 1
             if not args.dry_run:
-                fp = KbPageFingerprint(url=url, fingerprint=digest, created_at=_now())
-                fp.title = (result.title or "")[:500]
-                fp.doc_ids = json.dumps(doc_ids)
-                fp.char_count = len(result.text)
-                fp.last_seen_at = _now()
-                session.add(fp)
+                upsert_fingerprint(
+                    session, url=url, digest=digest, engine=args.engine,
+                    title=result.title, doc_ids=doc_ids,
+                    char_count=len(result.text), changed=False,
+                )
                 session.commit()
             continue
 
@@ -397,16 +443,11 @@ def main() -> int:
         # Baseline advances for everything we successfully READ, including
         # cosmetic changes — otherwise the same immaterial edit is re-judged,
         # and re-paid for, on every future run.
-        fp = session.query(KbPageFingerprint).filter(KbPageFingerprint.url == url).first()
-        if not fp:
-            fp = KbPageFingerprint(url=url, fingerprint=digest, created_at=_now())
-            session.add(fp)
-        fp.fingerprint = digest
-        fp.title = (result.title or "")[:500]
-        fp.doc_ids = json.dumps(doc_ids)
-        fp.char_count = len(result.text)
-        fp.last_seen_at = _now()
-        fp.last_changed_at = _now()
+        upsert_fingerprint(
+            session, url=url, digest=digest, engine=args.engine,
+            title=result.title, doc_ids=doc_ids,
+            char_count=len(result.text), changed=True,
+        )
 
         run.changes_found = stats["pending"] + stats["new"]
         session.commit()
