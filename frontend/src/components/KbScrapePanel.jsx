@@ -136,6 +136,86 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const visible = changes.filter((c) => c.status !== "cosmetic");
   const pendingCount = changes.filter((c) => c.status === "pending").length;
 
+  // Pending items split by whether there is actually anything to approve.
+  // A page feeding many documents never gets a draft — re-splitting the IACUC
+  // SOPs page back across its 52 documents unattended would corrupt all of
+  // them — so it can only ever be a pointer to go and look. Mixed into one
+  // list, a run with nothing approvable read as a broken Approve button rather
+  // than a deliberate refusal, which is exactly how it was reported.
+  const readyToApprove = visible.filter((c) => c.status === "pending" && c.has_diff);
+  const reviewByHand = visible.filter((c) => c.status === "pending" && !c.has_diff);
+  const settled = visible.filter((c) => c.status !== "pending");
+
+  const renderChange = (c) => {
+    const meta = STATUS_META[c.status] || STATUS_META.needs_review;
+    return (
+      <div key={c.id} className={`scrape-change ${meta.cls} ${c.reverted ? "reverted" : ""}`}>
+        <div className="scrape-change-main">
+          <div className="scrape-change-title">
+            <span className={`scrape-tag ${meta.cls}`}>{TYPE_LABEL[c.change_type] || c.change_type}</span>
+            <strong>{c.page_title || c.doc_id || c.url}</strong>
+            {c.reverted && <span className="scrape-tag reverted">reverted</span>}
+          </div>
+          <div className="scrape-change-what">{c.what_changed}</div>
+          {c.evidence_quote && (
+            <div className="scrape-change-quote">“{c.evidence_quote}”</div>
+          )}
+          {c.affected_doc_ids?.length > 1 && (
+            <div className="scrape-change-affected">
+              {c.affected_doc_ids.length} documents derive from this page:{" "}
+              {c.affected_doc_ids.slice(0, 6).join(", ")}
+              {c.affected_doc_ids.length > 6 && ` +${c.affected_doc_ids.length - 6} more`}
+            </div>
+          )}
+        </div>
+
+        <div className="scrape-change-actions">
+          <a href={c.url} target="_blank" rel="noreferrer" className="scrape-linkbtn" title="Open the live page">
+            <ExternalLink size={12} />
+          </a>
+          {c.has_diff && (
+            <button className="scrape-linkbtn" onClick={() => showDiff(c)}>diff</button>
+          )}
+          {c.status === "pending" && (
+            <>
+              {/* Only offered when there is an actual draft to apply. A
+                  multi-document page has no single replacement, so it
+                  gets Dismiss only. */}
+              {c.has_diff && (
+                <button
+                  className="scrape-linkbtn ok"
+                  disabled={busyId === c.id}
+                  onClick={() => act(c, "approve")}
+                  title="Save the proposed content as the new document"
+                >
+                  <Check size={12} /> Approve
+                </button>
+              )}
+              <button
+                className="scrape-linkbtn undo"
+                disabled={busyId === c.id}
+                onClick={() => act(c, "reject")}
+                title="Dismiss — the document was never changed"
+              >
+                <X size={12} /> Dismiss
+              </button>
+            </>
+          )}
+          {c.status === "approved" && !c.reverted && (
+            <button
+              className="scrape-linkbtn undo"
+              disabled={busyId === c.id}
+              onClick={() => act(c, "revert")}
+              title="Restore the content this replaced"
+            >
+              <RotateCcw size={12} /> Undo
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="scrape-panel">
       <div className="scrape-head">
@@ -238,75 +318,56 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
             </span>
           </div>
 
-          {visible.map((c) => {
-            const meta = STATUS_META[c.status] || STATUS_META.needs_review;
-            return (
-              <div key={c.id} className={`scrape-change ${meta.cls} ${c.reverted ? "reverted" : ""}`}>
-                <div className="scrape-change-main">
-                  <div className="scrape-change-title">
-                    <span className={`scrape-tag ${meta.cls}`}>{TYPE_LABEL[c.change_type] || c.change_type}</span>
-                    <strong>{c.page_title || c.doc_id || c.url}</strong>
-                    {c.reverted && <span className="scrape-tag reverted">reverted</span>}
-                  </div>
-                  <div className="scrape-change-what">{c.what_changed}</div>
-                  {c.evidence_quote && (
-                    <div className="scrape-change-quote">“{c.evidence_quote}”</div>
-                  )}
-                  {c.affected_doc_ids?.length > 1 && (
-                    <div className="scrape-change-affected">
-                      {c.affected_doc_ids.length} documents derive from this page:{" "}
-                      {c.affected_doc_ids.slice(0, 6).join(", ")}
-                      {c.affected_doc_ids.length > 6 && ` +${c.affected_doc_ids.length - 6} more`}
-                    </div>
-                  )}
-                </div>
-
-                <div className="scrape-change-actions">
-                  <a href={c.url} target="_blank" rel="noreferrer" className="scrape-linkbtn" title="Open the live page">
-                    <ExternalLink size={12} />
-                  </a>
-                  {c.has_diff && (
-                    <button className="scrape-linkbtn" onClick={() => showDiff(c)}>diff</button>
-                  )}
-                  {c.status === "pending" && (
-                    <>
-                      {/* Only offered when there is an actual draft to apply. A
-                          multi-document page has no single replacement, so it
-                          gets Dismiss only. */}
-                      {c.has_diff && (
-                        <button
-                          className="scrape-linkbtn ok"
-                          disabled={busyId === c.id}
-                          onClick={() => act(c, "approve")}
-                          title="Save the proposed content as the new document"
-                        >
-                          <Check size={12} /> Approve
-                        </button>
-                      )}
-                      <button
-                        className="scrape-linkbtn undo"
-                        disabled={busyId === c.id}
-                        onClick={() => act(c, "reject")}
-                        title="Dismiss — the document was never changed"
-                      >
-                        <X size={12} /> Dismiss
-                      </button>
-                    </>
-                  )}
-                  {c.status === "approved" && !c.reverted && (
-                    <button
-                      className="scrape-linkbtn undo"
-                      disabled={busyId === c.id}
-                      onClick={() => act(c, "revert")}
-                      title="Restore the content this replaced"
-                    >
-                      <RotateCcw size={12} /> Undo
-                    </button>
-                  )}
-                </div>
+          <div className="scrape-group">
+            <div className="scrape-group-head">
+              <h5>
+                Ready to approve
+                <span className="scrape-group-n">{readyToApprove.length}</span>
+              </h5>
+              <p>
+                One page, one document — there is a drafted replacement, so Approve
+                writes it and Undo puts the old version back.
+              </p>
+            </div>
+            {readyToApprove.length > 0 ? (
+              readyToApprove.map(renderChange)
+            ) : (
+              <div className="scrape-empty">
+                {reviewByHand.length > 0
+                  ? "Nothing from this run can be applied automatically. Every changed page below feeds more than one document, so there is no single replacement to write — which is why no Approve button appears."
+                  : "Nothing is waiting on your approval."}
               </div>
-            );
-          })}
+            )}
+          </div>
+
+          {reviewByHand.length > 0 && (
+            <div className="scrape-group">
+              <div className="scrape-group-head">
+                <h5>
+                  Review by hand
+                  <span className="scrape-group-n">{reviewByHand.length}</span>
+                </h5>
+                <p>
+                  Each of these pages feeds several documents, so there is no single
+                  replacement to approve. Open the page, check the documents it feeds,
+                  then dismiss. Nothing here can change a document.
+                </p>
+              </div>
+              {reviewByHand.map(renderChange)}
+            </div>
+          )}
+
+          {settled.length > 0 && (
+            <div className="scrape-group">
+              <div className="scrape-group-head">
+                <h5>
+                  Already handled
+                  <span className="scrape-group-n">{settled.length}</span>
+                </h5>
+              </div>
+              {settled.map(renderChange)}
+            </div>
+          )}
         </div>
       )}
 

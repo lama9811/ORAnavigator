@@ -734,7 +734,7 @@ Create the `ScrapeRun` row first (or run it from the panel and note the id), sin
 
 ## Notes for the implementer
 
-- **`cloudbuild.kb-scraper.yaml` deliberately does not set `SCRAPE_ENGINE`.** The code default governs, so there is one source of truth. Don't add the env var "for clarity" — it would create a second place to change.
+- **`SCRAPE_ENGINE` is set by hand on the live Job — the repo does not show it.** `cloudbuild.kb-scraper.yaml` never mentions it, but the deployed Job carried `SCRAPE_ENGINE=gemini` (observed 2026-08-03 on execution `…-dlccm`). An env var beats the code default, so flipping the default in `build_parser()` and shipping it would have changed nothing, silently. Line 107 uses **`--set-env-vars`**, which replaces the whole environment set, so deploying through that file clears the stale value — that, not the absence of the var from the yaml, is what makes the code default govern. **Verify with `gcloud run jobs executions describe <exec>` after deploying**, and never change line 107 to `--update-env-vars`.
 - **The test file loads scraper modules by file path** (`_load("run")` at the top of `test_kb_scraper.py`), because importing the package pulls in `google-adk`, which is not always installed locally. Follow that pattern; do not add a normal import.
 - **`kb_scraper/crawler.py` imports Playwright inside `crawl()`**, not at module scope, so `_load("run")` works in a test environment with no browser installed. Keep it that way.
 - **Do not touch the `result.unreadable` branch.** A failed read is reported and the document is left alone; treating it as deleted content is the most destructive thing this job could do.
