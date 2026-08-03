@@ -156,13 +156,40 @@ and the admin button cannot trigger it: `--audit` has to be passed as an args ov
 on a manual `gcloud run jobs execute` (alongside `SCRAPE_RUN_ID`, which the backend
 normally injects).
 
+## Measured against the live site (2026-08-03)
+
+Run before any code change, against `www.morgan.edu` from a residential IP, driving
+`kb_scraper/crawler.py:fetch_page` directly. Read-only — no database, no datastore.
+
+**1. Coverage — 21/21 pages readable, including all 18 the Gemini engine refuses.**
+Every page CLAUDE.md records as RECITATION-blocked came back with real content:
+compliance root, human subjects/IRB, animal research, IACUC SOPs, IACUC forms, COI,
+research security, NSPM-33, RCR, Maryland ethics, budget development, internal routing
+form, proposal components, role of PI, F&A cost rates, post-award reporting, PI
+handbooks, and `/ora`. The three known-readable control pages also passed. **The 44%
+blackout is eliminated, not reduced.**
+
+**2. Byte-stability — identical hashes across three consecutive reads.**
+`fanda-cost-rates` measured 1540 chars / `4ff3c4ad…` three times; `iacuc-sops` measured
+3102 chars / `34f1aae5…` three times. Compare with the Gemini engine's 1444/1466/1478
+on one unchanged page. **The fingerprint gate is viable.**
+
+**3. Accordion expansion works.** The IACUC SOPs page — the one that produced 52
+documents — yields **50 `SOP n.n:` entries** in the extracted text (91 non-empty lines),
+so `_expand_accordions()` is reaching the content that is absent from the served HTML.
+
+**Timing:** 1.7-7.0s per page, ~2.9s median. A 59-page crawl is ~3 min; even at the
+`MAX_PAGES=600` ceiling it stays inside the 3600s task timeout.
+
+Scripts used are in the session scratchpad (not committed — one-off verification).
+
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| Playwright's live pass rate on morgan.edu is unmeasured (the 56% Gemini figure is measured; this one is not) | `--dry-run --engine=playwright --limit 20` smoke test against the live site, first task in the plan, before any code change |
+| ~~Playwright's live pass rate is unmeasured~~ | **Resolved** — 21/21 readable, measured above |
 | A page that fails to render looks like deleted content | Already handled — `looks_unreadable()` routes 404s, timeouts, empty renders and 404-bodies-served-with-200 to a `skipped` row that never touches the document |
-| Crawl exceeds the 3600s task timeout | ~3s/page + 0.4s politeness delay; `MAX_PAGES=600` is a runaway guard. ~59-150 pages ≈ 5-10 min. Measured in the smoke test |
+| Crawl exceeds the 3600s task timeout | Measured at ~2.9s/page median + 0.4s politeness delay; `MAX_PAGES=600` is a runaway guard. 59 pages ≈ 3 min |
 | First run floods the review queue with new-page rows | Accepted (see above). If it proves unusable, gate new-page proposals behind a flag in a follow-up |
 
 ## Testing
@@ -180,7 +207,7 @@ Plus the live smoke test, run by hand and its result recorded in the plan.
 
 ## Rollout
 
-1. Smoke-test Playwright against the live site (`--dry-run --limit 20`)
+1. ~~Smoke-test Playwright against the live site~~ — **done, see Measured above**
 2. Implement, with tests green (`cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 python3 -m pytest -q --ignore=tests/test_agent_instruction.py`)
 3. Rebuild the scraper job image — `gcloud builds submit --config=cloudbuild.kb-scraper.yaml . --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)`. The `SHORT_SHA` substitution is required; a local submit leaves it empty and the image tag becomes the invalid `kb-scraper:`
 4. Deploy the backend (for the `init_db()` migration) — `gcloud builds submit --config=cloudbuild.yaml .`, and **confirm the deploy actually ran** with `gcloud run services describe <svc> --region=us-central1 --format='value(status.latestReadyRevisionName)'`. A merge to `main` ships nothing
