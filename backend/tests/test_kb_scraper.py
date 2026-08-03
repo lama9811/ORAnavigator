@@ -214,3 +214,48 @@ def test_unparseable_response_returns_none():
 def test_diff_summary_reports_direction_of_change():
     summary = fp.summarize_diff("The rate is 54%.", "The rate is 55%.")
     assert "54" in summary and "55" in summary
+
+
+# ---------------------------------------------------------------------------
+# Fingerprints are engine-specific — a hash of Gemini's markdown extraction and
+# a hash of Playwright's inner_text() differ for the SAME unchanged page, so a
+# row must record who wrote it or the first run after a switch reports every
+# page as changed.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def db_session():
+    """In-memory SQLite carrying the real model definitions."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from models import Base
+
+    eng = create_engine("sqlite://")
+    Base.metadata.create_all(bind=eng)
+    s = sessionmaker(bind=eng)()
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+def test_fingerprint_rows_record_their_engine(db_session):
+    from models import KbPageFingerprint
+
+    db_session.add(KbPageFingerprint(
+        url="https://www.morgan.edu/ora", fingerprint="a" * 64, engine="playwright"
+    ))
+    db_session.commit()
+
+    row = db_session.query(KbPageFingerprint).one()
+    assert row.engine == "playwright"
+
+
+def test_engine_is_nullable_for_rows_written_before_the_migration(db_session):
+    from models import KbPageFingerprint
+
+    db_session.add(KbPageFingerprint(url="https://www.morgan.edu/ora", fingerprint="b" * 64))
+    db_session.commit()
+
+    assert db_session.query(KbPageFingerprint).one().engine is None
