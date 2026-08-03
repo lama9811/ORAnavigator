@@ -112,7 +112,12 @@ def _load_url_index():
     return by_url, docs, get_document_content
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI surface. Separate from main() so the defaults are testable.
+
+    SCRAPE_ENGINE is read here rather than at import time so the environment
+    override can be exercised in tests.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-id", type=int, default=int(os.getenv("SCRAPE_RUN_ID") or 0))
     ap.add_argument("--dry-run", action="store_true", help="crawl and report; write nothing at all")
@@ -129,23 +134,40 @@ def main() -> int:
     ap.add_argument("--seed", action="append", default=[], help="override seed URL(s)")
     ap.add_argument(
         "--engine", choices=("gemini", "playwright"),
-        default=os.getenv("SCRAPE_ENGINE", "gemini"),
-        help="who reads the pages. gemini: gemini-3.6-flash via the URL Context "
-             "tool, no browser, works only on URLs the KB already knows. "
-             "playwright: headless Chromium, walks the site and finds new pages, "
-             "and returns the page verbatim so quotes can be verified against it.",
+        default=os.getenv("SCRAPE_ENGINE", "playwright"),
+        help="who reads the pages. playwright (default): headless Chromium, "
+             "walks the site, expands accordions, and returns the page verbatim "
+             "so quotes can be verified against it. gemini: gemini-3.6-flash via "
+             "the URL Context tool, no browser, works only on URLs the KB "
+             "already knows, and is refused outright on 26 of 59 ORA pages.",
     )
-    args = ap.parse_args()
+    return ap
 
-    # The Gemini engine's page text is a model rendering, not a transcript, so it
-    # is NOT byte-stable: the same unchanged page read three times at
-    # temperature 0 measured 1444, 1466 and 1478 chars — three different hashes.
-    # A fingerprint that never matches cannot gate anything, and leaving the gate
-    # in would mean silently claiming "this page moved" on every page of every
-    # run. Adjudicate everything instead and let the model be the change signal,
-    # which is what this engine actually offers.
-    if args.engine == "gemini" and not args.audit:
-        args.audit = True
+
+def resolve_audit(engine: str, audit: bool) -> bool:
+    """Should this run adjudicate first sightings as well as changed pages?
+
+    The Gemini engine's page text is a model rendering, not a transcript, so it
+    is NOT byte-stable: the same unchanged page read three times at temperature
+    0 measured 1444, 1466 and 1478 chars — three different hashes. A fingerprint
+    that never matches cannot gate anything, and leaving the gate in would mean
+    silently claiming "this page moved" on every page of every run — so that
+    engine adjudicates everything and lets the model be the change signal.
+
+    Playwright measured identical hashes across three reads of the same page
+    (verified 2026-08-03), so its gate works and is left alone.
+    """
+    if engine == "gemini":
+        return True
+    return audit
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+
+    was_audit = args.audit
+    args.audit = resolve_audit(args.engine, args.audit)
+    if args.audit and not was_audit:
         log.info("Gemini engine: fingerprint gate disabled (extraction is not byte-stable)")
 
     from crawler import MAX_PAGES

@@ -26,6 +26,7 @@ def _load(name):
 
 fp = _load("fingerprint")
 adj = _load("adjudicator")
+run = _load("run")
 
 
 # ---------------------------------------------------------------------------
@@ -259,3 +260,40 @@ def test_engine_is_nullable_for_rows_written_before_the_migration(db_session):
     db_session.commit()
 
     assert db_session.query(KbPageFingerprint).one().engine is None
+
+
+# ---------------------------------------------------------------------------
+# Engine selection. Playwright is the default because the Gemini engine cannot
+# read 26 of 59 ORA URLs (RECITATION blocks the entire compliance core).
+# ---------------------------------------------------------------------------
+
+def test_playwright_is_the_default_engine(monkeypatch):
+    monkeypatch.delenv("SCRAPE_ENGINE", raising=False)
+    args = run.build_parser().parse_args([])
+    assert args.engine == "playwright"
+
+
+def test_scrape_engine_env_var_overrides_the_default(monkeypatch):
+    monkeypatch.setenv("SCRAPE_ENGINE", "gemini")
+    args = run.build_parser().parse_args([])
+    assert args.engine == "gemini"
+
+
+def test_engine_flag_beats_the_env_var(monkeypatch):
+    monkeypatch.setenv("SCRAPE_ENGINE", "gemini")
+    args = run.build_parser().parse_args(["--engine=playwright"])
+    assert args.engine == "playwright"
+
+
+# --- the forced-audit rule -------------------------------------------------
+
+def test_gemini_forces_audit_because_its_text_is_not_byte_stable():
+    assert run.resolve_audit("gemini", False) is True
+
+
+def test_playwright_does_not_force_audit():
+    assert run.resolve_audit("playwright", False) is False
+
+
+def test_explicit_audit_flag_is_honoured_on_playwright():
+    assert run.resolve_audit("playwright", True) is True
