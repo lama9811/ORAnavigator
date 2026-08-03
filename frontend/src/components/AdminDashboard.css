@@ -3219,6 +3219,57 @@ body.dark .feedback-details p {
   color: var(--text-secondary);
 }
 
+/* Pending items are grouped by whether they can actually be approved. Without
+   the split, a run whose changes are all multi-document pages shows a list with
+   no Approve button anywhere and reads as broken. */
+.scrape-group {
+  margin-bottom: 14px;
+}
+
+.scrape-group-head {
+  margin: 0 0 7px;
+}
+
+.scrape-group-head h5 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.scrape-group-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+
+.scrape-group-head p {
+  margin: 3px 0 0;
+  font-size: 0.71rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.scrape-empty {
+  padding: 10px 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
 .scrape-change {
   display: flex;
   align-items: flex-start;
