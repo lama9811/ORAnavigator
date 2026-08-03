@@ -3272,6 +3272,28 @@ body.dark .feedback-details p {
   margin-left: auto;
 }
 
+/* Collapsed groups: the whole label is the hit target, not just the chevron. */
+.scrape-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.scrape-group-toggle:hover {
+  opacity: 0.75;
+}
+
+.scrape-group-toggle svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
 .scrape-group-head p {
   margin: 3px 0 0;
   font-size: 0.71rem;

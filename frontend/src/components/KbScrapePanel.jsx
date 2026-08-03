@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Globe, Loader2, AlertTriangle, Check, RotateCcw, ExternalLink, X } from "lucide-react";
+import { Globe, Loader2, AlertTriangle, Check, RotateCcw, ExternalLink, X, ChevronRight, ChevronDown } from "lucide-react";
 
 /**
  * Web scrape: trigger a crawl of morgan.edu/ora, watch it live, review what
@@ -68,6 +68,14 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const [diff, setDiff] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  // Collapsed by default rather than removed. Neither group is actionable, but
+  // both carry signal that matters once the browser engine is live: a change to
+  // a page feeding 52 documents is reported ONLY in review-by-hand, and the
+  // unreadable list is how a failed read stays visible instead of being
+  // mistaken for deleted content. Hiding them outright would drop both.
+  const [openGroups, setOpenGroups] = useState({ manual: false, settled: false });
+  const toggleGroup = (key) =>
+    setOpenGroups((g) => ({ ...g, [key]: !g[key] }));
   const timer = useRef(null);
   const wasRunning = useRef(false);
 
@@ -409,8 +417,15 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
             <div className="scrape-group">
               <div className="scrape-group-head">
                 <h5>
-                  Review by hand
-                  <span className="scrape-group-n">{reviewByHand.length}</span>
+                  <button
+                    className="scrape-group-toggle"
+                    onClick={() => toggleGroup("manual")}
+                    aria-expanded={openGroups.manual}
+                  >
+                    {openGroups.manual ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                    Review by hand
+                    <span className="scrape-group-n">{reviewByHand.length}</span>
+                  </button>
                   <button
                     className="scrape-linkbtn undo scrape-dismiss-all"
                     disabled={bulkBusy}
@@ -420,13 +435,15 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
                     <X size={12} /> {bulkBusy ? "Dismissing…" : `Dismiss all ${reviewByHand.length}`}
                   </button>
                 </h5>
-                <p>
-                  Each of these pages feeds several documents, so there is no single
-                  replacement to approve. Open the page, check the documents it feeds,
-                  then dismiss. Nothing here can change a document.
-                </p>
+                {openGroups.manual && (
+                  <p>
+                    Each of these pages feeds several documents, so there is no single
+                    replacement to approve. Open the page, check the documents it feeds,
+                    then dismiss. Nothing here can change a document.
+                  </p>
+                )}
               </div>
-              {reviewByHand.map(renderChange)}
+              {openGroups.manual && reviewByHand.map(renderChange)}
             </div>
           )}
 
@@ -434,11 +451,25 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
             <div className="scrape-group">
               <div className="scrape-group-head">
                 <h5>
-                  Already handled
-                  <span className="scrape-group-n">{settled.length}</span>
+                  <button
+                    className="scrape-group-toggle"
+                    onClick={() => toggleGroup("settled")}
+                    aria-expanded={openGroups.settled}
+                  >
+                    {openGroups.settled ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                    Already handled
+                    <span className="scrape-group-n">{settled.length}</span>
+                  </button>
                 </h5>
+                {openGroups.settled && (
+                  <p>
+                    Approved, dismissed, and pages that could not be read. A page that
+                    could not be read is left completely alone — it is never treated as
+                    deleted content.
+                  </p>
+                )}
               </div>
-              {settled.map(renderChange)}
+              {openGroups.settled && settled.map(renderChange)}
             </div>
           )}
         </div>
