@@ -112,7 +112,12 @@ def _load_url_index():
     return by_url, docs, get_document_content
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI surface. Separate from main() so the defaults are testable.
+
+    SCRAPE_ENGINE is read here rather than at import time so the environment
+    override can be exercised in tests.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-id", type=int, default=int(os.getenv("SCRAPE_RUN_ID") or 0))
     ap.add_argument("--dry-run", action="store_true", help="crawl and report; write nothing at all")
@@ -129,23 +134,90 @@ def main() -> int:
     ap.add_argument("--seed", action="append", default=[], help="override seed URL(s)")
     ap.add_argument(
         "--engine", choices=("gemini", "playwright"),
-        default=os.getenv("SCRAPE_ENGINE", "gemini"),
-        help="who reads the pages. gemini: gemini-3.6-flash via the URL Context "
-             "tool, no browser, works only on URLs the KB already knows. "
-             "playwright: headless Chromium, walks the site and finds new pages, "
-             "and returns the page verbatim so quotes can be verified against it.",
+        default=os.getenv("SCRAPE_ENGINE", "playwright"),
+        help="who reads the pages. playwright (default): headless Chromium, "
+             "walks the site, expands accordions, and returns the page verbatim "
+             "so quotes can be verified against it. gemini: gemini-3.6-flash via "
+             "the URL Context tool, no browser, works only on URLs the KB "
+             "already knows, and is refused outright on 26 of 59 ORA pages.",
     )
-    args = ap.parse_args()
+    return ap
 
-    # The Gemini engine's page text is a model rendering, not a transcript, so it
-    # is NOT byte-stable: the same unchanged page read three times at
-    # temperature 0 measured 1444, 1466 and 1478 chars — three different hashes.
-    # A fingerprint that never matches cannot gate anything, and leaving the gate
-    # in would mean silently claiming "this page moved" on every page of every
-    # run. Adjudicate everything instead and let the model be the change signal,
-    # which is what this engine actually offers.
-    if args.engine == "gemini" and not args.audit:
-        args.audit = True
+
+def resolve_audit(engine: str, audit: bool) -> bool:
+    """Should this run adjudicate first sightings as well as changed pages?
+
+    The Gemini engine's page text is a model rendering, not a transcript, so it
+    is NOT byte-stable: the same unchanged page read three times at temperature
+    0 measured 1444, 1466 and 1478 chars — three different hashes. A fingerprint
+    that never matches cannot gate anything, and leaving the gate in would mean
+    silently claiming "this page moved" on every page of every run — so that
+    engine adjudicates everything and lets the model be the change signal.
+
+    Playwright measured identical hashes across three reads of the same page
+    (verified 2026-08-03), so its gate works and is left alone.
+    """
+    if engine == "gemini":
+        return True
+    return audit
+
+
+def load_baseline(session, engine: str) -> dict[str, str]:
+    """{url: fingerprint} for pages THIS engine has read before.
+
+    Scoped by engine on purpose. A fingerprint is a hash of the extracted text,
+    and the two engines extract the same unchanged page differently — so a hash
+    written by the other engine is not a baseline, it is noise that would make
+    every page look changed. Rows with engine NULL predate the column and are
+    treated the same way.
+
+    This also scopes the removed-page sweep at the end of a run, which is
+    `prior` minus the URLs seen: without the filter, switching engines would
+    propose that every previously-known page had been deleted from the site.
+    """
+    from models import KbPageFingerprint
+
+    rows = (
+        session.query(KbPageFingerprint)
+        .filter(KbPageFingerprint.engine == engine)
+        .all()
+    )
+    return {r.url: r.fingerprint for r in rows}
+
+
+def upsert_fingerprint(session, *, url: str, digest: str, engine: str, title: str,
+                       doc_ids: list, char_count: int, changed: bool):
+    """Record what this engine saw at this URL, updating the row if one exists.
+
+    Must be an upsert rather than an insert: `url` is unique, so a page that
+    already carries another engine's row would raise IntegrityError on a bare
+    add. `last_changed_at` is only stamped when the page actually moved, so it
+    keeps meaning "when did this page last change" rather than "when did we
+    last look".
+    """
+    from models import KbPageFingerprint
+
+    fp = session.query(KbPageFingerprint).filter(KbPageFingerprint.url == url).first()
+    if fp is None:
+        fp = KbPageFingerprint(url=url, created_at=_now())
+        session.add(fp)
+    fp.fingerprint = digest
+    fp.engine = engine
+    fp.title = (title or "")[:500]
+    fp.doc_ids = json.dumps(doc_ids)
+    fp.char_count = char_count
+    fp.last_seen_at = _now()
+    if changed:
+        fp.last_changed_at = _now()
+    return fp
+
+
+def main() -> int:
+    args = build_parser().parse_args()
+
+    was_audit = args.audit
+    args.audit = resolve_audit(args.engine, args.audit)
+    if args.audit and not was_audit:
         log.info("Gemini engine: fingerprint gate disabled (extraction is not byte-stable)")
 
     from crawler import MAX_PAGES
@@ -175,11 +247,8 @@ def main() -> int:
     # what actually moved.
     prior: dict[str, str] = {}
     if not args.dry_run:
-        from models import KbPageFingerprint
-        prior = {
-            f.url: f.fingerprint for f in session.query(KbPageFingerprint).all()
-        }
-    log.info("Baseline: %d known page fingerprints", len(prior))
+        prior = load_baseline(session, args.engine)
+    log.info("Baseline: %d known page fingerprints for engine=%s", len(prior), args.engine)
 
     stats = {"pages": 0, "unreadable": 0, "unchanged": 0, "cosmetic": 0,
              "pending": 0, "new": 0}
@@ -270,12 +339,11 @@ def main() -> int:
         if known is None and doc_ids and not args.audit:
             stats["baselined"] = stats.get("baselined", 0) + 1
             if not args.dry_run:
-                fp = KbPageFingerprint(url=url, fingerprint=digest, created_at=_now())
-                fp.title = (result.title or "")[:500]
-                fp.doc_ids = json.dumps(doc_ids)
-                fp.char_count = len(result.text)
-                fp.last_seen_at = _now()
-                session.add(fp)
+                upsert_fingerprint(
+                    session, url=url, digest=digest, engine=args.engine,
+                    title=result.title, doc_ids=doc_ids,
+                    char_count=len(result.text), changed=False,
+                )
                 session.commit()
             continue
 
@@ -375,16 +443,11 @@ def main() -> int:
         # Baseline advances for everything we successfully READ, including
         # cosmetic changes — otherwise the same immaterial edit is re-judged,
         # and re-paid for, on every future run.
-        fp = session.query(KbPageFingerprint).filter(KbPageFingerprint.url == url).first()
-        if not fp:
-            fp = KbPageFingerprint(url=url, fingerprint=digest, created_at=_now())
-            session.add(fp)
-        fp.fingerprint = digest
-        fp.title = (result.title or "")[:500]
-        fp.doc_ids = json.dumps(doc_ids)
-        fp.char_count = len(result.text)
-        fp.last_seen_at = _now()
-        fp.last_changed_at = _now()
+        upsert_fingerprint(
+            session, url=url, digest=digest, engine=args.engine,
+            title=result.title, doc_ids=doc_ids,
+            char_count=len(result.text), changed=True,
+        )
 
         run.changes_found = stats["pending"] + stats["new"]
         session.commit()

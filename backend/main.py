@@ -264,6 +264,22 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to create support_tickets table: {e}")
 
+        # 7. Add kb_page_fingerprints.engine column if missing.
+        # A fingerprint hashes the extracted page TEXT, and the scrape engines
+        # extract the same unchanged page differently. Without recording who
+        # wrote each row, the first run after an engine switch compares browser
+        # hashes against LLM hashes and reports every page as changed.
+        try:
+            conn.execute(text("SELECT engine FROM kb_page_fingerprints LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'engine' column missing on kb_page_fingerprints. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE kb_page_fingerprints ADD COLUMN engine VARCHAR(20)"))
+                conn.commit()
+                print("[OK] Successfully added 'engine' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add engine column: {e}")
+
     # 8. Create/Update admin account
     try:
         db = SessionLocal()

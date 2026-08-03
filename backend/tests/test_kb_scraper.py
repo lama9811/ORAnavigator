@@ -26,6 +26,7 @@ def _load(name):
 
 fp = _load("fingerprint")
 adj = _load("adjudicator")
+run = _load("run")
 
 
 # ---------------------------------------------------------------------------
@@ -214,3 +215,178 @@ def test_unparseable_response_returns_none():
 def test_diff_summary_reports_direction_of_change():
     summary = fp.summarize_diff("The rate is 54%.", "The rate is 55%.")
     assert "54" in summary and "55" in summary
+
+
+# ---------------------------------------------------------------------------
+# Fingerprints are engine-specific — a hash of Gemini's markdown extraction and
+# a hash of Playwright's inner_text() differ for the SAME unchanged page, so a
+# row must record who wrote it or the first run after a switch reports every
+# page as changed.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture()
+def db_session():
+    """In-memory SQLite carrying the real model definitions."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from models import Base
+
+    eng = create_engine("sqlite://")
+    Base.metadata.create_all(bind=eng)
+    s = sessionmaker(bind=eng)()
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+def test_fingerprint_rows_record_their_engine(db_session):
+    from models import KbPageFingerprint
+
+    db_session.add(KbPageFingerprint(
+        url="https://www.morgan.edu/ora", fingerprint="a" * 64, engine="playwright"
+    ))
+    db_session.commit()
+
+    row = db_session.query(KbPageFingerprint).one()
+    assert row.engine == "playwright"
+
+
+def test_engine_is_nullable_for_rows_written_before_the_migration(db_session):
+    from models import KbPageFingerprint
+
+    db_session.add(KbPageFingerprint(url="https://www.morgan.edu/ora", fingerprint="b" * 64))
+    db_session.commit()
+
+    assert db_session.query(KbPageFingerprint).one().engine is None
+
+
+# ---------------------------------------------------------------------------
+# Engine selection. Playwright is the default because the Gemini engine cannot
+# read 26 of 59 ORA URLs (RECITATION blocks the entire compliance core).
+# ---------------------------------------------------------------------------
+
+def test_playwright_is_the_default_engine(monkeypatch):
+    monkeypatch.delenv("SCRAPE_ENGINE", raising=False)
+    args = run.build_parser().parse_args([])
+    assert args.engine == "playwright"
+
+
+def test_scrape_engine_env_var_overrides_the_default(monkeypatch):
+    monkeypatch.setenv("SCRAPE_ENGINE", "gemini")
+    args = run.build_parser().parse_args([])
+    assert args.engine == "gemini"
+
+
+def test_engine_flag_beats_the_env_var(monkeypatch):
+    monkeypatch.setenv("SCRAPE_ENGINE", "gemini")
+    args = run.build_parser().parse_args(["--engine=playwright"])
+    assert args.engine == "playwright"
+
+
+# --- the forced-audit rule -------------------------------------------------
+
+def test_gemini_forces_audit_because_its_text_is_not_byte_stable():
+    assert run.resolve_audit("gemini", False) is True
+
+
+def test_playwright_does_not_force_audit():
+    assert run.resolve_audit("playwright", False) is False
+
+
+def test_explicit_audit_flag_is_honoured_on_playwright():
+    assert run.resolve_audit("playwright", True) is True
+
+
+# ---------------------------------------------------------------------------
+# Baseline reads and fingerprint writes are scoped to the engine that ran, so
+# switching engines re-baselines silently instead of reporting every page as
+# changed — and instead of reporting every old URL as removed from the site.
+# ---------------------------------------------------------------------------
+
+def _fp(session, url, digest, engine):
+    from models import KbPageFingerprint
+    session.add(KbPageFingerprint(url=url, fingerprint=digest, engine=engine))
+    session.commit()
+
+
+def test_baseline_ignores_rows_written_by_another_engine(db_session):
+    _fp(db_session, "https://www.morgan.edu/ora", "g" * 64, "gemini")
+
+    assert run.load_baseline(db_session, "playwright") == {}
+
+
+def test_baseline_returns_rows_written_by_this_engine(db_session):
+    _fp(db_session, "https://www.morgan.edu/ora", "p" * 64, "playwright")
+
+    assert run.load_baseline(db_session, "playwright") == {
+        "https://www.morgan.edu/ora": "p" * 64
+    }
+
+
+def test_baseline_ignores_pre_migration_rows_with_no_engine(db_session):
+    _fp(db_session, "https://www.morgan.edu/ora", "n" * 64, None)
+
+    assert run.load_baseline(db_session, "playwright") == {}
+
+
+def test_a_gemini_era_url_is_not_reported_as_removed_from_the_site(db_session):
+    """The removed-page sweep is `prior` minus the URLs seen this run. Scoping
+    `prior` by engine is what stops a switch from proposing that every page was
+    deleted."""
+    _fp(db_session, "https://www.morgan.edu/ora", "g" * 64, "gemini")
+
+    prior = run.load_baseline(db_session, "playwright")
+    seen = set()  # nothing crawled yet
+    assert [u for u in prior if u not in seen] == []
+
+
+def test_upsert_updates_a_row_written_by_the_other_engine(db_session):
+    """url is unique=True, so a bare INSERT would raise IntegrityError here."""
+    from models import KbPageFingerprint
+
+    _fp(db_session, "https://www.morgan.edu/ora", "g" * 64, "gemini")
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora", digest="p" * 64,
+        engine="playwright", title="ORA", doc_ids=["about_ora"],
+        char_count=2128, changed=False,
+    )
+    db_session.commit()
+
+    rows = db_session.query(KbPageFingerprint).all()
+    assert len(rows) == 1
+    assert rows[0].fingerprint == "p" * 64
+    assert rows[0].engine == "playwright"
+    assert rows[0].char_count == 2128
+
+
+def test_upsert_inserts_when_the_page_is_new(db_session):
+    from models import KbPageFingerprint
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora/new", digest="p" * 64,
+        engine="playwright", title="New", doc_ids=[], char_count=10, changed=False,
+    )
+    db_session.commit()
+
+    assert db_session.query(KbPageFingerprint).count() == 1
+
+
+def test_upsert_only_stamps_last_changed_when_the_page_changed(db_session):
+    from models import KbPageFingerprint
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora", digest="p" * 64,
+        engine="playwright", title="ORA", doc_ids=[], char_count=1, changed=False,
+    )
+    db_session.commit()
+    assert db_session.query(KbPageFingerprint).one().last_changed_at is None
+
+    run.upsert_fingerprint(
+        db_session, url="https://www.morgan.edu/ora", digest="q" * 64,
+        engine="playwright", title="ORA", doc_ids=[], char_count=1, changed=True,
+    )
+    db_session.commit()
+    assert db_session.query(KbPageFingerprint).one().last_changed_at is not None

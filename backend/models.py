@@ -315,6 +315,12 @@ class KbPageFingerprint(Base):
     url = Column(String(500), nullable=False, unique=True, index=True)
     # SHA-256 of the normalized extracted text.
     fingerprint = Column(String(64), nullable=False)
+    # Which reader produced this hash: "playwright" | "gemini". A fingerprint is
+    # a hash of the extracted TEXT, and the two engines extract the same
+    # unchanged page differently — so a hash is only a valid baseline for the
+    # engine that wrote it. NULL means the row predates this column; it belongs
+    # to no engine and is therefore treated as a first sighting.
+    engine = Column(String(20), nullable=True)
     # JSON list of doc_ids derived from this page. Usually one — but the IACUC
     # SOPs page produced 52 and D-RED seminars 49, which is why a change here
     # cannot always be auto-applied.
