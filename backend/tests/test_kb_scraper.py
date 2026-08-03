@@ -374,6 +374,36 @@ def test_upsert_inserts_when_the_page_is_new(db_session):
     assert db_session.query(KbPageFingerprint).count() == 1
 
 
+# ---------------------------------------------------------------------------
+# The model is only asked about pages it can actually answer for. Adjudicating
+# a page with no single stored document meant handing the model an empty
+# "current document" and asking what changed — it can only answer "this is new",
+# which it did for 21 pages on the 2026-08-03 run, about pages years old.
+# ---------------------------------------------------------------------------
+
+def test_a_page_backed_by_one_document_is_adjudicated():
+    assert run.needs_adjudication(["pre_award_fanda_rates"]) is True
+
+
+def test_a_page_feeding_many_documents_is_not_adjudicated():
+    """The IACUC SOPs page feeds 52 documents. There is no single replacement to
+    propose, so the outcome is 'report it' whatever the model says."""
+    assert run.needs_adjudication([f"form_iacuc_sop_{i}" for i in range(52)]) is False
+
+
+def test_a_page_with_no_document_is_not_adjudicated():
+    assert run.needs_adjudication([]) is False
+
+
+def test_the_multi_document_note_is_deterministic_and_claims_no_change_detail():
+    note = run.multi_doc_note(17)
+    assert "17 documents" in note
+    assert "review them by hand" in note.lower()
+    # It must not assert the page is new — that was the artifact of adjudicating
+    # against an empty stored document.
+    assert "new page" not in note.lower()
+
+
 def test_upsert_only_stamps_last_changed_when_the_page_changed(db_session):
     from models import KbPageFingerprint
 

@@ -162,6 +162,38 @@ def resolve_audit(engine: str, audit: bool) -> bool:
     return audit
 
 
+def needs_adjudication(doc_ids: list) -> bool:
+    """Is there a single stored document to compare the live page against?
+
+    Only then is there a materiality question worth asking. The other two cases
+    both used to reach the model with `stored=""`, which the adjudicator renders
+    as "(none — this page is new)" — so it was handed a live page, told the KB
+    had nothing, and asked what changed. It answered the only thing it could:
+    "a new page has been added." Every run, for every such page, regardless of
+    whether anything moved. On the 2026-08-03 run that produced 21 confidently
+    worded proposals that were not comparisons at all, each costing a model call.
+
+      * many documents — the IACUC page feeds 52. There is no single replacement
+        to propose, so the outcome is "report it" no matter what the model says.
+      * no document at all — nothing to compare against by definition.
+    """
+    return len(doc_ids) == 1
+
+
+def multi_doc_note(n: int) -> str:
+    """What to say about a page that feeds several documents.
+
+    Deterministic on purpose. This used to interpolate the model's verdict, but
+    that verdict was produced against an empty stored document (see
+    needs_adjudication), so it asserted things like "a new page for Test Prep
+    has been added" about pages that have existed for years.
+    """
+    return (
+        f"This page changed. {n} documents derive from it, so there is no single "
+        f"replacement to approve — review them by hand."
+    )
+
+
 def load_baseline(session, engine: str) -> dict[str, str]:
     """{url: fingerprint} for pages THIS engine has read before.
 
@@ -365,11 +397,13 @@ def main() -> int:
             stats[bucket] = stats.get(bucket, 0) + 1
             continue
 
-        # A page with no document has nothing to compare against, so there is no
-        # materiality question to ask — skip the model call entirely.
+        # Only a page backed by exactly ONE document has a materiality question
+        # worth asking. Everything else has nothing to compare against, so the
+        # model call is skipped entirely rather than made against an empty
+        # stored document (see needs_adjudication).
         verdict = (
             adjudicate(result.text, stored, result.title)
-            if not is_new_page
+            if needs_adjudication(doc_ids)
             else Verdict(material=True, what_changed="", new_content="", quote="",
                          confidence="low", grounded=False)
         )
@@ -411,10 +445,7 @@ def main() -> int:
             # pointer to go look, not a change that can be approved.
             change.change_type = "modified"
             change.status = "pending"
-            change.what_changed = (
-                f"{verdict.what_changed} — {len(doc_ids)} documents derive from this "
-                f"page, so there is no single replacement to approve. Review them by hand."
-            )
+            change.what_changed = multi_doc_note(len(doc_ids))
             stats["pending"] = stats.get("pending", 0) + 1
 
         elif verdict.applicable and len(doc_ids) == 1:
