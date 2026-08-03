@@ -20,6 +20,30 @@ const fmtDuration = (s) => {
   return m ? `${m}m ${sec}s` : `${sec}s`;
 };
 
+// Relative age of a proposal, so the newest run is obvious at a glance without
+// doing date arithmetic. The card carries the full local timestamp as a
+// tooltip. Rows are returned newest-first, so this mainly answers "is this from
+// the run I just did, or one from last week that I never cleared?".
+const fmtWhen = (iso) => {
+  if (!iso) return "";
+  const t = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : `${iso}Z`);
+  if (Number.isNaN(t.getTime())) return "";
+  const mins = Math.floor((Date.now() - t.getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return t.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+
+const fmtExact = (iso) => {
+  if (!iso) return "";
+  const t = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : `${iso}Z`);
+  return Number.isNaN(t.getTime()) ? "" : t.toLocaleString();
+};
+
 const TYPE_LABEL = {
   modified: "changed",
   new: "new page",
@@ -43,6 +67,7 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const [starting, setStarting] = useState(false);
   const [diff, setDiff] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const timer = useRef(null);
   const wasRunning = useRef(false);
 
@@ -127,6 +152,41 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
     } finally { setBusyId(null); }
   };
 
+  // Bulk dismiss for the review-by-hand pile, which routinely runs to 20+ rows
+  // that carry no draft and cannot change anything. Deliberately NOT offered on
+  // the approvable group: those are the only real change reports in the queue,
+  // and clearing them in one click would throw away the actual signal.
+  //
+  // There is no bulk endpoint, so this walks the existing per-row reject. That
+  // keeps it a frontend-only change — no API to deploy — at the cost of one
+  // request per row, which is fine at this scale.
+  const dismissAll = async (rows) => {
+    if (!rows.length) return;
+    const ok = window.confirm(
+      `Dismiss all ${rows.length} items in "Review by hand"?\n\n` +
+      `They will be cleared from this list. No document is changed either way — ` +
+      `none of these carry a draft. This cannot be undone.`
+    );
+    if (!ok) return;
+
+    setBulkBusy(true);
+    let failed = 0;
+    try {
+      for (const c of rows) {
+        try {
+          const res = await fetch(
+            `${apiBase}/api/admin/kb-scrape/changes/${c.id}/reject`,
+            { method: "POST", headers: auth }
+          );
+          if (!res.ok) failed += 1;
+        } catch { failed += 1; }
+      }
+      await loadChanges();
+      onDocsChanged?.();
+      if (failed) alert(`${failed} of ${rows.length} could not be dismissed. The rest were cleared.`);
+    } finally { setBulkBusy(false); }
+  };
+
   const showDiff = async (change) => {
     const res = await fetch(`${apiBase}/api/admin/kb-scrape/changes/${change.id}/diff`, { headers: auth });
     if (res.ok) setDiff(await res.json());
@@ -155,6 +215,11 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
             <span className={`scrape-tag ${meta.cls}`}>{TYPE_LABEL[c.change_type] || c.change_type}</span>
             <strong>{c.page_title || c.doc_id || c.url}</strong>
             {c.reverted && <span className="scrape-tag reverted">reverted</span>}
+            {c.created_at && (
+              <span className="scrape-change-when" title={fmtExact(c.created_at)}>
+                {fmtWhen(c.created_at)}
+              </span>
+            )}
           </div>
           <div className="scrape-change-what">{c.what_changed}</div>
           {c.evidence_quote && (
@@ -346,6 +411,14 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
                 <h5>
                   Review by hand
                   <span className="scrape-group-n">{reviewByHand.length}</span>
+                  <button
+                    className="scrape-linkbtn undo scrape-dismiss-all"
+                    disabled={bulkBusy}
+                    onClick={() => dismissAll(reviewByHand)}
+                    title="Dismiss every item in this group. No document is changed."
+                  >
+                    <X size={12} /> {bulkBusy ? "Dismissing…" : `Dismiss all ${reviewByHand.length}`}
+                  </button>
                 </h5>
                 <p>
                   Each of these pages feeds several documents, so there is no single
