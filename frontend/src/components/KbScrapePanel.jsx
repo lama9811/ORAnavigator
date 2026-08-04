@@ -68,14 +68,12 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const [diff, setDiff] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
-  // Collapsed by default rather than removed. Neither group is actionable, but
-  // both carry signal that matters once the browser engine is live: a change to
-  // a page feeding 52 documents is reported ONLY in review-by-hand, and the
-  // unreadable list is how a failed read stays visible instead of being
-  // mistaken for deleted content. Hiding them outright would drop both.
-  const [openGroups, setOpenGroups] = useState({ manual: false, settled: false });
-  const toggleGroup = (key) =>
-    setOpenGroups((g) => ({ ...g, [key]: !g[key] }));
+  // Everything that is not an approvable change collapses behind one footer
+  // line. Collapsed rather than removed: a change to a page feeding 52
+  // documents is reported nowhere else, an unreadable page must stay visible so
+  // a failed read is never mistaken for deleted content, and Undo on an
+  // approved change is only reachable from there.
+  const [showRest, setShowRest] = useState(false);
   const timer = useRef(null);
   const wasRunning = useRef(false);
 
@@ -160,10 +158,10 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
     } finally { setBusyId(null); }
   };
 
-  // Bulk dismiss for the review-by-hand pile, which routinely runs to 20+ rows
-  // that carry no draft and cannot change anything. Deliberately NOT offered on
-  // the approvable group: those are the only real change reports in the queue,
-  // and clearing them in one click would throw away the actual signal.
+  // Bulk dismiss for the needs-a-manual-look pile, which routinely runs to 20+
+  // rows that carry no draft and cannot change anything. Deliberately NOT
+  // offered on the approvable list: those are the only real change reports, and
+  // clearing them in one click would throw away the actual signal.
   //
   // There is no bulk endpoint, so this walks the existing per-row reject. That
   // keeps it a frontend-only change — no API to deploy — at the cost of one
@@ -171,7 +169,7 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const dismissAll = async (rows) => {
     if (!rows.length) return;
     const ok = window.confirm(
-      `Dismiss all ${rows.length} items in "Review by hand"?\n\n` +
+      `Dismiss all ${rows.length} items that need a manual look?\n\n` +
       `They will be cleared from this list. No document is changed either way — ` +
       `none of these carry a draft. This cannot be undone.`
     );
@@ -204,6 +202,12 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const visible = changes.filter((c) => c.status !== "cosmetic");
   const pendingCount = changes.filter((c) => c.status === "pending").length;
 
+  // The panel shows ONE list: pages that changed and can be approved. Everything
+  // else — pages that need a manual look, pages that could not be read, and
+  // items already dealt with — collapses into a single footer line. That footer
+  // is not cosmetic: it is the only route to Undo on an approved change, which
+  // is the sole safety net on a write to the knowledge base.
+  //
   // Pending items split by whether there is actually anything to approve.
   // A page feeding many documents never gets a draft — re-splitting the IACUC
   // SOPs page back across its 52 documents unattended would corrupt all of
@@ -213,6 +217,18 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   const readyToApprove = visible.filter((c) => c.status === "pending" && c.has_diff);
   const reviewByHand = visible.filter((c) => c.status === "pending" && !c.has_diff);
   const settled = visible.filter((c) => c.status !== "pending");
+
+  // Everything that is not a decision you can make right now.
+  const rest = [...reviewByHand, ...settled];
+  const restSummary = [
+    settled.filter((c) => c.status === "skipped").length &&
+      `${settled.filter((c) => c.status === "skipped").length} couldn't read`,
+    reviewByHand.length && `${reviewByHand.length} need a manual look`,
+    settled.filter((c) => c.status === "approved").length &&
+      `${settled.filter((c) => c.status === "approved").length} approved`,
+    settled.filter((c) => c.status === "rejected").length &&
+      `${settled.filter((c) => c.status === "rejected").length} dismissed`,
+  ].filter(Boolean).join(" · ");
 
   const renderChange = (c) => {
     const meta = STATUS_META[c.status] || STATUS_META.needs_review;
@@ -379,97 +395,54 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
       {visible.length > 0 && (
         <div className="scrape-changes">
           <div className="scrape-changes-head">
-            <h4>What changed</h4>
+            <h4>Waiting for your approval</h4>
             <span className="scrape-counts">
-              {Object.entries(counts)
-                .filter(([k]) => k !== "cosmetic")
-                .map(([k, v]) => `${v} ${STATUS_META[k]?.label.toLowerCase() || k}`)
-                .join(" · ")}
-              {counts.cosmetic > 0 && (
-                <em> · {counts.cosmetic} cosmetic, hidden</em>
-              )}
+              {readyToApprove.length || "none"}
+              {counts.cosmetic > 0 && <em> · {counts.cosmetic} cosmetic, hidden</em>}
             </span>
           </div>
 
-          <div className="scrape-group">
-            <div className="scrape-group-head">
-              <h5>
-                Ready to approve
-                <span className="scrape-group-n">{readyToApprove.length}</span>
-              </h5>
-              <p>
-                One page, one document — there is a drafted replacement, so Approve
-                writes it and Undo puts the old version back.
-              </p>
-            </div>
-            {readyToApprove.length > 0 ? (
-              readyToApprove.map(renderChange)
-            ) : (
-              <div className="scrape-empty">
-                {reviewByHand.length > 0
-                  ? "Nothing from this run can be applied automatically. Every changed page below feeds more than one document, so there is no single replacement to write — which is why no Approve button appears."
-                  : "Nothing is waiting on your approval."}
-              </div>
-            )}
-          </div>
-
-          {reviewByHand.length > 0 && (
-            <div className="scrape-group">
-              <div className="scrape-group-head">
-                <h5>
-                  <button
-                    className="scrape-group-toggle"
-                    onClick={() => toggleGroup("manual")}
-                    aria-expanded={openGroups.manual}
-                  >
-                    {openGroups.manual ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                    Review by hand
-                    <span className="scrape-group-n">{reviewByHand.length}</span>
-                  </button>
-                  <button
-                    className="scrape-linkbtn undo scrape-dismiss-all"
-                    disabled={bulkBusy}
-                    onClick={() => dismissAll(reviewByHand)}
-                    title="Dismiss every item in this group. No document is changed."
-                  >
-                    <X size={12} /> {bulkBusy ? "Dismissing…" : `Dismiss all ${reviewByHand.length}`}
-                  </button>
-                </h5>
-                {openGroups.manual && (
-                  <p>
-                    Each of these pages feeds several documents, so there is no single
-                    replacement to approve. Open the page, check the documents it feeds,
-                    then dismiss. Nothing here can change a document.
-                  </p>
-                )}
-              </div>
-              {openGroups.manual && reviewByHand.map(renderChange)}
+          {readyToApprove.length > 0 ? (
+            readyToApprove.map(renderChange)
+          ) : (
+            <div className="scrape-empty">
+              Nothing from this run can be applied automatically.
+              {reviewByHand.length > 0 && (
+                <> Every changed page fed more than one document, so there was no
+                single replacement to draft — see below.</>
+              )}
             </div>
           )}
 
-          {settled.length > 0 && (
-            <div className="scrape-group">
-              <div className="scrape-group-head">
-                <h5>
-                  <button
-                    className="scrape-group-toggle"
-                    onClick={() => toggleGroup("settled")}
-                    aria-expanded={openGroups.settled}
-                  >
-                    {openGroups.settled ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                    Already handled
-                    <span className="scrape-group-n">{settled.length}</span>
-                  </button>
-                </h5>
-                {openGroups.settled && (
-                  <p>
-                    Approved, dismissed, and pages that could not be read. A page that
-                    could not be read is left completely alone — it is never treated as
-                    deleted content.
-                  </p>
-                )}
-              </div>
-              {openGroups.settled && settled.map(renderChange)}
+          {rest.length > 0 && (
+            <div className="scrape-rest">
+              <button
+                className="scrape-rest-toggle"
+                onClick={() => setShowRest((v) => !v)}
+                aria-expanded={showRest}
+              >
+                {showRest ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                {restSummary}
+              </button>
+
+              {showRest && (
+                <div className="scrape-rest-body">
+                  {reviewByHand.length > 0 && (
+                    <div className="scrape-rest-actions">
+                      <button
+                        className="scrape-linkbtn undo"
+                        disabled={bulkBusy}
+                        onClick={() => dismissAll(reviewByHand)}
+                        title="Dismiss every item needing a manual look. No document is changed."
+                      >
+                        <X size={12} />{" "}
+                        {bulkBusy ? "Dismissing…" : `Dismiss all ${reviewByHand.length}`}
+                      </button>
+                    </div>
+                  )}
+                  {rest.map(renderChange)}
+                </div>
+              )}
             </div>
           )}
         </div>

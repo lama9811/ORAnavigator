@@ -3231,49 +3231,16 @@ body.dark .feedback-details p {
   cursor: default;
 }
 
-/* Pending items are grouped by whether they can actually be approved. Without
-   the split, a run whose changes are all multi-document pages shows a list with
-   no Approve button anywhere and reads as broken. */
-.scrape-group {
-  margin-bottom: 14px;
+/* Everything that is not an approvable change lives behind one footer line.
+   Collapsed, not removed: it is the only route to Undo on an approved change,
+   and the only place a multi-document page change or a failed read is shown. */
+.scrape-rest {
+  margin-top: 12px;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 10px;
 }
 
-.scrape-group-head {
-  margin: 0 0 7px;
-}
-
-.scrape-group-head h5 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.scrape-group-n {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--border-color);
-  color: var(--text-secondary);
-  font-size: 0.67rem;
-  font-weight: 700;
-}
-
-/* Pushed to the far end of the group heading so it reads as a group-level
-   action, not as something attached to the count. */
-.scrape-dismiss-all {
-  margin-left: auto;
-}
-
-/* Collapsed groups: the whole label is the hit target, not just the chevron. */
-.scrape-group-toggle {
+.scrape-rest-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -3281,24 +3248,28 @@ body.dark .feedback-details p {
   border: 0;
   background: none;
   font: inherit;
-  color: inherit;
+  font-size: 0.71rem;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
-.scrape-group-toggle:hover {
+.scrape-rest-toggle:hover {
   opacity: 0.75;
 }
 
-.scrape-group-toggle svg {
+.scrape-rest-toggle svg {
   flex-shrink: 0;
   opacity: 0.7;
 }
 
-.scrape-group-head p {
-  margin: 3px 0 0;
-  font-size: 0.71rem;
-  line-height: 1.45;
-  color: var(--text-secondary);
+.scrape-rest-body {
+  margin-top: 10px;
+}
+
+.scrape-rest-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
 }
 
 .scrape-empty {
