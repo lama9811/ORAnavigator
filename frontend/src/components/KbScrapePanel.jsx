@@ -200,7 +200,6 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
 
   const running = run?.status === "running" || run?.status === "queued";
   const visible = changes.filter((c) => c.status !== "cosmetic");
-  const pendingCount = changes.filter((c) => c.status === "pending").length;
 
   // The panel shows ONE list: pages that changed and can be approved. Everything
   // else — pages that need a manual look, pages that could not be read, and
@@ -375,11 +374,15 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
         <div className={`scrape-summary ${run.status}`}>
           {run.status === "succeeded" && (
             <>
+              {/* Counts must match what the list below actually shows. Reporting
+                  every pending row as "awaiting approval" claimed 18 when only 2
+                  carried an Approve button — the rest cannot be approved at all. */}
               <Check size={14} /> Checked <strong>{run.pages_done}</strong> pages in{" "}
-              {fmtDuration(run.elapsed_s)} — <strong>{pendingCount}</strong>{" "}
-              {pendingCount === 1 ? "change awaits" : "changes await"} your approval
-              {run.pages_failed > 0 && <>, {run.pages_failed} unreadable</>}. Nothing has
-              been changed yet.
+              {fmtDuration(run.elapsed_s)} — <strong>{readyToApprove.length}</strong>{" "}
+              ready to approve
+              {reviewByHand.length > 0 && <>, {reviewByHand.length} need a manual look</>}
+              {run.pages_failed > 0 && <>, {run.pages_failed} couldn't be read</>}.
+              Nothing has been changed yet.
             </>
           )}
           {run.status === "failed" && (
