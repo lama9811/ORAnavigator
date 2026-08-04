@@ -375,6 +375,57 @@ def test_upsert_inserts_when_the_page_is_new(db_session):
 
 
 # ---------------------------------------------------------------------------
+# A finished run's duration is fixed. Measuring it from "now" made the summary
+# keep counting after the run ended: a 9m 49s crawl reported "1405m 20s" a day
+# later, and would have grown forever.
+# ---------------------------------------------------------------------------
+
+def test_a_finished_run_reports_how_long_it_actually_took():
+    from datetime import datetime, timedelta, timezone as _tz
+
+    import kb_scrape_service as svc
+    from models import ScrapeRun
+
+    started = datetime(2026, 8, 3, 19, 5, 5, tzinfo=_tz.utc)
+    run = ScrapeRun(
+        status="succeeded",
+        started_at=started,
+        finished_at=started + timedelta(minutes=9, seconds=49),
+    )
+    assert svc.run_to_dict(run)["elapsed_s"] == 589
+
+
+def test_a_finished_runs_duration_does_not_grow_with_wall_clock():
+    """The bug: a run that finished long ago kept reporting time since it started."""
+    from datetime import datetime, timedelta, timezone as _tz
+
+    import kb_scrape_service as svc
+    from models import ScrapeRun
+
+    long_ago = datetime.now(_tz.utc) - timedelta(days=30)
+    run = ScrapeRun(
+        status="succeeded",
+        started_at=long_ago,
+        finished_at=long_ago + timedelta(seconds=120),
+    )
+    assert svc.run_to_dict(run)["elapsed_s"] == 120
+
+
+def test_a_running_run_is_still_measured_against_now():
+    from datetime import datetime, timedelta, timezone as _tz
+
+    import kb_scrape_service as svc
+    from models import ScrapeRun
+
+    run = ScrapeRun(
+        status="running",
+        started_at=datetime.now(_tz.utc) - timedelta(seconds=45),
+        finished_at=None,
+    )
+    assert 44 <= svc.run_to_dict(run)["elapsed_s"] <= 60
+
+
+# ---------------------------------------------------------------------------
 # The model is only asked about pages it can actually answer for. Adjudicating
 # a page with no single stored document meant handing the model an empty
 # "current document" and asking what changed — it can only answer "this is new",

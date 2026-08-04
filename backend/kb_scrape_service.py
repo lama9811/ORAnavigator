@@ -45,6 +45,20 @@ def _seconds_since(dt) -> float:
     return (_now() - dt).total_seconds()
 
 
+def _seconds_between(start, end) -> float:
+    """Wall-clock duration between two stored timestamps.
+
+    Columns are naive UTC, so both sides are stamped before subtracting.
+    """
+    if not start or not end:
+        return 0.0
+    if start.tzinfo is None:
+        start = start.replace(tzinfo=timezone.utc)
+    if end.tzinfo is None:
+        end = end.replace(tzinfo=timezone.utc)
+    return (end - start).total_seconds()
+
+
 def active_run(db: Session):
     """The run currently in flight, if any — after reaping stale ones."""
     run = (
@@ -134,7 +148,16 @@ def run_to_dict(run: ScrapeRun | None) -> dict:
 
     found = run.pages_found or 0
     done = run.pages_done or 0
-    elapsed = _seconds_since(run.started_at) if run.started_at else 0.0
+    # A finished run's duration is fixed: finished_at - started_at. Measuring it
+    # from "now" instead made the summary keep counting after the run ended, so
+    # a 9m 49s crawl reported "1405m 20s" a day later and would grow forever.
+    # Only a run still in flight is measured against the current time.
+    elapsed = (
+        _seconds_between(run.started_at, run.finished_at)
+        if run.started_at and run.finished_at
+        else _seconds_since(run.started_at) if run.started_at
+        else 0.0
+    )
 
     # Only estimate once there is enough signal to be worth showing; an ETA
     # from three pages is noise dressed as information.
