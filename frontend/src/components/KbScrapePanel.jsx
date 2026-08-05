@@ -151,7 +151,10 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   // so it is a pointer rather than an action — and a list of things you cannot
   // act on is noise. The rows still exist in the API and the database.
   const notApprovable = visible.filter((c) => c.status === "pending" && !c.has_diff).length;
-  const settled = visible.filter((c) => c.status !== "pending");
+  // Approved, dismissed and unreadable rows are no longer listed at all.
+  // NOTE: the Undo button lived on approved rows in that group, so a revert is
+  // now only reachable through POST .../changes/{id}/revert. Restore the group
+  // if reverting by hand becomes a problem.
 
   const renderChange = (c) => {
     const meta = STATUS_META[c.status] || STATUS_META.needs_review;
@@ -347,17 +350,6 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
             )}
           </div>
 
-          {settled.length > 0 && (
-            <div className="scrape-group">
-              <div className="scrape-group-head">
-                <h5>
-                  Already handled
-                  <span className="scrape-group-n">{settled.length}</span>
-                </h5>
-              </div>
-              {settled.map(renderChange)}
-            </div>
-          )}
         </div>
       )}
 
