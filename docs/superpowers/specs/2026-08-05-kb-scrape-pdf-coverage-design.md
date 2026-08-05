@@ -84,16 +84,17 @@ unrewritable. Here 97% of files are unambiguous.
 
 ## Approach
 
-Add a **file phase** to the existing Job, after the page crawl, in the same run. Two
-behaviours, split by whether a document already exists:
+Add a **file phase** to the existing Job, after the page crawl, in the same run. Three
+behaviours, split by how many documents the file feeds:
 
 | Case | Behaviour | Why |
 |---|---|---|
-| Known file, hash moved | **Report only.** One row naming every derived document. | A revised PI Handbook cannot be safely re-split across 22 documents unattended. Same rule already applied to multi-document web pages. |
-| File on the site with no document | **Draft a document** from its text, queued for Approve. | There is no existing document to damage. Worst case is a dismissed draft. |
+| File on the site with no document | **Draft a new document** from its text, queued for Approve. | Nothing to damage; worst case is a dismissed draft. |
+| Known file changed, feeds **exactly 1** document | **Draft replacement content** for that document, queued for Approve. | 187 of 193 PDFs are this case. One file, one document, one diff to read. |
+| Known file changed, feeds **2+** documents | **Report only**, naming every derived document. | 6 files, 32 documents. PI Handbook 5 alone was split into 22; re-splitting it unattended would corrupt all of them at once. Same rule already applied to multi-document web pages. |
 
 Nothing reaches the datastore without an admin clicking Approve, unchanged from the
-2026-07-29 rule.
+2026-07-29 rule. Every applied change stores `previous_content`, so one click undoes it.
 
 ### Components
 
@@ -126,13 +127,29 @@ downloader is exactly such a reader; file and page fingerprints can never collid
 
 | `change_type` | `status` | Carries a draft? |
 |---|---|---|
-| `file_changed` | `pending` | No — `has_diff` false, so the UI offers Dismiss only |
+| `file_changed` | `pending` | Yes when the file feeds exactly one document and grounding succeeds; otherwise no, and the UI offers Dismiss only |
 | `file_new` | `pending` | Yes, when extraction and grounding both succeed |
 | `file_missing` | `skipped` | No — 403/404/timeout |
 
 `KbScrapePanel.jsx` needs three `TYPE_LABEL` entries ("file changed", "new file",
 "couldn't fetch"). The existing approvable/review-by-hand split then sorts them
 correctly with no further UI work: only `file_new` carries `new_content`.
+
+### Updating an existing document whose file changed
+
+Same extraction and grounding as below, with one difference in the prompt: the model is
+given **both** the new file text and the document's current content, and asked to update
+what the file now contradicts while **preserving detail the file does not address**.
+
+This matters more than it looks. The stored `content` is not a transcript of the file —
+it is LLM-summarised prose plus hand-authored material a scrape cannot regenerate
+(`key_facts` in 51 documents, `leadership_history`, `irb_voting_members`, staff
+`phone`/`office`). A naive "rewrite from the PDF" would silently delete it. The
+mitigations are: an update-not-replace prompt, the before/after diff the admin reads
+before approving, and `previous_content` making every approval revertible.
+
+Falls back to a plain report — no draft — when extraction is empty, grounding fails, or
+the model is unavailable.
 
 ### Drafting a document from a new PDF
 
@@ -174,8 +191,9 @@ own branch rather than relaxing that guard.
 - Reading `.docx` / `.xlsx` / `.pptx`. They are hashed, change-detected and reported,
   but not drafted — `pdfplumber` cannot read them and a handful of files does not
   justify Word and PowerPoint parsers in the image.
-- Rewriting existing documents when their source file changes. Report only, by
-  decision.
+- Rewriting the 32 documents that derive from a **multi-document** file. Those are
+  reported, never redrafted — no safe way exists to re-split one PDF back across 22
+  documents unattended.
 - Badging derived documents in the admin tree when their file moves. Considered and
   declined: one PI Handbook 5 revision would light up 22 documents at once.
 - OCR for scanned PDFs.
@@ -194,6 +212,9 @@ no network:
 6. A draft whose quote is absent from the extracted text is dropped.
 7. A quote differing only in whitespace/line wrapping still verifies.
 8. `known_files` prefers the snapshot and overlays live `struct_data`.
+9. A changed file feeding one document produces a draft; feeding two or more produces
+   a report with no draft.
+10. An update draft preserves a hand-authored passage the file does not contradict.
 
 ## Risks
 
