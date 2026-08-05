@@ -303,12 +303,42 @@ def _destination_kind(url: str) -> str:
 
 @lru_cache(maxsize=1)
 def _docs_by_title() -> dict:
-    """normalized title -> resolved doc row. Chunks carry titles, not doc_ids."""
+    """normalized title -> resolved doc row. Chunks carry titles, not doc_ids.
+
+    Indexed under BOTH names a document can go by. `_all_docs_by_id` prefers
+    `display_label`, but a retrieved chunk carries the datastore's `title`, and
+    the two differ in practice — the PF-10 form is "PF-10 Contractual Personnel
+    Request" on the /forms card and "PF-10 Contractual Personnel Request Form
+    (DocuSign)" in the datastore. Keying on one alone silently resolves nothing,
+    which looks exactly like the bug this feature exists to fix.
+    """
     out = {}
-    for row in _all_docs_by_id().values():
-        key = _norm_title(row.get("title"))
+    rows = _all_docs_by_id()
+
+    def _add(name, row):
+        key = _norm_title(name)
         if key and key not in out:
             out[key] = row
+
+    for row in rows.values():
+        _add(row.get("title"), row)
+
+    # The snapshot's raw `title`, which _all_docs_by_id may have replaced with
+    # display_label.
+    if _MANIFEST_PATH.exists():
+        with _MANIFEST_PATH.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    doc = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                row = rows.get(doc.get("doc_id"))
+                if row:
+                    _add(doc.get("title"), row)
+                    _add(doc.get("display_label"), row)
     return out
 
 

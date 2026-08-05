@@ -167,3 +167,42 @@ def test_attachments_and_citations_do_not_collide():
     query_cache.set_attachments(q, [{"title": "A file", "url": "https://f.pdf", "kind": "file"}])
     assert query_cache.get_citations(q)[0]["title"] == "A page"
     assert query_cache.get_attachments(q)[0]["title"] == "A file"
+
+
+# ---------------------------------------------------------------------------
+# A document goes by two names and chunks carry the one _all_docs_by_id drops.
+# Caught against real KB data, not fixtures: the PF-10 form is "PF-10
+# Contractual Personnel Request" on the /forms card (display_label) and "PF-10
+# Contractual Personnel Request Form (DocuSign)" in the datastore (title).
+# Indexing one alone silently resolves nothing — indistinguishable from the bug
+# this feature exists to fix.
+# ---------------------------------------------------------------------------
+
+def test_the_real_pf10_form_resolves_under_both_of_its_names(monkeypatch):
+    """No fixture: this runs against the committed snapshot."""
+    monkeypatch.undo()
+    fc._docs_by_title.cache_clear()
+    try:
+        for name in (
+            "PF-10 Contractual Personnel Request Form (DocuSign)",
+            "PF-10 Contractual Personnel Request",
+        ):
+            out = fc.attachments_for_titles([name])
+            assert out, f"no attachment resolved for {name!r}"
+            assert "docusign.net" in out[0]["url"]
+            assert out[0]["kind"] == "form"
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
+def test_a_document_whose_procedure_url_is_its_own_page_is_not_attached(monkeypatch):
+    """Pre-Award — F&A Cost Rates points at the page it came from, so Sources
+    already covers it. The rate LETTER is a separate document and does attach."""
+    monkeypatch.undo()
+    fc._docs_by_title.cache_clear()
+    try:
+        assert fc.attachments_for_titles(["Pre-Award — F&A Cost Rates"]) == []
+        letter = fc.attachments_for_titles(["Morgan State F&A Rate Agreement — 2024 to 2026"])
+        assert letter and letter[0]["url"].endswith(".pdf")
+    finally:
+        fc._docs_by_title.cache_clear()
