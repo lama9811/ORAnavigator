@@ -104,7 +104,14 @@ steps:
       # SCRAPE_MODEL_LOCATION=global is REQUIRED, not a preference:
       # gemini-3.6-flash 404s in us-central1 and answers only on `global`, and a
       # 404 here degrades silently to "no changes found" (golden rule 3).
-      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,SCRAPE_MODEL=gemini-3.6-flash,SCRAPE_MODEL_LOCATION=global,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8'
+      # SCRAPE_ENGINE=playwright is load-bearing and must stay listed HERE: this
+      # is --set-env-vars, which REPLACES the whole env set, so an engine chosen
+      # by hand on the Job is wiped by the next rebuild. Omitting it does not
+      # error — run.py falls back to its "gemini" default, and that engine cannot
+      # read 26 of the 59 ORA pages (RECITATION returns an EMPTY body on the
+      # entire compliance core). The revert would be silent: the crawl still
+      # succeeds and simply reports those pages as unreadable forever.
+      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},GOOGLE_GENAI_USE_VERTEXAI=TRUE,SCRAPE_ENGINE=playwright,SCRAPE_MODEL=gemini-3.6-flash,SCRAPE_MODEL_LOCATION=global,VERTEX_AI_DATASTORE_ID=projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8'
       - '--set-secrets=DATABASE_URL=ora-database-url:latest'
     waitFor: ['push-scraper']
 
