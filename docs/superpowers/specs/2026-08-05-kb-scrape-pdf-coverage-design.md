@@ -187,8 +187,19 @@ the model is unavailable.
 4. Placement: propose a `kb_path` from the file's folder and the page that links it,
    validated against `kb_tree.node_paths()`. Unresolvable → **Unfiled**, which is
    visible and one click from filed. `suggest_doc_id` supplies the `doc_id`.
-5. Approve → `create_kb_document` with `source_url` set to the file URL, so citations
-   resolve and the next run maps the file to its new document.
+5. Approve → `create_kb_document`, which gains a **`procedure_url` parameter** it does
+   not have today. Both URLs are written, and they mean different things:
+
+   | Field | Value | Purpose |
+   |---|---|---|
+   | `source_url` | the ORA page that links the file | provenance; what citations point at |
+   | `procedure_url` | the file itself | **the download link** |
+
+   Without this the feature half-works in the worst way: a document is created, answers
+   are drawn from it, and the file it came from cannot be reached. `procedure_url` is
+   also what lets the next run map the file back to its new document, and what the chat
+   attachment feature (`2026-08-05-chat-document-attachments-design.md`) renders as a
+   download button.
 
 `approve_change` currently rejects `change_type == "new"` outright because nothing says
 where the document belongs. `file_new` carries a validated `kb_path`, so it gets its

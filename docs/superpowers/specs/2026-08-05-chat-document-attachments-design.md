@@ -101,6 +101,13 @@ letter.
 2. Map each retrieved chunk's **title** → `doc_id`, reusing the normalisation already
    used by `_get_kb_url_map` (titles are what chunks carry; `doc_id` is not exposed).
 3. `resolve_kb_doc(doc_id)` → keep entries whose `url` is a file or form destination.
+   **`resolve_kb_doc` gains a live overlay**: the snapshot supplies the base map, and
+   `procedure_url` values from the datastore's `struct_data` are layered on top, lazily
+   and once per process. This is the same pattern `_get_kb_url_map()` already uses for
+   `source_url`, and it is required rather than cosmetic — a document created by the
+   file scrape exists only in the datastore, so a snapshot-only lookup would give
+   newly-added documents no download link at all. That is the exact failure this
+   feature exists to prevent.
 4. Deduplicate, preserve retrieval order, **cap at 3**, attach as
    `result["attachments"] = [{title, url, kind}]` where `kind ∈ {form, file}`.
 
@@ -154,13 +161,21 @@ link. Nothing else changes.
 
 ## Risks
 
-- **The snapshot is the source of truth for links and can go stale.** A document
-  authored in the admin dashboard after the snapshot was committed resolves to nothing,
-  so it silently gets no attachment. Acceptable — the failure is a missing link, not a
-  wrong one — but it is the same staleness that caused this bug and it will recur.
+- **Snapshot staleness, narrowed but not closed.** The live overlay above means
+  documents created after the snapshot still resolve. What remains uncovered is a
+  document whose `procedure_url` was *edited* in the snapshot but never in the
+  datastore, or vice versa — the two copies still do not sync. The failure mode is a
+  missing link rather than a wrong one.
 - **A dead `procedure_url` attaches just as confidently as a live one.** The KB already
   contains at least one broken target (`HR02 Accident Investigation`, 403). The file
   scrape designed in `2026-08-05-kb-scrape-pdf-coverage-design.md` is what detects
   those; this feature should be read alongside it.
 - **Three may be too few or too many.** The cap is a guess. Worth revisiting once real
   questions are observed.
+
+## Verification that the loop actually closes
+
+The two specs are only useful together, so the acceptance test spans both: post a new
+PDF to the ORA site → run the scrape → approve the drafted document → ask the chatbot
+about it → **receive a working download link to that PDF**. If any step in that chain
+loses `procedure_url`, the feature looks finished and is not.
