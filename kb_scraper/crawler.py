@@ -16,6 +16,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Iterator, Optional
 
+from extractors import kind_for_url
 from fingerprint import (
     fingerprint,
     is_in_scope,
@@ -55,6 +56,11 @@ class PageResult:
     title: str = ""
     text: str = ""
     links: list[str] = field(default_factory=list)
+    # Document and form URLs seen on this page. Kept separately from `links`
+    # because is_in_scope() deliberately rejects /Documents/... — page crawling
+    # must not follow them, but the file phase needs to know they exist. This is
+    # the only way a file with no KB document is ever discovered.
+    file_links: list[str] = field(default_factory=list)
     error: str = ""
 
     @property
@@ -64,6 +70,31 @@ class PageResult:
     @property
     def digest(self) -> str:
         return fingerprint(self.text)
+
+
+def _collect_file_links(raw_links, base: str) -> list[str]:
+    """Absolute morgan.edu document and form URLs found on a page.
+
+    These are exactly the links is_in_scope() throws away: ORA's files live
+    under /Documents/ADMINISTRATION/OFFICES/ora/, outside the page prefix, so
+    the crawl must not follow them — but discarding them at the point of
+    discovery is why a newly posted PDF was invisible to the scrape.
+    """
+    out: list[str] = []
+    for link in raw_links:
+        url = normalize_url(link, base)
+        if not url:
+            continue
+        kind = kind_for_url(url)
+        if kind not in ("file", "form"):
+            continue
+        # Our own documents only. A funder's PDF linked from a page is not ours
+        # to track, but a DocuSign form we route people to is.
+        if kind == "file" and "morgan.edu" not in url.lower():
+            continue
+        if url not in out:
+            out.append(url)
+    return out
 
 
 def _expand_accordions(page) -> None:
@@ -143,6 +174,7 @@ def fetch_page(page, url: str) -> PageResult:
         result.links = [
             u for u in (normalize_url(l, url) for l in raw_links) if u and is_in_scope(u)
         ]
+        result.file_links = _collect_file_links(raw_links, url)
     except Exception as e:
         result.error = str(e)[:400]
     return result

@@ -390,3 +390,39 @@ def test_upsert_only_stamps_last_changed_when_the_page_changed(db_session):
     )
     db_session.commit()
     assert db_session.query(KbPageFingerprint).one().last_changed_at is not None
+
+
+# ---------------------------------------------------------------------------
+# Document links — is_in_scope rejects /Documents/..., so these were being
+# discarded at the moment they were found. Collecting them is the only way a
+# file with no KB document is ever discovered.
+# ---------------------------------------------------------------------------
+
+def test_page_result_defaults_to_no_file_links():
+    crawler = _load("crawler")
+    r = crawler.PageResult(url="https://www.morgan.edu/ora")
+    assert r.file_links == []
+
+
+def test_collect_file_links_keeps_our_documents_and_forms_only():
+    crawler = _load("crawler")
+    raw = [
+        "/Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook5.pdf",
+        "/Documents/ADMINISTRATION/OFFICES/ora/Templates/x.docx",
+        "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=abc",
+        "/office-of-research-administration/pre-award",
+        "https://example.com/other.pdf",
+        "/Images/Shared/logo.png",
+    ]
+    out = crawler._collect_file_links(raw, "https://www.morgan.edu/ora")
+    assert out == [
+        "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook5.pdf",
+        "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Templates/x.docx",
+        "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=abc",
+    ]
+
+
+def test_collect_file_links_deduplicates():
+    crawler = _load("crawler")
+    raw = ["/Documents/ora/a.pdf", "/Documents/ora/a.pdf"]
+    assert len(crawler._collect_file_links(raw, "https://www.morgan.edu/ora")) == 1
