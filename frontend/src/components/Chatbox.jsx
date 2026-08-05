@@ -558,7 +558,7 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
           icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="url(#tg2)" strokeWidth="2" strokeLinecap="round"/><path d="M12 7v5l3 3" stroke="url(#tg2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><defs><linearGradient id="tg2" x1="3" y1="3" x2="21" y2="21"><stop stopColor="#818cf8"/><stop offset="1" stopColor="#6366f1"/></linearGradient></defs></svg>,
         });
       } else {
-        addMessage(botResponse, "bot", { citations: data.citations || [], feature: data.feature || null });
+        addMessage(botResponse, "bot", { citations: data.citations || [], attachments: data.attachments || [], feature: data.feature || null });
         await speakWithTTS(botResponse);
       }
 
@@ -862,6 +862,17 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                                 };
                                 return newMessages;
                             });
+                        } else if (event.type === "attachments") {
+                            // The actual document behind the answer, resolved
+                            // server-side so the URL is never model-written.
+                            setMessages((prev) => {
+                                const newMessages = [...prev];
+                                newMessages[newMessages.length - 1] = {
+                                    ...newMessages[newMessages.length - 1],
+                                    attachments: event.content || []
+                                };
+                                return newMessages;
+                            });
                         } else if (event.type === "feature") {
                             // Attach the deterministic in-app feature callout
                             setMessages((prev) => {
@@ -968,6 +979,15 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                         newMessages[newMessages.length - 1] = {
                             ...newMessages[newMessages.length - 1],
                             citations: event.content || []
+                        };
+                        return newMessages;
+                    });
+                } else if (event.type === "attachments") {
+                    setMessages((prev) => {
+                        const newMessages = [...prev];
+                        newMessages[newMessages.length - 1] = {
+                            ...newMessages[newMessages.length - 1],
+                            attachments: event.content || []
                         };
                         return newMessages;
                     });
@@ -1277,6 +1297,24 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                             </li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+
+                    {msg.sender === "bot" && !msg.isStreaming && msg.attachments && msg.attachments.length > 0 && (
+                      <div className="message-attachments">
+                        <span className="message-attachments-label">Documents</span>
+                        {msg.attachments.map((a, ai) => (
+                          <a
+                            key={ai}
+                            href={a.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="message-attachment"
+                          >
+                            <FileText size={13} aria-hidden="true" />
+                            <span>{a.title}</span>
+                          </a>
+                        ))}
                       </div>
                     )}
 

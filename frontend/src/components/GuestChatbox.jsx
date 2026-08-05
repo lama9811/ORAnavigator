@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowUpCircle } from "lucide-react";
+import { ArrowUpCircle, FileText } from "lucide-react";
 import "./GuestChatbox.css";
 
 // Default suggestions — ORA faculty/PI/admin audience
@@ -98,7 +98,7 @@ export default function GuestChatbox() {
         }
         const data = await res.json();
         const botReply = data.response || "I couldn't process that. Please try again.";
-        setMessages(prev => [...prev, { text: botReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), citations: data.citations || [] }]);
+        setMessages(prev => [...prev, { text: botReply, sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), citations: data.citations || [], attachments: data.attachments || [] }]);
       } catch {
         setMessages(prev => [...prev, { text: "Something went wrong. Please try again.", sender: "bot", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
       } finally {
@@ -189,6 +189,24 @@ export default function GuestChatbox() {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {msg.text}
                   </ReactMarkdown>
+                  {msg.sender === "bot" && msg.attachments && msg.attachments.length > 0 && (
+                    <div className="message-attachments">
+                      <span className="message-attachments-label">Documents</span>
+                      {msg.attachments.map((a, ai) => (
+                        <a
+                          key={ai}
+                          href={a.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="message-attachment"
+                        >
+                          <FileText size={13} aria-hidden="true" />
+                          <span>{a.title}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
+
                   {msg.sender === "bot" && msg.citations && msg.citations.length > 0 && (
                     <div className="message-sources">
                       <span className="message-sources-label">Sources</span>
