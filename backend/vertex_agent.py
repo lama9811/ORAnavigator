@@ -983,12 +983,16 @@ def query_agent(query: str, user_id: str = "default", context: str = "", model: 
 import threading
 _grounding_local = threading.local()
 
-def _set_grounding(kb_grounded: bool, chunks: int, coverage: float, citations: Optional[list] = None):
+def _set_grounding(kb_grounded: bool, chunks: int, coverage: float,
+                   citations: Optional[list] = None, attachments: Optional[list] = None):
     _grounding_local.data = {
         "kb_grounded": kb_grounded,
         "grounding_chunks": chunks,
         "grounding_coverage": coverage,
         "citations": citations or [],
+        # Download links ride the same channel as citations so main.py can cache
+        # and emit them without a second plumbing path.
+        "attachments": attachments or [],
     }
 
 
@@ -1393,14 +1397,44 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     # answer is never sourceless.
     if not _non_kb and _wants_fallback_citations(message, result):
         result["citations"] = _fallback_citations(message)
+    # The document behind the answer, resolved in code. The model describes the
+    # form; this hands it over.
+    result["attachments"] = _attachments_for_result(message, text, result)
     print(f"   [LATENCY] chat turn {(time_module.time() - _t0) * 1000:.0f}ms "
           f"(verdict={verdict}, chunks={result['chunks']})")
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
-                   citations=result["citations"])
+                   citations=result["citations"],
+                   attachments=result.get("attachments") or [])
     final = _finalize_answer(text, result["grounded_corpus"])
     if result["citations"]:
         yield {"type": "citations", "content": result["citations"]}
     yield {"type": "done", "content": final}
+
+
+def _chunk_titles(result: dict) -> list:
+    """Titles of the documents this turn retrieved, in retrieval order."""
+    return [c.get("title", "") for c in (result.get("citations") or []) if c.get("title")]
+
+
+def _attachments_for_result(message: str, text: str, result: dict) -> list:
+    """Download links for the documents behind this answer.
+
+    Cleared on exactly the turns citations are cleared. Stapling KB Sources onto
+    "thanks!" was a real production bug in July — the model runs a stray KB
+    search on a non-KB turn and returns real grounding metadata — and an
+    attachment reintroduces it in a more embarrassing form: a DocuSign form
+    offered in reply to "how are you". Reuse the guards rather than writing new
+    ones, so the two can never drift apart.
+    """
+    if _is_non_kb_reply(message, text) or _is_personal_identity(message):
+        return []
+    try:
+        from services.forms_catalog import attachments_for_titles
+
+        return attachments_for_titles(_chunk_titles(result))
+    except Exception:
+        # A missing link is a fine outcome; a failed turn is not.
+        return []
 
 
 def _run_verified_stream(message: str, user_id: str, session_id: str, context: str = "",
@@ -1471,10 +1505,14 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
     # already flagged with a caution note.
     if not _non_kb and verdict != "weak" and _wants_fallback_citations(message, result):
         result["citations"] = _fallback_citations(message)
+    # The document behind the answer, resolved in code. The model describes the
+    # form; this hands it over.
+    result["attachments"] = _attachments_for_result(message, text, result)
     print(f"   [LATENCY] chat turn (stream) {(time_module.time() - _t0) * 1000:.0f}ms "
           f"(verdict={verdict}, chunks={result['chunks']})")
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
-                   citations=result["citations"])
+                   citations=result["citations"],
+                   attachments=result.get("attachments") or [])
     final = _finalize_answer(text, result["grounded_corpus"])
     if verdict == "weak":
         final = final + _WEAK_NOTE   # can't regenerate/re-search mid-stream -> caution
@@ -1492,7 +1530,7 @@ def get_last_grounding() -> dict:
         grounding_chunks: Number of KB documents cited
         grounding_coverage: Fraction of response text backed by KB sources (0.0-1.0)
     """
-    return getattr(_grounding_local, "data", {"kb_grounded": True, "grounding_chunks": 0, "grounding_coverage": 1.0, "citations": []})
+    return getattr(_grounding_local, "data", {"kb_grounded": True, "grounding_chunks": 0, "grounding_coverage": 1.0, "citations": [], "attachments": []})
 
 
 def check_agent_health() -> dict:

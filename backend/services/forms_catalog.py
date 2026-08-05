@@ -227,6 +227,33 @@ def _all_docs_by_id() -> dict:
                 "url": url,
                 "source_url": source,
             }
+
+    # Overlay the datastore's own procedure_url values. Required, not cosmetic:
+    # a document created by the scrape's file phase exists ONLY in the
+    # datastore, so a snapshot-only lookup would give every newly-added document
+    # no download link -- the exact failure the attachment feature exists to
+    # prevent. Same lazy once-per-process overlay _get_kb_url_map applies to
+    # source_url.
+    try:
+        from datastore_manager import list_datastore_documents
+
+        for doc in list_datastore_documents():
+            did = doc.get("id") or doc.get("doc_id")
+            live = (doc.get("procedure_url") or "").strip()
+            if not did or not live:
+                continue
+            row = out.setdefault(did, {
+                "doc_id": did,
+                "title": doc.get("title") or did,
+                "url": "",
+                "source_url": doc.get("source_url") or "",
+            })
+            row["url"] = live
+    except Exception:
+        # The snapshot alone is a usable answer; a datastore blip must not take
+        # the forms catalog down with it.
+        pass
+
     return out
 
 
@@ -238,3 +265,97 @@ def resolve_kb_doc(doc_id: Optional[str]) -> Optional[dict]:
         return None
     row = _all_docs_by_id().get(doc_id)
     return dict(row) if row else None
+
+
+# ---------------------------------------------------------------------------
+# Download links for chat answers
+#
+# The chatbot could describe the PF-10 form and had no way to hand it over: the
+# live datastore stores only category/doc_id/file_path/playwright_verified/
+# source_file/subcategory/title, so procedure_url never reached the model. This
+# resolves it in code instead.
+#
+# Deterministic on purpose. A DocuSign PowerForm URL is ~150 characters of
+# opaque GUIDs; a model reproducing one will eventually corrupt a character and
+# produce a plausible link to a dead page -- an error no grounding check catches,
+# because the sentence around it is true. The model describes the form, this
+# function supplies the URL.
+# ---------------------------------------------------------------------------
+
+_FILE_EXT = (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")
+_FORM_HOSTS = ("docusign.net", "forms.gle", "docs.google.com/forms")
+
+
+def _norm_title(s: str) -> str:
+    return " ".join((s or "").split()).lower()
+
+
+def _destination_kind(url: str) -> str:
+    """file | form | page. Only the first two are worth attaching -- a page
+    destination is already covered by the Sources block."""
+    low = (url or "").lower()
+    if any(h in low for h in _FORM_HOSTS):
+        return "form"
+    if low.split("?")[0].split("#")[0].endswith(_FILE_EXT):
+        return "file"
+    return "page"
+
+
+@lru_cache(maxsize=1)
+def _docs_by_title() -> dict:
+    """normalized title -> resolved doc row. Chunks carry titles, not doc_ids.
+
+    Indexed under BOTH names a document can go by. `_all_docs_by_id` prefers
+    `display_label`, but a retrieved chunk carries the datastore's `title`, and
+    the two differ in practice — the PF-10 form is "PF-10 Contractual Personnel
+    Request" on the /forms card and "PF-10 Contractual Personnel Request Form
+    (DocuSign)" in the datastore. Keying on one alone silently resolves nothing,
+    which looks exactly like the bug this feature exists to fix.
+    """
+    out = {}
+    rows = _all_docs_by_id()
+
+    def _add(name, row):
+        key = _norm_title(name)
+        if key and key not in out:
+            out[key] = row
+
+    for row in rows.values():
+        _add(row.get("title"), row)
+
+    # The snapshot's raw `title`, which _all_docs_by_id may have replaced with
+    # display_label.
+    if _MANIFEST_PATH.exists():
+        with _MANIFEST_PATH.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    doc = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                row = rows.get(doc.get("doc_id"))
+                if row:
+                    _add(doc.get("title"), row)
+                    _add(doc.get("display_label"), row)
+    return out
+
+
+def attachments_for_titles(titles, limit: int = 3) -> list:
+    """The documents behind these retrieved chunk titles, as download links."""
+    by_title = _docs_by_title()
+    out, seen = [], set()
+    for title in titles or []:
+        row = by_title.get(_norm_title(title))
+        if not row:
+            continue
+        url = (row.get("url") or "").strip()
+        kind = _destination_kind(url)
+        if kind == "page" or not url or url in seen:
+            continue
+        seen.add(url)
+        out.append({"title": row.get("title") or title, "url": url, "kind": kind})
+        if len(out) >= limit:
+            break
+    return out

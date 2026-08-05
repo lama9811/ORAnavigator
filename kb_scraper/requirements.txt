@@ -14,3 +14,12 @@ PyMySQL                       # backend/requirements.txt:80 (unpinned there too)
 # PyMySQL needs this for MySQL 8's caching_sha2_password. The backend gets it
 # transitively via python-jose[cryptography]; here it has to be explicit.
 cryptography
+
+# File readers for the document phase. All pure-Python — the image gains these
+# wheels and no system libraries. pdfplumber's version MUST match
+# backend/requirements.txt:88: the job and the solicitation extractor parse the
+# same PDFs, and a drift would mean the two disagree about the same file.
+pdfplumber==0.11.1            # backend/requirements.txt:88
+python-docx==1.1.2
+python-pptx==1.0.2
+openpyxl==3.1.5

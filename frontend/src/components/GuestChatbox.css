@@ -972,3 +972,48 @@ body.dark .signup-modal-footer {
 body.dark .message-sources-list a {
   color: #8ab4f8;
 }
+
+/* ============================================
+   Documents block — the file itself, not the page it came from.
+   Sources cite provenance; this hands over the actual form or PDF.
+   The URL is resolved server-side and never written by the model.
+   ============================================ */
+.message-attachments {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.message-attachments-label {
+  width: 100%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary, #8A7E6D);
+}
+
+.message-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.message-attachment:hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: var(--msu-gold-50, rgba(243, 112, 33, 0.45));
+}
+
+body.dark .message-attachment:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

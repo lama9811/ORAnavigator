@@ -206,6 +206,36 @@ def approve_change(db: Session, change_id: int, user_id: int | None) -> dict:
                        "page by hand, not something that can be approved.",
         }
 
+    if change.change_type == "file_new":
+        # A new FILE, unlike a new page, arrives with everything a document
+        # needs: drafted content, a proposed tree path, and — the part that
+        # matters — the file's own URL, which becomes procedure_url so the
+        # document can actually be downloaded once it exists.
+        from kb_tree import suggest_doc_id
+
+        doc_id = change.doc_id or suggest_doc_id(change.page_title or change.url)
+        result = create_kb_document(
+            doc_id=doc_id,
+            title=change.page_title or doc_id,
+            content=change.new_content,
+            kb_path=change.kb_path or "",
+            procedure_url=change.url,
+        )
+        if not result.get("success"):
+            return {"success": False, "message": result.get("message", "Create failed")}
+
+        change.doc_id = doc_id
+        change.status = "approved"
+        change.reviewed = True
+        change.reviewed_by = user_id
+        change.reviewed_at = _now()
+        db.commit()
+        return {
+            "success": True,
+            "message": f"Created — {doc_id}",
+            "doc_id": doc_id,
+        }
+
     if change.change_type == "new":
         return {
             "success": False,

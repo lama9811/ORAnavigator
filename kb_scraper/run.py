@@ -40,6 +40,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from adjudicator import Verdict, adjudicate                           # noqa: E402
 from crawler import SEED_URLS, crawl                                  # noqa: E402
+from extractors import kind_for_url                                   # noqa: E402
+from file_adjudicator import draft_new, draft_update                  # noqa: E402
+from files import fetch_all, known_files                              # noqa: E402
 from fingerprint import summarize_diff                                # noqa: E402
 
 logging.basicConfig(
@@ -162,6 +165,45 @@ def resolve_audit(engine: str, audit: bool) -> bool:
     return audit
 
 
+def _snapshot_rows() -> list:
+    """The committed snapshot, as rows. The source of procedure_url.
+
+    Same precedence argument as _load_url_index: the seeded documents carry no
+    procedure_url in the datastore at all, so a datastore-only index maps no
+    files and every one of them reports as new.
+    """
+    import json as _json
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parent.parent
+        / "backend" / "kb_structured" / "_all_documents.jsonl"
+    )
+    rows = []
+    try:
+        for line in path.read_text().splitlines():
+            if line.strip():
+                rows.append(_json.loads(line))
+    except Exception as e:
+        log.warning("Could not read the KB snapshot for file mapping (%s)", e)
+    return rows
+
+
+def _is_file_baseline(known, doc_ids) -> bool:
+    """First sighting of a file whose documents already exist.
+
+    Record the hash and say nothing. Without this every known file reports as
+    changed on the first run, because there is no prior hash to compare against
+    — ~236 bogus proposals in one go.
+    """
+    return known is None and bool(doc_ids)
+
+
+def _classify_file(known, doc_ids) -> str:
+    """file_new when nothing derives from it; file_changed otherwise."""
+    return "file_new" if not doc_ids else "file_changed"
+
+
 def load_baseline(session, engine: str) -> dict[str, str]:
     """{url: fingerprint} for pages THIS engine has read before.
 
@@ -212,6 +254,143 @@ def upsert_fingerprint(session, *, url: str, digest: str, engine: str, title: st
     return fp
 
 
+def _file_phase(session, run, by_url_files, seen_file_links, get_content,
+                dry_run: bool, stats_out: dict) -> dict:
+    """Hash every ORA document, draft what changed and what is new.
+
+    Runs after the page crawl and shares its run row. Nothing here writes to the
+    datastore: new documents and updates become pending ScrapeChange rows that an
+    admin approves, exactly like page changes.
+    """
+    from models import ScrapeChange
+
+    # Forms are excluded for the same reason known_files excludes them: a
+    # DocuSign PowerForm serves a dynamic page with per-request tokens, so its
+    # bytes differ on every fetch and hashing it would report a change forever.
+    work = sorted(
+        {u for u in (set(by_url_files) | set(seen_file_links)) if kind_for_url(u) == "file"}
+    )
+    log.info(
+        "File phase: %d known, %d seen on site, %d to check",
+        len(by_url_files), len(seen_file_links), len(work),
+    )
+
+    prior = {} if dry_run else load_baseline(session, "file")
+    log.info("Baseline: %d known file fingerprints", len(prior))
+
+    stats = {"files": 0, "unreadable": 0, "unchanged": 0, "baselined": 0,
+             "new": 0, "updated": 0, "reported": 0}
+
+    def on_file(result, done, total):
+        if dry_run:
+            return
+        run.current_url = result.url[:500]
+        if done % PROGRESS_EVERY == 0 or done == total:
+            session.commit()
+
+    def should_stop() -> bool:
+        if dry_run:
+            return False
+        session.refresh(run)
+        return bool(run.cancel_requested)
+
+    for result in fetch_all(work, on_file=on_file, should_stop=should_stop):
+        stats["files"] += 1
+        url = result.url
+        doc_ids = by_url_files.get(url, [])
+        title = url.rsplit("/", 1)[-1].replace("%20", " ")
+
+        # --- A file we could not READ is not a file that was deleted. --------
+        if result.unreadable:
+            stats["unreadable"] += 1
+            if not dry_run:
+                session.add(ScrapeChange(
+                    run_id=run.id, url=url, page_title=title[:500],
+                    change_type="file_missing", status="skipped",
+                    doc_id=doc_ids[0] if len(doc_ids) == 1 else None,
+                    affected_doc_ids=json.dumps(doc_ids) if doc_ids else None,
+                    what_changed=f"Could not read the file ({result.error or result.status}). "
+                                 f"Document left unchanged.",
+                ))
+                session.commit()
+            continue
+
+        known = prior.get(url)
+        if known == result.digest:
+            stats["unchanged"] += 1
+            continue
+
+        if _is_file_baseline(known, doc_ids):
+            stats["baselined"] += 1
+            if not dry_run:
+                upsert_fingerprint(
+                    session, url=url, digest=result.digest, engine="file",
+                    title=title, doc_ids=doc_ids, char_count=result.size, changed=False,
+                )
+                session.commit()
+            continue
+
+        kind = _classify_file(known, doc_ids)
+
+        if dry_run:
+            log.info("  %-13s %d doc(s)  %s", kind, len(doc_ids), url)
+            stats["new" if kind == "file_new" else "updated"] += 1
+            continue
+
+        if kind == "file_new":
+            draft = draft_new(result.text, url, title_hint=title)
+            session.add(ScrapeChange(
+                run_id=run.id, url=url,
+                page_title=(draft.title or title)[:500],
+                change_type="file_new", status="pending",
+                kb_path=f"{draft.category}/{draft.subcategory}".strip("/") if draft.category else None,
+                what_changed=draft.what_changed or (
+                    "New document on morgan.edu with no knowledge base entry. "
+                    "Approve to create one from it."
+                ),
+                evidence_quote=draft.quote or None,
+                confidence=draft.confidence,
+                new_content=draft.content if draft.applicable else None,
+            ))
+            stats["new"] += 1
+        else:
+            # One draft PER derived document. The file is never re-split across
+            # them: each draft sees this file plus that document's own content,
+            # so a bad draft damages one document rather than all 22.
+            for doc_id in doc_ids:
+                stored = get_content(doc_id) or ""
+                draft = draft_update(result.text, stored, doc_id)
+                session.add(ScrapeChange(
+                    run_id=run.id, url=url, page_title=title[:500],
+                    change_type="file_changed", status="pending",
+                    doc_id=doc_id,
+                    affected_doc_ids=json.dumps(doc_ids) if len(doc_ids) > 1 else None,
+                    what_changed=draft.what_changed or "The source file changed.",
+                    evidence_quote=draft.quote or None,
+                    confidence=draft.confidence,
+                    previous_content=stored if draft.applicable else None,
+                    new_content=draft.content if draft.applicable else None,
+                ))
+                if draft.applicable:
+                    stats["updated"] += 1
+                    log.info("PROPOSED %s -> %s", url, doc_id)
+                else:
+                    stats["reported"] += 1
+
+        upsert_fingerprint(
+            session, url=url, digest=result.digest, engine="file",
+            title=title, doc_ids=doc_ids, char_count=result.size, changed=True,
+        )
+        run.changes_found = (
+            stats_out.get("pending", 0) + stats_out.get("new", 0)
+            + stats["new"] + stats["updated"] + stats["reported"]
+        )
+        session.commit()
+
+    log.info("File phase done: %s", stats)
+    return stats
+
+
 def main() -> int:
     args = build_parser().parse_args()
 
@@ -253,6 +432,10 @@ def main() -> int:
     stats = {"pages": 0, "unreadable": 0, "unchanged": 0, "cosmetic": 0,
              "pending": 0, "new": 0}
     seen_urls: set[str] = set()
+    # Document links the crawl walks past. is_in_scope() rejects them so the
+    # page crawl never follows them, but they are how a file with no KB
+    # document is discovered.
+    seen_file_links: set[str] = set()
 
     def should_stop() -> bool:
         if args.dry_run:
@@ -293,6 +476,7 @@ def main() -> int:
         stats["pages"] += 1
         url = result.url.rstrip("/")
         seen_urls.add(url)
+        seen_file_links.update(getattr(result, "file_links", None) or [])
         doc_ids = by_url.get(url, [])
 
         # --- Unreadable is NOT a change. Leave the document alone. -----------
@@ -452,6 +636,19 @@ def main() -> int:
         run.changes_found = stats["pending"] + stats["new"]
         session.commit()
 
+    # --- Documents: the files those pages link to --------------------------
+    # Runs whatever the page engine was: a file is bytes, and reading it needs
+    # neither a browser nor a model.
+    file_stats = _file_phase(
+        session, run,
+        known_files(docs, _snapshot_rows()),
+        seen_file_links,
+        get_content,
+        args.dry_run,
+        stats,
+    )
+    stats["files"] = file_stats
+
     # --- Pages that vanished from the site --------------------------------
     if not args.dry_run and not run.cancel_requested:
         gone = [u for u in prior if u not in seen_urls]
@@ -473,10 +670,16 @@ def main() -> int:
     log.info("Done: %s", stats)
 
     if not args.dry_run:
+        files = stats.get("files") or {}
         run.status = "cancelled" if run.cancel_requested else "succeeded"
         run.finished_at = _now()
-        run.changes_found = stats["pending"] + stats["new"]
-        run.pages_failed = stats["unreadable"]
+        # Documents count toward the same totals as pages: an admin reading the
+        # summary wants "how much is waiting for me", not a per-phase breakdown.
+        run.changes_found = (
+            stats["pending"] + stats["new"]
+            + files.get("new", 0) + files.get("updated", 0) + files.get("reported", 0)
+        )
+        run.pages_failed = stats["unreadable"] + files.get("unreadable", 0)
         session.commit()
         session.close()
 

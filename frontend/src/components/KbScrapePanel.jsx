@@ -25,6 +25,10 @@ const TYPE_LABEL = {
   new: "new page",
   removed: "gone from site",
   unreadable: "couldn't read",
+  // The document phase: PDFs, Word files, spreadsheets and slide decks.
+  file_new: "new document",
+  file_changed: "document changed",
+  file_missing: "couldn't fetch file",
 };
 
 const STATUS_META = {
@@ -143,8 +147,14 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
   // list, a run with nothing approvable read as a broken Approve button rather
   // than a deliberate refusal, which is exactly how it was reported.
   const readyToApprove = visible.filter((c) => c.status === "pending" && c.has_diff);
-  const reviewByHand = visible.filter((c) => c.status === "pending" && !c.has_diff);
-  const settled = visible.filter((c) => c.status !== "pending");
+  // Counted, not listed. A page feeding many documents can never carry a draft,
+  // so it is a pointer rather than an action — and a list of things you cannot
+  // act on is noise. The rows still exist in the API and the database.
+  const notApprovable = visible.filter((c) => c.status === "pending" && !c.has_diff).length;
+  // Approved, dismissed and unreadable rows are no longer listed at all.
+  // NOTE: the Undo button lived on approved rows in that group, so a revert is
+  // now only reachable through POST .../changes/{id}/revert. Restore the group
+  // if reverting by hand becomes a problem.
 
   const renderChange = (c) => {
     const meta = STATUS_META[c.status] || STATUS_META.needs_review;
@@ -333,41 +343,13 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
               readyToApprove.map(renderChange)
             ) : (
               <div className="scrape-empty">
-                {reviewByHand.length > 0
-                  ? "Nothing from this run can be applied automatically. Every changed page below feeds more than one document, so there is no single replacement to write — which is why no Approve button appears."
+                {notApprovable > 0
+                  ? `Nothing from this run can be applied automatically. ${notApprovable} changed ${notApprovable === 1 ? "page feeds" : "pages feed"} more than one document, so there is no single replacement to write — those are not listed.`
                   : "Nothing is waiting on your approval."}
               </div>
             )}
           </div>
 
-          {reviewByHand.length > 0 && (
-            <div className="scrape-group">
-              <div className="scrape-group-head">
-                <h5>
-                  Review by hand
-                  <span className="scrape-group-n">{reviewByHand.length}</span>
-                </h5>
-                <p>
-                  Each of these pages feeds several documents, so there is no single
-                  replacement to approve. Open the page, check the documents it feeds,
-                  then dismiss. Nothing here can change a document.
-                </p>
-              </div>
-              {reviewByHand.map(renderChange)}
-            </div>
-          )}
-
-          {settled.length > 0 && (
-            <div className="scrape-group">
-              <div className="scrape-group-head">
-                <h5>
-                  Already handled
-                  <span className="scrape-group-n">{settled.length}</span>
-                </h5>
-              </div>
-              {settled.map(renderChange)}
-            </div>
-          )}
         </div>
       )}
 
