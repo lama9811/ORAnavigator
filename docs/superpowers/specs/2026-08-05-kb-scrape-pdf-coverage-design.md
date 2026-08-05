@@ -84,14 +84,24 @@ unrewritable. Here 97% of files are unambiguous.
 
 ## Approach
 
-Add a **file phase** to the existing Job, after the page crawl, in the same run. Three
-behaviours, split by how many documents the file feeds:
+Add a **file phase** to the existing Job, after the page crawl, in the same run. Every
+file is covered, in both directions:
 
-| Case | Behaviour | Why |
-|---|---|---|
-| File on the site with no document | **Draft a new document** from its text, queued for Approve. | Nothing to damage; worst case is a dismissed draft. |
-| Known file changed, feeds **exactly 1** document | **Draft replacement content** for that document, queued for Approve. | 187 of 193 PDFs are this case. One file, one document, one diff to read. |
-| Known file changed, feeds **2+** documents | **Report only**, naming every derived document. | 6 files, 32 documents. PI Handbook 5 alone was split into 22; re-splitting it unattended would corrupt all of them at once. Same rule already applied to multi-document web pages. |
+| Case | Behaviour |
+|---|---|
+| File on the site with no document | **Draft a new document** from its text, queued for Approve. |
+| Known file changed, feeds **exactly 1** document | **Draft replacement content** for that document, queued for Approve. 187 of 193 PDFs. |
+| Known file changed, feeds **2+** documents | **One draft per derived document** — not one bulk rewrite. Each is queued and approved separately. |
+| Unreadable format (DocuSign / Google form) | Link-only document; detected and reported, contents cannot be read. |
+
+**The multi-document case is drafted per document, never re-split.** The dangerous
+operation — take a revised PI Handbook and redistribute its paragraphs across the 22
+documents that came from it — is not performed. Instead each of the 22 is handled on
+its own: the model receives the new file text plus *that document's* current content
+and updates only what the file contradicts. The blast radius of a bad draft is one
+document with its own diff and its own Undo, and 21 unrelated documents are untouched.
+The cost is 22 approvals rather than one, which is the correct trade when the
+alternative is an unreviewable bulk edit.
 
 Nothing reaches the datastore without an admin clicking Approve, unchanged from the
 2026-07-29 rule. Every applied change stores `previous_content`, so one click undoes it.
@@ -107,8 +117,20 @@ so `run.py` treats it as one more reader:
 - `fetch(url)` → streams the response, computes SHA-256 over the bytes, returns
   `FileResult(url, digest, content_type, size, text, unreadable, error)`.
   Downloads run through a `ThreadPoolExecutor` of 6.
-- `extract_text(raw, content_type)` → `pdfplumber` for `application/pdf`, capped at
-  **40 pages / 200k characters**. Returns `""` for every other type.
+- `extract_text(raw, content_type)` → dispatches on type, capped at **40 pages / 200k
+  characters**:
+
+  | Type | Reader | New dependency |
+  |---|---|---|
+  | `.pdf` | `pdfplumber` | pinned `0.11.1`, matching `backend/requirements.txt` |
+  | `.docx` | `python-docx` | yes |
+  | `.pptx` | `python-pptx` | yes |
+  | `.xlsx` / `.xls` | `openpyxl` | yes (already a transitive dep of pandas-free installs; pin explicitly) |
+  | `.doc` (legacy binary) | none | reported, not drafted |
+
+  Three readers are added because "every document" includes the `.docx` IRB informed
+  consent template, the IACUC forms and the `.pptx` research-misconduct deck. They are
+  small, pure-Python and add no system libraries to the image.
 
 **`crawler.py`** — stop discarding file links. `_fetch` keeps a second list,
 `file_links`, of in-scope-adjacent document URLs (morgan.edu host, a document
@@ -188,12 +210,11 @@ own branch rather than relaxing that guard.
 
 ## Non-goals
 
-- Reading `.docx` / `.xlsx` / `.pptx`. They are hashed, change-detected and reported,
-  but not drafted — `pdfplumber` cannot read them and a handful of files does not
-  justify Word and PowerPoint parsers in the image.
-- Rewriting the 32 documents that derive from a **multi-document** file. Those are
-  reported, never redrafted — no safe way exists to re-split one PDF back across 22
-  documents unattended.
+- **Re-splitting** a multi-document file. Each derived document is drafted
+  independently; the job never redistributes one file's contents across many documents.
+- Reading formats with no pure-Python reader: legacy `.doc`, and **DocuSign / Google
+  form links**, which are interactive web forms with no downloadable body. These are
+  detected, linked and reported — a document *about* the form, never its contents.
 - Badging derived documents in the admin tree when their file moves. Considered and
   declined: one PI Handbook 5 revision would light up 22 documents at once.
 - OCR for scanned PDFs.
@@ -219,8 +240,12 @@ no network:
 ## Risks
 
 - **34 drafts on the first run** — 34 Gemini calls and a large review queue in one go.
-  Acceptable as a one-time cost; if it proves unwieldy, cap drafts per run and let the
-  rest carry over.
+  Bounded, because change detection baselines on run one and proposes nothing; only the
+  new files draft. If it proves unwieldy, cap drafts per run and carry the rest over.
+- **One multi-document file can produce many drafts at once.** A PI Handbook 5 revision
+  yields 22 separate drafts to review. That is the deliberate trade against a single
+  unreviewable bulk edit, but it is a real review burden and the UI should group drafts
+  by their source file so they can be worked through — or dismissed — together.
 - **178 MB per run.** Fine today. If ORA's library grows substantially, revisit with a
   Content-Length pre-filter (stable across nodes, unlike ETag) to skip unchanged files —
   it cannot stand alone, since a same-size edit would slip through, but it can cheapen
