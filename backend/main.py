@@ -2505,20 +2505,36 @@ async def list_kb_scrape_changes(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """The change report for a run (defaults to the most recent one)."""
+    """The change report: the latest run, plus everything still unreviewed.
+
+    Asking for a specific run_id returns exactly that run. The default view does
+    NOT, because scoping it to one run makes a scrape bury the previous scrape's
+    unreviewed work: a run that finds nothing becomes "latest", the panel empties,
+    and approvable drafts from earlier runs vanish from the queue while the tree's
+    badges still count them. The panel and the tree then disagree about the same
+    database, and the tree is the one telling the truth.
+    """
+    from sqlalchemy import or_
+
     import kb_scrape_service as scrape
     from models import ScrapeChange
 
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
 
+    explicit_run = bool(run_id)
     if not run_id:
         latest = scrape.active_run(db) or scrape.last_finished_run(db)
         if not latest:
             return {"changes": [], "run_id": None, "counts": {}}
         run_id = latest.id
 
-    query = db.query(ScrapeChange).filter(ScrapeChange.run_id == run_id)
+    if explicit_run:
+        scope = ScrapeChange.run_id == run_id
+    else:
+        scope = or_(ScrapeChange.run_id == run_id, ScrapeChange.status == "pending")
+
+    query = db.query(ScrapeChange).filter(scope)
     if status:
         query = query.filter(ScrapeChange.status == status)
 
@@ -2528,7 +2544,7 @@ async def list_kb_scrape_changes(
     rows.sort(key=lambda c: order.get(c.status, 9))
 
     counts: dict = {}
-    for c in db.query(ScrapeChange).filter(ScrapeChange.run_id == run_id).all():
+    for c in db.query(ScrapeChange).filter(scope).all():
         counts[c.status] = counts.get(c.status, 0) + 1
 
     return {
