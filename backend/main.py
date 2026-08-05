@@ -280,6 +280,20 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add engine column: {e}")
 
+        # A file_new draft proposes where its document belongs in the tree.
+        # Without the column, approving one would have nowhere to file it and
+        # every new document would land in Unfiled.
+        try:
+            conn.execute(text("SELECT kb_path FROM scrape_changes LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'kb_path' column missing on scrape_changes. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE scrape_changes ADD COLUMN kb_path VARCHAR(255)"))
+                conn.commit()
+                print("[OK] Successfully added 'kb_path' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add kb_path column: {e}")
+
     # 8. Create/Update admin account
     try:
         db = SessionLocal()

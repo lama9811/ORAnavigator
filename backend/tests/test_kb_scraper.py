@@ -426,3 +426,24 @@ def test_collect_file_links_deduplicates():
     crawler = _load("crawler")
     raw = ["/Documents/ora/a.pdf", "/Documents/ora/a.pdf"]
     assert len(crawler._collect_file_links(raw, "https://www.morgan.edu/ora")) == 1
+
+
+# ---------------------------------------------------------------------------
+# The file phase's classifiers. First sighting must baseline, not report, or
+# every known file shows up as changed on the first run.
+# ---------------------------------------------------------------------------
+
+def test_classify_file_picks_the_right_change_type():
+    assert run._classify_file(known=None, doc_ids=[]) == "file_new"
+    assert run._classify_file(known="abc", doc_ids=["a"]) == "file_changed"
+    assert run._classify_file(known="abc", doc_ids=["a", "b"]) == "file_changed"
+
+
+def test_first_sighting_of_a_file_with_documents_is_a_baseline_not_a_change():
+    assert run._is_file_baseline(known=None, doc_ids=["a"]) is True
+    assert run._is_file_baseline(known="abc", doc_ids=["a"]) is False
+
+
+def test_a_never_seen_file_with_no_documents_is_not_a_baseline():
+    # It is genuinely new information, so it drafts on the first run.
+    assert run._is_file_baseline(known=None, doc_ids=[]) is False

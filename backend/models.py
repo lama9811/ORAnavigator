@@ -367,7 +367,7 @@ class ScrapeChange(Base):
     url = Column(String(500), nullable=False)
     page_title = Column(String(500), nullable=True)
 
-    # modified | new | removed | unreadable
+    # modified | new | removed | unreadable | file_new | file_changed | file_missing
     change_type = Column(String(20), default="modified")
     doc_id = Column(String(255), nullable=True, index=True)
     # JSON list — populated instead of doc_id when a page feeds many documents.
@@ -382,6 +382,11 @@ class ScrapeChange(Base):
     what_changed = Column(Text, nullable=True)
     evidence_quote = Column(Text, nullable=True)     # verified verbatim against the live page
     confidence = Column(String(20), nullable=True)   # high | medium | low
+
+    # Proposed tree placement for a file_new draft, derived from the file's
+    # own category. Blank lands the document in Unfiled, which is visible and
+    # one click from filed — a wrong label is worse than none.
+    kb_path = Column(String(255), nullable=True)
 
     previous_content = Column(Text, nullable=True)   # what revert restores
     new_content = Column(Text, nullable=True)
