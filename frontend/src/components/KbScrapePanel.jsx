@@ -25,6 +25,10 @@ const TYPE_LABEL = {
   new: "new page",
   removed: "gone from site",
   unreadable: "couldn't read",
+  // The document phase: PDFs, Word files, spreadsheets and slide decks.
+  file_new: "new document",
+  file_changed: "document changed",
+  file_missing: "couldn't fetch file",
 };
 
 const STATUS_META = {
