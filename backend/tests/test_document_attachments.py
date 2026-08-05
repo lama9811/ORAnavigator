@@ -92,3 +92,52 @@ def test_the_cap_is_respected():
         limit=1,
     )
     assert len(out) == 1
+
+
+# ---------------------------------------------------------------------------
+# Suppression. Attachments must be cleared on exactly the turns citations are
+# cleared -- a DocuSign form offered in reply to "how are you" is the July
+# Sources-on-smalltalk bug in a more embarrassing form.
+# ---------------------------------------------------------------------------
+
+def _result():
+    return {"citations": [{"title": "F&A Cost Rates", "url": "https://p"}]}
+
+
+def test_a_small_talk_turn_gets_no_attachments():
+    import vertex_agent as va
+    assert va._attachments_for_result("thanks!", "You're welcome!", _result()) == []
+
+
+def test_a_refusal_gets_no_attachments():
+    import vertex_agent as va
+    out = va._attachments_for_result(
+        "who is the president of the US?",
+        "I can only help with Morgan State University Office of Research Administration questions.",
+        _result(),
+    )
+    assert out == []
+
+
+def test_a_personal_identity_turn_gets_no_attachments():
+    import vertex_agent as va
+    out = va._attachments_for_result(
+        "what department am I in?", "You are in the Physics department.", _result()
+    )
+    assert out == []
+
+
+def test_a_real_kb_answer_gets_its_document():
+    import vertex_agent as va
+    out = va._attachments_for_result(
+        "what is the on-campus F&A rate?",
+        "The on-campus facilities and administrative rate is 54%.",
+        _result(),
+    )
+    assert out and out[0]["url"].endswith("rates.pdf")
+
+
+def test_chunk_titles_survives_a_result_with_no_citations():
+    import vertex_agent as va
+    assert va._chunk_titles({}) == []
+    assert va._chunk_titles({"citations": []}) == []
