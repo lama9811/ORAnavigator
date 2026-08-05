@@ -675,31 +675,52 @@ class MultiTierCache:
     # These are only ever called right after a successful text set()/get(),
     # so they inherit the same _should_cache gating implicitly.
     # ------------------------------------------------------------------
-    def set_citations(self, query: str, citations: list, context_hash: str = "") -> bool:
-        """Store the {title, url} citation list for a cached answer."""
-        if not citations:
+    def _set_side(self, prefix: str, query: str, rows: list, context_hash: str = "") -> bool:
+        """Store a list that rides alongside a cached answer."""
+        if not rows:
             return False
-        key = "cit:" + self._generate_key(query, context_hash)
-        self.l1.set(key, citations)
-        self.l2.set(key, json.dumps(citations))
+        key = prefix + self._generate_key(query, context_hash)
+        self.l1.set(key, rows)
+        self.l2.set(key, json.dumps(rows))
         return True
 
-    def get_citations(self, query: str, context_hash: str = "") -> list:
-        """Return the stored citation list for a cached answer, or []."""
-        key = "cit:" + self._generate_key(query, context_hash)
+    def _get_side(self, prefix: str, query: str, context_hash: str = "") -> list:
+        """Read a list stored alongside a cached answer, or []."""
+        key = prefix + self._generate_key(query, context_hash)
         cached = self.l1.get(key)
         if isinstance(cached, list):
             return cached
         raw = self.l2.get(key)
         if raw:
             try:
-                citations = json.loads(raw)
-                if isinstance(citations, list):
-                    self.l1.set(key, citations)
-                    return citations
+                rows = json.loads(raw)
+                if isinstance(rows, list):
+                    self.l1.set(key, rows)
+                    return rows
             except (ValueError, TypeError):
                 pass
         return []
+
+    def set_citations(self, query: str, citations: list, context_hash: str = "") -> bool:
+        """Store the {title, url} citation list for a cached answer."""
+        return self._set_side("cit:", query, citations, context_hash)
+
+    def get_citations(self, query: str, context_hash: str = "") -> list:
+        """Return the stored citation list for a cached answer, or []."""
+        return self._get_side("cit:", query, context_hash)
+
+    def set_attachments(self, query: str, attachments: list, context_hash: str = "") -> bool:
+        """Store the download links for a cached answer.
+
+        Same reason citations ride their own key: a cache HIT must still hand
+        over the form, or the second person to ask for PF-10 gets the answer
+        without it.
+        """
+        return self._set_side("att:", query, attachments, context_hash)
+
+    def get_attachments(self, query: str, context_hash: str = "") -> list:
+        """Return the stored download links for a cached answer, or []."""
+        return self._get_side("att:", query, context_hash)
 
     def invalidate(self, query: str, context_hash: str = "") -> bool:
         """Remove query from all cache tiers."""

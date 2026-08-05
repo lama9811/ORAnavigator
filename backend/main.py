@@ -1181,6 +1181,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
         if _cached:
             print(f"[CACHE] HIT (/chat) for query: {user_q[:50]}...")
             _cached_cites = query_cache.get_citations(user_q, _cache_ctx)
+            _cached_atts = query_cache.get_attachments(user_q, _cache_ctx)
             try:
                 new_chat = ChatHistory(
                     user_id=user["user_id"],
@@ -1197,6 +1198,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
             return {
                 "response": _cached,
                 "citations": _cached_cites or [],
+                "attachments": _cached_atts or [],
                 "feature": suggest_feature(original_q),
             }
 
@@ -1298,6 +1300,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # _should_cache() gate inside set() refuses personal-recall queries and
     # error/outage text, so this is leak-safe and won't poison on failures.
     _chat_citations = get_last_grounding().get("citations", [])
+    _chat_attachments = get_last_grounding().get("attachments", [])
     _looks_err = (
         not answer
         or "trouble" in answer.lower()[:40]
@@ -1310,6 +1313,8 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
             query_cache.set(user_q, answer, _cache_ctx)
             if _chat_citations:
                 query_cache.set_citations(user_q, _chat_citations, _cache_ctx)
+            if _chat_attachments:
+                query_cache.set_attachments(user_q, _chat_attachments, _cache_ctx)
         except Exception as e:
             print(f"[CACHE] store skipped: {e}")
 
@@ -1458,11 +1463,14 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
     if cached_response:
         print(f"[CACHE] HIT for query: {user_q[:50]}...")
         cached_citations = query_cache.get_citations(user_q, context_hash)
+        cached_attachments = query_cache.get_attachments(user_q, context_hash)
 
         async def generate_cached_sse():
             yield f"data: {json.dumps({'type': 'status', 'content': 'Retrieved from cache'})}\n\n"
             if cached_citations:
                 yield f"data: {json.dumps({'type': 'citations', 'content': cached_citations})}\n\n"
+            if cached_attachments:
+                yield f"data: {json.dumps({'type': 'attachments', 'content': cached_attachments})}\n\n"
             _feat = suggest_feature(original_q)
             if _feat:
                 yield f"data: {json.dumps({'type': 'feature', 'content': _feat})}\n\n"
@@ -1531,6 +1539,11 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     yield f"data: {json.dumps({'type': 'citations', 'content': content})}\n\n"
                 elif event_type == "done":
                     full_response = content or full_response
+                    # Download links are resolved at the DELIVER step, so they
+                    # are only available once the turn is complete.
+                    _atts = get_last_grounding().get("attachments", []) or []
+                    if _atts:
+                        yield f"data: {json.dumps({'type': 'attachments', 'content': _atts})}\n\n"
                     yield f"data: {json.dumps({'type': 'done', 'content': full_response})}\n\n"
                 elif event_type == "error":
                     stream_had_error = True
@@ -1557,6 +1570,8 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
             if query_cache.set(user_q, full_response, context_hash):
                 print(f"[CACHE] Stored response for: {user_q[:50]}...")
                 query_cache.set_citations(user_q, full_citations, context_hash)
+                query_cache.set_attachments(
+                    user_q, get_last_grounding().get("attachments", []) or [], context_hash)
 
         # Save to chat history after stream completes (save original query)
         try:
@@ -1664,10 +1679,12 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
             "response": cached_response,
             "cached": True,
             "citations": query_cache.get_citations(user_q, context_hash=""),
+            "attachments": query_cache.get_attachments(user_q, context_hash=""),
         }
 
     # Use Vertex AI Agent for real questions
     guest_citations = []
+    guest_attachments = []
     if USE_VERTEX_AGENT:
         try:
             import uuid
@@ -1681,6 +1698,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
             # Capture grounding immediately, before any later call can mutate
             # the module-global last-grounding state.
             guest_citations = get_last_grounding().get("citations", [])
+            guest_attachments = get_last_grounding().get("attachments", [])
 
             if answer and "error" not in answer.lower()[:50] and "I may not have complete information" not in answer and "don't have reliable information" not in answer:
                 query_cache.set(user_q, answer, context_hash="")
@@ -1688,6 +1706,8 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
                 # HIT re-emits the same Sources (see the hit branch above).
                 if guest_citations:
                     query_cache.set_citations(user_q, guest_citations, context_hash="")
+                if guest_attachments:
+                    query_cache.set_attachments(user_q, guest_attachments, context_hash="")
 
         except Exception as e:
             print(f"   Guest Vertex AI Error: {e}")
@@ -1703,7 +1723,8 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
         except Exception:
             pass
 
-    return {"response": answer, "citations": guest_citations}
+    return {"response": answer, "citations": guest_citations,
+            "attachments": guest_attachments}
 
 
 @app.get("/api/forms")

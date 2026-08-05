@@ -141,3 +141,29 @@ def test_chunk_titles_survives_a_result_with_no_citations():
     import vertex_agent as va
     assert va._chunk_titles({}) == []
     assert va._chunk_titles({"citations": []}) == []
+
+
+# ---------------------------------------------------------------------------
+# Cache. Without a parallel key the second person to ask for PF-10 gets the
+# answer and no form.
+# ---------------------------------------------------------------------------
+
+def test_attachments_round_trip_through_the_cache():
+    from cache import query_cache
+    atts = [{"title": "F&A Cost Rates", "url": "https://x/rates.pdf", "kind": "file"}]
+    query_cache.set_attachments("what is the f&a rate?", atts)
+    assert query_cache.get_attachments("what is the f&a rate?") == atts
+
+
+def test_missing_attachments_return_an_empty_list_not_none():
+    from cache import query_cache
+    assert query_cache.get_attachments("never asked before xyzzy plugh") == []
+
+
+def test_attachments_and_citations_do_not_collide():
+    from cache import query_cache
+    q = "collision check question"
+    query_cache.set_citations(q, [{"title": "A page", "url": "https://p"}])
+    query_cache.set_attachments(q, [{"title": "A file", "url": "https://f.pdf", "kind": "file"}])
+    assert query_cache.get_citations(q)[0]["title"] == "A page"
+    assert query_cache.get_attachments(q)[0]["title"] == "A file"

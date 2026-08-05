@@ -983,12 +983,16 @@ def query_agent(query: str, user_id: str = "default", context: str = "", model: 
 import threading
 _grounding_local = threading.local()
 
-def _set_grounding(kb_grounded: bool, chunks: int, coverage: float, citations: Optional[list] = None):
+def _set_grounding(kb_grounded: bool, chunks: int, coverage: float,
+                   citations: Optional[list] = None, attachments: Optional[list] = None):
     _grounding_local.data = {
         "kb_grounded": kb_grounded,
         "grounding_chunks": chunks,
         "grounding_coverage": coverage,
         "citations": citations or [],
+        # Download links ride the same channel as citations so main.py can cache
+        # and emit them without a second plumbing path.
+        "attachments": attachments or [],
     }
 
 
@@ -1399,7 +1403,8 @@ def _run_verified(message: str, user_id: str, session_id: str, context: str = ""
     print(f"   [LATENCY] chat turn {(time_module.time() - _t0) * 1000:.0f}ms "
           f"(verdict={verdict}, chunks={result['chunks']})")
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
-                   citations=result["citations"])
+                   citations=result["citations"],
+                   attachments=result.get("attachments") or [])
     final = _finalize_answer(text, result["grounded_corpus"])
     if result["citations"]:
         yield {"type": "citations", "content": result["citations"]}
@@ -1506,7 +1511,8 @@ def _run_verified_stream(message: str, user_id: str, session_id: str, context: s
     print(f"   [LATENCY] chat turn (stream) {(time_module.time() - _t0) * 1000:.0f}ms "
           f"(verdict={verdict}, chunks={result['chunks']})")
     _set_grounding(result["chunks"] > 0, result["chunks"], result["coverage"],
-                   citations=result["citations"])
+                   citations=result["citations"],
+                   attachments=result.get("attachments") or [])
     final = _finalize_answer(text, result["grounded_corpus"])
     if verdict == "weak":
         final = final + _WEAK_NOTE   # can't regenerate/re-search mid-stream -> caution
@@ -1524,7 +1530,7 @@ def get_last_grounding() -> dict:
         grounding_chunks: Number of KB documents cited
         grounding_coverage: Fraction of response text backed by KB sources (0.0-1.0)
     """
-    return getattr(_grounding_local, "data", {"kb_grounded": True, "grounding_chunks": 0, "grounding_coverage": 1.0, "citations": []})
+    return getattr(_grounding_local, "data", {"kb_grounded": True, "grounding_chunks": 0, "grounding_coverage": 1.0, "citations": [], "attachments": []})
 
 
 def check_agent_health() -> dict:
