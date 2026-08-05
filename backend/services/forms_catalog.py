@@ -23,6 +23,7 @@ only has `category` + `subcategory`), so this module derives them:
 import json
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Optional
 
 _KB_DIR = Path(__file__).resolve().parent.parent / "kb_structured"
@@ -291,13 +292,27 @@ def _norm_title(s: str) -> str:
 
 
 def _destination_kind(url: str) -> str:
-    """file | form | page. Only the first two are worth attaching -- a page
-    destination is already covered by the Sources block."""
+    """file | form | link | page. Everything but "page" is worth handing over.
+
+    The rule is "does this leave the ORA page it came from". Sources already
+    cites that page, so a morgan.edu destination adds nothing -- but an external
+    one is the thing itself and Sources will never show it. That distinction
+    matters more than the file/form split: the seven e-training modules are
+    hosted on Articulate, and treating them as ordinary web pages meant a PI
+    asking about Time and Effort got a 474-character description of a module
+    with no way to reach it.
+
+    Also caught by the same rule: Google Drive documents, the Google Docs IRB
+    form, the Panopto and YouTube recordings, and the five funding databases.
+    """
     low = (url or "").lower()
     if any(h in low for h in _FORM_HOSTS):
         return "form"
     if low.split("?")[0].split("#")[0].endswith(_FILE_EXT):
         return "file"
+    host = urlsplit(low).netloc
+    if host and not host.endswith("morgan.edu"):
+        return "link"
     return "page"
 
 

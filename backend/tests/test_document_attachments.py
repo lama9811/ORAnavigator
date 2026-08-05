@@ -206,3 +206,46 @@ def test_a_document_whose_procedure_url_is_its_own_page_is_not_attached(monkeypa
         assert letter and letter[0]["url"].endswith(".pdf")
     finally:
         fc._docs_by_title.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# The e-training gap. ORA's seven modules are hosted on Articulate, and
+# classifying them as ordinary web pages meant a PI asking about Time and
+# Effort got a 474-character description of a module with no way to open it.
+# The rule that fixes it: does the link LEAVE the ORA page it came from.
+# Sources already cites that page; it will never show the module.
+# ---------------------------------------------------------------------------
+
+def test_an_articulate_etraining_module_is_handed_over(monkeypatch):
+    monkeypatch.undo()
+    fc._docs_by_title.cache_clear()
+    try:
+        out = fc.attachments_for_titles(
+            ["Travel on Sponsored Projects: Approval to Reimbursement — eTraining Module"])
+        assert out, "the e-training module resolved to nothing"
+        assert "articulate.com" in out[0]["url"]
+        assert out[0]["kind"] == "link"
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
+def test_external_destinations_classify_as_link():
+    for url in (
+        "https://rise.articulate.com/share/EkNni5Bgg6Epa2bjN00d",
+        "https://drive.google.com/file/d/abc/view",
+        "https://morgan.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=x",
+        "https://www.grants.gov/",
+    ):
+        assert fc._destination_kind(url) == "link", url
+
+
+def test_a_morgan_page_is_still_not_attached():
+    """Sources covers the ORA page. Only what leaves it is handed over."""
+    assert fc._destination_kind(
+        "https://www.morgan.edu/office-of-research-administration/pre-award") == "page"
+
+
+def test_files_and_forms_keep_their_own_kinds():
+    assert fc._destination_kind("https://www.morgan.edu/Documents/x/handbook.pdf") == "file"
+    assert fc._destination_kind(
+        "https://na2.docusign.net/Member/PowerFormSigning.aspx?x=1") == "form"
