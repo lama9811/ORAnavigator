@@ -322,6 +322,7 @@ def create_kb_document(
     content: str,
     kb_path: str = "",
     source_url: str = "",
+    procedure_url: str = "",
 ) -> dict:
     """Author a new KB document directly in the datastore.
 
@@ -357,6 +358,13 @@ def create_kb_document(
             data["subcategory"] = parts[-1]
     if source_url.strip():
         data["source_url"] = source_url.strip()
+    if procedure_url.strip():
+        # The file itself, as distinct from source_url (the page that links it).
+        # This is the download link: the chat attachment feature renders it, and
+        # the next scrape uses it to map the file back to this document. Without
+        # it a document is created, answered from, and the file it came from
+        # cannot be reached.
+        data["procedure_url"] = procedure_url.strip()
 
     struct = Struct()
     struct.update(data)

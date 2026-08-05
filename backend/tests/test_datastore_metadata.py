@@ -243,3 +243,49 @@ def test_uploaded_binary_content_does_not_crash_on_decode(monkeypatch):
     result = dm.upload_document("scanned.pdf", b"%PDF-1.4\x00\xff\xfe binary")
 
     assert result["success"] is True
+
+
+# ---------------------------------------------------------------------------
+# procedure_url — the download link. Without it a document is created, answered
+# from, and the file it came from cannot be reached.
+# ---------------------------------------------------------------------------
+
+def test_create_kb_document_stores_the_download_link(monkeypatch):
+    captured = {}
+
+    class _Client:
+        def update_document(self, request):
+            captured["struct"] = dict(request.document.struct_data)
+            return object()
+
+    import datastore_manager as dm
+    monkeypatch.setattr(dm, "_get_doc_client", lambda: _Client())
+    monkeypatch.setattr(dm, "document_exists", lambda doc_id: False)
+    monkeypatch.setattr(dm, "invalidate_content_cache", lambda: None)
+
+    result = dm.create_kb_document(
+        doc_id="form_x", title="Form X", content="body",
+        kb_path="post_award/forms",
+        source_url="https://www.morgan.edu/office-of-research-administration/post-award/forms",
+        procedure_url="https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/x.pdf",
+    )
+    assert result["success"]
+    assert captured["struct"]["procedure_url"].endswith("/x.pdf")
+    assert captured["struct"]["source_url"].endswith("/post-award/forms")
+
+
+def test_create_kb_document_omits_procedure_url_when_absent(monkeypatch):
+    captured = {}
+
+    class _Client:
+        def update_document(self, request):
+            captured["struct"] = dict(request.document.struct_data)
+            return object()
+
+    import datastore_manager as dm
+    monkeypatch.setattr(dm, "_get_doc_client", lambda: _Client())
+    monkeypatch.setattr(dm, "document_exists", lambda doc_id: False)
+    monkeypatch.setattr(dm, "invalidate_content_cache", lambda: None)
+
+    dm.create_kb_document(doc_id="d", title="T", content="c")
+    assert "procedure_url" not in captured["struct"]
