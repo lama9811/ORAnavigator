@@ -192,24 +192,79 @@ steps:
   # =============================================================================
   # Step 7: Deploy Frontend to Cloud Run
   # =============================================================================
+  # Retries on ABORTED, then VERIFIES what is actually serving.
+  #
+  # Cloud Run versions each service optimistically: `gcloud run deploy` reads
+  # the service, then writes back asserting the version it read. This service
+  # carries the ora.inavigator.ai domain mapping, and the mapping controller
+  # reconciles independently -- bumping the version underneath an in-flight
+  # deploy. Observed 2026-08-06: the deploy created the revision, routed 100%
+  # of traffic to it, and THEN exited 1 with
+  #   ABORTED: version '<16:49:50>' was specified but current version is '<18:04:07>'
+  # A red build that had in fact shipped everything. That is worse than a
+  # failure, because the signal now lies in both directions.
+  #
+  # So: retry the race, then decide the step's exit code on the ONLY thing that
+  # matters -- whether the serving revision runs the image this build pushed.
+  # Red now means "the deployed image is not ours", and nothing else.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'deploy-frontend'
-    entrypoint: 'gcloud'
+    entrypoint: 'bash'
     args:
-      - 'run'
-      - 'deploy'
-      - '${_FRONTEND_SERVICE}'
-      - '--image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/frontend:${SHORT_SHA}'
-      - '--region=${_REGION}'
-      - '--platform=managed'
-      - '--port=8080'
-      - '--memory=512Mi'
-      - '--cpu=1'
-      - '--min-instances=0'
-      - '--max-instances=10'
-      - '--timeout=60'
-      - '--concurrency=200'
-      - '--allow-unauthenticated'
+      - '-c'
+      - |
+        set -o pipefail
+        IMAGE="${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO_NAME}/frontend:${SHORT_SHA}"
+
+        for attempt in 1 2 3; do
+          echo "deploy attempt $$attempt"
+          if gcloud run deploy ${_FRONTEND_SERVICE} \
+               --image="$$IMAGE" \
+               --region=${_REGION} \
+               --platform=managed \
+               --port=8080 \
+               --memory=512Mi \
+               --cpu=1 \
+               --min-instances=0 \
+               --max-instances=10 \
+               --timeout=60 \
+               --concurrency=200 \
+               --allow-unauthenticated; then
+            echo "deploy command succeeded"
+            break
+          fi
+          echo "deploy attempt $$attempt failed (likely an ABORTED version race)"
+          sleep 10
+        done
+
+        # The command's exit code is not evidence. This is.
+        WANT=$$(gcloud artifacts docker images describe "$$IMAGE" \
+                  --format='value(image_summary.digest)' 2>/dev/null)
+        REV=$$(gcloud run services describe ${_FRONTEND_SERVICE} --region=${_REGION} \
+                  --format='value(status.latestReadyRevisionName)')
+        GOT=$$(gcloud run revisions describe "$$REV" --region=${_REGION} \
+                  --format='value(spec.containers[0].image)')
+
+        echo "serving revision : $$REV"
+        echo "serving image    : $$GOT"
+        echo "expected digest  : $$WANT"
+
+        # Fail closed. An empty digest would make the glob below match anything
+        # and turn "we could not check" into a green build -- the exact failure
+        # this step exists to remove.
+        if [ -z "$$WANT" ] || [ -z "$$REV" ] || [ -z "$$GOT" ]; then
+          echo "FAILED: could not read the digest or the serving revision; refusing to pass."
+          exit 1
+        fi
+
+        case "$$GOT" in
+          *"$$WANT"*)
+            echo "VERIFIED: the serving revision runs the image this build pushed."
+            exit 0 ;;
+          *)
+            echo "FAILED: the serving revision does NOT run this build's image."
+            exit 1 ;;
+        esac
     waitFor: ['push-frontend', 'deploy-backend']
 
   # =============================================================================
