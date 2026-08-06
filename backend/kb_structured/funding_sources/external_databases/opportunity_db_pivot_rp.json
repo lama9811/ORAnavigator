@@ -6,8 +6,8 @@
   "display_label": "Pivot RP — Funding Database",
   "source_url": "https://www.morgan.edu/office-of-research-administration/funding-sources",
   "procedure_url": "https://pivot.proquest.com/",
-  "content": "Pivot RP (formerly Pivot, by ProQuest / Research Professional) is the most comprehensive and trusted source for global funding information and is the flagship funding database MSU subscribes to. It is a searchable database of funding opportunities; researchers can save searches, track opportunities, discover collaborators, get tailored funding recommendations and alerts, and gain insights from previously awarded grants. Faculty and staff access Pivot RP using their Morgan credentials at https://pivot.proquest.com/. Contact ask.ora@morgan.edu for access help.",
-  "last_scraped": "2026-05-14",
+  "content": "Pivot RP (formerly Pivot, by ProQuest / Research Professional) is the most comprehensive and trusted source for global funding information and is the flagship funding database MSU subscribes to. It is a searchable database of funding opportunities; researchers can save searches, track opportunities, discover collaborators, get tailored funding recommendations and alerts, and gain insights from previously awarded grants. Faculty and staff access Pivot RP using their Morgan credentials at https://pivot.proquest.com/. Contact ask.ora@morgan.edu for access help.\n\nAccess: sign up and log in using your Morgan State institutional email — signing up with a personal address is the usual reason a first attempt fails to get institutional access. ORA also links a 'further information about using Pivot RP' guide from the Funding Sources page.\n",
+  "last_scraped": "2026-08-06",
   "playwright_verified": true,
   "playwright_verified_at": "2026-05-14",
   "legacy_category": "opportunities"

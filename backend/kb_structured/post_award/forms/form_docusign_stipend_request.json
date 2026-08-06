@@ -6,7 +6,7 @@
   "display_label": "Stipend Request Memo",
   "source_url": "https://www.morgan.edu/office-of-research-administration/post-award/forms",
   "procedure_url": "https://na2.docusign.net/Member/PowerFormSigning.aspx?PowerFormId=83f3c87d-a6b9-40dc-a7f4-9d7c03723f57&env=na2&acct=91e00bed-fb84-48ab-9c47-f3a2c0621225&v=2",
-  "content": "DocuSign form for requesting stipend disbursement on sponsored projects at Morgan State University. The requested check issue date must be a minimum of 45 days after the date the request is submitted — submit at least 45 days in advance of the intended payment date. Route to the MSU ORA signing group. Questions to ora-docusign@morgan.edu.",
-  "last_scraped": "2026-05-14",
+  "content": "DocuSign form for requesting stipend disbursement on sponsored projects at Morgan State University. Available for both non-Title III and Title III funded stipends.\n\nWhat a stipend is: funding for a Morgan State University student whom the sponsored project is supporting for research and learning purposes ONLY. Stipends are not given for employment or working. They are given to students as funding so that the student does not have to work but instead is learning through the sponsored project.\n\nTiming: the Check Issue Date should ideally be at least 30 days out from the date the memo is submitted. If an earlier Check Issue Date is required, contact ask.ora@morgan.edu for review.\n\nRoute to the MSU ORA signing group. Questions about the DocuSign request forms go to Rebecca Steiner in the Office of Research Administration, rebecca.steiner@morgan.edu or 443-885-4044.\n",
+  "last_scraped": "2026-08-06",
   "legacy_category": "form"
 }

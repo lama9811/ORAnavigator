@@ -6,15 +6,17 @@
   "display_label": "Research Compliance Updates & News",
   "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-compliance-updates-and-news",
   "procedure_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/research-compliance-updates-and-news",
-  "content": "The Research Compliance Updates and News page is the planned home for ongoing announcements about regulatory changes, policy revisions, training opportunities, and other compliance bulletins from the Office of Research Compliance. As of 2026-05-14 the page is marked 'Coming Soon!' and does not yet contain published items. Until updates are posted, faculty and staff should subscribe to ORA Announcements or contact the office directly at ask.ora@morgan.edu or 443-885-4044 (Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251) for current compliance information.",
-  "last_scraped": "2026-05-14",
+  "content": "The Research Compliance Updates and News page carries announcements about regulatory changes, policy revisions, training opportunities, and other compliance bulletins from the Office of Research Compliance.\n\nPublished items:\n\nJuly 8, 2026 — NSF Dear Colleague Letter: Prohibitions on Collaborations with Restricted Entities. The National Science Foundation has issued updated guidance regarding prohibited collaborations with entities designated as U.S. Prohibited Parties. Researchers should review this notice to ensure all current and future NSF-funded activities comply with federal restrictions, and confirm that their research teams, partnerships, and subaward arrangements align with these requirements.\n\nQuestions about compliance implications go to the Office of Research Compliance at research.compliance@morgan.edu. For general ORA enquiries, ask.ora@morgan.edu or 443-885-4044 (Tyler Hall, Student Service Building, Suite 304, Baltimore, MD 21251). Faculty and staff can also subscribe to ORA Announcements.\n",
+  "last_scraped": "2026-08-06",
   "playwright_verified": true,
   "playwright_verified_at": "2026-05-14",
   "key_facts": {
     "page_status": "coming_soon",
     "page_marker_text": "Coming Soon!",
     "contact_email": "ask.ora@morgan.edu",
-    "alternate_channel": "ORA Announcements"
+    "alternate_channel": "ORA Announcements",
+    "research_compliance_email": "research.compliance@morgan.edu",
+    "latest_item_date": "2026-07-08"
   },
   "legacy_category": "compliance"
 }

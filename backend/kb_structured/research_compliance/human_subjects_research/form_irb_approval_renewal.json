@@ -6,7 +6,7 @@
   "display_label": "IRB Approval Renewal Form",
   "source_url": "https://www.morgan.edu/office-of-research-administration/research-compliance/human-subjects-research",
   "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Human%20Subjects%20Approval%20Renewal%202025%20%282%29.docx",
-  "content": "Annual continuing-review renewal form used to extend IRB approval for an ongoing human-subjects study. PIs must submit before the current approval period expires to avoid lapse. Submit to irb.research@morgan.edu.",
-  "last_scraped": "2026-05-14",
+  "content": "IRB continuing-review renewal form, used to extend IRB approval for an ongoing human-subjects study.\n\nContinuing review is NOT automatically annual. Under the revised Common Rule (45 CFR Part 46), many minimal-risk studies no longer require annual continuing review. The IRB may still require it for greater-than-minimal-risk research or where additional oversight is necessary. Where review IS required, the Office of Research Compliance notifies the PI 60-90 days before the due date, and the submission must include a brief study progress update, current enrollment status, any protocol modifications, reportable events (if applicable), and any revised study documents.\n\nSubmit before the current approval period expires. If approval lapses, all human subjects research activities must stop unless continuation is necessary to eliminate an immediate hazard to participants. Submit to irb.research@morgan.edu. See 45 CFR 46.109.\n",
+  "last_scraped": "2026-08-06",
   "legacy_category": "form"
 }

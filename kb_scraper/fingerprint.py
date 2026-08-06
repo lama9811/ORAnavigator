@@ -66,6 +66,15 @@ def normalize_url(url: str, base: str = "") -> str:
     return urlunsplit((parts.scheme, parts.netloc.lower(), path, query, ""))
 
 
+# ORA pages that live at a vanity path OUTSIDE the section prefix. The site
+# links to them ONLY by the short URL, so a prefix test alone never reaches
+# them and the page is invisible to the crawl -- not reported as an error,
+# simply never seen. SPARK cost us exactly this: the flagship training program
+# is linked from /trainings as `/spark`, was never crawled, and had no KB
+# document at all. Add an alias here whenever ORA publishes a short URL.
+_ORA_ALIASES = ("/ora", "/spark")
+
+
 def is_in_scope(url: str) -> bool:
     """ORA section only — morgan.edu at large is tens of thousands of pages with
     no corresponding documents to compare against."""
@@ -77,7 +86,9 @@ def is_in_scope(url: str) -> bool:
     path = parts.path.lower()
     if path.endswith(_SKIP_SUFFIXES):
         return False
-    return path.startswith(ORA_PREFIX) or path == "/ora" or path.startswith("/ora/")
+    if path.startswith(ORA_PREFIX):
+        return True
+    return any(path == a or path.startswith(a + "/") for a in _ORA_ALIASES)
 
 
 def normalize_text(text: str) -> str:

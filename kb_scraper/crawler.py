@@ -110,7 +110,19 @@ def _expand_accordions(page) -> None:
     except Exception:
         pass
 
-    for selector in ('[aria-expanded="false"]', ".accordion-button.collapsed", ".accordion-toggle"):
+    # morgan.edu's own accordion carries NO aria-expanded, no <details> and no
+    # bootstrap class -- it is a bare `.accordion > a[href="#"]` toggling a
+    # sibling `.content` div that ships `style="display:none"`. The three
+    # selectors below it matched nothing on such a page, so funding-sources
+    # extracted its 10 category headers and dropped all 66 programs inside
+    # them. Silent: the page read 200 OK and looked like a thin page rather
+    # than a broken read. Keep this selector first -- it is the site's own.
+    for selector in (
+        '.accordion > a[href="#"]',
+        '[aria-expanded="false"]',
+        ".accordion-button.collapsed",
+        ".accordion-toggle",
+    ):
         try:
             for handle in page.query_selector_all(selector)[:60]:
                 try:
@@ -119,6 +131,17 @@ def _expand_accordions(page) -> None:
                     continue
         except Exception:
             continue
+
+    # Anything still hidden gets forced open. A click can be intercepted by an
+    # overlay or a sticky header; the text is what we are after, not fidelity
+    # to the animation.
+    try:
+        page.eval_on_selector_all(
+            ".accordion .content",
+            "els => els.forEach(e => { e.style.display = 'block' })",
+        )
+    except Exception:
+        pass
 
     try:
         page.wait_for_timeout(350)

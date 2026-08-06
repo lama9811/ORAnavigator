@@ -83,6 +83,30 @@ def test_out_of_scope_urls_are_rejected(url):
     assert not fp.is_in_scope(url)
 
 
+@pytest.mark.parametrize("url", [
+    "https://www.morgan.edu/spark",
+    "https://www.morgan.edu/spark/",
+    "https://www.morgan.edu/SPARK",
+])
+def test_ora_vanity_urls_are_in_scope(url):
+    """SPARK is ORA's flagship training program and the Trainings page links it
+    ONLY as `/spark`. A bare prefix test never reaches it, so the page was
+    never crawled and had no KB document at all — invisible rather than
+    broken."""
+    assert fp.is_in_scope(url)
+
+
+@pytest.mark.parametrize("url", [
+    "https://www.morgan.edu/sparkle",
+    "https://www.morgan.edu/sparkling-water",
+    "https://www.morgan.edu/orange",
+])
+def test_alias_matching_does_not_swallow_similarly_named_sections(url):
+    """The alias must match a path SEGMENT, not a prefix — otherwise `/spark`
+    drags in every page whose path merely starts with those letters."""
+    assert not fp.is_in_scope(url)
+
+
 # ---------------------------------------------------------------------------
 # Fingerprinting
 # ---------------------------------------------------------------------------
