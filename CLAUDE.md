@@ -104,7 +104,7 @@ Admin clicks **Run scrape**; a Job crawls `morgan.edu/office-of-research-adminis
 
 ## ORA eTraining modules (Articulate Rise) — `backend/kb_structured/_etraining_modules.json`
 
-**8 modules, 340,240 characters, 106 knowledge checks, 52 embedded files.** Extracted 2026-08-05 after ORA asked whether the modules were in the KB. They were not: the KB held a **300–660 character description** of each ("a module about travel exists") and nothing they teach. This is Morgan's own grant-spending procedure, authored by ORA, and it exists nowhere else in the KB — not on the website pages, not in the PDFs.
+**8 modules, 347,397 characters, 106 knowledge checks, 52 embedded files.** Verified complete: a residual audit against the raw course payload found **1,426 prose strings, 0 missing — 100%**. Extracted 2026-08-05 after ORA asked whether the modules were in the KB. They were not: the KB held a **300–660 character description** of each ("a module about travel exists") and nothing they teach. This is Morgan's own grant-spending procedure, authored by ORA, and it exists nowhere else in the KB — not on the website pages, not in the PDFs.
 
 **Rise ships the whole course to the browser in one payload.** The lesson sequence and the quiz gate are UI controls, not server-side ones, so the full text is one request per module. **Two endpoints are needed** because ORA's share links come in two shapes and only one host answers each:
 
@@ -127,7 +127,11 @@ Attachments live on `articulateusercontent.com/{key}` (the `attachment.key` fiel
 
 **Loading:** `scripts/load_rise_etraining.py` (`--dry-run` / `--revert`). Content-only via `update_document`, so `struct_data` — placement, `procedure_url`, titles — is untouched; the previous bodies are written to `_etraining_kb_backup.json` first. The JSON is committed so the load is reproducible and the content reviewable in a diff.
 
-**Not captured:** video narration (no transcripts), diagrams published as images (captions only), and the contents of the 52 attachments (linked, not read). **Known risk:** these documents are far larger than any other in the KB (one is 97k chars) and the datastore cannot be configured for chunking, so each is retrieved whole. If answers on these topics come back vague, split each module into per-lesson documents — the extraction already has the lesson structure.
+**Blocks are self-contained — there is no nested content to chase.** `interactive`, `interactive-fullscreen` and `multimedia` blocks carry their items inline; a scan for iframes, embeds and Storyline packages found **zero** outbound content references. Everything is in the one payload.
+
+**Rise stores answer explanations under THREE keys** — `feedback`, `feedbackCorrect`, `feedbackIncorrect` — and a quiz may use any of them. Reading only `feedback` silently dropped the teaching ("Try again. Remember the distinction between direct and indirect costs.") from every module.
+
+**Not captured:** video narration (no transcripts), **466 screenshots and diagrams** (images, not text — the Banner and Purchasing modules lean on them heavily, so a "which field do I fill in" answer may still be incomplete; OCR or a vision model would be needed), and the contents of the 52 attachments (linked, not read). **Known risk:** these documents are far larger than any other in the KB (one is 97k chars) and the datastore cannot be configured for chunking, so each is retrieved whole. If answers on these topics come back vague, split each module into per-lesson documents — the extraction already has the lesson structure.
 
 ## Caching (layers + lifetimes)
 Caching exists to dodge the two real latency costs — the **Gemini call** and the **networked Cloud SQL read** from a **single-worker** backend — NOT to cache authoritative figures. **Cache the expensive (LLM answers), never the authoritative (budgets, statuses, verdicts, deadlines).**
