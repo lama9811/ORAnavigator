@@ -122,8 +122,22 @@ def list_datastore_documents() -> list[dict]:
     return result
 
 
-def get_document_content(doc_id: str, max_chars: int = 50000) -> str:
-    """Read document content from the datastore."""
+def get_document_content(doc_id: str, max_chars: int | None = None) -> str:
+    """Read document content from the datastore. FULL by default.
+
+    This used to truncate at 50,000 characters silently, which was harmless
+    while every document was a few thousand characters and became a data-loss
+    bug the moment the eTraining modules landed (one is 98,784). Two callers
+    read-modify-write:
+
+      * main.py's research-suggestion push does `existing + new` and saves the
+        result — truncating the read meant permanently destroying everything
+        past 50k on the next push.
+      * kb_scrape_service.approve_change stores `previous_content` for revert,
+        so an undo would have restored a truncated document.
+
+    Callers that genuinely want a preview must now ask for one explicitly.
+    """
     client = _get_doc_client()
     doc_name = f"{BRANCH}/documents/{doc_id}"
 
@@ -132,10 +146,11 @@ def get_document_content(doc_id: str, max_chars: int = 50000) -> str:
         # Content stored in raw_bytes (for search indexing)
         if doc.content and doc.content.raw_bytes:
             content = doc.content.raw_bytes.decode("utf-8")
-            return content[:max_chars]
+            return content[:max_chars] if max_chars else content
         # Fallback: check struct_data.content
         data = dict(doc.struct_data) if doc.struct_data else {}
-        return data.get("content", "")[:max_chars]
+        content = data.get("content", "")
+        return content[:max_chars] if max_chars else content
     except Exception as e:
         return f"Error reading document: {e}"
 

@@ -289,3 +289,40 @@ def test_create_kb_document_omits_procedure_url_when_absent(monkeypatch):
 
     dm.create_kb_document(doc_id="d", title="T", content="c")
     assert "procedure_url" not in captured["struct"]
+
+
+# ---------------------------------------------------------------------------
+# get_document_content used to truncate at 50,000 characters by default. That
+# was harmless while every document was a few thousand characters, and became
+# a data-loss bug the moment the eTraining modules landed (one is 98,784):
+# main.py's research push does `existing + new` and saves the result, so a
+# truncated read would have permanently destroyed everything past 50k.
+# ---------------------------------------------------------------------------
+
+class _BigDoc:
+    class _C:
+        raw_bytes = ("x" * 98_784).encode("utf-8")
+    content = _C()
+    struct_data = None
+
+
+def test_get_document_content_returns_the_whole_document_by_default(monkeypatch):
+    import datastore_manager as dm
+
+    class _Client:
+        def get_document(self, name):
+            return _BigDoc()
+
+    monkeypatch.setattr(dm, "_get_doc_client", lambda: _Client())
+    assert len(dm.get_document_content("big_doc")) == 98_784
+
+
+def test_truncation_is_available_but_must_be_asked_for(monkeypatch):
+    import datastore_manager as dm
+
+    class _Client:
+        def get_document(self, name):
+            return _BigDoc()
+
+    monkeypatch.setattr(dm, "_get_doc_client", lambda: _Client())
+    assert len(dm.get_document_content("big_doc", max_chars=500)) == 500
