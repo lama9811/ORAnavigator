@@ -7,5 +7,19 @@
   "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
   "procedure_url": "https://share.articulate.com/P5hdpOIVrXhCKX63DYkkA#/lessons/YMnBl8bH495X2Hkp2hXMu8dATa3ALOlw",
   "content": "FRIGRNT: Grant Code Inquiry\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 7 of 12).\nFRIGRNT: Querying Award Listings\nNeed a quick way to view award data among the growing list of PIs in your schools and departments? The FRIGRNT view in Banner allows users to query both active and historical award data in one place. Using FRIGRNT, PIs and administrators can review key details such as total award amounts, project performance period dates, track overall award portfolios, and more great data!\nComplete the content above before moving on.\nFRIGRNT: Query Award Listings in Banner\nNative Banner: FRIGRNT (Grant Code Inquiry)\nMake your way to the Native Banner landing page, type the page code FRIGRNT in the search bar, and select \"Grant Code Inquiry\". Please Note : Access to the FRIGRNT query view in Banner can be requested through your school's Budget Officer via Banner Workflow.\nFRIGRNT Query\nAt the top of the FRIGRNT query page a variety of data fields that can be used to query existing awards at Morgan State University. The most useful of which would be: Principal Investigator ID : Query by PI MSU ID number. Principal Investigator Last Name: Query by PI Last Name. Responsible Organization: Query by department organization code. After entering the information above click on the \"Go\" button in the top right corner of the screen.\nFRIGRNT View\nThe FRIGRNT page provides a deep resource of useful information: Grant : Grant Code assigned by RFA and the Project Title in Banner Principal Investigator ID : PI Name and MSU ID Agency: Sponsor Name and Banner Shorthand Current Amount: Total budget available for current fiscal year Cumulative Amount: Total funds awarded by sponsor to date Maximum Amount: Total sponsor commitment in the NOA (subject to funding availability per sponsor terms and conditions) Project Start Date: First date of the project's first performance period Project End Date: Last date of the project's final performance period Sponsor ID: Award number printed on the Notice of Award (NOA)\nPro Tip: You can export FRIGRNT query results data by pressing Shift+F1 on your keyboard.",
-  "last_scraped": "2026-08-06"
+  "last_scraped": "2026-08-06",
+  "images": [
+    {
+      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+      "caption": "FGIBDST: Budget by Fiscal Year"
+    },
+    {
+      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/EFMORAlz6yX64Mye.png",
+      "caption": "FRIGRNT Query"
+    },
+    {
+      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/x7S4UqLTRetvmdFD.png",
+      "caption": "FRIGRNT View"
+    }
+  ]
 }

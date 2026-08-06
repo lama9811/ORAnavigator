@@ -2,48 +2,10 @@
   "generated_at": "2026-08-06",
   "cdn": "https://articulateusercontent.com/",
   "bucket": "oranavigator-kb-assets",
-  "min_bytes": 60000,
+  "filter": "keep every uploaded image except Rise's stock photo library (plain dictionary filenames) and brand/UI assets (logo, bear_head, Asset N, favicon). Size is NOT used: real screenshots run from 2.9KB to 2MB, and a 1MB Morgan_logo.jpg would pass any size threshold.",
   "modules": {
     "form_cost_share_etraining": {
       "share_id": "jQ-qp8p2axC-3ba_0hXae",
-      "images": [
-        {
-          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/ThF4dI4YaIoKaju0.jpg",
-          "caption": "What is Cost Share?",
-          "lesson_id": "Bb5H0pEgvQQnqjrLs5jvTVUbAVEczbHP",
-          "bytes": 186062
-        },
-        {
-          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/zBydO2y0D3wU0rqo-Screenshot%25202024-11-11%2520130120.png",
-          "caption": "What is Cost Share?",
-          "lesson_id": "Bb5H0pEgvQQnqjrLs5jvTVUbAVEczbHP",
-          "bytes": 188947
-        },
-        {
-          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/dKXSw6KwFk03xMbx.jpg",
-          "caption": "Forms of Cost Share",
-          "lesson_id": "CRQo3HT1EiXm212NWJI68Yc6wIIBI1d0",
-          "bytes": 214345
-        },
-        {
-          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/4I2GFIwSAmpnafYt-Screenshot%25202024-11-11%2520133421.png",
-          "caption": "Cost Share: Pre-Award",
-          "lesson_id": "rK3NcB1RENWacmRyHjiu0jPPN0xj5BGq",
-          "bytes": 299890
-        },
-        {
-          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/SEcACyBBUzQeyyCr-Screenshot%25202024-11-11%2520164654.png",
-          "caption": "Cost Share Activity Code (P-Card Reconciliation)",
-          "lesson_id": "IlBHOe6GfYYTX3uq1xxM66VrKUqeeBFA",
-          "bytes": 66974
-        },
-        {
-          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "zrOBu3JOrsqOxe0hCCspT7w6Cuu4dhNx",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "Bb5H0pEgvQQnqjrLs5jvTVUbAVEczbHP": [
           "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/ThF4dI4YaIoKaju0.jpg",
@@ -56,232 +18,122 @@
           "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/4I2GFIwSAmpnafYt-Screenshot%25202024-11-11%2520133421.png"
         ],
         "IlBHOe6GfYYTX3uq1xxM66VrKUqeeBFA": [
+          "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/bSYj3mK-Mt2vtUCC-Screenshot%25202024-11-11%2520164442.png",
+          "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/IP_2u10upcqlnBGZ-Screenshot%25202024-11-11%2520164442.png",
           "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/SEcACyBBUzQeyyCr-Screenshot%25202024-11-11%2520164654.png",
           "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/4I2GFIwSAmpnafYt-Screenshot%25202024-11-11%2520133421.png"
         ],
         "zrOBu3JOrsqOxe0hCCspT7w6Cuu4dhNx": [
           "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/4I2GFIwSAmpnafYt-Screenshot%25202024-11-11%2520133421.png",
+          "caption": "Cost Share: Pre-Award"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/IP_2u10upcqlnBGZ-Screenshot%25202024-11-11%2520164442.png",
+          "caption": "Cost Share Activity Code (Requisitions)"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/SEcACyBBUzQeyyCr-Screenshot%25202024-11-11%2520164654.png",
+          "caption": "Cost Share Activity Code (P-Card Reconciliation)"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/ThF4dI4YaIoKaju0.jpg",
+          "caption": "What is Cost Share?"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/bSYj3mK-Mt2vtUCC-Screenshot%25202024-11-11%2520164442.png",
+          "caption": "Step #5: Cost Share Activity Code"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/dKXSw6KwFk03xMbx.jpg",
+          "caption": "Forms of Cost Share"
+        },
+        {
+          "key": "rise/courses/UQdQQxqFztVA6DOU3StlDvFXJ8xILscY/zBydO2y0D3wU0rqo-Screenshot%25202024-11-11%2520130120.png",
+          "caption": "What is Cost Share?"
+        }
+      ]
     },
     "form_navigating_banner_etraining": {
       "share_id": "P5hdpOIVrXhCKX63DYkkA",
-      "images": [
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/3u8ztAFYPAd5akft.jpg",
-          "caption": "Banner Finance Workflow Access",
-          "lesson_id": "HSNIjdQM44TNR3wvJi0KFEePYk8eeDo0",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/CO0kkGbLPPJ0b1q0.jpg",
-          "caption": "Confirm Employee and Supervisor Information",
-          "lesson_id": "HSNIjdQM44TNR3wvJi0KFEePYk8eeDo0",
-          "bytes": 60391
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/9oGIwXusVH-Rcw2Q.jpg",
-          "caption": "Enter Project Index(s)",
-          "lesson_id": "HSNIjdQM44TNR3wvJi0KFEePYk8eeDo0",
-          "bytes": 80113
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hOCAg2fy2yZS6zrv-Native%2520Banner%2520%25231.PNG",
-          "caption": "MSU's Home Page",
-          "lesson_id": "2cKVAXZFsiUTf9q9jdbd4BOWniE8dGsc",
-          "bytes": 2428994
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/un8vBEEdPu7XqLGc-Native%2520%25232.PNG",
-          "caption": "Select Banner/Websis",
-          "lesson_id": "2cKVAXZFsiUTf9q9jdbd4BOWniE8dGsc",
-          "bytes": 1199292
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ZERSGy9jXjl6kfdh-Native%2520%25233.PNG",
-          "caption": "Enter MSU Credentials",
-          "lesson_id": "2cKVAXZFsiUTf9q9jdbd4BOWniE8dGsc",
-          "bytes": 263560
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/cQ9RTEWgACpRC6Bp-Native%2520%25234.PNG",
-          "caption": "Select Native Banner",
-          "lesson_id": "2cKVAXZFsiUTf9q9jdbd4BOWniE8dGsc",
-          "bytes": 676174
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/P230laAaYHtrBxnJ.jpeg",
-          "caption": "FGIBDST: Budget by Fiscal Year",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/m00hnfsGb6WpKkQT-fgibdst%2520screenshot%2520%25233%2520129623.PNG",
-          "caption": "Budget View Details",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 129040
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/6UXhokPeAdQCk2nb-fgibdst%2520trans%2520detail%2520%25231.PNG",
-          "caption": "Identify Specific Transaction Details (Part 1)",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 121030
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ADsWjy2JxbxnT09u-fgibdst%2520trans%2520detail%2520%25232.PNG",
-          "caption": "Identify Specific Transaction Details (Part 2)",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 130631
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/YRk5SbgmXxWoHUmC-fgibdst%2520trans%2520detail%2520%25233.PNG",
-          "caption": "Identify Specific Transaction Details (Part 3)",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 64156
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/Vf-wPS82xHLazwA9-org%2520encumbrances%2520detail%2520%25231.PNG",
-          "caption": "Organization Encumbrances (Part 1)",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 133657
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/FDrRYIBTrVa8RvLV-Export%2520%25231.png",
-          "caption": "Exporting Data",
-          "lesson_id": "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN",
-          "bytes": 208568
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/XtgFwvyYmAMGl1Vt-frigitd%2520screenshot%2520%25233%2520(1).PNG",
-          "caption": "FRIGITD Budget Detail",
-          "lesson_id": "4DZ2LkPcFeY_fuVXRVlj0UFjIZQWH36O",
-          "bytes": 77986
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/0DWd-yWVLFbzw01l.jpg",
-          "caption": "FGIENCD: Encumbrance Detail Lookup",
-          "lesson_id": "hSzwHo6XCB9_1ApLnC-HgtDS5nL7hhHB",
-          "bytes": 163420
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/o_hJGyxkPPRLz_sp-fgiencd%2520screenshot%2520%25233.PNG",
-          "caption": "FGIENCD View Detail",
-          "lesson_id": "hSzwHo6XCB9_1ApLnC-HgtDS5nL7hhHB",
-          "bytes": 104215
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/rpD2n5mExbB0aEX_.jpg",
-          "caption": "Sufficient Funds in Pool Level",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 279362
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/P1pwEDj3M6DX_9yH.jpg",
-          "caption": "Allowability",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 338272
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/Zqa2OVMIKB0p3zQP.jpg",
-          "caption": "Change of Project Scope",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 78598
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/JCyPkOAsWfKVrCrn-budget%2520transfer%25201.png",
-          "caption": "Navigate to Finance Self-Service",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 301515
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/2KD_Ho5vTab08kvi-budget%2520transfer%25202.png",
-          "caption": "My Journals",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 81629
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/oQmNj2sdBFw5bVR2-budget%2520transfer%2520%25234.png",
-          "caption": "Add Accounting #2",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 85718
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/h8BH9SpngrW5VF02-budget%2520transfer%2520%25235.png",
-          "caption": "Submit Journal",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 137918
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/RT27BPEU8QPTXwSS.jpg",
-          "caption": "Budget Transfer Requests",
-          "lesson_id": "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-          "bytes": 215282
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/SFsA-jIz84IrAJxy.jpg",
-          "caption": "Cost Transfer Requests",
-          "lesson_id": "Iq7i9byxjcyo4ppjlUnu4tEPCE3dMUYw",
-          "bytes": 194468
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/kPQZLFUN4KokvPor.jpg",
-          "caption": "Cost Transfer Requests",
-          "lesson_id": "Iq7i9byxjcyo4ppjlUnu4tEPCE3dMUYw",
-          "bytes": 80898
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hY6v3gXWTnOiOVyt.jpg",
-          "caption": "Labor Redistributions",
-          "lesson_id": "-9t9K61rrCs7esFiK5xfmSkkbWTzjoj6",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/8ayp5sI2Q3d3vPsp.png",
-          "caption": "Labor Redistributions",
-          "lesson_id": "-9t9K61rrCs7esFiK5xfmSkkbWTzjoj6",
-          "bytes": 99162
-        },
-        {
-          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "2fGJQUGiM5-m_Cwc2CIGPIGSkDPp68QS",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "HSNIjdQM44TNR3wvJi0KFEePYk8eeDo0": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/3u8ztAFYPAd5akft.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/nlXfJyT4QN_Jy6UO.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/2jyLprWhyhSa7JfM.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/--wtZFZQcVOHYoBj-IsIE-djfXFEcuHzm.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hlTsrE4DmtBcdUrb.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/tyfiEdSvAdjxRo0T.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/4S92wmGdb0o-FNSN-Finance%2520Workflow%25203.png",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/CO0kkGbLPPJ0b1q0.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/DU4Wrx9CASwlnQGq.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/LrP7Af6A-NSGOAc9.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/xmGWMODJ6ZN5PsFh.png",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/9oGIwXusVH-Rcw2Q.jpg"
         ],
         "2cKVAXZFsiUTf9q9jdbd4BOWniE8dGsc": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hOCAg2fy2yZS6zrv-Native%2520Banner%2520%25231.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/un8vBEEdPu7XqLGc-Native%2520%25232.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ZERSGy9jXjl6kfdh-Native%2520%25233.PNG",
-          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/cQ9RTEWgACpRC6Bp-Native%2520%25234.PNG"
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/cQ9RTEWgACpRC6Bp-Native%2520%25234.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/-qrc-7hDm8OWhXT2-snip%2520%25231.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/4kyYcMvKpzSLCQzW-Native%2520%25235.PNG"
+        ],
+        "z5l3s2hLKNKMCvGa2m3h0M3DgsfLDHgW": [
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/bJ9fs5whrwOatbhv.jpg"
         ],
         "mOYR-DVwD6g1Skxn3vIx-2GsqNPmMQsN": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/P230laAaYHtrBxnJ.jpeg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/arJ564LPfVf4FDIk.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/-O3cAoX4Cpd5_7va-fgibdst%2520screenshot%2520%25232%2520129623.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/m00hnfsGb6WpKkQT-fgibdst%2520screenshot%2520%25233%2520129623.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/6UXhokPeAdQCk2nb-fgibdst%2520trans%2520detail%2520%25231.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ADsWjy2JxbxnT09u-fgibdst%2520trans%2520detail%2520%25232.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/YRk5SbgmXxWoHUmC-fgibdst%2520trans%2520detail%2520%25233.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/Vf-wPS82xHLazwA9-org%2520encumbrances%2520detail%2520%25231.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/DNCtv8ot2hpQbU3o-org%2520encumbrances%2520detail%2520%25232.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/FDrRYIBTrVa8RvLV-Export%2520%25231.png"
         ],
         "4DZ2LkPcFeY_fuVXRVlj0UFjIZQWH36O": [
-          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/XtgFwvyYmAMGl1Vt-frigitd%2520screenshot%2520%25233%2520(1).PNG"
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/-EUuWvgVyjIL9Vlx-frigitd%2520screenshot%2520%25231.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ad1xAfXNvhQ7BVc1-frigitd%2520screenshot%2520%25232.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/XtgFwvyYmAMGl1Vt-frigitd%2520screenshot%2520%25233%2520(1).PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/de9KoPWpMBs1qPyh-frigitd%2520screenshot%2520%25234.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/i-nlKtKunGBFUbJQ-frigitd%2520screenshot%2520%25235.PNG"
         ],
         "hSzwHo6XCB9_1ApLnC-HgtDS5nL7hhHB": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/0DWd-yWVLFbzw01l.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/0DeqqDmWZhZXNhb5-FGIENCD%2520screenshot%2520%25231.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/_jJbVqPDHnkJGCHC-fgiencd%2520screenshot%2520%25232.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/o_hJGyxkPPRLz_sp-fgiencd%2520screenshot%2520%25233.PNG"
+        ],
+        "YMnBl8bH495X2Hkp2hXMu8dATa3ALOlw": [
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/EFMORAlz6yX64Mye.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/x7S4UqLTRetvmdFD.png"
         ],
         "MLA45EqLTDlds1qVeupBy6oBgh6G6TwS": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/rpD2n5mExbB0aEX_.jpg",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/P1pwEDj3M6DX_9yH.jpg",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/Zqa2OVMIKB0p3zQP.jpg",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/5IZ4S8hJxiDQpfV6.jpg",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/JCyPkOAsWfKVrCrn-budget%2520transfer%25201.png",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/2KD_Ho5vTab08kvi-budget%2520transfer%25202.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/gWektMBrYOxltkG4-budget%2520transfer%25203.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/kZo7lz_YcXnlPNjH-Budget%2520Transfer%2520%25231.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/do4fVB260zsFWNOp-budget%2520transfer%2520%25232.PNG",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/O8gVBcZxvnkj7YWh-budget%2520transfer%2520%25233.PNG",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/oQmNj2sdBFw5bVR2-budget%2520transfer%2520%25234.png",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/h8BH9SpngrW5VF02-budget%2520transfer%2520%25235.png",
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/RT27BPEU8QPTXwSS.jpg"
@@ -292,65 +144,263 @@
         ],
         "-9t9K61rrCs7esFiK5xfmSkkbWTzjoj6": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hY6v3gXWTnOiOVyt.jpg",
-          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/8ayp5sI2Q3d3vPsp.png"
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/8ayp5sI2Q3d3vPsp.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/UB8_1Df4Cs1j67Zi.png",
+          "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/z9vIJpppEclujhIZ.png"
         ],
         "2fGJQUGiM5-m_Cwc2CIGPIGSkDPp68QS": [
           "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/--wtZFZQcVOHYoBj-IsIE-djfXFEcuHzm.png",
+          "caption": "Workflow: My Processes"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/-EUuWvgVyjIL9Vlx-frigitd%2520screenshot%2520%25231.PNG",
+          "caption": "Native Banner: FRIGITD Page"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/-O3cAoX4Cpd5_7va-fgibdst%2520screenshot%2520%25232%2520129623.PNG",
+          "caption": "Enter Budget Details"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/-qrc-7hDm8OWhXT2-snip%2520%25231.png",
+          "caption": "Note: Potential Login Issue"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/0DWd-yWVLFbzw01l.jpg",
+          "caption": "FGIENCD: Encumbrance Detail Lookup"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/0DeqqDmWZhZXNhb5-FGIENCD%2520screenshot%2520%25231.PNG",
+          "caption": "Native Banner: FGIENCD Page"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/2KD_Ho5vTab08kvi-budget%2520transfer%25202.png",
+          "caption": "My Journals"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/2jyLprWhyhSa7JfM.jpg",
+          "caption": "Banner Links Homepage"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/3u8ztAFYPAd5akft.jpg",
+          "caption": "Banner Finance Workflow Access"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/4S92wmGdb0o-FNSN-Finance%2520Workflow%25203.png",
+          "caption": "Select Workflow"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/4kyYcMvKpzSLCQzW-Native%2520%25235.PNG",
+          "caption": "Native Banner Landing Page"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/5IZ4S8hJxiDQpfV6.jpg",
+          "caption": "Pool Level & Percentage Change Restrictions"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/6UXhokPeAdQCk2nb-fgibdst%2520trans%2520detail%2520%25231.PNG",
+          "caption": "Identify Specific Transaction Details (Part 1)"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/8ayp5sI2Q3d3vPsp.png",
+          "caption": "Labor Redistributions"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/9oGIwXusVH-Rcw2Q.jpg",
+          "caption": "Enter Project Index(s)"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ADsWjy2JxbxnT09u-fgibdst%2520trans%2520detail%2520%25232.PNG",
+          "caption": "Identify Specific Transaction Details (Part 2)"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/CO0kkGbLPPJ0b1q0.jpg",
+          "caption": "Confirm Employee and Supervisor Information"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/DNCtv8ot2hpQbU3o-org%2520encumbrances%2520detail%2520%25232.PNG",
+          "caption": "Organization Encumbrances (Part 2)"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/DU4Wrx9CASwlnQGq.jpg",
+          "caption": "Enter Start Date and Request Type"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/EFMORAlz6yX64Mye.png",
+          "caption": "FRIGRNT Query"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/FDrRYIBTrVa8RvLV-Export%2520%25231.png",
+          "caption": "Exporting Data"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/JCyPkOAsWfKVrCrn-budget%2520transfer%25201.png",
+          "caption": "Navigate to Finance Self-Service"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/LrP7Af6A-NSGOAc9.png",
+          "caption": "Select Appropriate Role"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/O8gVBcZxvnkj7YWh-budget%2520transfer%2520%25233.PNG",
+          "caption": "Add Accounting #1: Part 2"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/P1pwEDj3M6DX_9yH.jpg",
+          "caption": "Allowability"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/P230laAaYHtrBxnJ.jpeg",
+          "caption": "FGIBDST: Budget by Fiscal Year"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/RT27BPEU8QPTXwSS.jpg",
+          "caption": "Budget Transfer Requests"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/SFsA-jIz84IrAJxy.jpg",
+          "caption": "Cost Transfer Requests"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/UB8_1Df4Cs1j67Zi.png",
+          "caption": "Labor Redistributions"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/Vf-wPS82xHLazwA9-org%2520encumbrances%2520detail%2520%25231.PNG",
+          "caption": "Organization Encumbrances (Part 1)"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/XtgFwvyYmAMGl1Vt-frigitd%2520screenshot%2520%25233%2520(1).PNG",
+          "caption": "FRIGITD Budget Detail"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/YRk5SbgmXxWoHUmC-fgibdst%2520trans%2520detail%2520%25233.PNG",
+          "caption": "Identify Specific Transaction Details (Part 3)"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ZERSGy9jXjl6kfdh-Native%2520%25233.PNG",
+          "caption": "Enter MSU Credentials"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/Zqa2OVMIKB0p3zQP.jpg",
+          "caption": "Change of Project Scope"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/_jJbVqPDHnkJGCHC-fgiencd%2520screenshot%2520%25232.PNG",
+          "caption": "Enter Document Number"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/ad1xAfXNvhQ7BVc1-frigitd%2520screenshot%2520%25232.PNG",
+          "caption": "Enter Query Details"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/arJ564LPfVf4FDIk.png",
+          "caption": "Native Banner: FGIBDST Page"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/bJ9fs5whrwOatbhv.jpg",
+          "caption": "Defining FOAPAL"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/cQ9RTEWgACpRC6Bp-Native%2520%25234.PNG",
+          "caption": "Select Native Banner"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/de9KoPWpMBs1qPyh-frigitd%2520screenshot%2520%25234.PNG",
+          "caption": "Want a Clean Budget View?"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/do4fVB260zsFWNOp-budget%2520transfer%2520%25232.PNG",
+          "caption": "Add Accounting #1"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/gWektMBrYOxltkG4-budget%2520transfer%25203.png",
+          "caption": "Create Journal"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/h8BH9SpngrW5VF02-budget%2520transfer%2520%25235.png",
+          "caption": "Submit Journal"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hOCAg2fy2yZS6zrv-Native%2520Banner%2520%25231.PNG",
+          "caption": "MSU's Home Page"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hY6v3gXWTnOiOVyt.jpg",
+          "caption": "Labor Redistributions"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/hlTsrE4DmtBcdUrb.jpg",
+          "caption": "Banner Finance Security Access Request"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/i-nlKtKunGBFUbJQ-frigitd%2520screenshot%2520%25235.PNG",
+          "caption": "Simplified Available Balance"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "caption": "FGIBDST: Budget by Fiscal Year"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/kPQZLFUN4KokvPor.jpg",
+          "caption": "Cost Transfer Requests"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/kZo7lz_YcXnlPNjH-Budget%2520Transfer%2520%25231.PNG",
+          "caption": "Create Journal: Part 2"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/m00hnfsGb6WpKkQT-fgibdst%2520screenshot%2520%25233%2520129623.PNG",
+          "caption": "Budget View Details"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/nlXfJyT4QN_Jy6UO.jpg",
+          "caption": "Workflow: Banner Finance Access Request"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/oQmNj2sdBFw5bVR2-budget%2520transfer%2520%25234.png",
+          "caption": "Add Accounting #2"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/o_hJGyxkPPRLz_sp-fgiencd%2520screenshot%2520%25233.PNG",
+          "caption": "FGIENCD View Detail"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/rpD2n5mExbB0aEX_.jpg",
+          "caption": "Sufficient Funds in Pool Level"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/tyfiEdSvAdjxRo0T.png",
+          "caption": "Enter Workflow Specifics"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/un8vBEEdPu7XqLGc-Native%2520%25232.PNG",
+          "caption": "Select Banner/Websis"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/x7S4UqLTRetvmdFD.png",
+          "caption": "FRIGRNT View"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/xmGWMODJ6ZN5PsFh.png",
+          "caption": "Select Desired Access"
+        },
+        {
+          "key": "rise/courses/a3KxqjvK34Th8rPzu-8KNaVhQHi3pfBC/z9vIJpppEclujhIZ.png",
+          "caption": "Labor Redistributions"
+        }
+      ]
     },
     "form_post_award_quick_guide_etraining": {
       "share_id": "bLJYTO9HcIsvOpsVS9KKkClk3VoLSs1N",
-      "images": [
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/qEVCppq4ncichGuF.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "uhz8nR3abdY1xyBcBk2lTNHgFMJe4-dS",
-          "bytes": 119966
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/FLbQKKQYguzoeONA-Tyler%2520Hall_Cloudy%2520Dark%2520Sky.jpg",
-          "caption": "Cost Allowability",
-          "lesson_id": "Hu9u0A8neWwBuJtcxz0iAadzR-QNEfmb",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/3afrKR7jH4nFeT4L-Tyler_Hall_DSC2759_6.5w_300dpi.max-2880x1800.jpg",
-          "caption": "Cost Allowability",
-          "lesson_id": "Hu9u0A8neWwBuJtcxz0iAadzR-QNEfmb",
-          "bytes": 272408
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/M-nDkxofMbUC0Ujl.jpg",
-          "caption": "Cost Allowability",
-          "lesson_id": "Hu9u0A8neWwBuJtcxz0iAadzR-QNEfmb",
-          "bytes": 184448
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/fz1IZv_DRj1j9F2M.jpg",
-          "caption": "P-Card Access",
-          "lesson_id": "XsbrvxdqA4wocpVZivoOrNpxhioZVCKr",
-          "bytes": 93485
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/ddbJexwYHb-3lILf.png",
-          "caption": "Compliance Matters!",
-          "lesson_id": "Y8dUuP72Ah-prBOGLMpet5z7pF8P5ahK",
-          "bytes": 77395
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/kijlG60RZqM9Kjb4-tyler-hall.jpg",
-          "caption": "ORA Resources for PIs",
-          "lesson_id": "aoofAeqIuBuzvFseXHm1-e3NwQMPaVZ7",
-          "bytes": 190269
-        },
-        {
-          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/jYEox1p0sVuGaM4Q.jpg",
-          "caption": "Go Change the World!",
-          "lesson_id": "MTtu8kmhjjzyiMRZko5u9vUzkCqA-QkM",
-          "bytes": 145670
-        }
-      ],
       "by_lesson": {
         "uhz8nR3abdY1xyBcBk2lTNHgFMJe4-dS": [
           "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/qEVCppq4ncichGuF.jpg"
@@ -361,6 +411,7 @@
           "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/M-nDkxofMbUC0Ujl.jpg"
         ],
         "XsbrvxdqA4wocpVZivoOrNpxhioZVCKr": [
+          "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/V7cOj7h50kyqmAXJ.png",
           "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/fz1IZv_DRj1j9F2M.jpg"
         ],
         "Y8dUuP72Ah-prBOGLMpet5z7pF8P5ahK": [
@@ -372,414 +423,48 @@
         "MTtu8kmhjjzyiMRZko5u9vUzkCqA-QkM": [
           "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/jYEox1p0sVuGaM4Q.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/3afrKR7jH4nFeT4L-Tyler_Hall_DSC2759_6.5w_300dpi.max-2880x1800.jpg",
+          "caption": "Cost Allowability"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/FLbQKKQYguzoeONA-Tyler%2520Hall_Cloudy%2520Dark%2520Sky.jpg",
+          "caption": "Cost Allowability"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/M-nDkxofMbUC0Ujl.jpg",
+          "caption": "Cost Allowability"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/V7cOj7h50kyqmAXJ.png",
+          "caption": "Spending Instruments"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/ddbJexwYHb-3lILf.png",
+          "caption": "Compliance Matters!"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/fz1IZv_DRj1j9F2M.jpg",
+          "caption": "P-Card Access"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/jYEox1p0sVuGaM4Q.jpg",
+          "caption": "Go Change the World!"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/kijlG60RZqM9Kjb4-tyler-hall.jpg",
+          "caption": "ORA Resources for PIs"
+        },
+        {
+          "key": "rise/courses/JWCsmOaR3S5ZDV7HF38tne6DU7IteKKw/qEVCppq4ncichGuF.jpg",
+          "caption": "Message from ORA"
+        }
+      ]
     },
     "form_purchasing_banner_pool_08_etraining": {
       "share_id": "Oj9sl7O574NyfS_WK9btG",
-      "images": [
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/o60kU51xxeDgPcNz.jpg",
-          "caption": "Uniform Guidance: Subpart E",
-          "lesson_id": "5YAEoC7WndWmkryUI9iFx0OBjjr4uFD0",
-          "bytes": 443465
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/7PnwUwaZACN8qKwk.jpeg",
-          "caption": "Procurement Playbook (Research Essentials)",
-          "lesson_id": "jf0TYvsa_EsRGDRWyL316w_zxZbdKvT1",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/m55zIghqzhNxgVm8.png",
-          "caption": "Procurement Playbook (Research Essentials)",
-          "lesson_id": "jf0TYvsa_EsRGDRWyL316w_zxZbdKvT1",
-          "bytes": 1451483
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/peGfSqVK1W-rHz6u.jpeg",
-          "caption": "Procurement Playbook (Research Essentials)",
-          "lesson_id": "jf0TYvsa_EsRGDRWyL316w_zxZbdKvT1",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8QShUkHbuS95Qxkm.jpg",
-          "caption": "Procurement Playbook (Research Essentials)",
-          "lesson_id": "jf0TYvsa_EsRGDRWyL316w_zxZbdKvT1",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/spOBBCvIIlUo3bSQ.jpg",
-          "caption": "Procurement Playbook (Research Essentials)",
-          "lesson_id": "jf0TYvsa_EsRGDRWyL316w_zxZbdKvT1",
-          "bytes": 201556
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/L9iv0pc18nDSdOtv.jpg",
-          "caption": "appropriate access granted?",
-          "lesson_id": "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ",
-          "bytes": 505562
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/YjbzNfJOfuok_1-v.jpg",
-          "caption": "funds in the correct budget pool?",
-          "lesson_id": "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ",
-          "bytes": 288456
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/luEfHyoThocg2Z12.jpg",
-          "caption": "Vendor in the Procurement System?",
-          "lesson_id": "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ",
-          "bytes": 369652
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/pAdHRGRsS6G-GnD-.jpg",
-          "caption": "Statement of work (SOW) drafted?",
-          "lesson_id": "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ",
-          "bytes": 532812
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/3rxBSOvwPXvzrUh3.png",
-          "caption": "Requisition Entry Prep",
-          "lesson_id": "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ",
-          "bytes": 361537
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/z7ymKC5V1L1tIIJp.jpg",
-          "caption": "Requisition Entry Prep",
-          "lesson_id": "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ",
-          "bytes": 122196
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/JbhPYy5WQGOW9Ekn.png",
-          "caption": "Banner Links Homepage",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 431446
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/tX_TmcHAUMRgG8z1.png",
-          "caption": "Finance Self-Service",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 82338
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/rcFo3ZInynxEvx23.png",
-          "caption": "My Requisitions Homepage",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 75351
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/IJl6smm41qEnIFHl.png",
-          "caption": "Requestor Information",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 122231
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/igzQZ0HeP2KdyX60.png",
-          "caption": "Vendor Information",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 77859
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/27Airj4WdZKGl4tT.png",
-          "caption": "Add Item & Accounting (Step 1)",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 69024
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Hzj-_ataHGT-AkEj.png",
-          "caption": "Add Item & Accounting (Step 2)",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 95238
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Ni6JHwEhVFb47hdx.png",
-          "caption": "Add Item & Accounting (Step 3)",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 106056
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/bD7ENoSuygaDYNl3.png",
-          "caption": "Add Item & Accounting (Step 4)",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 133750
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/nb03SXer-SRnNJu-.jpg",
-          "caption": "How To: Requisition Entry in Banner",
-          "lesson_id": "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61",
-          "bytes": 876753
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/_jHQv1xir_YalBIV.png",
-          "caption": "Processing Invoices for Payment",
-          "lesson_id": "WBWfxt6PU7Id479njoihRkFT2LEGe8Wk",
-          "bytes": 356657
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/wBlmFpILuFBcVKzG-Invoice%2520example%2520(not%2520authorized).png",
-          "caption": "Processing Invoices for Payment",
-          "lesson_id": "WBWfxt6PU7Id479njoihRkFT2LEGe8Wk",
-          "bytes": 159892
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/fMO6we07F-V729GN.png",
-          "caption": "Processing Invoices for Payment",
-          "lesson_id": "WBWfxt6PU7Id479njoihRkFT2LEGe8Wk",
-          "bytes": 356657
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/KVmFz28KbLNuW7Mh.jpg",
-          "caption": "MSU: Subawards vs. Subcontracts",
-          "lesson_id": "BZHxiOUlHLEeqkdDKrTZw5cNNSGvjfys",
-          "bytes": 154798
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/DcDOkTV_X7brwBGL.png",
-          "caption": "MSU: Subawards vs. Subcontracts",
-          "lesson_id": "BZHxiOUlHLEeqkdDKrTZw5cNNSGvjfys",
-          "bytes": 1738329
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/4BGdu8LVd3SAkGZR.png",
-          "caption": "MSU: Subawards vs. Subcontracts",
-          "lesson_id": "BZHxiOUlHLEeqkdDKrTZw5cNNSGvjfys",
-          "bytes": 361537
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/_c2tnSib8w9h5xja.jpg",
-          "caption": "MSU: Subawards vs. Subcontracts",
-          "lesson_id": "BZHxiOUlHLEeqkdDKrTZw5cNNSGvjfys",
-          "bytes": 193747
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/B_k4LiyBeKWmJoBc.jpeg",
-          "caption": "MSU: Subawards vs. Subcontracts",
-          "lesson_id": "BZHxiOUlHLEeqkdDKrTZw5cNNSGvjfys",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/bNWB-husfaBEg7Ud-ckhaysh3o125fsguo6mahl6h5-msu-tyler-hall-dusk-exterior-from-quad.max.jpg",
-          "caption": "MSU Working Fund",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/0CprCxZsiSW74m9S-121222_TylerHall-Morgan-State.jpeg",
-          "caption": "MSU Working Fund",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/bPLu_A1JjpHdhijx.jpg",
-          "caption": "Workflow access granted?",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 132888
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/HZJJxEGkCpXh4TLz.jpg",
-          "caption": "Funds available in pool 08: contractual services?",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 192837
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/QocSNmn0Y9-ueOVH.jpg",
-          "caption": "MSU Working Fund: Initiation & Management",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 1472922
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/ncIgVrY_gPtVka1o.jpg",
-          "caption": "Enter a Requisition in Finance Self-Service Banner",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 62329
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/kJMu3oS2e7mRungg-Custodian%2520Agreement%2520image.png",
-          "caption": "Supporting Document: Fund Custodian Agreement",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 197139
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/q-8ILWm6jZlVqKjh.png",
-          "caption": "Supporting Document: Fund Advance Request Form",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 117047
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/LXZRZvVahcWgS77A.jpg",
-          "caption": "MSU Working Fund",
-          "lesson_id": "j-uQ0pskPd2IcwPjvSnrgUhhzEWgHLYJ",
-          "bytes": 2169455
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/p6glZzXaNRr_VjUW.png",
-          "caption": "Catering & Events",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 361537
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/SdB0jTqFvreX2HZf.jpg",
-          "caption": "Reserve A Space",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 316902
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/cE14Us33Bs5npxD8.jpg",
-          "caption": "Create Sodexo Magic Catering Quote",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 379891
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/WvIKXe1VwvFuJlCw.jpg",
-          "caption": "Enter Banner Requisition",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 223833
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/9iMWr-xelklTlElC.jpg",
-          "caption": "Contact MSU Events Office",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 429920
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/GRez3NMhyoJYiunf.jpg",
-          "caption": "Complete Sodexo Magic Order",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 213924
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/-aJ9x3KGAPcNRqs_.jpeg",
-          "caption": "Catering & Events",
-          "lesson_id": "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/DWuNHhG_TDvLgZ8-.jpg",
-          "caption": "Purchasing Supplies on Sponsored Awards",
-          "lesson_id": "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy",
-          "bytes": 1102951
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/PtNfSopZEqSwZ5wu.png",
-          "caption": "Purchasing Supplies on Sponsored Awards",
-          "lesson_id": "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy",
-          "bytes": 304300
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/kzajK0crjCjSrnx6.jpg",
-          "caption": "Required Documentation",
-          "lesson_id": "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy",
-          "bytes": 226700
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/ObcUglf-KQq2Iy5z.png",
-          "caption": "Preferred Vendors",
-          "lesson_id": "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy",
-          "bytes": 236232
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/QURIyXV1D4wZkqeh.png",
-          "caption": "Sponsor-Specific restrictions",
-          "lesson_id": "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy",
-          "bytes": 83025
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/WIw_UhnYZfvfU84c.jpg",
-          "caption": "Technology Procurements",
-          "lesson_id": "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy",
-          "bytes": 267479
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/L-H7lba20YHVTTCy.jpg",
-          "caption": "P-Card Office Sends Documents",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 313998
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/mU8e1xhqQsIqa1Jy.png",
-          "caption": "P-Card Use: Quick Guide",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 356657
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/mTLlZCECUUaoge34.png",
-          "caption": "FAAINVT",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 156772
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/MzgkPbDA0yrg8rpN.png",
-          "caption": "Cardholder Details",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 134831
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/7mQSLLiG6OQl1fTO.png",
-          "caption": "Transaction Selection",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 239901
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/82quWTEbheb6VMxX.png",
-          "caption": "Accounting Information",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 212896
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/vSXWu4E1L_86vJGw.png",
-          "caption": "P-Card Use: Quick Guide",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 356657
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Xtpjy01HOnZ9Yk0x.jpeg",
-          "caption": "P-Card Use: Quick Guide",
-          "lesson_id": "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Co6C1pZ9b0N9lkyT.jpg",
-          "caption": "Facility Needs",
-          "lesson_id": "f0KDNH_bdxPGuu-i6a-hEq0zgSSLyFzU",
-          "bytes": 11751513
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/N9eC8zyNsH4zvsHB.jpg",
-          "caption": "Total Cost of Ownership",
-          "lesson_id": "f0KDNH_bdxPGuu-i6a-hEq0zgSSLyFzU",
-          "bytes": 1135066
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/cSKtHEQNSZr_42K8.png",
-          "caption": "Asset Tagging",
-          "lesson_id": "f0KDNH_bdxPGuu-i6a-hEq0zgSSLyFzU",
-          "bytes": 1283178
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/fmVkpIlB66hQS3yI.jpg",
-          "caption": "Non-Travel Reimbursement",
-          "lesson_id": "y8xjJTPZBpTLmHCs08IqfS-lJc97zxKd",
-          "bytes": 297716
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8ef3zi6mtO4xVVPU.png",
-          "caption": "Non-Travel Reimbursement",
-          "lesson_id": "y8xjJTPZBpTLmHCs08IqfS-lJc97zxKd",
-          "bytes": 140667
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Xj6oGGxmjwfIakbi.png",
-          "caption": "Non-Travel Reimbursement",
-          "lesson_id": "y8xjJTPZBpTLmHCs08IqfS-lJc97zxKd",
-          "bytes": 356657
-        },
-        {
-          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "wEiKXipGHErOEZgzJkg6mwtFJlAzLsmJ",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "5YAEoC7WndWmkryUI9iFx0OBjjr4uFD0": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/o60kU51xxeDgPcNz.jpg"
@@ -791,6 +476,9 @@
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8QShUkHbuS95Qxkm.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/spOBBCvIIlUo3bSQ.jpg"
         ],
+        "6NhTezLzCiRFS3GWPgJvvAP0sj-Stazf": [
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/GhZ40jqLZl8a8wcp.jpg"
+        ],
         "2sMB8zqghnNd8VMSEKtEQcc_g0lW-9RQ": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/L9iv0pc18nDSdOtv.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/YjbzNfJOfuok_1-v.jpg",
@@ -800,6 +488,8 @@
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/z7ymKC5V1L1tIIJp.jpg"
         ],
         "cr4i1XYIhAzJVwj_ThIIwXmA6ZoplA61": [
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/qq3visyGAmotoMZa.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/JbhPYy5WQGOW9Ekn.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/tX_TmcHAUMRgG8z1.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/rcFo3ZInynxEvx23.png",
@@ -814,7 +504,8 @@
         "WBWfxt6PU7Id479njoihRkFT2LEGe8Wk": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/_jHQv1xir_YalBIV.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/wBlmFpILuFBcVKzG-Invoice%2520example%2520(not%2520authorized).png",
-          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/fMO6we07F-V729GN.png"
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/fMO6we07F-V729GN.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/5rNH-RCw5TMbXVSZ.png"
         ],
         "BZHxiOUlHLEeqkdDKrTZw5cNNSGvjfys": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/KVmFz28KbLNuW7Mh.jpg",
@@ -832,10 +523,13 @@
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/ncIgVrY_gPtVka1o.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/kJMu3oS2e7mRungg-Custodian%2520Agreement%2520image.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/q-8ILWm6jZlVqKjh.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Vi12SE6UPFQbKcNw.jpg",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/imPxJ6xDyVjrOH9L.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/LXZRZvVahcWgS77A.jpg"
         ],
         "HKEHH5zPJcEwdfYTi8GqjGniUbSexxjc": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/p6glZzXaNRr_VjUW.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/z7erMybPdUvtwl-d.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/SdB0jTqFvreX2HZf.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/cE14Us33Bs5npxD8.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/WvIKXe1VwvFuJlCw.jpg",
@@ -844,6 +538,7 @@
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/-aJ9x3KGAPcNRqs_.jpeg"
         ],
         "3bxQuWZGyWRP7wMqwB5t-wkh-oPokiTy": [
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8fSiFvAS6E4PBVFL.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/DWuNHhG_TDvLgZ8-.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/PtNfSopZEqSwZ5wu.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/kzajK0crjCjSrnx6.jpg",
@@ -854,11 +549,18 @@
         "VZz4M8tAByxm5OMXl4KpTsj2gCc5VUuZ": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/L-H7lba20YHVTTCy.jpg",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/mU8e1xhqQsIqa1Jy.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/k872n834mlr2LqJj.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/mTLlZCECUUaoge34.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/MzgkPbDA0yrg8rpN.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/7mQSLLiG6OQl1fTO.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/82quWTEbheb6VMxX.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/vSXWu4E1L_86vJGw.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/i-355a51QPaYNcH7.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/qian-zl8arw7iDQE-card%2520log%2520top.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/74-FNfgD80hm0waP-card%2520log%2520trans%2520%25231.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/3cGqzO26XZJ7Ji7h-card%2520log%2520trans%2520%25232.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Vv7n6Yi7OZ31mhRN.png",
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/5igOxZdBxer5JjxA-docusign.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Xtpjy01HOnZ9Yk0x.jpeg"
         ],
         "f0KDNH_bdxPGuu-i6a-hEq0zgSSLyFzU": [
@@ -871,194 +573,388 @@
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8ef3zi6mtO4xVVPU.png",
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Xj6oGGxmjwfIakbi.png"
         ],
+        "Uc_IeTmXmhBWY8uyHmGxGginicm5UCuZ": [
+          "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/beR6QuB_mBiB9szZ.png"
+        ],
         "wEiKXipGHErOEZgzJkg6mwtFJlAzLsmJ": [
           "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/-aJ9x3KGAPcNRqs_.jpeg",
+          "caption": "Catering & Events"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/0CprCxZsiSW74m9S-121222_TylerHall-Morgan-State.jpeg",
+          "caption": "MSU Working Fund"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/27Airj4WdZKGl4tT.png",
+          "caption": "Add Item & Accounting (Step 1)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/3cGqzO26XZJ7Ji7h-card%2520log%2520trans%2520%25232.png",
+          "caption": "Transaction Details Part 2"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/3rxBSOvwPXvzrUh3.png",
+          "caption": "Requisition Entry Prep"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/4BGdu8LVd3SAkGZR.png",
+          "caption": "MSU: Subawards vs. Subcontracts"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/5igOxZdBxer5JjxA-docusign.png",
+          "caption": "Upload Documents to DocuSign"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/5rNH-RCw5TMbXVSZ.png",
+          "caption": "Processing Invoices for Payment"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/74-FNfgD80hm0waP-card%2520log%2520trans%2520%25231.png",
+          "caption": "Transaction Details Part 1"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/7PnwUwaZACN8qKwk.jpeg",
+          "caption": "Procurement Playbook (Research Essentials)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/7mQSLLiG6OQl1fTO.png",
+          "caption": "Transaction Selection"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/82quWTEbheb6VMxX.png",
+          "caption": "Accounting Information"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8QShUkHbuS95Qxkm.jpg",
+          "caption": "Procurement Playbook (Research Essentials)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8ef3zi6mtO4xVVPU.png",
+          "caption": "Non-Travel Reimbursement"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/8fSiFvAS6E4PBVFL.jpg",
+          "caption": "Purchasing Supplies on Sponsored Awards"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/9iMWr-xelklTlElC.jpg",
+          "caption": "Contact MSU Events Office"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/B_k4LiyBeKWmJoBc.jpeg",
+          "caption": "MSU: Subawards vs. Subcontracts"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Co6C1pZ9b0N9lkyT.jpg",
+          "caption": "Facility Needs"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/DWuNHhG_TDvLgZ8-.jpg",
+          "caption": "Purchasing Supplies on Sponsored Awards"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/DcDOkTV_X7brwBGL.png",
+          "caption": "MSU: Subawards vs. Subcontracts"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/GRez3NMhyoJYiunf.jpg",
+          "caption": "Complete Sodexo Magic Order"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/GhZ40jqLZl8a8wcp.jpg",
+          "caption": "Tax Exempt Purchasing"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/HZJJxEGkCpXh4TLz.jpg",
+          "caption": "Funds available in pool 08: contractual services?"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Hzj-_ataHGT-AkEj.png",
+          "caption": "Add Item & Accounting (Step 2)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/IJl6smm41qEnIFHl.png",
+          "caption": "Requestor Information"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/JbhPYy5WQGOW9Ekn.png",
+          "caption": "Banner Links Homepage"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/KVmFz28KbLNuW7Mh.jpg",
+          "caption": "MSU: Subawards vs. Subcontracts"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/L-H7lba20YHVTTCy.jpg",
+          "caption": "P-Card Office Sends Documents"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/L9iv0pc18nDSdOtv.jpg",
+          "caption": "appropriate access granted?"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/LXZRZvVahcWgS77A.jpg",
+          "caption": "MSU Working Fund"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/MzgkPbDA0yrg8rpN.png",
+          "caption": "Cardholder Details"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/N9eC8zyNsH4zvsHB.jpg",
+          "caption": "Total Cost of Ownership"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Ni6JHwEhVFb47hdx.png",
+          "caption": "Add Item & Accounting (Step 3)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/ObcUglf-KQq2Iy5z.png",
+          "caption": "Preferred Vendors"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/PtNfSopZEqSwZ5wu.png",
+          "caption": "Purchasing Supplies on Sponsored Awards"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/QURIyXV1D4wZkqeh.png",
+          "caption": "Sponsor-Specific restrictions"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/QocSNmn0Y9-ueOVH.jpg",
+          "caption": "MSU Working Fund: Initiation & Management"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/SdB0jTqFvreX2HZf.jpg",
+          "caption": "Reserve A Space"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Vi12SE6UPFQbKcNw.jpg",
+          "caption": "Pickup the Disbursement Check"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Vv7n6Yi7OZ31mhRN.png",
+          "caption": "Verify Log Accuracy"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/WIw_UhnYZfvfU84c.jpg",
+          "caption": "Technology Procurements"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/WvIKXe1VwvFuJlCw.jpg",
+          "caption": "Enter Banner Requisition"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Xj6oGGxmjwfIakbi.png",
+          "caption": "Non-Travel Reimbursement"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/Xtpjy01HOnZ9Yk0x.jpeg",
+          "caption": "P-Card Use: Quick Guide"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/YjbzNfJOfuok_1-v.jpg",
+          "caption": "funds in the correct budget pool?"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/_c2tnSib8w9h5xja.jpg",
+          "caption": "MSU: Subawards vs. Subcontracts"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/_jHQv1xir_YalBIV.png",
+          "caption": "Processing Invoices for Payment"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/bD7ENoSuygaDYNl3.png",
+          "caption": "Add Item & Accounting (Step 4)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/bNWB-husfaBEg7Ud-ckhaysh3o125fsguo6mahl6h5-msu-tyler-hall-dusk-exterior-from-quad.max.jpg",
+          "caption": "MSU Working Fund"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/bPLu_A1JjpHdhijx.jpg",
+          "caption": "Workflow access granted?"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/beR6QuB_mBiB9szZ.png",
+          "caption": "Your department is in need of graphic design work for an annual report detailing your program's accomplishments. After the work is done the vendor provides you with the following invoice. What error(s) will need to be rectified before submitting this invoice for processing through MSU's Accounts Payable department? Select all that apply."
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/cE14Us33Bs5npxD8.jpg",
+          "caption": "Create Sodexo Magic Catering Quote"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/cSKtHEQNSZr_42K8.png",
+          "caption": "Asset Tagging"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/fMO6we07F-V729GN.png",
+          "caption": "Processing Invoices for Payment"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/fmVkpIlB66hQS3yI.jpg",
+          "caption": "Non-Travel Reimbursement"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/i-355a51QPaYNcH7.png",
+          "caption": "State Transaction Log"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/igzQZ0HeP2KdyX60.png",
+          "caption": "Vendor Information"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/imPxJ6xDyVjrOH9L.png",
+          "caption": "Submit Logs and Request Additional Disbursements"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "caption": "Summary"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/k872n834mlr2LqJj.png",
+          "caption": "Banner P-Card Transaction Reconciliation"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/kJMu3oS2e7mRungg-Custodian%2520Agreement%2520image.png",
+          "caption": "Supporting Document: Fund Custodian Agreement"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/kzajK0crjCjSrnx6.jpg",
+          "caption": "Required Documentation"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/luEfHyoThocg2Z12.jpg",
+          "caption": "Vendor in the Procurement System?"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/m55zIghqzhNxgVm8.png",
+          "caption": "Procurement Playbook (Research Essentials)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/mTLlZCECUUaoge34.png",
+          "caption": "FAAINVT"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/mU8e1xhqQsIqa1Jy.png",
+          "caption": "P-Card Use: Quick Guide"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/nb03SXer-SRnNJu-.jpg",
+          "caption": "How To: Requisition Entry in Banner"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/ncIgVrY_gPtVka1o.jpg",
+          "caption": "Enter a Requisition in Finance Self-Service Banner"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/o60kU51xxeDgPcNz.jpg",
+          "caption": "Uniform Guidance: Subpart E"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/p6glZzXaNRr_VjUW.png",
+          "caption": "Catering & Events"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/pAdHRGRsS6G-GnD-.jpg",
+          "caption": "Statement of work (SOW) drafted?"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/peGfSqVK1W-rHz6u.jpeg",
+          "caption": "Procurement Playbook (Research Essentials)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/q-8ILWm6jZlVqKjh.png",
+          "caption": "Supporting Document: Fund Advance Request Form"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/qian-zl8arw7iDQE-card%2520log%2520top.png",
+          "caption": "Data Entry Part 1"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/qq3visyGAmotoMZa.png",
+          "caption": "Requisition Entry in Self-Service"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/rcFo3ZInynxEvx23.png",
+          "caption": "My Requisitions Homepage"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/spOBBCvIIlUo3bSQ.jpg",
+          "caption": "Procurement Playbook (Research Essentials)"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/tX_TmcHAUMRgG8z1.png",
+          "caption": "Finance Self-Service"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/vSXWu4E1L_86vJGw.png",
+          "caption": "P-Card Use: Quick Guide"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/wBlmFpILuFBcVKzG-Invoice%2520example%2520(not%2520authorized).png",
+          "caption": "Processing Invoices for Payment"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/z7erMybPdUvtwl-d.png",
+          "caption": "Sodexo Magic Order Process"
+        },
+        {
+          "key": "rise/courses/dr1x0wltGUgaTDQoS3qhL4PZTBSM_JJf/z7ymKC5V1L1tIIJp.jpg",
+          "caption": "Requisition Entry Prep"
+        }
+      ]
     },
     "form_summer_contracts_interactive": {
       "share_id": "P_TX_Sz334DiNOJZ0upJ7",
-      "images": [
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/3-aidaj6ROS8G00D.jpg",
-          "caption": "EPAFs: Requesting EPAF Access",
-          "lesson_id": "4pxX0KI7jXKlLC7ysenh6TA15t2qjzVG",
-          "bytes": 189987
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/dpzmkjb321XjwSOb.jpg",
-          "caption": "EPAFs: Requesting EPAF Access",
-          "lesson_id": "4pxX0KI7jXKlLC7ysenh6TA15t2qjzVG",
-          "bytes": 442640
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/aosPVjRz1QbARc9s-Morgan_logo.jpg",
-          "caption": "How to Submit a Contractual PIN Request",
-          "lesson_id": "rZ0JVjPnwvEdkOOjqNPA9QKHsfrJxoCI",
-          "bytes": 1074144
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/vbb6BcRfIseEKs9c.jpg",
-          "caption": "Banner Links Homepage: Select Workflow",
-          "lesson_id": "rZ0JVjPnwvEdkOOjqNPA9QKHsfrJxoCI",
-          "bytes": 114959
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pkm6YmV0T5bPcE3c-Banner%2520links%2520page.png",
-          "caption": "Banner Links Homepage: Employee Self-Service",
-          "lesson_id": "8Dh_xE6Ap_yItNW5SNRtWCxWVN6WLNiz",
-          "bytes": 332197
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/Q7obCmqrztEdijTS.png",
-          "caption": "NEW EPAF Person Selection",
-          "lesson_id": "8Dh_xE6Ap_yItNW5SNRtWCxWVN6WLNiz",
-          "bytes": 64885
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/HZleksSm6xMwtKN2.jpg",
-          "caption": "Electronic Personnel Action Forms (EPAF)",
-          "lesson_id": "8Dh_xE6Ap_yItNW5SNRtWCxWVN6WLNiz",
-          "bytes": 317976
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/1vNGrlx5bhwKLGY8-Screenshot%25202024-04-08%2520122339.png",
-          "caption": "PF-10: Contract Revisions and Continuations",
-          "lesson_id": "LgGqGxT1I39a3gv6pfF1XazRgTb3Xec8",
-          "bytes": 255823
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/CQoCqRAB8ZI-LQQl-Screenshot%25202024-04-08%2520122458.png",
-          "caption": "PF-10: Contract Revisions and Continuations",
-          "lesson_id": "LgGqGxT1I39a3gv6pfF1XazRgTb3Xec8",
-          "bytes": 209037
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/j2c7vi-vTWEgOqNZ-ckhaysh3o125fsguo6mahl6h5-msu-tyler-hall-dusk-exterior-from-quad.max.jpg",
-          "caption": "PF-10: Contract Revisions and Continuations",
-          "lesson_id": "LgGqGxT1I39a3gv6pfF1XazRgTb3Xec8",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/stZ36YP2_NCZOtHm.jpg",
-          "caption": "Student Employees: Restrictions and Considerations",
-          "lesson_id": "nvF_wIz7bOBavLbOYuEx9UsQ3PFu122W",
-          "bytes": 667090
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/bWF4uj86LJoAEHE1.png",
-          "caption": "Faculty Summer Contracts",
-          "lesson_id": "fh419l2vf_XUc2yirLB9QGdRNVvvMMtx",
-          "bytes": 157679
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/aCrulMLKDEbkeY7N-121222_TylerHall-Morgan-State.jpeg",
-          "caption": "Faculty Summer Contracts",
-          "lesson_id": "fh419l2vf_XUc2yirLB9QGdRNVvvMMtx",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pj6dJjTizijQwQrL.jpg",
-          "caption": "Faculty Summer Contract Math",
-          "lesson_id": "wHakec6BO3-oQdZItNAdFm8ku2mRmg37",
-          "bytes": 164407
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/XYVIZcP9cFdlqO1t-121222_TylerHall-Morgan-State.jpeg",
-          "caption": "Processing Honoraria Requests",
-          "lesson_id": "2_jxEKQkqOaMoYIovTdnBGqu8daC7z2i",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/k2nzkdLBDYyYopiU-121222_TylerHall-Morgan-State.jpeg",
-          "caption": "ARGOS Payroll Reports",
-          "lesson_id": "T9CfFDRVz17-I7AbzK1DxHfg3yZdsSG6",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/-a9DG-JXruejq9Xz-NHIDIST%2520Example.PNG",
-          "caption": "ARGOS Payroll Reports",
-          "lesson_id": "T9CfFDRVz17-I7AbzK1DxHfg3yZdsSG6",
-          "bytes": 128073
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/ZMSIUm5hnghkxRs_-Banner%2520links%2520page.png",
-          "caption": "Go to Employee Self-Service (Timesheet)",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 332197
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/r7BeqD2D3z176SF--gradient-technology-cyber-background_23-2149112205.jpg",
-          "caption": "Timesheet Processing",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 122163
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/HzzlxYZPz66Ko9c3-Banner%2520links%2520page.png",
-          "caption": "Go to Employee Self-Service (Timesheet)",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 332197
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/y0ovtJJEW4vSv6WL-image%2520(1).png",
-          "caption": "Go to the \"Approve Time\" Page",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 111543
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/CFi4nV3uhr6VvZUy-image%2520(2).png",
-          "caption": "Time Entry Approvals",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 71026
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/4LCnpBkYBFM04IpH-image%2520(3).png",
-          "caption": "Approve/Return Timesheet",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 261633
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/e-AjwTeFnLgdc37z-gradient-technology-cyber-background_23-2149112205.jpg",
-          "caption": "Timesheet Processing",
-          "lesson_id": "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C",
-          "bytes": 122163
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pBBMOKrX1sFd7oGk-Banner%2520links%2520page.png",
-          "caption": "Go to Employee Self-Service",
-          "lesson_id": "VF0KEpbPDT4OB4YZBNYTqx8cU2fwEy40",
-          "bytes": 332197
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/muXKFXbIYyam0sRn-360_F_319724815_nx2AmCuoFez3KQN2ssNLvY0umDxjZ1TC.jpg",
-          "caption": "Employee Self-Service: Reviewing Annual Salary",
-          "lesson_id": "VF0KEpbPDT4OB4YZBNYTqx8cU2fwEy40",
-          "bytes": 67340
-        },
-        {
-          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "AFQ91MOikf3ilvXiFgPEbqkAsuAuaYMp",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "4pxX0KI7jXKlLC7ysenh6TA15t2qjzVG": [
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/3-aidaj6ROS8G00D.jpg",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/IEdwuY8Fe2--UQlF-Screenshot%25202024-04-09%2520185146.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/-Awm50Wg8zep5MXb.jpg",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/F9RnzlBxU7jPc-hf-Screenshot%25202024-04-07%2520002529.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/R6bOpx6BERjs7JMx-Screenshot%25202024-04-09%2520005509.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/do8bw0Yx_NaETA21.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/4r_Jnfa-kQ4NiOf5.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/sobknQfHU3lXFghG.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/5LOuy4iPcrnFfIDl-Screenshot%25202024-04-09%2520010624.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/dpzmkjb321XjwSOb.jpg"
         ],
         "rZ0JVjPnwvEdkOOjqNPA9QKHsfrJxoCI": [
-          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/aosPVjRz1QbARc9s-Morgan_logo.jpg",
-          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/vbb6BcRfIseEKs9c.jpg"
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/vbb6BcRfIseEKs9c.jpg",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/F9RnzlBxU7jPc-hf-Screenshot%25202024-04-07%2520002529.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/iwx0jAZ0uU-ksLuY.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/5xSTLOiw4IREUQF1-Screenshot%25202024-04-07%2520002805.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/IHMeTlGm1o8rgC2J-Screenshot%25202024-04-07%2520003110.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/cJkpHwwge_BOZ1ZR-Screenshot%25202024-04-07%2520003917.png"
         ],
         "8Dh_xE6Ap_yItNW5SNRtWCxWVN6WLNiz": [
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pkm6YmV0T5bPcE3c-Banner%2520links%2520page.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/GJpJBRkwwhWW8X9l-Screenshot%25202024-04-09%2520232208.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/OLrlLfZxvcBveWpH-Screenshot%25202024-04-10%2520000633.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/Q7obCmqrztEdijTS.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/-7wVpE155TEjkt3L.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/xSZ9W_B4zupe0-Xc-Screenshot%25202024-04-10%2520001950.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/8UNqLaO6OqwFUDpO.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/VnXktFy-twkBVPpM-screnshot%25201.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/ehYJ7N5zgcuHS05j-sreenshot%25202.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/HZleksSm6xMwtKN2.jpg"
         ],
         "LgGqGxT1I39a3gv6pfF1XazRgTb3Xec8": [
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/1vNGrlx5bhwKLGY8-Screenshot%25202024-04-08%2520122339.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/CQoCqRAB8ZI-LQQl-Screenshot%25202024-04-08%2520122458.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/l2p4vo5y7KgMNU6y-Screenshot%25202024-04-08%2520122548.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/j2c7vi-vTWEgOqNZ-ckhaysh3o125fsguo6mahl6h5-msu-tyler-hall-dusk-exterior-from-quad.max.jpg"
         ],
         "nvF_wIz7bOBavLbOYuEx9UsQ3PFu122W": [
@@ -1080,6 +976,9 @@
         ],
         "NG0it2A3Dbx0u5yhStvzc1ByRA3veJ1C": [
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/ZMSIUm5hnghkxRs_-Banner%2520links%2520page.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/4d0dqlAZr7824iRV.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/IwsTEy9U_Y5wiyzR-enter%2520time%2520%25233.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/yfhqTfzV9MzIXbJe.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/r7BeqD2D3z176SF--gradient-technology-cyber-background_23-2149112205.jpg",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/HzzlxYZPz66Ko9c3-Banner%2520links%2520page.png",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/y0ovtJJEW4vSv6WL-image%2520(1).png",
@@ -1089,125 +988,227 @@
         ],
         "VF0KEpbPDT4OB4YZBNYTqx8cU2fwEy40": [
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pBBMOKrX1sFd7oGk-Banner%2520links%2520page.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/Hj1gsdk4_7TTaNmC.png",
+          "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/_rGZV4ePTEdfY1lv.jpg",
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/muXKFXbIYyam0sRn-360_F_319724815_nx2AmCuoFez3KQN2ssNLvY0umDxjZ1TC.jpg"
         ],
         "AFQ91MOikf3ilvXiFgPEbqkAsuAuaYMp": [
           "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/-7wVpE155TEjkt3L.png",
+          "caption": "Contractual PIN Entry"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/-Awm50Wg8zep5MXb.jpg",
+          "caption": "Banner Links Homepage: Select Workflow"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/-a9DG-JXruejq9Xz-NHIDIST%2520Example.PNG",
+          "caption": "ARGOS Payroll Reports"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/1vNGrlx5bhwKLGY8-Screenshot%25202024-04-08%2520122339.png",
+          "caption": "PF-10: Contract Revisions and Continuations"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/3-aidaj6ROS8G00D.jpg",
+          "caption": "EPAFs: Requesting EPAF Access"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/4LCnpBkYBFM04IpH-image%2520(3).png",
+          "caption": "Approve/Return Timesheet"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/4d0dqlAZr7824iRV.png",
+          "caption": "Access Your Available Timesheets"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/4r_Jnfa-kQ4NiOf5.png",
+          "caption": "Select Workflow"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/5LOuy4iPcrnFfIDl-Screenshot%25202024-04-09%2520010624.png",
+          "caption": "Extra: Add Missing Individuals to EPAF Approval Levels"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/5xSTLOiw4IREUQF1-Screenshot%25202024-04-07%2520002805.png",
+          "caption": "Enter Workflow Specifics"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/8UNqLaO6OqwFUDpO.png",
+          "caption": "Contract Specifics (Part 2)"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/CFi4nV3uhr6VvZUy-image%2520(2).png",
+          "caption": "Time Entry Approvals"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/CQoCqRAB8ZI-LQQl-Screenshot%25202024-04-08%2520122458.png",
+          "caption": "PF-10: Contract Revisions and Continuations"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/F9RnzlBxU7jPc-hf-Screenshot%25202024-04-07%2520002529.png",
+          "caption": "Select \"My Processes\""
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/GJpJBRkwwhWW8X9l-Screenshot%25202024-04-09%2520232208.png",
+          "caption": "My Activities: EPAF"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/HZleksSm6xMwtKN2.jpg",
+          "caption": "Electronic Personnel Action Forms (EPAF)"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/Hj1gsdk4_7TTaNmC.png",
+          "caption": "Job Summary"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/HzzlxYZPz66Ko9c3-Banner%2520links%2520page.png",
+          "caption": "Go to Employee Self-Service (Timesheet)"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/IEdwuY8Fe2--UQlF-Screenshot%25202024-04-09%2520185146.png",
+          "caption": "EPAFs: Requesting EPAF Access"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/IHMeTlGm1o8rgC2J-Screenshot%25202024-04-07%2520003110.png",
+          "caption": "Select Workflow"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/IwsTEy9U_Y5wiyzR-enter%2520time%2520%25233.png",
+          "caption": "Enter Time"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/OLrlLfZxvcBveWpH-Screenshot%25202024-04-10%2520000633.png",
+          "caption": "EPAF: Personnel Actions"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/Q7obCmqrztEdijTS.png",
+          "caption": "NEW EPAF Person Selection"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/R6bOpx6BERjs7JMx-Screenshot%25202024-04-09%2520005509.png",
+          "caption": "Select \"EPAF Access Request Form\""
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/VnXktFy-twkBVPpM-screnshot%25201.png",
+          "caption": "EPAF Routing Queue & Comments"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/XYVIZcP9cFdlqO1t-121222_TylerHall-Morgan-State.jpeg",
+          "caption": "Processing Honoraria Requests"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/ZMSIUm5hnghkxRs_-Banner%2520links%2520page.png",
+          "caption": "Go to Employee Self-Service (Timesheet)"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/_rGZV4ePTEdfY1lv.jpg",
+          "caption": "Review Salaries by Position"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/aCrulMLKDEbkeY7N-121222_TylerHall-Morgan-State.jpeg",
+          "caption": "Faculty Summer Contracts"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/bWF4uj86LJoAEHE1.png",
+          "caption": "Faculty Summer Contracts"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/cJkpHwwge_BOZ1ZR-Screenshot%25202024-04-07%2520003917.png",
+          "caption": "Enter Data and Submit"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/do8bw0Yx_NaETA21.png",
+          "caption": "Enter Workflow Specifics"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/dpzmkjb321XjwSOb.jpg",
+          "caption": "EPAFs: Requesting EPAF Access"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/e-AjwTeFnLgdc37z-gradient-technology-cyber-background_23-2149112205.jpg",
+          "caption": "Timesheet Processing"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/ehYJ7N5zgcuHS05j-sreenshot%25202.png",
+          "caption": "Submit the EPAF"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/iwx0jAZ0uU-ksLuY.png",
+          "caption": "Select \"Contractual PIN Request\""
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/j2c7vi-vTWEgOqNZ-ckhaysh3o125fsguo6mahl6h5-msu-tyler-hall-dusk-exterior-from-quad.max.jpg",
+          "caption": "PF-10: Contract Revisions and Continuations"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+          "caption": "After EPAF entry"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/k2nzkdLBDYyYopiU-121222_TylerHall-Morgan-State.jpeg",
+          "caption": "ARGOS Payroll Reports"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/l2p4vo5y7KgMNU6y-Screenshot%25202024-04-08%2520122548.png",
+          "caption": "PF-10: Contract Revisions and Continuations"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/muXKFXbIYyam0sRn-360_F_319724815_nx2AmCuoFez3KQN2ssNLvY0umDxjZ1TC.jpg",
+          "caption": "Employee Self-Service: Reviewing Annual Salary"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pBBMOKrX1sFd7oGk-Banner%2520links%2520page.png",
+          "caption": "Go to Employee Self-Service"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pj6dJjTizijQwQrL.jpg",
+          "caption": "Faculty Summer Contract Math"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/pkm6YmV0T5bPcE3c-Banner%2520links%2520page.png",
+          "caption": "Banner Links Homepage: Employee Self-Service"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/r7BeqD2D3z176SF--gradient-technology-cyber-background_23-2149112205.jpg",
+          "caption": "Timesheet Processing"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/sobknQfHU3lXFghG.png",
+          "caption": "Enter Employee Role and Submit"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/stZ36YP2_NCZOtHm.jpg",
+          "caption": "Student Employees: Restrictions and Considerations"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/vbb6BcRfIseEKs9c.jpg",
+          "caption": "Banner Links Homepage: Select Workflow"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/xSZ9W_B4zupe0-Xc-Screenshot%25202024-04-10%2520001950.png",
+          "caption": "Contract Specifics (Part 1)"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/y0ovtJJEW4vSv6WL-image%2520(1).png",
+          "caption": "Go to the \"Approve Time\" Page"
+        },
+        {
+          "key": "rise/courses/yeGd83XB_frmwl2TaIRYWkWJUavnQ7cV/yfhqTfzV9MzIXbJe.png",
+          "caption": "Late Timesheets & Electronic Access Issues"
+        }
+      ]
     },
     "form_supporting_participants_etraining": {
       "share_id": "fLyvCDI1vSeMFtSyq2ebF",
-      "images": [
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/q3EHxmUpgSEbUPtv.jpg",
-          "caption": "Participant Support Costs: Key Points",
-          "lesson_id": "tWqsmv3nCi2ANLwrUp5ciqgFNAZ6LAMo",
-          "bytes": 3401875
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/G9Z626moqjTekSEX.jpg",
-          "caption": "Stipend Support",
-          "lesson_id": "tWqsmv3nCi2ANLwrUp5ciqgFNAZ6LAMo",
-          "bytes": 452504
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/T9FR_N3IPi2NaFKz.jpg",
-          "caption": "Tuition Remission",
-          "lesson_id": "tWqsmv3nCi2ANLwrUp5ciqgFNAZ6LAMo",
-          "bytes": 544776
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/mEkIVJEg0c0r7JPy.jpg",
-          "caption": "Health Insurance",
-          "lesson_id": "tWqsmv3nCi2ANLwrUp5ciqgFNAZ6LAMo",
-          "bytes": 290939
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/LW4KUVVnltz-LDpr.jpg",
-          "caption": "Participant Support Costs: Key Points",
-          "lesson_id": "tWqsmv3nCi2ANLwrUp5ciqgFNAZ6LAMo",
-          "bytes": 433297
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/b4njk5TqACw2Aq21.jpeg",
-          "caption": "Stipend Vs. Contract: Which is Appropriate?",
-          "lesson_id": "gnfuoDrQJAPt93yO5BMYJ4GX4hfxicxP",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/vBYNHMq2nD4BhbNm.jpeg",
-          "caption": "Stipends for MSU Students",
-          "lesson_id": "SA67c17oBLqg8S41NsFbJBlp6-9kghjM",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/ti8mO8HOYL7O4ZRq.png",
-          "caption": "Stipends for MSU Students",
-          "lesson_id": "SA67c17oBLqg8S41NsFbJBlp6-9kghjM",
-          "bytes": 112264
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/7_YmyX0pwN6x6l-0.jpg",
-          "caption": "Stipends for External Participants",
-          "lesson_id": "ZuIVYgRFBaVwS450jPvgYcC8bvVpHRjX",
-          "bytes": 326452
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/F4RCj2qOsNI1Sjp5.png",
-          "caption": "Stipends for External Participants",
-          "lesson_id": "ZuIVYgRFBaVwS450jPvgYcC8bvVpHRjX",
-          "bytes": 100052
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/3RiuL62AKQZRe0ca.jpg",
-          "caption": "Stipends for External Participants",
-          "lesson_id": "ZuIVYgRFBaVwS450jPvgYcC8bvVpHRjX",
-          "bytes": 454947
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/9mykk3TF5M3uTaSp.jpg",
-          "caption": "Student Tuition, Fees, and Health Insurance",
-          "lesson_id": "_97OrDqn9GWuY9MOTmnfFbz2zc62yEVS",
-          "bytes": 262638
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/Y1ws0032cEwAhcI8.png",
-          "caption": "Student Tuition, Fees, and Health Insurance",
-          "lesson_id": "_97OrDqn9GWuY9MOTmnfFbz2zc62yEVS",
-          "bytes": 126168
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/MD9kKPeWSDyU4f0S.png",
-          "caption": "Student Tuition, Fees, and Health Insurance",
-          "lesson_id": "_97OrDqn9GWuY9MOTmnfFbz2zc62yEVS",
-          "bytes": 102145
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/Zwpk2WyPnQ7dNnht.jpg",
-          "caption": "Indirect Costs and MTDC",
-          "lesson_id": "TXIoZSG3WflUXgx9mVdkrfHU8OnvzJSn",
-          "bytes": 224946
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/o_mQ_V2gf8Gxd8W5.png",
-          "caption": "Indirect Costs and MTDC",
-          "lesson_id": "TXIoZSG3WflUXgx9mVdkrfHU8OnvzJSn",
-          "bytes": 1458492
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/mVIl3mTrKguiwvwi.jpg",
-          "caption": "Indirect Costs and MTDC",
-          "lesson_id": "TXIoZSG3WflUXgx9mVdkrfHU8OnvzJSn",
-          "bytes": 561938
-        },
-        {
-          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "YTR1YgBGokxxHf2CV9X8-WJvexzNG4ES",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "tWqsmv3nCi2ANLwrUp5ciqgFNAZ6LAMo": [
           "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/q3EHxmUpgSEbUPtv.jpg",
@@ -1221,11 +1222,13 @@
         ],
         "SA67c17oBLqg8S41NsFbJBlp6-9kghjM": [
           "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/vBYNHMq2nD4BhbNm.jpeg",
-          "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/ti8mO8HOYL7O4ZRq.png"
+          "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/ti8mO8HOYL7O4ZRq.png",
+          "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/RAh36bQtyo17_3xg.png"
         ],
         "ZuIVYgRFBaVwS450jPvgYcC8bvVpHRjX": [
           "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/7_YmyX0pwN6x6l-0.jpg",
           "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/F4RCj2qOsNI1Sjp5.png",
+          "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/who-zgMsWqxv3hbW.png",
           "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/3RiuL62AKQZRe0ca.jpg"
         ],
         "_97OrDqn9GWuY9MOTmnfFbz2zc62yEVS": [
@@ -1241,102 +1244,92 @@
         "YTR1YgBGokxxHf2CV9X8-WJvexzNG4ES": [
           "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/3RiuL62AKQZRe0ca.jpg",
+          "caption": "Stipends for External Participants"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/7_YmyX0pwN6x6l-0.jpg",
+          "caption": "Stipends for External Participants"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/9mykk3TF5M3uTaSp.jpg",
+          "caption": "Student Tuition, Fees, and Health Insurance"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/F4RCj2qOsNI1Sjp5.png",
+          "caption": "Stipends for External Participants"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/G9Z626moqjTekSEX.jpg",
+          "caption": "Stipend Support"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/LW4KUVVnltz-LDpr.jpg",
+          "caption": "Participant Support Costs: Key Points"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/MD9kKPeWSDyU4f0S.png",
+          "caption": "Student Tuition, Fees, and Health Insurance"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/RAh36bQtyo17_3xg.png",
+          "caption": "Stipends for MSU Students"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/T9FR_N3IPi2NaFKz.jpg",
+          "caption": "Tuition Remission"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/Y1ws0032cEwAhcI8.png",
+          "caption": "Student Tuition, Fees, and Health Insurance"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/Zwpk2WyPnQ7dNnht.jpg",
+          "caption": "Indirect Costs and MTDC"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/b4njk5TqACw2Aq21.jpeg",
+          "caption": "Stipend Vs. Contract: Which is Appropriate?"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/mEkIVJEg0c0r7JPy.jpg",
+          "caption": "Health Insurance"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/mVIl3mTrKguiwvwi.jpg",
+          "caption": "Indirect Costs and MTDC"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/o_mQ_V2gf8Gxd8W5.png",
+          "caption": "Indirect Costs and MTDC"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/q3EHxmUpgSEbUPtv.jpg",
+          "caption": "Participant Support Costs: Key Points"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/ti8mO8HOYL7O4ZRq.png",
+          "caption": "Stipends for MSU Students"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/vBYNHMq2nD4BhbNm.jpeg",
+          "caption": "Stipends for MSU Students"
+        },
+        {
+          "key": "rise/courses/U5tbyEz4mfS5hz3yGEKU7g759i4_LQ2z/who-zgMsWqxv3hbW.png",
+          "caption": "Stipends for External Participants"
+        }
+      ]
     },
     "form_time_effort_etraining": {
       "share_id": "s01WpXKAGFN1dft3QDlow",
-      "images": [
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/WgcfraxXamLMk_0Q.png",
-          "caption": "Auditor Assurance",
-          "lesson_id": "Becp4ReEo9dTHt2kbKgpsv3Ku3SwTb6H",
-          "bytes": 172073
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/qXtd6b5yu7shzAIo.png",
-          "caption": "Federally Mandated",
-          "lesson_id": "Becp4ReEo9dTHt2kbKgpsv3Ku3SwTb6H",
-          "bytes": 60424
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/fV1eeASyASr_ZcjL.jpg",
-          "caption": "Who Certifies Effort?",
-          "lesson_id": "_R5Tbxo1kTpkqz9y8XmhIgGxB0PQaeSf",
-          "bytes": 172639
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/KZtDayBP1-zGKKn-.jpg",
-          "caption": "Primary Certifier",
-          "lesson_id": "_R5Tbxo1kTpkqz9y8XmhIgGxB0PQaeSf",
-          "bytes": 211074
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/_Wvg5I0HZ-OagqgJ.jpg",
-          "caption": "Alternate Certifier",
-          "lesson_id": "_R5Tbxo1kTpkqz9y8XmhIgGxB0PQaeSf",
-          "bytes": 315929
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/THLEzlbYzoBskpM8.jpeg",
-          "caption": "Who Certifies Effort?",
-          "lesson_id": "_R5Tbxo1kTpkqz9y8XmhIgGxB0PQaeSf",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/ifMtx1eZWuTGZhD1.jpg",
-          "caption": "Significance of Effort Reporting",
-          "lesson_id": "fhUFYBCN3xx1HdzQLOkB3lCvrM4jrOEU",
-          "bytes": 160696
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/qFNStnFpesaw8kgL.jpg",
-          "caption": "Significance of Effort Reporting",
-          "lesson_id": "fhUFYBCN3xx1HdzQLOkB3lCvrM4jrOEU",
-          "bytes": 195554
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/Eop_495rxHV8JEzD.jpg",
-          "caption": "Significance of Effort Reporting",
-          "lesson_id": "fhUFYBCN3xx1HdzQLOkB3lCvrM4jrOEU",
-          "bytes": 630523
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/hAesfiAF3XruCv6z.jpg",
-          "caption": "Institutional Base Salary (IBS)",
-          "lesson_id": "aKaE5XaiyaH_dy-pjOdPY1o3Ggc4J9HI",
-          "bytes": 362219
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/Arwb6rl1o2EBnEat.png",
-          "caption": "Effort Reporting at MSU",
-          "lesson_id": "leIXinEsOyEpjJYrcGTjkUlum6_Waiwt",
-          "bytes": 1361968
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/i4WU0gXoZa_kToSZ.png",
-          "caption": "Effort Reporting at MSU",
-          "lesson_id": "leIXinEsOyEpjJYrcGTjkUlum6_Waiwt",
-          "bytes": 361537
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/gQou1IWpqSKiedCI.png",
-          "caption": "Effort Reporting at MSU",
-          "lesson_id": "leIXinEsOyEpjJYrcGTjkUlum6_Waiwt",
-          "bytes": 157803
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/EChzhf-WGVb1SotX.png",
-          "caption": "Effort Reporting at MSU",
-          "lesson_id": "leIXinEsOyEpjJYrcGTjkUlum6_Waiwt",
-          "bytes": 157803
-        },
-        {
-          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "QTq-v2DMnYtZqkYoLlm45BLO0OlgbLGK",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "Becp4ReEo9dTHt2kbKgpsv3Ku3SwTb6H": [
           "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/WgcfraxXamLMk_0Q.png",
@@ -1360,89 +1353,82 @@
           "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/Arwb6rl1o2EBnEat.png",
           "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/i4WU0gXoZa_kToSZ.png",
           "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/gQou1IWpqSKiedCI.png",
-          "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/EChzhf-WGVb1SotX.png"
+          "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/EChzhf-WGVb1SotX.png",
+          "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/gljPN-M1s1HyAheF.png"
         ],
         "QTq-v2DMnYtZqkYoLlm45BLO0OlgbLGK": [
           "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/Arwb6rl1o2EBnEat.png",
+          "caption": "Effort Reporting at MSU"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/EChzhf-WGVb1SotX.png",
+          "caption": "Effort Reporting at MSU"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/Eop_495rxHV8JEzD.jpg",
+          "caption": "Significance of Effort Reporting"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/KZtDayBP1-zGKKn-.jpg",
+          "caption": "Primary Certifier"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/THLEzlbYzoBskpM8.jpeg",
+          "caption": "Who Certifies Effort?"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/WgcfraxXamLMk_0Q.png",
+          "caption": "Auditor Assurance"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/_Wvg5I0HZ-OagqgJ.jpg",
+          "caption": "Alternate Certifier"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/fV1eeASyASr_ZcjL.jpg",
+          "caption": "Who Certifies Effort?"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/gQou1IWpqSKiedCI.png",
+          "caption": "Effort Reporting at MSU"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/gljPN-M1s1HyAheF.png",
+          "caption": "Effort Reporting at MSU"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/hAesfiAF3XruCv6z.jpg",
+          "caption": "Institutional Base Salary (IBS)"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/i4WU0gXoZa_kToSZ.png",
+          "caption": "Effort Reporting at MSU"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/ifMtx1eZWuTGZhD1.jpg",
+          "caption": "Significance of Effort Reporting"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/qFNStnFpesaw8kgL.jpg",
+          "caption": "Significance of Effort Reporting"
+        },
+        {
+          "key": "rise/courses/pBBHPT8z6JjgtlDKPVWpUIJpK3eOxKQQ/qXtd6b5yu7shzAIo.png",
+          "caption": "Federally Mandated"
+        }
+      ]
     },
     "form_travel_sponsored_projects_etraining": {
       "share_id": "IrsPFmh4W57M3hmXtCUO2",
-      "images": [
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/8O0Qe5vd-zFSzxJL.jpg",
-          "caption": "Destination details & allocability",
-          "lesson_id": "858pUXDs7CnIekMRXjmiixmNjTkxVNbp",
-          "bytes": 351369
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/X7sdJyllgo7VzIbk.jpg",
-          "caption": "Estimated Expenses",
-          "lesson_id": "858pUXDs7CnIekMRXjmiixmNjTkxVNbp",
-          "bytes": 592870
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/2gw8DxoLeL3H-Voy.jpg",
-          "caption": "Index & Budget",
-          "lesson_id": "858pUXDs7CnIekMRXjmiixmNjTkxVNbp",
-          "bytes": 194393
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/WlqDP8wFbzToAkqT.jpg",
-          "caption": "Booking a Flight or Train Ticket",
-          "lesson_id": "A-ycymLNuGEeT063agOmLNIHYGPMyb4V",
-          "bytes": 187256
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/VesQRhT1fv2jq4FD.jpg",
-          "caption": "Booking a Flight or Train Ticket",
-          "lesson_id": "A-ycymLNuGEeT063agOmLNIHYGPMyb4V",
-          "bytes": 128852
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/RYDSBbzGamzI4GZV-Tyler_Hall_DSC2759_6.5w_300dpi.max-2880x1800.jpg",
-          "caption": "Additional Travel Rules",
-          "lesson_id": "ibKZeIVIZJR3ioiBjkje1kqKE0BQ31NQ",
-          "bytes": 272408
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/7CQuDEVEm3ZdaPhe-ChatGPT%2520Image%2520May%252029%252C%25202025%252C%252010_56_06%2520AM.png",
-          "caption": "Travel Request Form (TL Form) Guidance",
-          "lesson_id": "S3b7uBSZOQV23VCKz_sCuGB-xMaN5G2l",
-          "bytes": 1561101
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/GWCWrKXWg1oHrJWf.jpg",
-          "caption": "Travel Request Form (TL Form) Guidance",
-          "lesson_id": "S3b7uBSZOQV23VCKz_sCuGB-xMaN5G2l",
-          "bytes": 2372579
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/OSJlEy3DedEotcdq-Example%2520Travel%2520Form%2520Image.PNG",
-          "caption": "Travel Request Form (TL Form) Guidance",
-          "lesson_id": "S3b7uBSZOQV23VCKz_sCuGB-xMaN5G2l",
-          "bytes": 141187
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/-JTIGiZcrVhMmQ5V-Screenshot%25202025-06-02%2520125137.png",
-          "caption": "Travel Reimbursement Form (GAD Form X-5)",
-          "lesson_id": "-gylEB_whpWNsl5WSYkeAY7IOm-RdbjA",
-          "bytes": 82846
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/DbWck-Izt0ZLWy0L-121222_TylerHall-Morgan-State.jpeg",
-          "caption": "Travel Reimbursement Form (GAD Form X-5)",
-          "lesson_id": "-gylEB_whpWNsl5WSYkeAY7IOm-RdbjA",
-          "bytes": 309565
-        },
-        {
-          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/1GqZUZi4VRak_pOl.jpg",
-          "caption": "Message from ORA",
-          "lesson_id": "90rSi6EsanC69yCf5MgvYwHG18iigzsv",
-          "bytes": 153463
-        }
-      ],
       "by_lesson": {
         "858pUXDs7CnIekMRXjmiixmNjTkxVNbp": [
           "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/8O0Qe5vd-zFSzxJL.jpg",
@@ -1452,6 +1438,9 @@
         "A-ycymLNuGEeT063agOmLNIHYGPMyb4V": [
           "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/WlqDP8wFbzToAkqT.jpg",
           "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/VesQRhT1fv2jq4FD.jpg"
+        ],
+        "3x1_VO30UrbDVyAksFypsQwYuvot1ozK": [
+          "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/gZN-g_KH93al3hF1-Group%2520Travel%2520Attendee%2520List%2520image.PNG"
         ],
         "ibKZeIVIZJR3ioiBjkje1kqKE0BQ31NQ": [
           "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/RYDSBbzGamzI4GZV-Tyler_Hall_DSC2759_6.5w_300dpi.max-2880x1800.jpg"
@@ -1468,9 +1457,62 @@
         "90rSi6EsanC69yCf5MgvYwHG18iigzsv": [
           "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/1GqZUZi4VRak_pOl.jpg"
         ]
-      }
+      },
+      "images": [
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/-JTIGiZcrVhMmQ5V-Screenshot%25202025-06-02%2520125137.png",
+          "caption": "Travel Reimbursement Form (GAD Form X-5)"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/1GqZUZi4VRak_pOl.jpg",
+          "caption": "Message from ORA"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/2gw8DxoLeL3H-Voy.jpg",
+          "caption": "Index & Budget"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/7CQuDEVEm3ZdaPhe-ChatGPT%2520Image%2520May%252029%252C%25202025%252C%252010_56_06%2520AM.png",
+          "caption": "Travel Request Form (TL Form) Guidance"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/8O0Qe5vd-zFSzxJL.jpg",
+          "caption": "Destination details & allocability"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/DbWck-Izt0ZLWy0L-121222_TylerHall-Morgan-State.jpeg",
+          "caption": "Travel Reimbursement Form (GAD Form X-5)"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/GWCWrKXWg1oHrJWf.jpg",
+          "caption": "Travel Request Form (TL Form) Guidance"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/OSJlEy3DedEotcdq-Example%2520Travel%2520Form%2520Image.PNG",
+          "caption": "Travel Request Form (TL Form) Guidance"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/RYDSBbzGamzI4GZV-Tyler_Hall_DSC2759_6.5w_300dpi.max-2880x1800.jpg",
+          "caption": "Additional Travel Rules"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/VesQRhT1fv2jq4FD.jpg",
+          "caption": "Booking a Flight or Train Ticket"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/WlqDP8wFbzToAkqT.jpg",
+          "caption": "Booking a Flight or Train Ticket"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/X7sdJyllgo7VzIbk.jpg",
+          "caption": "Estimated Expenses"
+        },
+        {
+          "key": "rise/courses/Upr98dzppXScRX4Xm3hqp4Db_qOFJd4X/gZN-g_KH93al3hF1-Group%2520Travel%2520Attendee%2520List%2520image.PNG",
+          "caption": "Group Travel Guidance"
+        }
+      ]
     }
   },
-  "total_images": 183,
-  "stock_filter": "filename is a plain dictionary word (Rise stock library) or contains stock_image"
+  "total_images": 262
 }

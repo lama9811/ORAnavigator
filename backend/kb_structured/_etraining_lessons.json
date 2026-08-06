@@ -93,6 +93,14 @@
           "content": "Cost Share: Post-Award\n\nFrom the ORA eTraining module \"It Takes a Village: Understanding Cost Share on Sponsored Projects\" (lesson 5 of 7).\nPost Award: Documentation and Monitoring\nCongratulations on receiving your award! With the Notice of Award (NOA) now in hand, it's essential to establish cost share commitments from day one. To facilitate this, please review the following steps carefully to ensure cost share is accurately recorded in Banner. Proper tracking is critical for accurate sponsor invoicing and maintaining federal fiscal compliance.\nCost Share: Post-Award Phase\nStep #1: Initial Award Setup\nWhen the Office of Research Administration receives an NOA with committed cost share the following will happen: A post award briefing will be scheduled with DRED staff, the PI, and their support staff. The briefing will provide resources, allow for questions, and detail the requirements and responsibilities of cost share under the award. ORA Staff will coordinate with Restricted Funds Accounting (RFA) staff to create a Cost Share Activity Code. Use of the activity code is covered later in this lesson.\nStep #2: Cost Share Specifics Sent to RFA\nThe ORA Budget Specialist will send the cost share budget and budget justification to the RFA team.\nStep #3: Host a Post Award Briefing\nA post award briefing is required for all projects with documented cost share. We will outline the requirements and responsibilities of cost share and determine cost share sources. The project's cost share activity code will be shared with the PI via the RFA team.\nStep #4: Complete Cost Share DocuSign Forms\nFor personnel cost share, a Payroll Cost Share Memo (attached below) must be completed and sent to Crystal Nichols (crystal.nichols@morgan.edu). This form should be completed for any personnel (PI, Co-PI, Program Manager, etc) whose salary will require cost share under the award. It is crucial to verify an employee does not over commit cost share between all projects at MSU. Please review your payroll cost share memo with your RFA account prior to submitting the completed form to Ms. Nichols. For non-personnel cost share, the appropriate Non-Payroll Cost Share Form (below) must be completed on a schedule outlined by the PI's RFA Grant Accountant. This schedule will be based on the invoicing/reporting deadlines of the award. There are two Non-Payroll Cost Share Forms: Non-Payroll Cost Share Memo - Participant Support Costs Non-Payroll Cost Share - Travel, Services, & Commodities\nStep #5: Cost Share Activity Code\nAs a part of the award setup process the MSU RFA team will create a cost share activity code specific to each award. The code typically will reflect the project's fund code with a 'C' at the end. For example, a project with fund code 12345 would have a cost share activity code of 12345C. The code can be used on a variety of expensing instruments to include travel forms, stipend requests, requisitions, and p-card reconciliations. Below are examples of where the activity code would be used for p-card reconciliations and requisitions.\nCost Share Activity Code (Requisitions)\nCost Share Activity Code (P-Card Reconciliation)\nD9BphPv12b07SrGc-Payroll%20Cost%20Share%20Memo.docx\n-NPy7tpE5320PFsH-Payroll%20Cost%20Share%20Memo%20(Example).docx\nKE_TfVkEwKKBL1d6-NonPayroll%20Participant%20Cost%20Share%20Memo.docx\nujot8TjuGWTYTs7U-Non-Payroll%20Cost%20Share%20for%20Travel%2C%20Services%2C%20%26%20Commodities.docx\nComplete the content above before moving on.",
           "images": [
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_cost_share_etraining/bSYj3mK-Mt2vtUCC-Screenshot%25202024-11-11%2520164442.png",
+              "caption": "Step #5: Cost Share Activity Code"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_cost_share_etraining/IP_2u10upcqlnBGZ-Screenshot%25202024-11-11%2520164442.png",
+              "caption": "Cost Share Activity Code (Requisitions)"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_cost_share_etraining/SEcACyBBUzQeyyCr-Screenshot%25202024-11-11%2520164654.png",
               "caption": "Cost Share Activity Code (P-Card Reconciliation)"
             },
@@ -172,8 +180,44 @@
               "caption": "Banner Finance Workflow Access"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/nlXfJyT4QN_Jy6UO.jpg",
+              "caption": "Workflow: Banner Finance Access Request"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/2jyLprWhyhSa7JfM.jpg",
+              "caption": "Banner Links Homepage"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/--wtZFZQcVOHYoBj-IsIE-djfXFEcuHzm.png",
+              "caption": "Workflow: My Processes"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/hlTsrE4DmtBcdUrb.jpg",
+              "caption": "Banner Finance Security Access Request"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/tyfiEdSvAdjxRo0T.png",
+              "caption": "Enter Workflow Specifics"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/4S92wmGdb0o-FNSN-Finance%2520Workflow%25203.png",
+              "caption": "Select Workflow"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/CO0kkGbLPPJ0b1q0.jpg",
               "caption": "Confirm Employee and Supervisor Information"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/DU4Wrx9CASwlnQGq.jpg",
+              "caption": "Enter Start Date and Request Type"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/LrP7Af6A-NSGOAc9.png",
+              "caption": "Select Appropriate Role"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/xmGWMODJ6ZN5PsFh.png",
+              "caption": "Select Desired Access"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/9oGIwXusVH-Rcw2Q.jpg",
@@ -204,6 +248,14 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/cQ9RTEWgACpRC6Bp-Native%2520%25234.PNG",
               "caption": "Select Native Banner"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/-qrc-7hDm8OWhXT2-snip%2520%25231.png",
+              "caption": "Note: Potential Login Issue"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/4kyYcMvKpzSLCQzW-Native%2520%25235.PNG",
+              "caption": "Native Banner Landing Page"
             }
           ]
         },
@@ -213,7 +265,13 @@
           "lesson_id": "z5l3s2hLKNKMCvGa2m3h0M3DgsfLDHgW",
           "procedure_url": "https://share.articulate.com/P5hdpOIVrXhCKX63DYkkA#/lessons/z5l3s2hLKNKMCvGa2m3h0M3DgsfLDHgW",
           "chars": 1763,
-          "content": "Defining FOAPAL\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 3 of 12).\nFOAPAL: Banner Grant Codes\nWhen dealing with budgets you will likely come across the acronym FOAPAL. This refers to a string of codes setup by the Restricted Funds Accounting (RFA) team that is unique to a specific budget. FOAPAL stands for:\nFund\nA project's fund is a 5-digit code unique to a specific project. Many forms will ask for both a project's index and fund number.\nOrganization Code\nEach group on campus (School of Social Work, GESTAR, etc) has a unique organization code that \"houses\" a project budget. Typically, budgets under each org code are under the purview of the school's Budget Officer.\nAccount\nBudgets are broken down in Banner into pool levels (noted by 2-digit pool level codes). Each pool level has various 5-digit account codes which impact the corresponding budget. For example, your project's supply pool (09) may have office supply expenses (09021) charged against it.\nProgram\nThis helps identify the funding source. For the vast majority of grants on campus the program code will always be 25.\nActivity\nMany project budgets will not utilize the activity code, but it is used to identify special activity such as cost share on grants. Please review our cost share module for more information on cost share activity codes.\nLocation\nThis is typically not used on grants, but may be utilized for fixed assets.\nComplete the content above before moving on.\nBanner Account Codes\nUnderstanding account codes in Banner can be confusing at times. Please review the list of account codes below to appropriately allocate your project expenses in Banner.\ntTOht7dauqI4cv6n-Banner%20Expenditure%20Revenue%20Codes%20Only.xls"
+          "content": "Defining FOAPAL\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 3 of 12).\nFOAPAL: Banner Grant Codes\nWhen dealing with budgets you will likely come across the acronym FOAPAL. This refers to a string of codes setup by the Restricted Funds Accounting (RFA) team that is unique to a specific budget. FOAPAL stands for:\nFund\nA project's fund is a 5-digit code unique to a specific project. Many forms will ask for both a project's index and fund number.\nOrganization Code\nEach group on campus (School of Social Work, GESTAR, etc) has a unique organization code that \"houses\" a project budget. Typically, budgets under each org code are under the purview of the school's Budget Officer.\nAccount\nBudgets are broken down in Banner into pool levels (noted by 2-digit pool level codes). Each pool level has various 5-digit account codes which impact the corresponding budget. For example, your project's supply pool (09) may have office supply expenses (09021) charged against it.\nProgram\nThis helps identify the funding source. For the vast majority of grants on campus the program code will always be 25.\nActivity\nMany project budgets will not utilize the activity code, but it is used to identify special activity such as cost share on grants. Please review our cost share module for more information on cost share activity codes.\nLocation\nThis is typically not used on grants, but may be utilized for fixed assets.\nComplete the content above before moving on.\nBanner Account Codes\nUnderstanding account codes in Banner can be confusing at times. Please review the list of account codes below to appropriately allocate your project expenses in Banner.\ntTOht7dauqI4cv6n-Banner%20Expenditure%20Revenue%20Codes%20Only.xls",
+          "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/bJ9fs5whrwOatbhv.jpg",
+              "caption": "Defining FOAPAL"
+            }
+          ]
         },
         {
           "doc_id": "etr_banner_04_fgibdst_budget_by_fiscal_year",
@@ -226,6 +284,18 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/P230laAaYHtrBxnJ.jpeg",
               "caption": "FGIBDST: Budget by Fiscal Year"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+              "caption": "FGIBDST: Budget by Fiscal Year"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/arJ564LPfVf4FDIk.png",
+              "caption": "Native Banner: FGIBDST Page"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/-O3cAoX4Cpd5_7va-fgibdst%2520screenshot%2520%25232%2520129623.PNG",
+              "caption": "Enter Budget Details"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/m00hnfsGb6WpKkQT-fgibdst%2520screenshot%2520%25233%2520129623.PNG",
@@ -248,6 +318,10 @@
               "caption": "Organization Encumbrances (Part 1)"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/DNCtv8ot2hpQbU3o-org%2520encumbrances%2520detail%2520%25232.PNG",
+              "caption": "Organization Encumbrances (Part 2)"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/FDrRYIBTrVa8RvLV-Export%2520%25231.png",
               "caption": "Exporting Data"
             }
@@ -262,8 +336,28 @@
           "content": "FRIGITD: Budget Inception to Date\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 5 of 12).\nFRIGITD: Budget Inception to Date\nUnlike FGIBDST, Native Banner's FRIGITD page is the ideal view for projects with performance periods that do not match the University fiscal year. This page shows a project's budget for a selected date range and allows the user to set the start and stop dates of the query to reflect their project's performance period.\nComplete the content above before moving on.\nFRIGITD: Budget View by Date Range\nSummary\nNative Banner: FRIGITD Page\nMake your way to the Native Banner landing page, type the page code FRIGITD in the search bar, and select \"Grant Inception to Date\".\nEnter Query Details\nStart by entering your project's Index then hit \"Enter\" on your keyboard twice to populate the remaining fields. Then, review your query start and stop dates. The default will be from the start of the project to present (inception to date), but can be edited to reflect any performance period required. Once you have the correct dates entered click on the \"Go\" button in the upper right corner of the screen.\nFRIGITD Budget Detail\nYour project budget will populate with a view very similar to the FGIBDST page. You will be able to review your pool level budgets, charges against each pool, and active project encumbrances.\nWant a Clean Budget View?\nBoth of the default views for FRIGITD and FGIBDST can be overwhelming to understand with all pool level accounts expanded. You can simplify your overall budget availability by pool level by changing one section of the query section. Repeat Step 2, but change \"Account Summary\" to \"Budget Pool\". Then, click on \"Go\" in the upper right corner.\nSimplified Available Balance\nThis view condenses all accounts under each pool level into a singular total figure. This results in a clean presentation of your project's budget pool levels. This will help you verify that you have sufficient funds in a pool level before submitting requests.",
           "images": [
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+              "caption": "FGIBDST: Budget by Fiscal Year"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/-EUuWvgVyjIL9Vlx-frigitd%2520screenshot%2520%25231.PNG",
+              "caption": "Native Banner: FRIGITD Page"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/ad1xAfXNvhQ7BVc1-frigitd%2520screenshot%2520%25232.PNG",
+              "caption": "Enter Query Details"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/XtgFwvyYmAMGl1Vt-frigitd%2520screenshot%2520%25233%2520(1).PNG",
               "caption": "FRIGITD Budget Detail"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/de9KoPWpMBs1qPyh-frigitd%2520screenshot%2520%25234.PNG",
+              "caption": "Want a Clean Budget View?"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/i-nlKtKunGBFUbJQ-frigitd%2520screenshot%2520%25235.PNG",
+              "caption": "Simplified Available Balance"
             }
           ]
         },
@@ -280,6 +374,18 @@
               "caption": "FGIENCD: Encumbrance Detail Lookup"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+              "caption": "FGIBDST: Budget by Fiscal Year"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/0DeqqDmWZhZXNhb5-FGIENCD%2520screenshot%2520%25231.PNG",
+              "caption": "Native Banner: FGIENCD Page"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/_jJbVqPDHnkJGCHC-fgiencd%2520screenshot%2520%25232.PNG",
+              "caption": "Enter Document Number"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/o_hJGyxkPPRLz_sp-fgiencd%2520screenshot%2520%25233.PNG",
               "caption": "FGIENCD View Detail"
             }
@@ -291,7 +397,21 @@
           "lesson_id": "YMnBl8bH495X2Hkp2hXMu8dATa3ALOlw",
           "procedure_url": "https://share.articulate.com/P5hdpOIVrXhCKX63DYkkA#/lessons/YMnBl8bH495X2Hkp2hXMu8dATa3ALOlw",
           "chars": 2163,
-          "content": "FRIGRNT: Grant Code Inquiry\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 7 of 12).\nFRIGRNT: Querying Award Listings\nNeed a quick way to view award data among the growing list of PIs in your schools and departments? The FRIGRNT view in Banner allows users to query both active and historical award data in one place. Using FRIGRNT, PIs and administrators can review key details such as total award amounts, project performance period dates, track overall award portfolios, and more great data!\nComplete the content above before moving on.\nFRIGRNT: Query Award Listings in Banner\nNative Banner: FRIGRNT (Grant Code Inquiry)\nMake your way to the Native Banner landing page, type the page code FRIGRNT in the search bar, and select \"Grant Code Inquiry\". Please Note : Access to the FRIGRNT query view in Banner can be requested through your school's Budget Officer via Banner Workflow.\nFRIGRNT Query\nAt the top of the FRIGRNT query page a variety of data fields that can be used to query existing awards at Morgan State University. The most useful of which would be: Principal Investigator ID : Query by PI MSU ID number. Principal Investigator Last Name: Query by PI Last Name. Responsible Organization: Query by department organization code. After entering the information above click on the \"Go\" button in the top right corner of the screen.\nFRIGRNT View\nThe FRIGRNT page provides a deep resource of useful information: Grant : Grant Code assigned by RFA and the Project Title in Banner Principal Investigator ID : PI Name and MSU ID Agency: Sponsor Name and Banner Shorthand Current Amount: Total budget available for current fiscal year Cumulative Amount: Total funds awarded by sponsor to date Maximum Amount: Total sponsor commitment in the NOA (subject to funding availability per sponsor terms and conditions) Project Start Date: First date of the project's first performance period Project End Date: Last date of the project's final performance period Sponsor ID: Award number printed on the Notice of Award (NOA)\nPro Tip: You can export FRIGRNT query results data by pressing Shift+F1 on your keyboard."
+          "content": "FRIGRNT: Grant Code Inquiry\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 7 of 12).\nFRIGRNT: Querying Award Listings\nNeed a quick way to view award data among the growing list of PIs in your schools and departments? The FRIGRNT view in Banner allows users to query both active and historical award data in one place. Using FRIGRNT, PIs and administrators can review key details such as total award amounts, project performance period dates, track overall award portfolios, and more great data!\nComplete the content above before moving on.\nFRIGRNT: Query Award Listings in Banner\nNative Banner: FRIGRNT (Grant Code Inquiry)\nMake your way to the Native Banner landing page, type the page code FRIGRNT in the search bar, and select \"Grant Code Inquiry\". Please Note : Access to the FRIGRNT query view in Banner can be requested through your school's Budget Officer via Banner Workflow.\nFRIGRNT Query\nAt the top of the FRIGRNT query page a variety of data fields that can be used to query existing awards at Morgan State University. The most useful of which would be: Principal Investigator ID : Query by PI MSU ID number. Principal Investigator Last Name: Query by PI Last Name. Responsible Organization: Query by department organization code. After entering the information above click on the \"Go\" button in the top right corner of the screen.\nFRIGRNT View\nThe FRIGRNT page provides a deep resource of useful information: Grant : Grant Code assigned by RFA and the Project Title in Banner Principal Investigator ID : PI Name and MSU ID Agency: Sponsor Name and Banner Shorthand Current Amount: Total budget available for current fiscal year Cumulative Amount: Total funds awarded by sponsor to date Maximum Amount: Total sponsor commitment in the NOA (subject to funding availability per sponsor terms and conditions) Project Start Date: First date of the project's first performance period Project End Date: Last date of the project's final performance period Sponsor ID: Award number printed on the Notice of Award (NOA)\nPro Tip: You can export FRIGRNT query results data by pressing Shift+F1 on your keyboard.",
+          "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+              "caption": "FGIBDST: Budget by Fiscal Year"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/EFMORAlz6yX64Mye.png",
+              "caption": "FRIGRNT Query"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/x7S4UqLTRetvmdFD.png",
+              "caption": "FRIGRNT View"
+            }
+          ]
         },
         {
           "doc_id": "etr_banner_08_budget_transfer_requests",
@@ -314,12 +434,32 @@
               "caption": "Change of Project Scope"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/5IZ4S8hJxiDQpfV6.jpg",
+              "caption": "Pool Level & Percentage Change Restrictions"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/JCyPkOAsWfKVrCrn-budget%2520transfer%25201.png",
               "caption": "Navigate to Finance Self-Service"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/2KD_Ho5vTab08kvi-budget%2520transfer%25202.png",
               "caption": "My Journals"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/gWektMBrYOxltkG4-budget%2520transfer%25203.png",
+              "caption": "Create Journal"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/kZo7lz_YcXnlPNjH-Budget%2520Transfer%2520%25231.PNG",
+              "caption": "Create Journal: Part 2"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/do4fVB260zsFWNOp-budget%2520transfer%2520%25232.PNG",
+              "caption": "Add Accounting #1"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/O8gVBcZxvnkj7YWh-budget%2520transfer%2520%25233.PNG",
+              "caption": "Add Accounting #1: Part 2"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/oQmNj2sdBFw5bVR2-budget%2520transfer%2520%25234.png",
@@ -367,6 +507,14 @@
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/8ayp5sI2Q3d3vPsp.png",
+              "caption": "Labor Redistributions"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/UB8_1Df4Cs1j67Zi.png",
+              "caption": "Labor Redistributions"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/z9vIJpppEclujhIZ.png",
               "caption": "Labor Redistributions"
             }
           ]
@@ -460,6 +608,10 @@
           "chars": 3092,
           "content": "Spending Instruments\n\nFrom the ORA eTraining module \"Post Award Quick Guide\" (lesson 4 of 9).\nHow to Spend Your Money\nThe PI may spend award funds through a variety of mechanisms at MSU. These are summarized in PI Handbook #3 on pages 21-22. The PI must: Work with RFA to establish an award account with a Banner index and fund. Ensure a Purchasing Card (P-Card) is linked to the index/fund if needed. Submit a WorkFlow request for access to your project budget in Banner.\nComplete the content above before moving on.\nIntroduction\nLorem ipsum dolor sit amet, consectetur adipiscing elit. In purus velit, tincidunt ac nibh quis, sollicitudin varius libero. Nullam at mi felis. Donec a scelerisque augue, sit amet porttitor nibh. Suspendisse at lorem ut elit placerat blandit.\nSummary\nEstablishing the Award Account\nHas a Post-Award Briefing with the ORA been completed? Once ORA has a copy of the NOA in hand they will contact the project PI to schedule this meeting. No spending can occur on a project without this so be sure to make yourself available. Once the Post-Award Briefing has been completed, has notice been sent to the Restricted Funds Accounting (RFA) team? Has RFA set up the account and assigned a grant accountant? RFA needs to be notified that a Post-Award Briefing has occurred so that they can initiate actions in Banner to establish your award account. At that time, RFA will also assign the grant accountant you will work with for the duration of your award.\nP-Card Access\nDoes the PI have a MSU Purchasing Card (P-Card)? If yes : Submit a request for the new index to be attached to the current P-Card through the Purchasing Card Office . If no: Submit a request for a new P-Card through the Purchasing Card Office if necessary. The PI (or other assigned cardholder) will need to receive P-Card training. Whether or not a PI receives a P-Card for their project is at the discretion of the MSU Purchasing Card Office.\nBanner WorkFlow Access\nHas the PI's supervisor submitted a WorkFlow request for the PI to gain access to their budget in Banner? Once Banner access is granted, the award funds may begin to be spent according to the budget/budget justification.\nKnowledge check: True or False: As soon as you receive a copy of your Notice of Award you may begin spending on your project.\n  - True  [incorrect]\n  - False  [CORRECT ANSWER]\n  Explanation: There are multiple reasons why this answer is false. First, your Notice of Award typically arrived before the start date of your project. Here at MSU, pre-award spending is typically not allowed. Additionally, RFA and ORA need to provide you with a post award briefing, and establish the project budget in Banner, before you can spend on your project.\nKnowledge check: True or False: The Purchasing Card Office will automatically add your new budget to your existing purchasing card once ORA has received your Notice of Award.\n  - True  [incorrect]\n  - False  [CORRECT ANSWER]\n  Explanation: You need to submit documentation to the P-Card Office to add the new Banner index associated with your project to your P-Card.",
           "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_post_award_quick_guide_etraining/V7cOj7h50kyqmAXJ.png",
+              "caption": "Spending Instruments"
+            },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_post_award_quick_guide_etraining/fz1IZv_DRj1j9F2M.jpg",
               "caption": "P-Card Access"
@@ -719,7 +871,13 @@
           "lesson_id": "6NhTezLzCiRFS3GWPgJvvAP0sj-Stazf",
           "procedure_url": "https://share.articulate.com/Oj9sl7O574NyfS_WK9btG#/lessons/6NhTezLzCiRFS3GWPgJvvAP0sj-Stazf",
           "chars": 959,
-          "content": "Tax Exempt Purchasing\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 3 of 15).\nMorgan State University: Tax Exempt Purchasing\nMorgan State University, under the umbrella of the State of Maryland, maintains tax-exempt status for procuring goods and services. There are limited exceptions to this policy including hotel/lodging taxes and car rental tax fees assessed while on university-approved travel. All purchases made in Maryland using the MSU Purchasing Card (P-Card) outside of these limited exceptions should be tax free. For accidental tax charges the cardholder must work with the vendor to receive a refund.\nMorgan's Tax Exempt ID # is 30002563 and is noted on your purchasing card.\nTax-Exempt Forms\nTo obtain a completed tax exempt form for your chosen vendor please contact the MSU Procurement department by emailing services.procurement@morgan.edu .\nComplete the content above before moving on."
+          "content": "Tax Exempt Purchasing\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 3 of 15).\nMorgan State University: Tax Exempt Purchasing\nMorgan State University, under the umbrella of the State of Maryland, maintains tax-exempt status for procuring goods and services. There are limited exceptions to this policy including hotel/lodging taxes and car rental tax fees assessed while on university-approved travel. All purchases made in Maryland using the MSU Purchasing Card (P-Card) outside of these limited exceptions should be tax free. For accidental tax charges the cardholder must work with the vendor to receive a refund.\nMorgan's Tax Exempt ID # is 30002563 and is noted on your purchasing card.\nTax-Exempt Forms\nTo obtain a completed tax exempt form for your chosen vendor please contact the MSU Procurement department by emailing services.procurement@morgan.edu .\nComplete the content above before moving on.",
+          "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/GhZ40jqLZl8a8wcp.jpg",
+              "caption": "Tax Exempt Purchasing"
+            }
+          ]
         },
         {
           "doc_id": "etr_purchasing_04_requisition_entry_prep",
@@ -763,6 +921,14 @@
           "chars": 4214,
           "content": "How To: Requisition Entry in Banner\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 5 of 15).\nProcurements in Banner Self-Service\nRequisitions are used to formally initiate purchases in Banner and provide the information needed to route the request for review, approval, and purchase order creation. During requisition entry, users identify the vendor, funding source, account code, item or service being purchased, and supporting documentation needed for Procurement review. Below is a detailed walkthrough of the Banner requisition process, including the key fields users must complete before submitting the request for approval.\nComplete the content above before moving on.\nHow To: Requisition Entry\nRequisition Entry in Self-Service\nSummary\nBanner Links Homepage\nMake your way to the Banner Links landing page and click on \"Finance Self-Service\".\nFinance Self-Service\nClick on \"My Requisitions\".\nMy Requisitions Homepage\nThe \"My Requisitions\" homepage shows an initiator's requisitions broken down by status: Draft Requisitions : Includes requisitions that have been entered but not submitted. Pending Requisitions : Includes those that have been submitted but not yet completed/fully approved. Completed Requisitions : Includes those that have been fully approved. Completed requisitions are converted to Purchase Orders (POs). The status of the POs, and finalized PO#, can be found under the 'status' column. Click on the \"Create Requisition\" button in the top right corner of the screen to create a new requisition.\nRequestor Information\nUpdate the following: Delivery Date : Set the delivery date to the expected delivery date of the requested commodity or service. Public Comment : Here you can add notes for the requisition. Typically, the ORA Budget Officers and Procurement Staff like to see the initiator's name, campus extension, office location, and award title. Ship To Location: For most procurements select \"WSCPP\" and do not update the \"Attention To\" section. Click the \"Next\" button at the bottom of the page. Please Note: This page will auto complete default cells based on your Banner profile. As a result, you may need to change the listed Organization.\nVendor Information\nUpdate the following: Uncheck the \"Choose vendor for me\" box. Either (1) enter the Vendor ID of your chosen vendor or (2) search the vendors name. Be certain you select the appropriate vendor record as some vendors may have several mailing addresses or departments/divisions on file. Click the \"Next\" button at the bottom of the screen.\nAdd Item & Accounting (Step 1)\nIn the \"Add Item(s)\" section type a brief description of the commodity or service then click the blue \"Add as new item\" line.\nAdd Item & Accounting (Step 2)\nUpdate the following: Unit of Measure: Select the best option for your procurement type. For the majority of procurements, EACH (EA) is the best option. Quantity: For services the quantity would be 1. For commodities it should reflect your order's item count. Unit Price: The per item price of your commodity/service. Click the \"Save\" button at the bottom of the screen.\nAdd Item & Accounting (Step 3)\nYou can repeat the previous two steps to add additional items as needed to the requisition. After adding all items click on the \"Add Accounting\" button at the bottom of the screen.\nAdd Item & Accounting (Step 4)\nUpdate the following: Index: Each budget in Banner has a 6-digit index code. Once entered, the Fund, Organization, and Program cells should automatically populate. Account: Banner budgets are organized into budget pools, and each pool includes specific account codes that identify the type of expense being charged. A list of Banner account codes is attached below this section. Activity: This will be mostly relevant for cost share activity and is described in greater detail in our It Takes a Village: Understanding Cost Share on Sponsored Projects e-module. Click the \"Save\" button at the bottom of the screen. To submit the requisition click the \"Submit Requisition\" button.\nPlease Note: Remember to have your supporting documentation on hand and verify budget availability prior to requisition entry.\nwvpwFEHcg11ud6OA.docx",
           "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/qq3visyGAmotoMZa.png",
+              "caption": "Requisition Entry in Self-Service"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+              "caption": "Summary"
+            },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/JbhPYy5WQGOW9Ekn.png",
               "caption": "Banner Links Homepage"
@@ -823,6 +989,10 @@
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/fMO6we07F-V729GN.png",
+              "caption": "Processing Invoices for Payment"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/5rNH-RCw5TMbXVSZ.png",
               "caption": "Processing Invoices for Payment"
             }
           ]
@@ -898,6 +1068,14 @@
               "caption": "Supporting Document: Fund Advance Request Form"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/Vi12SE6UPFQbKcNw.jpg",
+              "caption": "Pickup the Disbursement Check"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/imPxJ6xDyVjrOH9L.png",
+              "caption": "Submit Logs and Request Additional Disbursements"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/LXZRZvVahcWgS77A.jpg",
               "caption": "MSU Working Fund"
             }
@@ -914,6 +1092,10 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/p6glZzXaNRr_VjUW.png",
               "caption": "Catering & Events"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/z7erMybPdUvtwl-d.png",
+              "caption": "Sodexo Magic Order Process"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/SdB0jTqFvreX2HZf.jpg",
@@ -949,6 +1131,10 @@
           "chars": 5587,
           "content": "Purchasing Supplies on Sponsored Awards\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 10 of 15).\nPurchasing Supplies on Sponsored Projects\nSupplies ( 2CFR200.453 ) are commonly needed to support the day-to-day work of a sponsored project. Supply, and other procurement, orders must be delivered to MSU main campus or an MSU-owned satellite location (such as MSU PEARL). When supplies are purchased with sponsored funds, the purchase must follow sponsor requirements, Uniform Guidance, and MSU Procurement rules. The key question is not only “Can we buy this?” but also “Can we clearly document why this purchase benefits the sponsored project?”\nComplete the content above before moving on.\nWhat is a Micro-Purchase?\nA micro-purchase is a low-dollar procurement of supplies or services that falls at or below Morgan State University’s micro-purchase threshold of $5,000 per transaction . The current federal micro-purchase threshold under FAR 2.101 is generally $15,000 , and 2 CFR 200.320 allows recipients to use lower institutional thresholds. Morgan applies a more restrictive institutional limit of $5,000 , so MSU users must follow the lower threshold. 2 CFR 200.320 states that micro-purchases may be awarded without soliciting competitive price or rate quotations if the recipient considers the price reasonable and maintains documentation supporting that conclusion.\nRequirement Rule Federal micro-purchase threshold $15,000 Morgan State University threshold $5,000 Rule to follow More restrictive rule Practical result at MSU $5,000 micro-purchase limit\nPrice Reasonableness in Procurements\nEven when quotes are not required, MSU personnel must still be responsible stewards of University and sponsored funds. The price must be fair and reasonable. The documentation does not need to be complicated, but it should be clear enough for a reviewer, auditor, or sponsor to understand why the price was considered reasonable. Ways to support price reasonableness may include:\nWays to support price reasonableness may include: Comparing vendors to identify a fair or lower price Reviewing prior purchases of the same or similar item Using an established or preferred vendor Considering less expensive alternatives if they would still meet the project need Confirming that the item is not unusually priced compared to market expectations\nComparing vendors to identify a fair or lower price\nReviewing prior purchases of the same or similar item\nUsing an established or preferred vendor\nConsidering less expensive alternatives if they would still meet the project need\nConfirming that the item is not unusually priced compared to market expectations\nWarren Buffett\n\"Contemplating any business act, an employee should ask himself whether he would be willing to see it immediately described by an informed and critical reporter on the front page of his local paper, there to be read by his spouse, children, and friends.\"\nhttps://cdn.articulate.com/assets/rise/assets/block-defaults/quote_background_thumb.jpg\nAdditional Purchasing Guidelines\nRequired Documentation\nWhether the purchase is made by p-card or requisition, your files should include enough documentation to support the business purpose, project benefit, and allowability of the expense. At minimum, include: Receipt or invoice Business purpose (allocability to the project's NOA) Confirmation that the cost occurred during the project period of performance Confirmation that the cost is allocable to the award being charged Please refer to the \" Processing Invoices for Payment \" lesson in this module for key invoice components.\nPreferred Vendors\nBefore purchasing supplies, check whether the item is available through: Existing State contracts MSU preferred vendors MBE, SBE, VSBE, or other certified vendor options, when applicable Using established contracts or preferred vendors can improve compliance, reduce processing time, and support institutional procurement goals.\nSponsor-Specific restrictions\nAlways check sponsor-specific guidance before purchasing supplies. Examples include: NIH Grants Policy Statement (NIH GPS) NSF Proposal & Award Policies & Procedures Guide (NSF PAPPG) Award terms and conditions Sponsor prior approval requirements Restrictions in the approved budget or Notice of Award Some sponsors may restrict certain types of purchases, require prior approval, or expect additional documentation for items that appear unusual, high-risk, or not clearly tied to the project scope.\nTechnology Procurements\nTechnology-related purchases may require additional review before purchase. This may include: Computers, tablets, software, cloud-based tools, data storage, etc. Before purchasing technology, review Morgan's IT minimum hardware requirements to ensure they meet the product specifications necessary to link with Morgan's domain and IT support. Preferred vendors should be used when possible, especially for technology purchases, to help ensure compatibility with MSU systems and institutional standards.\nKnowledge Check\nKnowledge check: A PI has $4,800 remaining on a federal award that ends next month. The PI wants to purchase general office supplies for the department because the funds are available. Is this allowable?\n  - Yes  [incorrect]\n  - No  [CORRECT ANSWER]\n  If correct: Great job! The purchase does not appear allocable to the sponsored project and may not benefit the award during the period of performance.\n  If incorrect: Try again. Remember our guidelines on end-of-period purchasing and general office supply procurements.",
           "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/8fSiFvAS6E4PBVFL.jpg",
+              "caption": "Purchasing Supplies on Sponsored Awards"
+            },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/DWuNHhG_TDvLgZ8-.jpg",
               "caption": "Purchasing Supplies on Sponsored Awards"
@@ -992,6 +1178,10 @@
               "caption": "P-Card Use: Quick Guide"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/k872n834mlr2LqJj.png",
+              "caption": "Banner P-Card Transaction Reconciliation"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/mTLlZCECUUaoge34.png",
               "caption": "FAAINVT"
             },
@@ -1010,6 +1200,30 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/vSXWu4E1L_86vJGw.png",
               "caption": "P-Card Use: Quick Guide"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/i-355a51QPaYNcH7.png",
+              "caption": "State Transaction Log"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/qian-zl8arw7iDQE-card%2520log%2520top.png",
+              "caption": "Data Entry Part 1"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/74-FNfgD80hm0waP-card%2520log%2520trans%2520%25231.png",
+              "caption": "Transaction Details Part 1"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/3cGqzO26XZJ7Ji7h-card%2520log%2520trans%2520%25232.png",
+              "caption": "Transaction Details Part 2"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/Vv7n6Yi7OZ31mhRN.png",
+              "caption": "Verify Log Accuracy"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/5igOxZdBxer5JjxA-docusign.png",
+              "caption": "Upload Documents to DocuSign"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/Xtpjy01HOnZ9Yk0x.jpeg",
@@ -1067,7 +1281,13 @@
           "lesson_id": "Uc_IeTmXmhBWY8uyHmGxGginicm5UCuZ",
           "procedure_url": "https://share.articulate.com/Oj9sl7O574NyfS_WK9btG#/lessons/Uc_IeTmXmhBWY8uyHmGxGginicm5UCuZ",
           "chars": 8642,
-          "content": "Procurement on Sponsored Awards Knowledge Review\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 14 of 15).\nincorrect\nYour department is in need of graphic design work for an annual report detailing your program's accomplishments. After the work is done the vendor provides you with the following invoice. What error(s) will need to be rectified before submitting this invoice for processing through MSU's Accounts Payable department? Select all that apply.\nThe invoice number should begin with \"MSU\".\nThe \"Bill To\" address should be Morgan State University with attention to Dr. May.\nTax charges must be removed.\nThe description of services is too vague.\nGreat job!\nOne of your selections is not a requirement on invoices.\nYou are trying to book travel for a faculty member on your budget. You check various sources and find that Orbitz.com has the best price for your hotel stay. When you try to book the stay you receive an error message stating payment couldn't be processed. What might be the reason(s) why? Select all that apply.\nYour project budget doesn't have a travel (04) budget.\nOrbitz.com may have an MCC code block by the State of Maryland.\nYou are over your monthly spending limit for your p-card.\nUS Bank has flagged the expense as part of their potential fraud protection.\nGreat Job! It is good practice to be aware of these possible obstacles so you can use other resources if necessary.\nRemember that you can technically process allowable purchases without an available budget in the appropriate budget pool.\nAssume you are working on your April P-Card expenses. Put these dates in order of occurrence in the P-Card cycle. *Drag the correct response on the left to the corresponding date on the right.\nStatement Close Date\n4/25\nStatement Availability Date\n4/26\nBANNER Reconciliation Date\n5/8\nState Transaction Log Due Date\n5/15\nfreezeFirst\nMatch each procurement range with the appropriate competition requirement.\n$0 - $5,000\nNo formal competition required; price must still be reasonable.\n$5,001 - $25,000\nThree vendors consulted; informal quotes acceptable.\n$25,001 - $100,000\nThree vendors consulted; typically requires an RFQ and Performance Work Statement.\nGreater than $100,000\nFormal RFP process with eMMA posting and proposal review committee\nMatch the activity to the responsible office.\nVendor Invoice Payment\nAccounts Payable\nEquipment Tagging\nProperty Control\nVendor Registration\nProcurement\nWorking Fund Check Pickup\nOffice of the Bursar\nBanner Workflow Access\nOffice of the Comptroller\nKnowledge check: To submit your log through DocuSign you need all of the following except:\n  - a copy of your US Bank statement  [CORRECT ANSWER]\n  - detailed invoices for each expense  [incorrect]\n  - completed State of Maryland Transaction Log  [incorrect]\n  - a screenshot of the budget(s) funding the expense  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Which of the following Banner page codes is used for p-card reconciliation?\n  - FGIENCD  [CORRECT ANSWER]\n  - FGIBDST  [incorrect]\n  - FRIGITD  [incorrect]\n  - FAAINVT  [CORRECT ANSWER]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Dr. Cage, a cardholder in the Biology department, needs to purchase lab supplies from a major lab supply company. After totaling the items needed the quote came out to $5,100. Dr. Cage decides to request two quotes from the vendor for $2,500 and $2,600. What banner purchasing practice is Dr. Cage guilty of performing?\n  - fraud  [CORRECT ANSWER]\n  - split purchasing  [incorrect]\n  - utilizing an unregistered vendor  [incorrect]\n  - providing kickbacks  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Which Uniform Guidance principle asks whether a purchase is permitted under the award, federal regulations, sponsor terms, and institutional policy?\n  - Allocability  [CORRECT ANSWER]\n  - Reasonableness  [incorrect]\n  - Allowability  [incorrect]\n  - Consistency  [incorrect]\n  If correct: Great job! Allowability determines whether the cost is permitted under applicable rules.\n  If incorrect: Try again.\n  Note on \"Allocability\": Try again.\nKnowledge check: Why are purchases made near the end of a project period closely scrutinized?\n  - They require sponsor approval.  [CORRECT ANSWER]\n  - They must clearly benefit the remaining project period.  [incorrect]\n  - They are never allowable.  [incorrect]\n  - They require VP for Finance and Management approval.  [incorrect]\n  If correct: Great job! This raises red flags with respect to cost allocability.\n  If incorrect: Try again.\nKnowledge check: A $4,000 laboratory supply purchase is planned. What level of competition is required?\n  - Three written quotes  [CORRECT ANSWER]\n  - Formal RFQ  [incorrect]\n  - One quote/no formal competition  [incorrect]\n  - Two quotes  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: For a procurement between $25,001 and $100,000, what document establishes the scope of work?\n  - Purchase Order (PO)  [CORRECT ANSWER]\n  - Internal Routing Form (IRF)  [incorrect]\n  - Performance Work Statement (PWS)  [incorrect]\n  - Invoice  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: After an RFQ has been posted, what should the initiator do if a vendor has questions?\n  - Answer them directly  [CORRECT ANSWER]\n  - Ignore them  [incorrect]\n  - Refer them to Procurement  [incorrect]\n  - Cancel the procurement  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: A vendor has never done business with Morgan. Before a requisition can proceed, what is generally required?\n  - Cost Transfer Request Form  [CORRECT ANSWER]\n  - Vendor Registration Form  [incorrect]\n  - Sole Source Determination Form  [incorrect]\n  - Non-Travel Reimbursement Form  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: To authorize an invoice for payment, it should be marked:\n  - Approved  [CORRECT ANSWER]\n  - Paid  [incorrect]\n  - Verified  [incorrect]\n  - OK to Pay  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Which statement best describes a subaward?\n  - Purchase of routine lab supplies  [CORRECT ANSWER]\n  - An outside entity performs substantive programmatic work  [incorrect]\n  - Payment for consulting services only  [incorrect]\n  - Purchase of equipment  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: When Morgan is the prime recipient, indirect costs are generally assessed on what portion of a subaward?\n  - Entire amount  [CORRECT ANSWER]\n  - No IDC is charged  [incorrect]\n  - First $25,000  [incorrect]\n  - First $50,000  [incorrect]\n  Note on \"Entire amount\": Try again.\n  Note on \"No IDC is charged\": Try again.\n  Note on \"First $25,000\": Great job!\n  Note on \"First $50,000\": Try again. This is the federal threshold, but not Morgan's.\nKnowledge check: What is the primary purpose of the MSU Working Fund on sponsored projects?\n  - Purchase equipment  [CORRECT ANSWER]\n  - Pay travel advances  [incorrect]\n  - Provide participant incentives  [incorrect]\n  - Purchase office supplies  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Before entering a requisition in Banner, which of the following should be confirmed? Select the best answer.\n  - The vendor has a completed invoice ready.  [CORRECT ANSWER]\n  - Workflow access, availability of funds, vendor setup, and any required Statement of Work.  [incorrect]\n  - The Office of Research Administration has pre-approved the cost.  [incorrect]\n  - Accounts Payable has approved the transaction.  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: After obtaining a requisition number for a Sodexo catering order, which should you do next?\n  - Wait for an email from the MSU Events Office.  [CORRECT ANSWER]\n  - Send the requisition number to the MSU Events Office.  [incorrect]\n  - Submit the catering invoice to Accounts Payable.  [incorrect]\n  - Contact the sponsor for final approval.  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: A faculty member pays for grant supplies out of pocket and submits a non-travel reimbursement request. The receipt includes Maryland sales tax. What should happen?\n  - Reimburse the full amount, including tax.  [CORRECT ANSWER]\n  - Reimburse only the pre-tax amount.  [incorrect]\n  - Charge the tax to indirect costs.  [incorrect]\n  - Submit a cost transfer.  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again."
+          "content": "Procurement on Sponsored Awards Knowledge Review\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 14 of 15).\nincorrect\nYour department is in need of graphic design work for an annual report detailing your program's accomplishments. After the work is done the vendor provides you with the following invoice. What error(s) will need to be rectified before submitting this invoice for processing through MSU's Accounts Payable department? Select all that apply.\nThe invoice number should begin with \"MSU\".\nThe \"Bill To\" address should be Morgan State University with attention to Dr. May.\nTax charges must be removed.\nThe description of services is too vague.\nGreat job!\nOne of your selections is not a requirement on invoices.\nYou are trying to book travel for a faculty member on your budget. You check various sources and find that Orbitz.com has the best price for your hotel stay. When you try to book the stay you receive an error message stating payment couldn't be processed. What might be the reason(s) why? Select all that apply.\nYour project budget doesn't have a travel (04) budget.\nOrbitz.com may have an MCC code block by the State of Maryland.\nYou are over your monthly spending limit for your p-card.\nUS Bank has flagged the expense as part of their potential fraud protection.\nGreat Job! It is good practice to be aware of these possible obstacles so you can use other resources if necessary.\nRemember that you can technically process allowable purchases without an available budget in the appropriate budget pool.\nAssume you are working on your April P-Card expenses. Put these dates in order of occurrence in the P-Card cycle. *Drag the correct response on the left to the corresponding date on the right.\nStatement Close Date\n4/25\nStatement Availability Date\n4/26\nBANNER Reconciliation Date\n5/8\nState Transaction Log Due Date\n5/15\nfreezeFirst\nMatch each procurement range with the appropriate competition requirement.\n$0 - $5,000\nNo formal competition required; price must still be reasonable.\n$5,001 - $25,000\nThree vendors consulted; informal quotes acceptable.\n$25,001 - $100,000\nThree vendors consulted; typically requires an RFQ and Performance Work Statement.\nGreater than $100,000\nFormal RFP process with eMMA posting and proposal review committee\nMatch the activity to the responsible office.\nVendor Invoice Payment\nAccounts Payable\nEquipment Tagging\nProperty Control\nVendor Registration\nProcurement\nWorking Fund Check Pickup\nOffice of the Bursar\nBanner Workflow Access\nOffice of the Comptroller\nKnowledge check: To submit your log through DocuSign you need all of the following except:\n  - a copy of your US Bank statement  [CORRECT ANSWER]\n  - detailed invoices for each expense  [incorrect]\n  - completed State of Maryland Transaction Log  [incorrect]\n  - a screenshot of the budget(s) funding the expense  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Which of the following Banner page codes is used for p-card reconciliation?\n  - FGIENCD  [CORRECT ANSWER]\n  - FGIBDST  [incorrect]\n  - FRIGITD  [incorrect]\n  - FAAINVT  [CORRECT ANSWER]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Dr. Cage, a cardholder in the Biology department, needs to purchase lab supplies from a major lab supply company. After totaling the items needed the quote came out to $5,100. Dr. Cage decides to request two quotes from the vendor for $2,500 and $2,600. What banner purchasing practice is Dr. Cage guilty of performing?\n  - fraud  [CORRECT ANSWER]\n  - split purchasing  [incorrect]\n  - utilizing an unregistered vendor  [incorrect]\n  - providing kickbacks  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Which Uniform Guidance principle asks whether a purchase is permitted under the award, federal regulations, sponsor terms, and institutional policy?\n  - Allocability  [CORRECT ANSWER]\n  - Reasonableness  [incorrect]\n  - Allowability  [incorrect]\n  - Consistency  [incorrect]\n  If correct: Great job! Allowability determines whether the cost is permitted under applicable rules.\n  If incorrect: Try again.\n  Note on \"Allocability\": Try again.\nKnowledge check: Why are purchases made near the end of a project period closely scrutinized?\n  - They require sponsor approval.  [CORRECT ANSWER]\n  - They must clearly benefit the remaining project period.  [incorrect]\n  - They are never allowable.  [incorrect]\n  - They require VP for Finance and Management approval.  [incorrect]\n  If correct: Great job! This raises red flags with respect to cost allocability.\n  If incorrect: Try again.\nKnowledge check: A $4,000 laboratory supply purchase is planned. What level of competition is required?\n  - Three written quotes  [CORRECT ANSWER]\n  - Formal RFQ  [incorrect]\n  - One quote/no formal competition  [incorrect]\n  - Two quotes  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: For a procurement between $25,001 and $100,000, what document establishes the scope of work?\n  - Purchase Order (PO)  [CORRECT ANSWER]\n  - Internal Routing Form (IRF)  [incorrect]\n  - Performance Work Statement (PWS)  [incorrect]\n  - Invoice  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: After an RFQ has been posted, what should the initiator do if a vendor has questions?\n  - Answer them directly  [CORRECT ANSWER]\n  - Ignore them  [incorrect]\n  - Refer them to Procurement  [incorrect]\n  - Cancel the procurement  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: A vendor has never done business with Morgan. Before a requisition can proceed, what is generally required?\n  - Cost Transfer Request Form  [CORRECT ANSWER]\n  - Vendor Registration Form  [incorrect]\n  - Sole Source Determination Form  [incorrect]\n  - Non-Travel Reimbursement Form  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: To authorize an invoice for payment, it should be marked:\n  - Approved  [CORRECT ANSWER]\n  - Paid  [incorrect]\n  - Verified  [incorrect]\n  - OK to Pay  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Which statement best describes a subaward?\n  - Purchase of routine lab supplies  [CORRECT ANSWER]\n  - An outside entity performs substantive programmatic work  [incorrect]\n  - Payment for consulting services only  [incorrect]\n  - Purchase of equipment  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: When Morgan is the prime recipient, indirect costs are generally assessed on what portion of a subaward?\n  - Entire amount  [CORRECT ANSWER]\n  - No IDC is charged  [incorrect]\n  - First $25,000  [incorrect]\n  - First $50,000  [incorrect]\n  Note on \"Entire amount\": Try again.\n  Note on \"No IDC is charged\": Try again.\n  Note on \"First $25,000\": Great job!\n  Note on \"First $50,000\": Try again. This is the federal threshold, but not Morgan's.\nKnowledge check: What is the primary purpose of the MSU Working Fund on sponsored projects?\n  - Purchase equipment  [CORRECT ANSWER]\n  - Pay travel advances  [incorrect]\n  - Provide participant incentives  [incorrect]\n  - Purchase office supplies  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: Before entering a requisition in Banner, which of the following should be confirmed? Select the best answer.\n  - The vendor has a completed invoice ready.  [CORRECT ANSWER]\n  - Workflow access, availability of funds, vendor setup, and any required Statement of Work.  [incorrect]\n  - The Office of Research Administration has pre-approved the cost.  [incorrect]\n  - Accounts Payable has approved the transaction.  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: After obtaining a requisition number for a Sodexo catering order, which should you do next?\n  - Wait for an email from the MSU Events Office.  [CORRECT ANSWER]\n  - Send the requisition number to the MSU Events Office.  [incorrect]\n  - Submit the catering invoice to Accounts Payable.  [incorrect]\n  - Contact the sponsor for final approval.  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.\nKnowledge check: A faculty member pays for grant supplies out of pocket and submits a non-travel reimbursement request. The receipt includes Maryland sales tax. What should happen?\n  - Reimburse the full amount, including tax.  [CORRECT ANSWER]\n  - Reimburse only the pre-tax amount.  [incorrect]\n  - Charge the tax to indirect costs.  [incorrect]\n  - Submit a cost transfer.  [incorrect]\n  If correct: Great job!\n  If incorrect: Try again.",
+          "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/beR6QuB_mBiB9szZ.png",
+              "caption": "Your department is in need of graphic design work for an annual report detailing your program's accomplishments. After the work is done the vendor provides you with the following invoice. What error(s) will need to be rectified before submitting this invoice for processing through MSU's Accounts Payable department? Select all that apply."
+            }
+          ]
         },
         {
           "doc_id": "etr_purchasing_15_message_from_ora",
@@ -1134,6 +1354,38 @@
               "caption": "EPAFs: Requesting EPAF Access"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/IEdwuY8Fe2--UQlF-Screenshot%25202024-04-09%2520185146.png",
+              "caption": "EPAFs: Requesting EPAF Access"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/-Awm50Wg8zep5MXb.jpg",
+              "caption": "Banner Links Homepage: Select Workflow"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/F9RnzlBxU7jPc-hf-Screenshot%25202024-04-07%2520002529.png",
+              "caption": "Select \"My Processes\""
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/R6bOpx6BERjs7JMx-Screenshot%25202024-04-09%2520005509.png",
+              "caption": "Select \"EPAF Access Request Form\""
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/do8bw0Yx_NaETA21.png",
+              "caption": "Enter Workflow Specifics"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/4r_Jnfa-kQ4NiOf5.png",
+              "caption": "Select Workflow"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/sobknQfHU3lXFghG.png",
+              "caption": "Enter Employee Role and Submit"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/5LOuy4iPcrnFfIDl-Screenshot%25202024-04-09%2520010624.png",
+              "caption": "Extra: Add Missing Individuals to EPAF Approval Levels"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/dpzmkjb321XjwSOb.jpg",
               "caption": "EPAFs: Requesting EPAF Access"
             }
@@ -1148,12 +1400,28 @@
           "content": "EPAFs: How to Submit a PIN Request\n\nFrom the ORA eTraining module \"Building the Project Team: Contractual Hiring and Compensation\" (lesson 3 of 15).\nSubmitting a PIN Request in Workflow\nA Contractual PIN is among the first pieces of information you must collect before entering an EPAF for new position. Below, we detail exactly how to submit the request in Workflow.\nHow to Submit a Contractual PIN Request\nMissing Workflow Access\nIf a pin is urgently needed, and the initiator does not have workflow access for pin requests, the same information required in the pin request can be emailed to OHR@morgan.edu to request a pin.\nBanner Links Homepage: Select Workflow\nSubmitting a contractual pin request is an action handled in Workflow (a system utilized for a number of user-initiated access requests). Please make your way to the Banner Links homepage here and select the Workflow icon. You will be prompted to enter your MSU credentials.\nSelect \"My Processes\"\nOn the left side of the screen you will see the \"User Profile\" taskbar under which is a link titled \"My Processes.\"\nSelect \"Contractual PIN Request\"\nSelect \"Contractual PIN Request\" on the My Processes page. Please Note: If the contractual pin request link is unavailable, contact the HR Information Systems team (hris@morgan.edu) for assistance in adding that workflow to your processes.\nEnter Workflow Specifics\nHere you must name the Workflow. A great example would be \" Employee Name PIN Request.\" You can identify the priority as normal or urgent depending on how quickly the pin is needed. Now click the \"Start Workflow\" button.\nSelect Workflow\nYou may need to refresh your browser page a few times for the workflow to load. Once loaded, select the correct workflow action.\nEnter Data and Submit\nFor each employee PIN request you will need to have the following information: Position Title Employment Type For faculty summer contracts the employment type would be full-time staff. For student contracts the select should always be \"Student\" regardless of the contract dates or hours worked. Budget Code (Project Budget Index) Supervisor Name and PIN The supervisor named is responsible for approving timesheets in Employee Self-Service. An initiator can enter \"000000\" in the Supervisor PIN box if they do not have it on hand. HR will review and update as needed. After entering all data please click the \"Complete\" button and your workflow will be on its way! Once the pin request has been successfully submitted the initiator will receive a pin to their email address typically within 24 hours.\nSharing PINs for Identical Positions\nPINs may be shared by employees on a project so long as (a) the budget funding the contracts is the same and (b) the position title is the same. A contract initiator would simply use a new suffix for the subsequent contracts. For example, a PIN may be established for an Graduate Research Assistant (GRA) to work on Project XYZ (Index 123456). The PIN provided by OHR could be 647198-00. The first GRA would use 647198-00, the next 647198-01, and so on as needed.\nComplete the content above before moving on.",
           "images": [
             {
-              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/aosPVjRz1QbARc9s-Morgan_logo.jpg",
-              "caption": "How to Submit a Contractual PIN Request"
-            },
-            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/vbb6BcRfIseEKs9c.jpg",
               "caption": "Banner Links Homepage: Select Workflow"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/F9RnzlBxU7jPc-hf-Screenshot%25202024-04-07%2520002529.png",
+              "caption": "Select \"My Processes\""
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/iwx0jAZ0uU-ksLuY.png",
+              "caption": "Select \"Contractual PIN Request\""
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/5xSTLOiw4IREUQF1-Screenshot%25202024-04-07%2520002805.png",
+              "caption": "Enter Workflow Specifics"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/IHMeTlGm1o8rgC2J-Screenshot%25202024-04-07%2520003110.png",
+              "caption": "Select Workflow"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/cJkpHwwge_BOZ1ZR-Screenshot%25202024-04-07%2520003917.png",
+              "caption": "Enter Data and Submit"
             }
           ]
         },
@@ -1166,12 +1434,44 @@
           "content": "Electronic Personnel Action Forms (EPAF)\n\nFrom the ORA eTraining module \"Building the Project Team: Contractual Hiring and Compensation\" (lesson 4 of 15).\nEPAFs: Steps Prior to Contract Entry\nThe process for hiring an employee will vary depending upon the individual. Please review the information below prior to entering any EPAF contract.\nEPAF Access\nAll contract initiators must have EPAF access granted in Employee Self-Service. If you need access granted, please review the Workflow process in the \"EPAFs: Requesting EPAF Access\" lesson of this module.\nContractual PIN\nIn order to enter a contract in EPAF an initiator must have requested a contractual PIN through the Office of Human Resources. A detailed step-by-step tutorial on how to request a PIN can be found in the \"EPAFs: How to Submit a PIN Request\" lesson in this module.\nEPAF Comments\nPlease review any comments included in your EPAF during the ORA approval process. ORA Budget Officers use the comments section to not required revisions or provide guidance needed for approval. If an EPAF appears to be pending longer than expected, check the comments section to ensure all requested updates have been addressed prior to contacting the ORA Budget Officers via email or phone for a status update.\nLIGHT\nComplete the content above before moving on.\nEPAFs: Contracting for New and Returning Employees\nEPAF Entry Process\nAfter EPAF entry\nAfter you have submitted your EPAF contract you must email a completed Position Description Form to OHR@morgan.edu . The email should reference the EPAF transaction ID# listed at the top of the EPAF page. Once the EPAF is approved by all parties, and a background check is completed, OHR will email the employee directly with a copy of their contract for signature.\nPrior to EPAF Entry\nAll Contracts Have the position's contractual PIN ready. If you still need a PIN please review the request process in the \"EPAFs: How to Submit a PIN Request\" lesson of this module. Submit the Background Check Google Form to request a background check via HireRight. A contract will not be generated by OHR without a completed background check. Complete a Position Description Form (attached below). Maintain this for your records and provide to HR if requested. New Employees Only Submit a Employee ID Setup request. OHR will email the initiator within 24-48 hours with an MSU ID for the new employee. Student Employees Only Review student contract restrictions in the \"Student Employees: Restrictions and Considerations\" lesson of this module. Faculty Summer Contracts Review contract tips and calculation assistance in the \"Faculty Summer Contracts\" lesson in this module.\nBanner Links Homepage: Employee Self-Service\nTo submit an EPAF you need to start at the Employee Self-Service Banner page. Please make your way to the Banner Links homepage here and select the \"Employee Self-Service (Timesheet)\" icon. You will be prompted to enter your MSU credentials.\nMy Activities: EPAF\nOnce the Employee Dashboard page has loaded you should see a taskbar on the right titled \"My Activities.\" Click on the \"Electronic Personnel Action Forms (EPAF)\" link.\nEPAF: Personnel Actions\nOn the \"Personnel Actions\" page an EPAF initiator will find two links: EPAF Originator Summary : Displays the EPAFs you have already submitted. New EPAF: Allows a user to initiate an EPAF. Please select the New EPAF option to begin the new contract entry process.\nNEW EPAF Person Selection\nOn the New EPAF page you will need to complete the following: Identify the prospective employee. This can be done by entering the individual's first and last name, or MSU ID, and then click \"Search\". Select the employee record by clicking on their MSU ID. Note: It has been observed that occasionally students are not included in the employee database for EPAF entry. If you cannot query the student you wish to employ please email OHR@morgan.edu to add the student to the employee database. Enter the contract start date. On this page the \"Query Date\" should match the contract's start date. Assign the Approval Category. For grant-funded contracts this will typically be either (1) PF-10 Full Time Contract Staff or (2) PF-10 Part Time Contractual Staff. After entering all data click \"Go.\"\nContractual PIN Entry\nEnter the position's contractual PIN and suffix. The first contract utilizing a PIN will likely have the suffix \"00\" Employees on the same project can share the same 6-digit pin so long as they share the same position title as well. They would simply change the suffix. For example, a GRA may have a PIN (123456-00) and a second GRA on the same project may have the same Pin with a new suffix (123456-01)\nContract Specifics (Part 1)\nContract Type Primary: The employee's main contract. Secondary: Utilized for secondary contracts. Overload: Should be utilized for faculty summer contracts. Contract Number The \"Contract Number\" is the hourly rate for the contract. Annual Salary The \"Annual Salary\" is the total salary cost of the contract.\nContract Specifics (Part 2)\nContract Index/Fund The contract's accounting information (index, fund, org code, etc.) should auto populate based off of the information submitted in the PIN request. Please verify that the figures are accurate. Termination of Job: Jobs Effective Date The date entered in this section should reflect the stop date of the contract.\nEPAF Routing Queue & Comments\nThe EPAF Routing Queue for grant-funded positions has been updated to allow for a more streamlined approval process and should be used for all grant-funded contracts. The image above details the default queue that should be strictly followed. Other individuals (Budget Officers, Directors, etc) can be added as FYI only. PI PI Supervisor (typically Chair or Dean) (Level 40): Graduate School Only necessary for graduate student EPAFs select Philip Inocencio (Level 60): Grant Accounting select Lucy Manyara (Level 89): HR Contractual Coordinator select Morenike Efese (Level 90): HR select Yolanda Elliott select \"Apply\" not \"Approve\" The \"Comments\" Section should have the following contract information: hours per week, grant title, grant performance period (current fiscal year), and PI name.\nSubmit the EPAF\nAfter entering the EPAF Routing Queue an initiator should review their EPAF for accuracy. Then, click the \"Save\" button at the bottom left corner of the screen. If there aren't any errors you can click the \"Submit\" button at the bottom of the screen. Your EPAF is now officially on the way!\neaowziNOe58a9TFH-Position%20Description%20Form%20(Blank%20Copy).docx",
           "images": [
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/j6UDSer_nU8mMRnE-Screenshot%25202024-04-10%2520005749.png",
+              "caption": "After EPAF entry"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/pkm6YmV0T5bPcE3c-Banner%2520links%2520page.png",
               "caption": "Banner Links Homepage: Employee Self-Service"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/GJpJBRkwwhWW8X9l-Screenshot%25202024-04-09%2520232208.png",
+              "caption": "My Activities: EPAF"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/OLrlLfZxvcBveWpH-Screenshot%25202024-04-10%2520000633.png",
+              "caption": "EPAF: Personnel Actions"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/Q7obCmqrztEdijTS.png",
               "caption": "NEW EPAF Person Selection"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/-7wVpE155TEjkt3L.png",
+              "caption": "Contractual PIN Entry"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/xSZ9W_B4zupe0-Xc-Screenshot%25202024-04-10%2520001950.png",
+              "caption": "Contract Specifics (Part 1)"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/8UNqLaO6OqwFUDpO.png",
+              "caption": "Contract Specifics (Part 2)"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/VnXktFy-twkBVPpM-screnshot%25201.png",
+              "caption": "EPAF Routing Queue & Comments"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/ehYJ7N5zgcuHS05j-sreenshot%25202.png",
+              "caption": "Submit the EPAF"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/HZleksSm6xMwtKN2.jpg",
@@ -1193,6 +1493,10 @@
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/CQoCqRAB8ZI-LQQl-Screenshot%25202024-04-08%2520122458.png",
+              "caption": "PF-10: Contract Revisions and Continuations"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/l2p4vo5y7KgMNU6y-Screenshot%25202024-04-08%2520122548.png",
               "caption": "PF-10: Contract Revisions and Continuations"
             },
             {
@@ -1300,6 +1604,18 @@
               "caption": "Go to Employee Self-Service (Timesheet)"
             },
             {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/4d0dqlAZr7824iRV.png",
+              "caption": "Access Your Available Timesheets"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/IwsTEy9U_Y5wiyzR-enter%2520time%2520%25233.png",
+              "caption": "Enter Time"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/yfhqTfzV9MzIXbJe.png",
+              "caption": "Late Timesheets & Electronic Access Issues"
+            },
+            {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/r7BeqD2D3z176SF--gradient-technology-cyber-background_23-2149112205.jpg",
               "caption": "Timesheet Processing"
             },
@@ -1336,6 +1652,14 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/pBBMOKrX1sFd7oGk-Banner%2520links%2520page.png",
               "caption": "Go to Employee Self-Service"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/Hj1gsdk4_7TTaNmC.png",
+              "caption": "Job Summary"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/_rGZV4ePTEdfY1lv.jpg",
+              "caption": "Review Salaries by Position"
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/muXKFXbIYyam0sRn-360_F_319724815_nx2AmCuoFez3KQN2ssNLvY0umDxjZ1TC.jpg",
@@ -1459,6 +1783,10 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_supporting_participants_etraining/ti8mO8HOYL7O4ZRq.png",
               "caption": "Stipends for MSU Students"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_supporting_participants_etraining/RAh36bQtyo17_3xg.png",
+              "caption": "Stipends for MSU Students"
             }
           ]
         },
@@ -1476,6 +1804,10 @@
             },
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_supporting_participants_etraining/F4RCj2qOsNI1Sjp5.png",
+              "caption": "Stipends for External Participants"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_supporting_participants_etraining/who-zgMsWqxv3hbW.png",
               "caption": "Stipends for External Participants"
             },
             {
@@ -1676,6 +2008,10 @@
             {
               "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_time_effort_etraining/EChzhf-WGVb1SotX.png",
               "caption": "Effort Reporting at MSU"
+            },
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_time_effort_etraining/gljPN-M1s1HyAheF.png",
+              "caption": "Effort Reporting at MSU"
             }
           ]
         },
@@ -1790,7 +2126,13 @@
           "lesson_id": "3x1_VO30UrbDVyAksFypsQwYuvot1ozK",
           "procedure_url": "https://share.articulate.com/IrsPFmh4W57M3hmXtCUO2#/lessons/3x1_VO30UrbDVyAksFypsQwYuvot1ozK",
           "chars": 1619,
-          "content": "Group Travel Guidance\n\nFrom the ORA eTraining module \"Travel on Sponsored Projects: From Approval to Reimbursement\" (lesson 3 of 8).\nGroup Travel Rules\nThere are times when a single faculty member or administrative employee may lead a group of students to a conference or event. In such cases, one travel request form may be submitted under the employee’s name, with an attached Attendees List (see below) of all student participants. Additional group travel guidelines are outlined below.\nComplete the content above before moving on.\nGroup Travel Attendees List\nRequired Attendee List\nA completed Attendee List is required for group travel requests. This document must be completed and submitted as supporting documentation for the travel authorization or reimbursement form.\nNo Reimbursements\nStudents that are on group travel are not able to submit a travel reimbursement for travel expenses. If you believe reimbursement will be necessary, please complete separate TL requests for each student on the trip.\nGraduate Student Restriction\nGraduate students cannot receive funding from the GSA (Graduate Student Association) for any travel covered by other funding.\nTravel Advances\nFaculty/Staff running a group travel can request travel advances for the student attendees. The check will be made out in the employee's name, and that employee will be responsible for disbursing advances to students that require it. Further information on travel advances can be found on the Comptroller's Travel Office page.\nPlease click on each numbered marker above to continue.\nthboIyj8QTTlBbKj-Group%20Travel%20Attendee%20List.docx"
+          "content": "Group Travel Guidance\n\nFrom the ORA eTraining module \"Travel on Sponsored Projects: From Approval to Reimbursement\" (lesson 3 of 8).\nGroup Travel Rules\nThere are times when a single faculty member or administrative employee may lead a group of students to a conference or event. In such cases, one travel request form may be submitted under the employee’s name, with an attached Attendees List (see below) of all student participants. Additional group travel guidelines are outlined below.\nComplete the content above before moving on.\nGroup Travel Attendees List\nRequired Attendee List\nA completed Attendee List is required for group travel requests. This document must be completed and submitted as supporting documentation for the travel authorization or reimbursement form.\nNo Reimbursements\nStudents that are on group travel are not able to submit a travel reimbursement for travel expenses. If you believe reimbursement will be necessary, please complete separate TL requests for each student on the trip.\nGraduate Student Restriction\nGraduate students cannot receive funding from the GSA (Graduate Student Association) for any travel covered by other funding.\nTravel Advances\nFaculty/Staff running a group travel can request travel advances for the student attendees. The check will be made out in the employee's name, and that employee will be responsible for disbursing advances to students that require it. Further information on travel advances can be found on the Comptroller's Travel Office page.\nPlease click on each numbered marker above to continue.\nthboIyj8QTTlBbKj-Group%20Travel%20Attendee%20List.docx",
+          "images": [
+            {
+              "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_travel_sponsored_projects_etraining/gZN-g_KH93al3hF1-Group%2520Travel%2520Attendee%2520List%2520image.PNG",
+              "caption": "Group Travel Guidance"
+            }
+          ]
         },
         {
           "doc_id": "etr_travel_04_additional_travel_rules",
