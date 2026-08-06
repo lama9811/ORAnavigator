@@ -1199,6 +1199,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
                 "response": _cached,
                 "citations": _cached_cites or [],
                 "attachments": _cached_atts or [],
+                "images": [],
                 "feature": suggest_feature(original_q),
             }
 
@@ -1301,6 +1302,7 @@ async def chat_with_bot(req: QueryRequest, user=Depends(get_current_user), db: S
     # error/outage text, so this is leak-safe and won't poison on failures.
     _chat_citations = get_last_grounding().get("citations", [])
     _chat_attachments = get_last_grounding().get("attachments", [])
+    _chat_images = get_last_grounding().get("images", [])
     _looks_err = (
         not answer
         or "trouble" in answer.lower()[:40]
@@ -1544,6 +1546,9 @@ async def chat_stream(req: QueryRequest, user=Depends(get_current_user), db: Ses
                     _atts = get_last_grounding().get("attachments", []) or []
                     if _atts:
                         yield f"data: {json.dumps({'type': 'attachments', 'content': _atts})}\n\n"
+                    _imgs = get_last_grounding().get("images", []) or []
+                    if _imgs:
+                        yield f"data: {json.dumps({'type': 'images', 'content': _imgs})}\n\n"
                     yield f"data: {json.dumps({'type': 'done', 'content': full_response})}\n\n"
                 elif event_type == "error":
                     stream_had_error = True
@@ -1685,6 +1690,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
     # Use Vertex AI Agent for real questions
     guest_citations = []
     guest_attachments = []
+    guest_images = []
     if USE_VERTEX_AGENT:
         try:
             import uuid
@@ -1699,6 +1705,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
             # the module-global last-grounding state.
             guest_citations = get_last_grounding().get("citations", [])
             guest_attachments = get_last_grounding().get("attachments", [])
+            guest_images = get_last_grounding().get("images", [])
 
             if answer and "error" not in answer.lower()[:50] and "I may not have complete information" not in answer and "don't have reliable information" not in answer:
                 query_cache.set(user_q, answer, context_hash="")
@@ -1724,7 +1731,7 @@ async def chat_guest(req: GuestQueryRequest, request: Request):
             pass
 
     return {"response": answer, "citations": guest_citations,
-            "attachments": guest_attachments}
+            "attachments": guest_attachments, "images": guest_images}
 
 
 @app.get("/api/forms")

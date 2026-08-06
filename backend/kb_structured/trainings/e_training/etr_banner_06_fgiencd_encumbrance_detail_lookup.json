@@ -7,5 +7,15 @@
   "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
   "procedure_url": "https://share.articulate.com/P5hdpOIVrXhCKX63DYkkA#/lessons/hSzwHo6XCB9_1ApLnC-HgtDS5nL7hhHB",
   "content": "FGIENCD: Encumbrance Detail Lookup\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 6 of 12).\nFGIENCD: Active Project Encumbrances\nThere are a variety of methods by which MSU can commit project funds to cover a future expense such as Travel Authorizations (TLs), Requisitions (REQs), Purchase Orders (POs), and others. Native Banner's FGIENCD page displays existing balance and past activity (invoice processing, change orders, etc.) of project encumbrances. This can be very helpful to ensure vendor invoices have been processed, verify remaining balance on travel authorizations, and more!\nComplete the content above before moving on.\nFGIENCD: Detailed Encumbrance Activity\nSummary\nNative Banner: FGIENCD Page\nMake your way to the Native Banner landing page, type the page code FGIENCD in the search bar, and select \"Detail Encumbrance Activity\".\nEnter Document Number\nYou can review a variety of encumbrances using the FGIENCD view. Some of these may include: Travel Forms (TLs) : These will start with \"TL\" followed by a 5-digit reference number. Requisition (REQ) : These will start with an \"R\" followed by a 7-digit reference number. Purchase Order (PO) : These will start with a \"P\" followed by a 7-digit reference number. Enter your document number and click on the \"Go\" button in the upper right corner of the screen.\nFGIENCD View Detail\nThe encumbrance detail view contains a few key fields: Balance Details Encumbrance : Total funds held. Liquidation : Total charges. Balance : Remaining balance. Transaction Activity Transaction Date : Date the transaction impacted your budget at MSU. This will be the date that MSU Accounts Payable processes listed invoices. The vendor will not receive payment for roughly 3 weeks after this date. Type : This identifies the transaction type. Some examples include a purchase order assignment (PORD), a processed invoice (XBD1), fiscal year rollover (E090), etc. Document Code : reference code for a specific action. Transaction Amount : total dollar charge per action. Remaining Balance : A running balance of remaining encumbrance funds.\nTo close existing encumbrances please contact the appropriate department and ask for the funds to be released. For example, for open travel authorizations speak with the Travel Office and for open purchase orders speak with Procurement.",
-  "last_scraped": "2026-08-06"
+  "last_scraped": "2026-08-06",
+  "images": [
+    {
+      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/0DWd-yWVLFbzw01l.jpg",
+      "caption": "FGIENCD: Encumbrance Detail Lookup"
+    },
+    {
+      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/o_hJGyxkPPRLz_sp-fgiencd%2520screenshot%2520%25233.PNG",
+      "caption": "FGIENCD View Detail"
+    }
+  ]
 }

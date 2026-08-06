@@ -249,3 +249,58 @@ def test_files_and_forms_keep_their_own_kinds():
     assert fc._destination_kind("https://www.morgan.edu/Documents/x/handbook.pdf") == "file"
     assert fc._destination_kind(
         "https://na2.docusign.net/Member/PowerFormSigning.aspx?x=1") == "form"
+
+
+# ---------------------------------------------------------------------------
+# Training screenshots. The modules teach by pointing at Banner screens, so the
+# picture is often the answer. Same resolution path and the SAME suppression
+# guards as attachments -- a Banner screenshot under "thanks!" is the same bug
+# as a DocuSign form under it.
+# ---------------------------------------------------------------------------
+
+_SHOT_LESSON = 'How To: Requisition Entry in Banner — Purchasing with Purpose: Procurement on Sponsored Projects'
+
+
+def test_a_lesson_with_screenshots_resolves_them(monkeypatch):
+    monkeypatch.undo()
+    fc._docs_by_title.cache_clear()
+    try:
+        out = fc.images_for_titles([_SHOT_LESSON])
+        assert out, "no screenshots resolved for a lesson that has them"
+        assert out[0]["url"].startswith(
+            "https://storage.googleapis.com/oranavigator-kb-assets/etraining/")
+        assert "caption" in out[0]
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
+def test_the_image_cap_holds(monkeypatch):
+    monkeypatch.undo()
+    fc._docs_by_title.cache_clear()
+    try:
+        assert len(fc.images_for_titles([_SHOT_LESSON], limit=2)) == 2
+        assert len(fc.images_for_titles([_SHOT_LESSON])) <= 4
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
+def test_a_document_with_no_images_resolves_to_nothing(monkeypatch):
+    monkeypatch.undo()
+    fc._docs_by_title.cache_clear()
+    try:
+        assert fc.images_for_titles(["PF-10 Contractual Personnel Request"]) == []
+        assert fc.images_for_titles([]) == []
+        assert fc.images_for_titles(None) == []
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
+def test_screenshots_are_suppressed_on_non_kb_turns():
+    import vertex_agent as va
+    r = {"citations": [{"title": _SHOT_LESSON, "url": "https://p"}]}
+    assert va._images_for_result("thanks!", "You're welcome!", r) == []
+    assert va._images_for_result(
+        "who is the president of the US?",
+        "I can only help with Morgan State University Office of Research "
+        "Administration questions.", r) == []
+    assert va._images_for_result("what department am I in?", "You are in Physics.", r) == []

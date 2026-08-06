@@ -227,6 +227,9 @@ def _all_docs_by_id() -> dict:
                 "title": title,
                 "url": url,
                 "source_url": source,
+                # Mirrored eTraining screenshots, [{url, caption}]. Present only
+                # on lesson documents; everything else carries an empty list.
+                "images": doc.get("images") or [],
             }
 
     # Overlay the datastore's own procedure_url values. Required, not cosmetic:
@@ -373,4 +376,27 @@ def attachments_for_titles(titles, limit: int = 3) -> list:
         out.append({"title": row.get("title") or title, "url": url, "kind": kind})
         if len(out) >= limit:
             break
+    return out
+
+
+def images_for_titles(titles, limit: int = 4) -> list:
+    """Screenshots belonging to the lessons behind these retrieved chunk titles.
+
+    Same shape and the same call site as attachments_for_titles: the caller
+    resolves once, from the documents the turn actually retrieved, and the model
+    never sees a URL. Capped because a lesson can carry ten screenshots and an
+    answer that dumps all of them is worse than one that shows the first few.
+    """
+    by_title = _docs_by_title()
+    out, seen = [], set()
+    for title in titles or []:
+        row = by_title.get(_norm_title(title))
+        for img in (row or {}).get("images") or []:
+            url = (img.get("url") or "").strip()
+            if not url or url in seen:
+                continue
+            seen.add(url)
+            out.append({"url": url, "caption": img.get("caption") or ""})
+            if len(out) >= limit:
+                return out
     return out
