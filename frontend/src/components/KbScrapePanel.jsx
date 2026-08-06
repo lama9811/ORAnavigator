@@ -131,6 +131,18 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
     } finally { setBusyId(null); }
   };
 
+  const dismissReported = async () => {
+    if (!window.confirm(
+      `Dismiss ${notApprovable} reported page(s)? These have no draft to approve — ` +
+      `they are pointers to pages feeding several documents. Nothing is changed either way.`
+    )) return;
+    await fetch(`${apiBase}/api/admin/kb-scrape/changes/dismiss-reported`, {
+      method: "POST", headers: auth,
+    });
+    await loadChanges();
+    onDocsChanged?.();
+  };
+
   const showDiff = async (change) => {
     const res = await fetch(`${apiBase}/api/admin/kb-scrape/changes/${change.id}/diff`, { headers: auth });
     if (res.ok) setDiff(await res.json());
@@ -138,7 +150,11 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
 
   const running = run?.status === "running" || run?.status === "queued";
   const visible = changes.filter((c) => c.status !== "cosmetic");
-  const pendingCount = changes.filter((c) => c.status === "pending").length;
+  // Only proposals carrying a draft. Counting every pending row made the
+  // summary claim "90 changes await your approval" while Ready to approve
+  // showed 0 — the other 90 are pointers to multi-document pages that can
+  // never be approved, and saying they await approval is simply untrue.
+  const pendingCount = changes.filter((c) => c.status === "pending" && c.has_diff).length;
 
   // Pending items split by whether there is actually anything to approve.
   // A page feeding many documents never gets a draft — re-splitting the IACUC
@@ -343,9 +359,19 @@ export default function KbScrapePanel({ apiBase, token, onDocsChanged }) {
               readyToApprove.map(renderChange)
             ) : (
               <div className="scrape-empty">
-                {notApprovable > 0
-                  ? `Nothing from this run can be applied automatically. ${notApprovable} changed ${notApprovable === 1 ? "page feeds" : "pages feed"} more than one document, so there is no single replacement to write — those are not listed.`
-                  : "Nothing is waiting on your approval."}
+                {notApprovable > 0 ? (
+                  <>
+                    Nothing here can be applied automatically.{" "}
+                    <strong>{notApprovable}</strong>{" "}
+                    {notApprovable === 1 ? "page feeds" : "pages feed"} more than one
+                    document, so there is no single replacement to write. They are
+                    reported, not listed.
+                    <button className="scrape-linkbtn undo" onClick={dismissReported}
+                            style={{ marginLeft: 10 }}>
+                      <X size={12} /> Dismiss all {notApprovable}
+                    </button>
+                  </>
+                ) : "Nothing is waiting on your approval."}
               </div>
             )}
           </div>

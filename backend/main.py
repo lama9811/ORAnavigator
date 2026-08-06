@@ -2624,6 +2624,22 @@ async def approve_kb_scrape_change(
     return result
 
 
+@app.post("/api/admin/kb-scrape/changes/dismiss-reported")
+async def dismiss_reported_changes(
+    user: dict = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Clear every pending proposal that has no draft to approve.
+
+    Declared BEFORE the /{change_id}/... routes: FastAPI matches in order, and
+    a path param would otherwise swallow "dismiss-reported" as a change_id.
+    """
+    import kb_scrape_service as scrape
+
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return await asyncio.to_thread(scrape.dismiss_reported, db, user.get("id"))
+
+
 @app.post("/api/admin/kb-scrape/changes/{change_id}/reject")
 async def reject_kb_scrape_change(
     change_id: int, user: dict = Depends(get_current_user), db: Session = Depends(get_db)

@@ -263,6 +263,35 @@ def approve_change(db: Session, change_id: int, user_id: int | None) -> dict:
     return {"success": True, "message": f"Approved — {change.doc_id} updated", "doc_id": change.doc_id}
 
 
+def dismiss_reported(db: Session, user_id: int | None) -> dict:
+    """Clear every pending proposal that carries no draft.
+
+    These are pointers, not actions: a page feeding many documents can never
+    have a single replacement written, so the review list does not offer them
+    and there is otherwise no way to get rid of them. Without this they
+    accumulate every run — 90 after three — and keep the summary claiming work
+    is waiting when none of it can be done.
+
+    Proposals that DO carry a draft are untouched; those are real decisions.
+    """
+    rows = (
+        db.query(ScrapeChange)
+        .filter(
+            ScrapeChange.status == "pending",
+            (ScrapeChange.new_content.is_(None)) | (ScrapeChange.new_content == ""),
+        )
+        .all()
+    )
+    for c in rows:
+        c.status = "rejected"
+        c.reviewed = True
+        c.reviewed_by = user_id
+        c.reviewed_at = _now()
+    db.commit()
+    return {"success": True, "dismissed": len(rows),
+            "message": f"Dismissed {len(rows)} reported page(s) with nothing to approve"}
+
+
 def reject_change(db: Session, change_id: int, user_id: int | None) -> dict:
     """Dismiss a proposal. The document was never touched, so there is nothing
     to undo — this only clears it from the review queue and the tree badge."""
@@ -315,7 +344,18 @@ def pending_by_doc(db: Session) -> dict[str, dict]:
     out: dict[str, dict] = {}
     rows = (
         db.query(ScrapeChange)
-        .filter(ScrapeChange.status == "pending", ScrapeChange.doc_id.isnot(None))
+        .filter(
+            ScrapeChange.status == "pending",
+            ScrapeChange.doc_id.isnot(None),
+            # Only proposals that carry a draft. The review panel lists exactly
+            # these (`pending && has_diff`), and without the same filter the
+            # badge counts rows the panel will not show — leaving an amber ⚠ on
+            # the tree that an admin has no way to clear, having approved
+            # everything the queue offered. A badge you cannot act on is a dead
+            # end, not information.
+            ScrapeChange.new_content.isnot(None),
+            ScrapeChange.new_content != "",
+        )
         .order_by(ScrapeChange.id.desc())
         .all()
     )
