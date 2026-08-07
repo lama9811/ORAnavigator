@@ -1,0 +1,95 @@
+{
+ "generated_at": "2026-08-07",
+ "videos": [
+  {
+   "video_id": "2ze2PNHvLYk",
+   "url": "https://www.youtube.com/watch?v=2ze2PNHvLYk",
+   "title": "2ze2PNHvLYk",
+   "referenced_by": [],
+   "transcript_chars": 0,
+   "error": "\nCould not retrieve a transcript for the video https://www.youtube.com/watch?v=2ze2PNHvLYk! This is most likely caused by:\n\nThe video is no longer available\n\nIf you are sure that the described cause i"
+  },
+  {
+   "video_id": "IkPgQxKvI0c",
+   "url": "https://www.youtube.com/watch?v=IkPgQxKvI0c",
+   "title": "ORA Tips for Timely and Successful Submission of Proposals",
+   "referenced_by": [
+    "form_dred_2021_10_tips_timely_submission",
+    "trainings_monthly_d_red"
+   ],
+   "transcript_chars": 53174
+  },
+  {
+   "video_id": "P2ncgx_Qm-o",
+   "url": "https://www.youtube.com/watch?v=P2ncgx_Qm-o",
+   "title": "ORA: Finding the Right Funding Opportunity",
+   "referenced_by": [
+    "form_dred_2021_06_choosing_funding",
+    "trainings_monthly_d_red"
+   ],
+   "transcript_chars": 57650
+  },
+  {
+   "video_id": "RaYDhqlpkAo",
+   "url": "https://www.youtube.com/watch?v=RaYDhqlpkAo",
+   "title": "How to make an NIH biosketch using My Bibliography and SciENcv",
+   "referenced_by": [],
+   "transcript_chars": 7968
+  },
+  {
+   "video_id": "SpFcC0eRk8Q",
+   "url": "https://www.youtube.com/watch?v=SpFcC0eRk8Q",
+   "title": "My Bibliography",
+   "referenced_by": [],
+   "transcript_chars": 1284
+  },
+  {
+   "video_id": "VGTRQNNDbmM",
+   "url": "https://www.youtube.com/watch?v=VGTRQNNDbmM",
+   "title": "Add Preprint Citations in My Bibliography",
+   "referenced_by": [],
+   "transcript_chars": 0,
+   "error": "\nCould not retrieve a transcript for the video https://www.youtube.com/watch?v=VGTRQNNDbmM! This is most likely caused by:\n\nNo transcripts were found for any of the requested language codes: ('en',)\n\n"
+  },
+  {
+   "video_id": "YcXR5Ndf2ig",
+   "url": "https://www.youtube.com/watch?v=YcXR5Ndf2ig",
+   "title": "2021 Faculty Institute: ASCEND RCMI",
+   "referenced_by": [
+    "form_dred_2021_08_ascend_rcmi_hohmann",
+    "trainings_monthly_d_red"
+   ],
+   "transcript_chars": 3910
+  },
+  {
+   "video_id": "iGsw3SK-J6k",
+   "url": "https://www.youtube.com/watch?v=iGsw3SK-J6k",
+   "title": "ORA Why and How to Use Them Workshop",
+   "referenced_by": [
+    "form_dred_2021_07_useful_resources",
+    "trainings_monthly_d_red"
+   ],
+   "transcript_chars": 34288
+  },
+  {
+   "video_id": "qD6Efajaq5M",
+   "url": "https://www.youtube.com/watch?v=qD6Efajaq5M",
+   "title": "ORA Subawards: What You Need to Know",
+   "referenced_by": [
+    "form_subaward_process_slides",
+    "trainings_monthly_d_red"
+   ],
+   "transcript_chars": 45409
+  },
+  {
+   "video_id": "zoDvRuwD0l4",
+   "url": "https://www.youtube.com/watch?v=zoDvRuwD0l4",
+   "title": "ORA Subawards What You Need to Know",
+   "referenced_by": [
+    "post_award_subawards"
+   ],
+   "transcript_chars": 45409,
+   "duplicate_of": "qD6Efajaq5M"
+  }
+ ]
+}

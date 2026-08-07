@@ -88,7 +88,17 @@ def normalize_url(url: str, base: str = "") -> str:
 # simply never seen. SPARK cost us exactly this: the flagship training program
 # is linked from /trainings as `/spark`, was never crawled, and had no KB
 # document at all. Add an alias here whenever ORA publishes a short URL.
-_ORA_ALIASES = ("/ora", "/spark")
+_ORA_ALIASES = (
+    "/ora",
+    "/spark",
+    # One of the 14 ORA staff profiles lives here rather than under the section
+    # prefix -- the staff directory's "VIEW PROFILE" link for Keyshawn Moncrieffe
+    # is the only one of the 14 that leaves /office-of-research-administration.
+    # Without this the page is structurally invisible: not stale, never fetched.
+    # Same failure class as the /spark vanity URL, but in the opposite direction
+    # -- a LONGER out-of-section path rather than a shorter one.
+    "/research-and-economic-development/about-us/staff-directory",
+)
 
 
 def is_in_scope(url: str) -> bool:
