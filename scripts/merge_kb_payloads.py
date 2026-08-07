@@ -49,10 +49,16 @@ def main() -> int:
             p = os.path.join(KB, rel)
             if os.path.exists(p):
                 os.remove(p)
+        # By doc_id, not by restoring a whole-file snapshot -- a snapshot revert
+        # discards rows other generators added in the meantime and orphans their
+        # files. Observed doing exactly that on 2026-08-07.
+        mine = set(b.get("doc_ids") or [])
+        rows = [json.loads(l) for l in open(MANIFEST)]
+        kept = [r for r in rows if r["doc_id"] not in mine]
         with open(MANIFEST, "w") as f:
-            for row in b["manifest"]:
+            for row in kept:
                 f.write(json.dumps(row) + "\n")
-        print(f"reverted {len(b['created_files'])} files; manifest -> {len(b['manifest'])} rows")
+        print(f"reverted {len(b['created_files'])} files; manifest {len(rows)} -> {len(kept)} rows")
         return 0
 
     if not args.payloads:
@@ -112,7 +118,8 @@ def main() -> int:
         })
 
     json.dump({"manifest": manifest,
-               "created_files": [r.replace(os.sep, "/") for r, _ in created]},
+               "created_files": [r.replace(os.sep, "/") for r, _ in created],
+               "doc_ids": [d["doc_id"] for _, d in created]},
               open(BACKUP, "w"))
 
     for rel, d in created:

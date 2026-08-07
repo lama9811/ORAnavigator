@@ -159,11 +159,21 @@ def main() -> int:
             fp = os.path.join(KB, p)
             if os.path.exists(fp):
                 os.remove(fp)
+        # Remove only THIS script's rows, by doc_id. Restoring the whole
+        # manifest from a snapshot taken at write time silently discards every
+        # row any OTHER generator added since -- which is not hypothetical: it
+        # deleted 54 video-transcript rows here on 2026-08-07 and orphaned their
+        # files on disk, with no error and no output saying so.
+        mine = set(b.get("doc_ids") or [])
+        if not mine:  # backups written before doc_ids was recorded
+            mine = {os.path.basename(p)[:-5] for p in b["created_files"]}
+        rows = [json.loads(l) for l in open(MANIFEST)]
+        kept = [r for r in rows if r["doc_id"] not in mine]
         with open(MANIFEST, "w") as f:
-            for row in b["manifest"]:
+            for row in kept:
                 f.write(json.dumps(row) + "\n")
         print(f"reverted: removed {len(b['created_files'])} files, "
-              f"manifest back to {len(b['manifest'])} rows")
+              f"manifest {len(rows)} -> {len(kept)} rows")
         return 0
 
     src = args.input or os.path.join(
@@ -238,7 +248,8 @@ def main() -> int:
         return 0
 
     json.dump({"manifest": manifest,
-               "created_files": [r.replace(os.sep, "/") for r, _ in created]},
+               "created_files": [r.replace(os.sep, "/") for r, _ in created],
+               "doc_ids": [d["doc_id"] for _, d in created]},
               open(BACKUP, "w"))
 
     for rel, doc in created:

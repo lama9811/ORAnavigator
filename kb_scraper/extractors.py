@@ -17,6 +17,16 @@ import re
 
 log = logging.getLogger(__name__)
 
+# Caps for the SCRAPE job, where extraction is a change-detection gate over ~277
+# files every run and reading a 118-page policy in full buys nothing.
+#
+# They are the wrong caps for INGESTION, and the failure is silent: a truncated
+# read returns clean text with no error, so a document looks complete and a
+# "does the KB cover this?" check wrongly clears. Measured 2026-08-07 -- MSU's
+# Procurement Policies is 118 pages / 245,608 chars and came back 36% captured
+# (SECTIONS VI-XI and Appendix A missing); the Prohibited Conduct Procedures is
+# 89 pages and came back at 40. Callers that are LOADING a file into the KB must
+# pass max_pages/max_chars explicitly; the loader scripts pass None for both.
 MAX_CHARS = 200_000
 MAX_PDF_PAGES = 40
 
@@ -38,20 +48,21 @@ def kind_for_url(url: str) -> str:
     return "page"
 
 
-def _truncate(text: str) -> str:
-    return text[:MAX_CHARS]
+def _truncate(text: str, max_chars: int | None = MAX_CHARS) -> str:
+    return text if max_chars is None else text[:max_chars]
 
 
-def _clean(text: str) -> str:
-    return _truncate(re.sub(r"\n{3,}", "\n\n", text).strip())
+def _clean(text: str, max_chars: int | None = MAX_CHARS) -> str:
+    return _truncate(re.sub(r"\n{3,}", "\n\n", text).strip(), max_chars)
 
 
-def _pdf(raw: bytes) -> str:
+def _pdf(raw: bytes, max_pages: int | None = MAX_PDF_PAGES) -> str:
     import pdfplumber
 
     out = []
     with pdfplumber.open(io.BytesIO(raw)) as pdf:
-        for page in pdf.pages[:MAX_PDF_PAGES]:
+        pages = pdf.pages if max_pages is None else pdf.pages[:max_pages]
+        for page in pages:
             out.append(page.extract_text() or "")
     return "\n\n".join(out)
 
@@ -119,15 +130,24 @@ def _format_of(content_type: str, url: str) -> str:
     return ""
 
 
-def extract_text(raw: bytes, content_type: str = "", url: str = "") -> str:
-    """Plain text, or "" when this file has no readable body. Never raises."""
+def extract_text(raw: bytes, content_type: str = "", url: str = "",
+                 max_pages: int | None = MAX_PDF_PAGES,
+                 max_chars: int | None = MAX_CHARS) -> str:
+    """Plain text, or "" when this file has no readable body. Never raises.
+
+    Pass max_pages=None, max_chars=None when INGESTING a file into the KB. The
+    defaults are the scrape job's change-detection caps and will silently return
+    a partial document -- see the note on MAX_CHARS.
+    """
     if not raw:
         return ""
     reader = _READERS.get(_format_of(content_type, url))
     if reader is None:
         return ""
     try:
-        return _clean(reader(raw))
+        if reader is _pdf:
+            return _clean(_pdf(raw, max_pages), max_chars)
+        return _clean(reader(raw), max_chars)
     except Exception as e:
         # A malformed or encrypted file is unreadable, not empty. Callers key
         # off the empty string and report rather than propose.
