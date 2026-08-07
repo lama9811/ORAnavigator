@@ -1,29 +1,29 @@
 {
-  "doc_id": "etr_purchasing_06_processing_invoices_for_payment",
-  "title": "Processing Invoices for Payment — Purchasing with Purpose: Procurement on Sponsored Projects",
-  "display_label": "Processing Invoices for Payment — Purchasing with Purpose: Procurement on Sponsored Projects",
-  "category": "trainings",
-  "subcategory": "e_training",
-  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
-  "procedure_url": "https://share.articulate.com/Oj9sl7O574NyfS_WK9btG#/lessons/WBWfxt6PU7Id479njoihRkFT2LEGe8Wk",
-  "content": "Processing Invoices for Payment\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 6 of 15).\nMSU A/P: Invoice Requirements\nThe MSU Accounts Payable team (A/P, msuap@morgan.edu) is responsible for processing vendor invoices for payment via the State of Maryland. Below are the necessary components of a vendor invoice.\nVendor Name Tax Federal ID Number (SSN or FEIN) Invoice # Invoice Date Bill-To Address Should be addressed to MSU directly. PI can be listed as attn. MSU Purchase Order # (PO#) The PO must be completed and approved by Procurement before A/P will process the invoice. Remittance Address\nComplete the content above before moving on.\nOK to Pay: Processing Invoices for Payment\nTo process an invoice through MSU A/P you must mark the invoice as \"Ok to Pay\" (see left). This authorizes the invoice to be processed and should include the full name and signature of the individual authorized to submit invoices for the project, the date of submission, and purchase order #. Once marked, the \"OK to Pay\" invoice copy, and the original, should be emailed to approved-invoices.msuap@morgan.edu for payment processing.\nPlease Note: Invoices from international vendors may require different invoice information compared to domestic vendors. Please contact the MSU Accounts Payable team for guidance.\nejWm2vG2HY2v8Y_g-OK%20to%20Pay%20Invoice%20Example.pdf",
-  "last_scraped": "2026-08-06",
-  "images": [
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/_jHQv1xir_YalBIV.png",
-      "caption": "Processing Invoices for Payment"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/wBlmFpILuFBcVKzG-Invoice%2520example%2520(not%2520authorized).png",
-      "caption": "Processing Invoices for Payment"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/fMO6we07F-V729GN.png",
-      "caption": "Processing Invoices for Payment"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/5rNH-RCw5TMbXVSZ.png",
-      "caption": "Processing Invoices for Payment"
-    }
-  ]
+ "doc_id": "etr_purchasing_06_processing_invoices_for_payment",
+ "title": "Processing Invoices for Payment \u2014 Purchasing with Purpose: Procurement on Sponsored Projects",
+ "display_label": "Processing Invoices for Payment \u2014 Purchasing with Purpose: Procurement on Sponsored Projects",
+ "category": "trainings",
+ "subcategory": "e_training",
+ "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+ "procedure_url": "https://share.articulate.com/Oj9sl7O574NyfS_WK9btG#/lessons/WBWfxt6PU7Id479njoihRkFT2LEGe8Wk",
+ "content": "Processing Invoices for Payment\n\nFrom the ORA eTraining module \"Purchasing with Purpose: Procurement on Sponsored Projects\" (lesson 6 of 15).\nMSU A/P: Invoice Requirements\nThe MSU Accounts Payable team (A/P, msuap@morgan.edu) is responsible for processing vendor invoices for payment via the State of Maryland. Below are the necessary components of a vendor invoice.\nVendor Name Tax Federal ID Number (SSN or FEIN) Invoice # Invoice Date Bill-To Address Should be addressed to MSU directly. PI can be listed as attn. MSU Purchase Order # (PO#) The PO must be completed and approved by Procurement before A/P will process the invoice. Remittance Address\nComplete the content above before moving on.\nOK to Pay: Processing Invoices for Payment\nTo process an invoice through MSU A/P you must mark the invoice as \"Ok to Pay\" (see left). This authorizes the invoice to be processed and should include the full name and signature of the individual authorized to submit invoices for the project, the date of submission, and purchase order #. Once marked, the \"OK to Pay\" invoice copy, and the original, should be emailed to approved-invoices.msuap@morgan.edu for payment processing.\nPlease Note: Invoices from international vendors may require different invoice information compared to domestic vendors. Please contact the MSU Accounts Payable team for guidance.\nejWm2vG2HY2v8Y_g-OK%20to%20Pay%20Invoice%20Example.pdf",
+ "last_scraped": "2026-08-06",
+ "images": [
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/_jHQv1xir_YalBIV.png",
+   "caption": "Processing Invoices for Payment"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/wBlmFpILuFBcVKzG-Invoice%252520example%252520%28not%252520authorized%29.png",
+   "caption": "Processing Invoices for Payment"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/fMO6we07F-V729GN.png",
+   "caption": "Processing Invoices for Payment"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_purchasing_banner_pool_08_etraining/5rNH-RCw5TMbXVSZ.png",
+   "caption": "Processing Invoices for Payment"
+  }
+ ]
 }

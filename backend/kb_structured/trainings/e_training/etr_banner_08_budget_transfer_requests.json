@@ -1,65 +1,65 @@
 {
-  "doc_id": "etr_banner_08_budget_transfer_requests",
-  "title": "Budget Transfer Requests — Navigating Banner: Essentials for Research Administration",
-  "display_label": "Budget Transfer Requests — Navigating Banner: Essentials for Research Administration",
-  "category": "trainings",
-  "subcategory": "e_training",
-  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
-  "procedure_url": "https://share.articulate.com/P5hdpOIVrXhCKX63DYkkA#/lessons/MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
-  "content": "Budget Transfer Requests\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 8 of 12).\nTransferring Funds on Sponsored Projects\nWhat happens if you didn't initially budget for an expense in your approved budget outlined in your Notice of Award (NOA)? There may be times when the needs of your project require funds to move from one budget category to another. This is where the Budget Transfer process comes in.\nComplete the content above before moving on.\nRestrictions on Budget Transfers\nBefore submitting a budget transfer request the initiator should consider the factors below.\nSufficient Funds in Pool Level\nThis may seem obvious, but there must be sufficient funds in the Banner pool level from which you plan to transfer funds. Without enough money the transfer will not be processed.\nAllowability\nBudget transfers cannot occur if the reason for the transfer is not allowable under the terms of the project award. A common example is equipment. Many projects specifically restrict spending project funds on equipment. If this is the case, a budget transfer will not be approved to move funds to the equipment pool level. Transfer requests should only involve one index per request. Transfers between multiple indexes/projects is not allowable. Budget transfers should not create new budget categories. For example, you should not transfer funds out of supplies to create a new travel budget without prior written sponsor approval.\nChange of Project Scope\nA budget transfer cannot be processed if doing so would substantially alter the design and scope of the project. If a change in scope would result from the budget transfer it is the PI's responsibility to contact their Program Officer for written authorization to move the funds.\nPool Level & Percentage Change Restrictions\nMany sponsors have limitations on how much funding can be moved between the pool levels outlined in the project Notice of Award. For example, NIH-sponsored projects typically limit budget transfers to no more than 25% of the total project budget. Additionally, several Banner pool levels have their own specific restrictions. Some examples include the following: 01&02 (Salaries) : Key Personnel, PIs and CO-PIs, cannot move more than 25% of their proposed salary/effort without approval from the Program Officer. 11 (Equipment) : If your NOA/FOA explicitly restricts equipment purchases then funds cannot be transferred into the 11 Banner pool level. 12 (Participant Support) : Moving funds out of pool level 12 requires written authorization from the project's Program Officer. 15 (Indirect Cost, IDC) : Funds cannot be transferred out of pool level 15 and added to a direct cost pool level such as 09 (Supplies) unless the transfer in/out of pool level 15 is to compensate for funds moving from an IDC-assessed pool level to a non-assessed one. For example, let's say you have a $2,000,000 project with $100,000 in your equipment pool level. Now your project needs have changed and you can use a less-expensive piece of equipment ($50,000) to perform the work without impacting your project scope. To move the excess equipment funds to your travel pool (04) the $50,000 would need to be split between 04 and 15 to account for the increased IDC capture ($32,679 to 04 & $17,321 to 15 based on a 53% IDC rate). IDC is not assessed on activities under pool level 12 (Participant Support), pool level 11 (Equipment), or subawards after IDC is captured on the first 25k of the subaward. Current IDC rates can be found here .\nHow To: Budget Transfers\nHow to Perform a Budget Transfer\nSummary\nNavigate to Finance Self-Service\nThe budget transfer process is completed in Finance Self-Service. Please make your way to the Banner Links homepage here and select the Finance Self-Service icon. You will be prompted to enter your MSU credentials.\nMy Journals\nClick on the \"My Journals\" link.\nCreate Journal\nOn the \"My Journals\" landing page you see three sections: Draft Journals : Journal entries (budget transfer for example) that have been started, but not submitted for processing Pending Journals : Journal entries that the user have submitted for approval, but hasn't been processed. Completed Journals : Journal entries that have been approved and processed. Click on the \"Create Journal\" button in the top right of the screen to begin a new budget transfer.\nCreate Journal: Part 2\nThe \"transaction date\" will default to today's date. Use the \"public comment\" section to provide approvers with some details on why the transfer is necessary. Click on \"Create\" to go to the next page.\nAdd Accounting #1\nA user must \"add accounting\", or add the budget/account details, for a transfer request. First , we enter accounting information for where the funds are being transferred from. Then , we add another set of accounting information detailing where the funds are moving to. For both sections, we need to include the following information: Journal Type : For budget transfers the journal type is XBT9. If you are missing this option, please contact your school's budget officer to amend your workflow access to include budget transfers. Index : The 6-digit budget code assigned to your project budget in Banner. Fund, Program, and Org Code will auto populate after index entry. Account : Select the 2-digit budget pool level you need to move funds from. DO NOT select a specific 5-digit account code for this action.\nAdd Accounting #1: Part 2\nAmount : Total dollar amount to be moved. You can only transfer whole dollar amounts (no cents). Debit/Credit : Please select debit (- minus) to reduce funds in the pool funds will move from. Description : a very brief description (35 character max) of the justification for the journal. For example, \"Budget transfer for upcoming travel\". Budget Period : Based on the university fiscal year, this refers to the month in which you are entering the transfer. For example, a transfer in July would be 01, August 02, etc. Click on \"Add Accounting\" to complete this page and add the next accounting page for where the funds will be moved.\nAdd Accounting #2\nNow we need to add the accounting for where the funds will be moving to. Repeat Steps 5 &6, but with the below changes: Account : Select the 2-digit budget pool level you need to move funds to. DO NOT select a specific 5-digit account code for this action. Debit/Credit : Please select credit (+ plus) to add funds to the new pool level. Click on \"Save\" at the bottom to save this second accounting sequence.\nSubmit Journal\nHere you should see both accounting sequences detailing where the transfer will occur. Verify the transfer sequences are correct and click on \"Submit Journal\" in the bottom right corner of the screen.\nLIGHT",
-  "last_scraped": "2026-08-06",
-  "images": [
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/rpD2n5mExbB0aEX_.jpg",
-      "caption": "Sufficient Funds in Pool Level"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/P1pwEDj3M6DX_9yH.jpg",
-      "caption": "Allowability"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/Zqa2OVMIKB0p3zQP.jpg",
-      "caption": "Change of Project Scope"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/5IZ4S8hJxiDQpfV6.jpg",
-      "caption": "Pool Level & Percentage Change Restrictions"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/JCyPkOAsWfKVrCrn-budget%2520transfer%25201.png",
-      "caption": "Navigate to Finance Self-Service"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/2KD_Ho5vTab08kvi-budget%2520transfer%25202.png",
-      "caption": "My Journals"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/gWektMBrYOxltkG4-budget%2520transfer%25203.png",
-      "caption": "Create Journal"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/kZo7lz_YcXnlPNjH-Budget%2520Transfer%2520%25231.PNG",
-      "caption": "Create Journal: Part 2"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/do4fVB260zsFWNOp-budget%2520transfer%2520%25232.PNG",
-      "caption": "Add Accounting #1"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/O8gVBcZxvnkj7YWh-budget%2520transfer%2520%25233.PNG",
-      "caption": "Add Accounting #1: Part 2"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/oQmNj2sdBFw5bVR2-budget%2520transfer%2520%25234.png",
-      "caption": "Add Accounting #2"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/h8BH9SpngrW5VF02-budget%2520transfer%2520%25235.png",
-      "caption": "Submit Journal"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/RT27BPEU8QPTXwSS.jpg",
-      "caption": "Budget Transfer Requests"
-    }
-  ]
+ "doc_id": "etr_banner_08_budget_transfer_requests",
+ "title": "Budget Transfer Requests \u2014 Navigating Banner: Essentials for Research Administration",
+ "display_label": "Budget Transfer Requests \u2014 Navigating Banner: Essentials for Research Administration",
+ "category": "trainings",
+ "subcategory": "e_training",
+ "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+ "procedure_url": "https://share.articulate.com/P5hdpOIVrXhCKX63DYkkA#/lessons/MLA45EqLTDlds1qVeupBy6oBgh6G6TwS",
+ "content": "Budget Transfer Requests\n\nFrom the ORA eTraining module \"Navigating Banner: Essentials for Research Administration\" (lesson 8 of 12).\nTransferring Funds on Sponsored Projects\nWhat happens if you didn't initially budget for an expense in your approved budget outlined in your Notice of Award (NOA)? There may be times when the needs of your project require funds to move from one budget category to another. This is where the Budget Transfer process comes in.\nComplete the content above before moving on.\nRestrictions on Budget Transfers\nBefore submitting a budget transfer request the initiator should consider the factors below.\nSufficient Funds in Pool Level\nThis may seem obvious, but there must be sufficient funds in the Banner pool level from which you plan to transfer funds. Without enough money the transfer will not be processed.\nAllowability\nBudget transfers cannot occur if the reason for the transfer is not allowable under the terms of the project award. A common example is equipment. Many projects specifically restrict spending project funds on equipment. If this is the case, a budget transfer will not be approved to move funds to the equipment pool level. Transfer requests should only involve one index per request. Transfers between multiple indexes/projects is not allowable. Budget transfers should not create new budget categories. For example, you should not transfer funds out of supplies to create a new travel budget without prior written sponsor approval.\nChange of Project Scope\nA budget transfer cannot be processed if doing so would substantially alter the design and scope of the project. If a change in scope would result from the budget transfer it is the PI's responsibility to contact their Program Officer for written authorization to move the funds.\nPool Level & Percentage Change Restrictions\nMany sponsors have limitations on how much funding can be moved between the pool levels outlined in the project Notice of Award. For example, NIH-sponsored projects typically limit budget transfers to no more than 25% of the total project budget. Additionally, several Banner pool levels have their own specific restrictions. Some examples include the following: 01&02 (Salaries) : Key Personnel, PIs and CO-PIs, cannot move more than 25% of their proposed salary/effort without approval from the Program Officer. 11 (Equipment) : If your NOA/FOA explicitly restricts equipment purchases then funds cannot be transferred into the 11 Banner pool level. 12 (Participant Support) : Moving funds out of pool level 12 requires written authorization from the project's Program Officer. 15 (Indirect Cost, IDC) : Funds cannot be transferred out of pool level 15 and added to a direct cost pool level such as 09 (Supplies) unless the transfer in/out of pool level 15 is to compensate for funds moving from an IDC-assessed pool level to a non-assessed one. For example, let's say you have a $2,000,000 project with $100,000 in your equipment pool level. Now your project needs have changed and you can use a less-expensive piece of equipment ($50,000) to perform the work without impacting your project scope. To move the excess equipment funds to your travel pool (04) the $50,000 would need to be split between 04 and 15 to account for the increased IDC capture ($32,679 to 04 & $17,321 to 15 based on a 53% IDC rate). IDC is not assessed on activities under pool level 12 (Participant Support), pool level 11 (Equipment), or subawards after IDC is captured on the first 25k of the subaward. Current IDC rates can be found here .\nHow To: Budget Transfers\nHow to Perform a Budget Transfer\nSummary\nNavigate to Finance Self-Service\nThe budget transfer process is completed in Finance Self-Service. Please make your way to the Banner Links homepage here and select the Finance Self-Service icon. You will be prompted to enter your MSU credentials.\nMy Journals\nClick on the \"My Journals\" link.\nCreate Journal\nOn the \"My Journals\" landing page you see three sections: Draft Journals : Journal entries (budget transfer for example) that have been started, but not submitted for processing Pending Journals : Journal entries that the user have submitted for approval, but hasn't been processed. Completed Journals : Journal entries that have been approved and processed. Click on the \"Create Journal\" button in the top right of the screen to begin a new budget transfer.\nCreate Journal: Part 2\nThe \"transaction date\" will default to today's date. Use the \"public comment\" section to provide approvers with some details on why the transfer is necessary. Click on \"Create\" to go to the next page.\nAdd Accounting #1\nA user must \"add accounting\", or add the budget/account details, for a transfer request. First , we enter accounting information for where the funds are being transferred from. Then , we add another set of accounting information detailing where the funds are moving to. For both sections, we need to include the following information: Journal Type : For budget transfers the journal type is XBT9. If you are missing this option, please contact your school's budget officer to amend your workflow access to include budget transfers. Index : The 6-digit budget code assigned to your project budget in Banner. Fund, Program, and Org Code will auto populate after index entry. Account : Select the 2-digit budget pool level you need to move funds from. DO NOT select a specific 5-digit account code for this action.\nAdd Accounting #1: Part 2\nAmount : Total dollar amount to be moved. You can only transfer whole dollar amounts (no cents). Debit/Credit : Please select debit (- minus) to reduce funds in the pool funds will move from. Description : a very brief description (35 character max) of the justification for the journal. For example, \"Budget transfer for upcoming travel\". Budget Period : Based on the university fiscal year, this refers to the month in which you are entering the transfer. For example, a transfer in July would be 01, August 02, etc. Click on \"Add Accounting\" to complete this page and add the next accounting page for where the funds will be moved.\nAdd Accounting #2\nNow we need to add the accounting for where the funds will be moving to. Repeat Steps 5 &6, but with the below changes: Account : Select the 2-digit budget pool level you need to move funds to. DO NOT select a specific 5-digit account code for this action. Debit/Credit : Please select credit (+ plus) to add funds to the new pool level. Click on \"Save\" at the bottom to save this second accounting sequence.\nSubmit Journal\nHere you should see both accounting sequences detailing where the transfer will occur. Verify the transfer sequences are correct and click on \"Submit Journal\" in the bottom right corner of the screen.\nLIGHT",
+ "last_scraped": "2026-08-06",
+ "images": [
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/rpD2n5mExbB0aEX_.jpg",
+   "caption": "Sufficient Funds in Pool Level"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/P1pwEDj3M6DX_9yH.jpg",
+   "caption": "Allowability"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/Zqa2OVMIKB0p3zQP.jpg",
+   "caption": "Change of Project Scope"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/5IZ4S8hJxiDQpfV6.jpg",
+   "caption": "Pool Level & Percentage Change Restrictions"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/JCyPkOAsWfKVrCrn-budget%252520transfer%2525201.png",
+   "caption": "Navigate to Finance Self-Service"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/2KD_Ho5vTab08kvi-budget%252520transfer%2525202.png",
+   "caption": "My Journals"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/gWektMBrYOxltkG4-budget%252520transfer%2525203.png",
+   "caption": "Create Journal"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/kZo7lz_YcXnlPNjH-Budget%252520Transfer%252520%2525231.PNG",
+   "caption": "Create Journal: Part 2"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/do4fVB260zsFWNOp-budget%252520transfer%252520%2525232.PNG",
+   "caption": "Add Accounting #1"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/O8gVBcZxvnkj7YWh-budget%252520transfer%252520%2525233.PNG",
+   "caption": "Add Accounting #1: Part 2"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/oQmNj2sdBFw5bVR2-budget%252520transfer%252520%2525234.png",
+   "caption": "Add Accounting #2"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/h8BH9SpngrW5VF02-budget%252520transfer%252520%2525235.png",
+   "caption": "Submit Journal"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_navigating_banner_etraining/RT27BPEU8QPTXwSS.jpg",
+   "caption": "Budget Transfer Requests"
+  }
+ ]
 }

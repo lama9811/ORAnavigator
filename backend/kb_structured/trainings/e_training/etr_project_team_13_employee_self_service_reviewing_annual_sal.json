@@ -1,29 +1,29 @@
 {
-  "doc_id": "etr_project_team_13_employee_self_service_reviewing_annual_sal",
-  "title": "Employee Self-Service: Reviewing Annual Salary — Building the Project Team: Contractual Hiring and Compensation",
-  "display_label": "Employee Self-Service: Reviewing Annual Salary — Building the Project Team: Contractual Hiring and Compensation",
-  "category": "trainings",
-  "subcategory": "e_training",
-  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
-  "procedure_url": "https://share.articulate.com/P_TX_Sz334DiNOJZ0upJ7#/lessons/VF0KEpbPDT4OB4YZBNYTqx8cU2fwEy40",
-  "content": "Employee Self-Service: Reviewing Annual Salary\n\nFrom the ORA eTraining module \"Building the Project Team: Contractual Hiring and Compensation\" (lesson 13 of 15).\nSelf-Service: Job Description Personnel Data\nHow to Lookup Your Annual Salary\nSummary\nLorem ipsum dolor sit amet, consectetur adipiscing elit. In purus velit, tincidunt ac nibh quis, sollicitudin varius libero. Nullam at mi felis. Donec a scelerisque augue, sit amet porttitor nibh. Suspendisse at lorem ut elit placerat blandit.\nGo to Employee Self-Service\nFirst, you must make your way to the Employee Self-Service portal of Banner where you will be prompted to enter your MSU credentials. You can find the Banner Links homepage here .\nJob Summary\nClick on the drop down arrow next to \"Job Summary.\" Then, click on the \"Job Information\" link.\nReview Salaries by Position\nHere, all current and previous positions will be listed. By clicking on the drop down arrows next to each position you can review a salary history from contract inception to date. This is where you can source the salary data for faculty summer contracts.\nLIGHT\nComplete the content above before moving on.",
-  "last_scraped": "2026-08-06",
-  "images": [
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/pBBMOKrX1sFd7oGk-Banner%2520links%2520page.png",
-      "caption": "Go to Employee Self-Service"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/Hj1gsdk4_7TTaNmC.png",
-      "caption": "Job Summary"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/_rGZV4ePTEdfY1lv.jpg",
-      "caption": "Review Salaries by Position"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/muXKFXbIYyam0sRn-360_F_319724815_nx2AmCuoFez3KQN2ssNLvY0umDxjZ1TC.jpg",
-      "caption": "Employee Self-Service: Reviewing Annual Salary"
-    }
-  ]
+ "doc_id": "etr_project_team_13_employee_self_service_reviewing_annual_sal",
+ "title": "Employee Self-Service: Reviewing Annual Salary \u2014 Building the Project Team: Contractual Hiring and Compensation",
+ "display_label": "Employee Self-Service: Reviewing Annual Salary \u2014 Building the Project Team: Contractual Hiring and Compensation",
+ "category": "trainings",
+ "subcategory": "e_training",
+ "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+ "procedure_url": "https://share.articulate.com/P_TX_Sz334DiNOJZ0upJ7#/lessons/VF0KEpbPDT4OB4YZBNYTqx8cU2fwEy40",
+ "content": "Employee Self-Service: Reviewing Annual Salary\n\nFrom the ORA eTraining module \"Building the Project Team: Contractual Hiring and Compensation\" (lesson 13 of 15).\nSelf-Service: Job Description Personnel Data\nHow to Lookup Your Annual Salary\nSummary\nLorem ipsum dolor sit amet, consectetur adipiscing elit. In purus velit, tincidunt ac nibh quis, sollicitudin varius libero. Nullam at mi felis. Donec a scelerisque augue, sit amet porttitor nibh. Suspendisse at lorem ut elit placerat blandit.\nGo to Employee Self-Service\nFirst, you must make your way to the Employee Self-Service portal of Banner where you will be prompted to enter your MSU credentials. You can find the Banner Links homepage here .\nJob Summary\nClick on the drop down arrow next to \"Job Summary.\" Then, click on the \"Job Information\" link.\nReview Salaries by Position\nHere, all current and previous positions will be listed. By clicking on the drop down arrows next to each position you can review a salary history from contract inception to date. This is where you can source the salary data for faculty summer contracts.\nLIGHT\nComplete the content above before moving on.",
+ "last_scraped": "2026-08-06",
+ "images": [
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/pBBMOKrX1sFd7oGk-Banner%252520links%252520page.png",
+   "caption": "Go to Employee Self-Service"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/Hj1gsdk4_7TTaNmC.png",
+   "caption": "Job Summary"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/_rGZV4ePTEdfY1lv.jpg",
+   "caption": "Review Salaries by Position"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/muXKFXbIYyam0sRn-360_F_319724815_nx2AmCuoFez3KQN2ssNLvY0umDxjZ1TC.jpg",
+   "caption": "Employee Self-Service: Reviewing Annual Salary"
+  }
+ ]
 }

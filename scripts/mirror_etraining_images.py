@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -44,7 +45,19 @@ UA = "Mozilla/5.0 (compatible; ORANavigatorKB/1.0; +https://ora.inavigator.ai)"
 
 
 def public_url(bucket: str, object_name: str) -> str:
-    return f"https://storage.googleapis.com/{bucket}/{object_name}"
+    """Browser-fetchable URL for a mirrored object.
+
+    The object NAME legitimately contains percent signs: Rise's own keys arrive
+    already URL-encoded ("...Screenshot%25202024-11-11..."), and object_name()
+    stores that last segment verbatim, so the blob really is called `%2520`.
+    Emitting it raw produces a URL the server decodes back to `%20`, which names
+    no object -- a 404 on every screenshot whose original filename had a space,
+    i.e. most of the genuine Banner captures, while the stock photos (plain
+    names) keep working. Quote with safe="/" so the path separators survive and
+    only the `%` is escaped. Measured 2026-08-07: 78 of 267 stored URLs were
+    dead this way, and re-encoding fixed all 78.
+    """
+    return f"https://storage.googleapis.com/{bucket}/{urllib.parse.quote(object_name, safe='/')}"
 
 
 def object_name(module: str, key: str) -> str:

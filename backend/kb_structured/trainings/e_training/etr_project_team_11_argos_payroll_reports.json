@@ -1,21 +1,21 @@
 {
-  "doc_id": "etr_project_team_11_argos_payroll_reports",
-  "title": "ARGOS Payroll Reports — Building the Project Team: Contractual Hiring and Compensation",
-  "display_label": "ARGOS Payroll Reports — Building the Project Team: Contractual Hiring and Compensation",
-  "category": "trainings",
-  "subcategory": "e_training",
-  "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
-  "procedure_url": "https://share.articulate.com/P_TX_Sz334DiNOJZ0upJ7#/lessons/T9CfFDRVz17-I7AbzK1DxHfg3yZdsSG6",
-  "content": "ARGOS Payroll Reports\n\nFrom the ORA eTraining module \"Building the Project Team: Contractual Hiring and Compensation\" (lesson 11 of 15).\nARGOS Reporting: More Accurate Payroll Data\nResearch Administrators at Morgan should have access to Argos reporting tool's Principal Investigator folder. This folder includes reports that allow users to quickly generate accurate budget screenshots and access more detailed payroll information, including salary and fringe cost data. These reports provide a more complete and user-friendly view of sponsored project personnel expenses than what is typically available through common Banner budget views.\nComplete the content above before moving on.",
-  "last_scraped": "2026-08-06",
-  "images": [
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/k2nzkdLBDYyYopiU-121222_TylerHall-Morgan-State.jpeg",
-      "caption": "ARGOS Payroll Reports"
-    },
-    {
-      "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/-a9DG-JXruejq9Xz-NHIDIST%2520Example.PNG",
-      "caption": "ARGOS Payroll Reports"
-    }
-  ]
+ "doc_id": "etr_project_team_11_argos_payroll_reports",
+ "title": "ARGOS Payroll Reports \u2014 Building the Project Team: Contractual Hiring and Compensation",
+ "display_label": "ARGOS Payroll Reports \u2014 Building the Project Team: Contractual Hiring and Compensation",
+ "category": "trainings",
+ "subcategory": "e_training",
+ "source_url": "https://www.morgan.edu/office-of-research-administration/trainings/e-training",
+ "procedure_url": "https://share.articulate.com/P_TX_Sz334DiNOJZ0upJ7#/lessons/T9CfFDRVz17-I7AbzK1DxHfg3yZdsSG6",
+ "content": "ARGOS Payroll Reports\n\nFrom the ORA eTraining module \"Building the Project Team: Contractual Hiring and Compensation\" (lesson 11 of 15).\nARGOS Reporting: More Accurate Payroll Data\nResearch Administrators at Morgan should have access to Argos reporting tool's Principal Investigator folder. This folder includes reports that allow users to quickly generate accurate budget screenshots and access more detailed payroll information, including salary and fringe cost data. These reports provide a more complete and user-friendly view of sponsored project personnel expenses than what is typically available through common Banner budget views.\nComplete the content above before moving on.",
+ "last_scraped": "2026-08-06",
+ "images": [
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/k2nzkdLBDYyYopiU-121222_TylerHall-Morgan-State.jpeg",
+   "caption": "ARGOS Payroll Reports"
+  },
+  {
+   "url": "https://storage.googleapis.com/oranavigator-kb-assets/etraining/form_summer_contracts_interactive/-a9DG-JXruejq9Xz-NHIDIST%252520Example.PNG",
+   "caption": "ARGOS Payroll Reports"
+  }
+ ]
 }
