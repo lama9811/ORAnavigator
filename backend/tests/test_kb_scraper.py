@@ -471,3 +471,53 @@ def test_first_sighting_of_a_file_with_documents_is_a_baseline_not_a_change():
 def test_a_never_seen_file_with_no_documents_is_not_a_baseline():
     # It is genuinely new information, so it drafts on the first run.
     assert run._is_file_baseline(known=None, doc_ids=[]) is False
+
+
+# ---------------------------------------------------------------------------
+# Bare-relative document links. morgan.edu writes every PDF/DOCX link this way
+# and resolves it with <base href="https://www.morgan.edu/">. These used to
+# normalize to "" and be dropped, which disabled the only mechanism that
+# discovers a file with no KB document.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("raw", [
+    "Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook5.pdf",
+    "./Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook5.pdf",
+])
+def test_bare_relative_document_link_resolves_against_the_site_root(raw):
+    page = "https://www.morgan.edu/office-of-research-administration/resources/templates"
+    assert fp.normalize_url(raw, page) == (
+        "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook5.pdf"
+    )
+
+
+def test_bare_relative_is_not_resolved_against_the_containing_page():
+    """The <base> tag points at the root, so page-relative joining is wrong.
+
+    urljoin against the page URL yields a plausible path that 404s -- a worse
+    outcome than dropping the link, because it looks like a real dead file.
+    """
+    page = "https://www.morgan.edu/office-of-research-administration/resources/templates"
+    got = fp.normalize_url("Documents/ora/x.docx", page)
+    assert "/resources/Documents/" not in got
+    assert got == "https://www.morgan.edu/Documents/ora/x.docx"
+
+
+def test_collect_file_links_now_sees_bare_relative_pdfs():
+    crawler = _load("crawler")
+    raw = [
+        "Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook1.pdf",
+        "Documents/ADMINISTRATION/OFFICES/ora/Templates/budget.docx",
+    ]
+    out = crawler._collect_file_links(
+        raw, "https://www.morgan.edu/office-of-research-administration/resources"
+    )
+    assert out == [
+        "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/PI/Handbook1.pdf",
+        "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Templates/budget.docx",
+    ]
+
+
+def test_fragment_only_href_is_still_dropped():
+    """The accordion toggles are <a href="#"> -- they must not become URLs."""
+    assert fp.normalize_url("#", "https://www.morgan.edu/ora") == ""

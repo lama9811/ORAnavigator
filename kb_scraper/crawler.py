@@ -171,8 +171,23 @@ def _extract(page) -> tuple[str, list[str]]:
 
     links: list[str] = []
     try:
+        # `e.href` (the DOM property), NOT getAttribute('href') (the raw string).
+        # morgan.edu writes its document links as bare relative paths --
+        # href="Documents/ADMINISTRATION/OFFICES/ora/BasicChecklist.pdf" -- and
+        # resolves them with a page-level <base href="https://www.morgan.edu/">.
+        # normalize_url() only understands absolute, protocol-relative and
+        # root-relative forms, so every one of those raw strings normalized to ""
+        # and was silently dropped: measured, ALL 13 pre-award pages reported
+        # file_links=[] while demonstrably linking 17 PDFs, and all five PI
+        # Handbooks were invisible. That disables the one mechanism the code
+        # calls "the only way a file with no KB document is ever discovered".
+        # The DOM property is already absolute and already honours <base>, so the
+        # browser does the resolution we would otherwise have to reimplement --
+        # and would reimplement WRONGLY, since urljoin against the page URL gives
+        # /office-of-research-administration/resources/Documents/... rather than
+        # /Documents/....
         links = page.eval_on_selector_all(
-            "a[href]", "els => els.map(e => e.getAttribute('href'))"
+            "a[href]", "els => els.map(e => e.href || e.getAttribute('href'))"
         ) or []
     except Exception:
         pass

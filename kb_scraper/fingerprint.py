@@ -53,6 +53,22 @@ def normalize_url(url: str, base: str = "") -> str:
         url = urlunsplit((parts.scheme, parts.netloc, url, "", ""))
     elif url.startswith("/"):
         url = "https://www.morgan.edu" + url
+    elif not urlsplit(url).scheme and not url.startswith("#"):
+        # A BARE relative path: href="Documents/ADMINISTRATION/OFFICES/ora/x.pdf".
+        # This is how morgan.edu writes every document link, and it used to fall
+        # through every branch above and return "" -- so all 17 pre-award PDFs
+        # and all five PI Handbooks were dropped at the point of discovery.
+        #
+        # Resolved against the SITE ROOT, not against the containing page, and
+        # that is not a shortcut: the pages carry <base href="https://www.morgan.edu/">,
+        # so the browser resolves them from the root too. urljoin against the page
+        # URL would invent /office-of-research-administration/resources/Documents/...
+        # -- a plausible-looking URL that 404s, which is worse than dropping it.
+        #
+        # crawler._extract() now reads the DOM `href` property, which already does
+        # this resolution correctly; this branch is the safety net for any caller
+        # that still passes a raw attribute string.
+        url = "https://www.morgan.edu/" + url.lstrip("./")
 
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https"):
