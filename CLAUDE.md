@@ -24,10 +24,18 @@ The chat path: frontend → backend (`vertex_agent.py`) → ADK agent (`adk_agen
   ```
   Env vars are required because importing `main` constructs the app. `test_agent_instruction.py` needs `google-adk` (not always installed locally). App-level e2e tests use FastAPI `TestClient` with `dependency_overrides` for `get_db` / `get_current_user` (see `tests/test_proposals_api_e2e.py`).
 - **Frontend:** `cd frontend && npm run build` (no `node_modules`? `npm install` first). It's a **PWA** — verify changes in a fresh/incognito window.
-- **Deploy: there is NO Cloud Build trigger — a merge to `main` ships NOTHING.** Confirmed again 2026-08-05: `gcloud builds list` showed no build since 2026-07-29 despite several merges, and production was still serving an image built hours before the code existed. Every deploy is submitted **by hand**:
+- **Deploy: there IS a Cloud Build trigger — `deploy-to-main` — and a push to `main` SHIPS TO PRODUCTION.** This corrects what this file asserted until 2026-08-07 ("there is NO trigger; a merge to `main` ships NOTHING; every deploy is by hand"), which was wrong and cost a production incident. **`git push origin main` is a deploy.** Treat it with the care golden rule 7 already demands.
+  **Why the old claim survived so long — both checks that would disprove it come back EMPTY:**
+  ```bash
+  gcloud builds triggers list          # -> empty
+  gcloud builds list --limit=10        # -> shows ONLY hand-submitted builds
+  ```
+  Trigger-fired builds and the trigger itself live in a **region** that neither default-scoped command reads, so the evidence for "no trigger" is an artifact of the query, not a fact about the project. Observed 2026-08-07: a build appeared in the Console (`Trigger: deploy-to-main`, branch `main`, commit `001eb85`) that was absent from `gcloud builds list`, and a Cloud Run revision appeared with an image nobody could account for — it was the push firing the trigger. **Confirm from the Cloud Console, or from the serving revision, never from an empty `gcloud builds list`.**
+  A manual submit is still possible and is what you want when deploying **uncommitted** work (it uploads the working directory, not the commit):
   ```bash
   gcloud builds submit --config=cloudbuild.yaml . --substitutions=SHORT_SHA=$(git rev-parse --short HEAD)
   ```
+  **Do NOT push and then also submit by hand.** Both builds tag the same `SHORT_SHA`, Docker builds are not reproducible, so they produce different digests and **race on the tag**. The `deploy-frontend` verify step then resolves `frontend:<sha>` to the *other* build's digest and fails with "the serving revision does NOT run this build's image" — a true statement about a harmless situation, and a red build that means nothing. Measured 2026-08-07: two builds of `001eb85` started 17 seconds apart and did exactly this.
   **The `--substitutions=SHORT_SHA=…` is REQUIRED on this config too, not just the scraper's.** `cloudbuild.yaml` interpolates `${SHORT_SHA}` in **9 places**, and it is populated only for repo-triggered builds — a local directory submit leaves it empty and the build dies instantly with `invalid image name ".../adk-agent:": could not parse reference`, naming a service rather than the missing substitution. This file previously gave the command without the flag, so the documented instruction failed on first contact. There's also a manual `deploy-cloudrun.sh` (needs local `gcloud`). **Always confirm a deploy actually ran** — `gcloud run services describe <svc> --region=us-central1 --format='value(status.latestReadyRevisionName)'` — rather than inferring it from a merge or a green build list. The **backend** runs `--min-instances=1 --cpu-boost` so the chat path never pays a 30–60s cold start (the dominant cause of slow first answers); the frontend stays `min-instances=0` (static, off the per-question path). **The ADK service MUST stay a SINGLE instance (`--min-instances=1 --max-instances=1`).** It stores agent sessions **in memory** (no `ADK_SESSION_DB_URI`), so with >1 instance a session created on one instance **404s on `/run_sse`** when the next call is routed to another — the user sees *"An error occurred while processing your question"*, intermittently (random per-instance routing). A brief bump to `--min-instances=2` for concurrency caused exactly this outage. **Never scale ADK horizontally without wiring a shared session store (`ADK_SESSION_DB_URI`) first.** `concurrency=80` lets one warm ADK instance handle normal + demo load fine. (You can apply a scaling change live without a full rebuild via `gcloud run services update <svc> --min-instances=N --max-instances=M`.) **A red build does NOT mean nothing shipped — and `deploy-frontend` is now the only step that tells the truth.** Cloud Run versions each service optimistically, `gcloud run deploy` asserts the version it read, and this service carries the `ora.inavigator.ai` domain mapping whose controller reconciles independently and bumps that version mid-deploy. Observed 2026-08-06: the deploy created the revision, routed 100% of traffic to it, **then exited 1** with `ABORTED: version '<16:49:50>' was specified but current version is '<18:04:07>'`. A red build that had shipped everything — worse than a failure, because the signal then lies in both directions (a green build on this repo already ships nothing, since there is no trigger). The step now retries the race three times and decides its exit code on the only evidence that matters: whether the serving revision runs the digest this build pushed. It **fails closed** — an unreadable digest or revision exits 1 rather than letting an empty string glob-match anything. **`cloudbuild.yaml` is a single point of failure** — the backend deploy step is an inline bash heredoc, so a one-character typo there (e.g. a stray `=` swallowing `--min-instances`) breaks the *whole* deploy and silently blocks every merge from shipping. Validate it (`python3 -c "import yaml; yaml.safe_load(open('cloudbuild.yaml'))"`) after any edit.
 - **Backend service-account IAM** (`oranavigator-backend@<proj>.iam.gserviceaccount.com`): the admin dashboard **writes** to the KB datastore, so the SA needs **`roles/discoveryengine.editor`**. With `roles/discoveryengine.viewer` alone (what `deploy-cloudrun.sh setup_iam` used to grant) reads work — the KB browser lists and searches fine — but every **Save 403s** with `discoveryengine.documents.update denied`, which reads as a UI bug rather than a permissions one. Editor covers `documents.create/.update/.delete`. Note this is a **project-level** grant and therefore broader than needed (it also allows datastore/engine create+delete); least privilege would be a custom role limited to `discoveryengine.documents.*`. Accepted deliberately — revisit if the project gains other Discovery Engine resources. `roles/discoveryengine.viewer` is now redundant alongside it. **`gcloud` may not be on `PATH` locally** — it lives at `~/google-cloud-sdk/bin/gcloud`.
 - **Secrets** live in Secret Manager as `ora-database-url`, `ora-jwt-secret`, `ora-admin-email`, `ora-admin-password`, `ora-redis-url`, `ora-firecrawl-api-key`, plus **`SMTP_USER` / `SMTP_PASS`** (mapped in `cloudbuild.yaml`). Note the SMTP pair **breaks the `ora-*` naming convention** — they were created by hand on 2026-07-28 and replace the retired `ora-smtp`; don't "fix" the names without re-pointing `--set-secrets`. The Cloud Build runs as the **default compute service account** (`<projnum>-compute@…`), which lacks `secretmanager.secrets.create` — so the `deploy-backend` step **self-heals** `ora-firecrawl-api-key` (creates a `unset` placeholder if missing) so a missing optional secret never breaks the deploy. Create real secret values via the Console (the project picker prevents the "wrong project" mistake). **A hand-created secret has an EMPTY IAM policy** — the backend SA can't read it and the deploy fails outright. `SMTP_USER`/`SMTP_PASS` both needed an explicit grant: `gcloud secrets add-iam-policy-binding <name> --member=serviceAccount:oranavigator-backend@<proj>.iam.gserviceaccount.com --role=roles/secretmanager.secretAccessor`. The pre-existing `ora-*` secrets already carry this binding, which is why the omission isn't obvious.
@@ -46,7 +54,7 @@ The chat path: frontend → backend (`vertex_agent.py`) → ADK agent (`adk_agen
 4. **Human reviews before commit.** Extractions and budgets are returned for review; nothing is saved until the user confirms.
 5. **Conventions:** structured data stored as **TEXT columns + `json.dumps/loads`** (e.g. `Submission.budget_json`, `compliance_json`, `sections_json`, `notes`). New columns are added with a **self-healing migration** in `main.py:init_db()` (try `SELECT col`; on error `ALTER TABLE ADD COLUMN`) — safe on prod MySQL, no Alembic.
 6. **One feature = one focused change.** Don't refactor unrelated code. Verify before claiming done.
-7. **Never push automatically.** Do NOT run `git push` (and don't open PRs) on your own — only when the user explicitly asks in that message. Pushing to `main` triggers the Cloud Build deploy, so an unrequested push ships to production. Committing locally is fine to stage work, but wait for an explicit "push"/"deploy" before it leaves the machine. Approval to push once does not carry over to later changes.
+7. **Never push automatically.** Do NOT run `git push` (and don't open PRs) on your own — only when the user explicitly asks in that message. Pushing to `main` fires the **`deploy-to-main` trigger** and ships to production — CONFIRMED 2026-08-07, and note this rule was right while the Deploy section above said the opposite for months. An unrequested push is an unrequested deploy. A push is also sufficient: do NOT follow it with a manual `builds submit`, which races the trigger's build on the same image tag. Committing locally is fine to stage work, but wait for an explicit "push"/"deploy" before it leaves the machine. Approval to push once does not carry over to later changes.
 
 ## The Proposal Toolkit (backend `services/` + per-proposal modals in `frontend/src/components/`)
 Each proposal (`Submission` + `SubmissionTask` in `models.py`, logic in `proposals_service.py`, sponsor task templates in `proposal_templates.py`) has a toolbar of tools:
@@ -119,6 +127,109 @@ export GOOGLE_CLOUD_PROJECT=infra-vertex-494621-v1
 export VERTEX_AI_DATASTORE_ID="projects/infra-vertex-494621-v1/locations/us/collections/default_collection/dataStores/oranavigator-kb-v8"
 ```
 
+## The 2026-08-07 completeness pass (crawler fixes + what "complete" means here)
+
+ORA asked whether the KB had everything on morgan.edu/ora. Answering it required fixing two
+crawler bugs first, and the answer changed the KB's scope rules.
+
+**THE KB HOLDS ORA KNOWLEDGE ONLY — being linked from morgan.edu/ora is NOT the test.** ORA's
+site links a lot of material other offices own. The test is whether a research administrator
+would ask ORA about it. Applied 2026-08-07 after the KB was found able to answer *what spill
+supplies are stocked in the BioLabs* and *how long to hold an eye open at the eyewash station*:
+**98 of the 110 documents ingested from site-linked files (543,924 of 593,941 characters, 88%)
+were removed** — Title IX Prohibited Conduct Procedures and the Sexual Harassment Policy, the
+Transformation Morgan 2030 strategic plan, the Biological Safety Manual, HR diversity plans and
+EEO FAQs, Title VI, the Nondiscrimination Policy, IT 2FA instructions, the ARF emergency call
+list. Kept the 12 that are research administration (SBIR/STTR + Subrecipient Monitoring decks,
+ORA6 Subaward Process, Pivot-RP guide, FD syllabus and link lists, Research Misconduct flowchart
+and deck, IRB-CITI). Nothing became undiscoverable: the ORA *page* documents still record that
+these files exist and that ORA links them; only the ingested bodies are gone. Beyond looking
+wrong, 543k characters of off-topic text competes for the same top-N retrieval slots as the real
+answer. **Classify before loading — reversing it means deleting from both copies.**
+
+**The crawler could not see ORA's documents at all.** `_extract()` read
+`getAttribute('href')` — the raw string — and morgan.edu writes every PDF/DOCX link as a bare
+relative path (`href="Documents/ADMINISTRATION/OFFICES/ora/x.pdf"`) resolved by a page-level
+`<base href="https://www.morgan.edu/">`. `normalize_url()` understood absolute, `//` and
+`/`-rooted forms only, so those strings normalized to `""` and were dropped at the point of
+discovery: the templates page reported **0 of its 10** .docx, the PI Handbooks page **0 of 5**,
+all 13 pre-award pages `file_links: []` while linking 17 PDFs. That disabled the one mechanism
+the code calls *"the only way a file with no KB document is ever discovered."* `_extract()` now
+reads the DOM **`href` property** (already absolute, already honours `<base>`); `normalize_url()`
+learned the bare-relative form as a safety net. Both resolve against the **site root**, not the
+containing page — `urljoin` against the page URL invents
+`/office-of-research-administration/resources/Documents/...`, a plausible URL that 404s, which is
+worse than dropping it. After the fix the crawl finds **277 distinct files** where it found 60.
+
+**One staff profile is outside the section prefix.** The directory's "VIEW PROFILE" link for
+Keyshawn Moncrieffe is the only one of 14 that leaves `/office-of-research-administration` —
+it lives under `/research-and-economic-development/about-us/staff-directory/`. Added to
+`_ORA_ALIASES`: same failure class as the `/spark` vanity URL, opposite direction (a *longer*
+out-of-section path). **All 14 `staff_*` documents now point `source_url` at the person's PROFILE
+page**, with the directory kept as `directory_url` — they previously all pointed at the directory,
+leaving 22,708 characters of bios, degrees and certifications watched by nothing.
+
+**`MAX_PDF_PAGES = 40` / `MAX_CHARS = 200_000` silently truncate.** Correct for the scrape job
+(a change-detection gate over 277 files); wrong for ingestion, and the failure is invisible — a
+truncated read returns clean text with no error, so the document looks complete and a coverage
+check wrongly clears. Measured: MSU Procurement Policies is 118 pages / 245,842 chars and came
+back **36% captured**; the Prohibited Conduct Procedures is 89 pages and came back at 40, losing
+128,357 characters *after* it had already been pushed live. `extract_text()` now takes
+`max_pages`/`max_chars`; **loaders must pass `None` for both.**
+
+**Screenshot URLs were 404ing in production.** Rise asset keys arrive already URL-encoded and
+`mirror_etraining_images.py` stored the last path segment verbatim, so the blob really is named
+`...Screenshot%2520...` — but the URL was emitted unescaped, and the server decoded it back to a
+name that does not exist. **74 of 262 stored URLs were dead**, and the survivors were Rise's stock
+photos (plain filenames need no escaping), so the feature looked like it worked while exactly the
+genuine Banner captures were broken. Repair is deliberately **empirical** (`fix_etraining_image_urls.py`
+HEADs the bucket): a textual fix cannot be both correct and idempotent, because the broken form
+`%2520` is itself a valid escape sequence — "escape any % that isn't already an escape" fixes
+**0 of 78**, and unquote-then-requote mangles a correct URL back to the broken one.
+
+**A whole-file manifest snapshot is the WRONG revert model.** `--revert` restored
+`_all_documents.jsonl` from a snapshot taken at write time, which discarded 54 rows another
+generator had added since and orphaned their files on disk — silently, with tests still green.
+Reverts now remove **only their own rows, by doc_id**, and `scripts/merge_kb_payloads.py` is the
+single writer of the manifest (concurrent writers to one file lose whole batches with no error).
+After any bulk load, assert every manifest row has a file: exactly one legitimately does not
+(`form_irb_informed_consent_template`).
+
+**`create_kb_document` DROPS an unknown `kb_path` rather than rejecting the write.** It validates
+against `kb_tree.node_paths()`, so an invented path yields a document that saves fine, searches
+fine, and is quietly unplaced in the **Unfiled** bucket — visible only as a count in a panel
+nobody watches. `trainings/training_presentations` and `trainings/spark` are NOT nodes.
+`load_ora_site_files.py` now asserts its placements are real nodes at start-up.
+
+**Quiz answer keys: the key is a PER-ANSWER `correct` boolean on each answer object**, not a
+block-level `correct`/`corrects` id field — and Rise **omits the key entirely when false**, so
+absent means incorrect. Measured against all 8 live payloads: 108 items carry a key, **105 were
+already marked correctly, 0 mismarked** (387 options compared). A claim that 83% were inverted did
+not survive checking — it compared the wrong field. The real gap was 3 `MULTIPLE_RESPONSE`
+"select all that apply" items rendered as bare prose. **Two of those three are internally
+inconsistent in ORA's own course data** (the key marks one option correct while
+`feedbackIncorrect` says "One of your selections is not a requirement", implying three are), so
+each rendered block carries an explicit note that the module disagrees with itself. Raise with ORA.
+
+**There is no video or audio in the eTraining modules.** Zero blocks of family
+`video`/`audio`/`embed`/`storyline` across all 8 payloads; the `mp4` and `vimeo` strings that
+suggest otherwise are a random substring in a generated block id (`clx26dxn301kj35753yjqmp4v`) and
+the `rise-vimeo-patch` feature flag. The 52 `multimedia` blocks are all `variant: attachment`.
+**ORA's video narration IS capturable** — YouTube carries auto-generated captions for the ~10 site
+recordings; 8 of 10 transcribe (222,217 chars). The 2 failures are external NIH/NLM clips with
+captions disabled. Transcripts are labelled as speech recognition in their own first lines and
+carry the video URL, because a mis-heard dollar figure is indistinguishable from an authored one
+once it is prose in a KB. Duplicate uploads collapse by transcript hash (`qD6Efajaq5M` and
+`zoDvRuwD0l4` are the same seminar under two ids).
+
+**Screenshots are now READ, not just shown.** 235 of 262 yield text (93,252 chars), loaded as
+**51 per-lesson documents** rather than 235 tiny ones — median transcription is 216 characters.
+Transcriptions under 25 chars are dropped as captions on decorative photos. Vision is also a
+second, content-based filter the filename rule cannot be: several files named `Screenshot ...`
+are macOS wallpaper.
+
+**KB is now 723 live documents / 724 manifest rows.**
+
 ## ORA eTraining modules (Articulate Rise) — `backend/kb_structured/_etraining_modules.json`
 
 **8 modules, 294,190 characters, 106 knowledge checks, 52 embedded files.** Verified complete: a residual audit against the raw course payload found **1,426 prose strings, 0 missing — 100%**. Extracted 2026-08-05 after ORA asked whether the modules were in the KB. They were not: the KB held a **300–660 character description** of each ("a module about travel exists") and nothing they teach. This is Morgan's own grant-spending procedure, authored by ORA, and it exists nowhere else in the KB — not on the website pages, not in the PDFs.
@@ -151,7 +262,7 @@ Attachments live on `articulateusercontent.com/{key}` (the `attachment.key` fiel
 
 **Screenshots are now SHOWN in chat answers (2026-08-06).** 183 real screenshots are mirrored to **`gs://oranavigator-kb-assets/etraining/{module}/`** and attached to the 69 lesson documents that have them, rendered under the answer via the same resolver and the same suppression guards as the Documents block. **Mirrored, not hot-linked:** the Articulate URL embeds the Rise course id, so republishing a module changes it — which has already happened to three modules. Public-read is deliberate (they are already served without auth from Articulate, and proxying them would put image traffic through a single-worker backend). **Filter by FILENAME, never by size.** Two rules, both name-based: drop Rise's stock photo library (`6_food.jpg`, `mountains.jpg`, `18_tech.jpg` — plain dictionary words, no upload prefix) and drop brand/UI assets (`logo`, `bear_head`, `Asset 1`, `favicon`). A size threshold fails in **both** directions and was measured doing so: a 60 KB floor discarded **86 genuine Banner screenshots** whose filenames read `fgibdst screenshot #2`, `budget transfer #2`, `enter time #3` — a third of the real set — while happily keeping a **1 MB `Morgan_logo.jpg`**. Real screenshots run from **2.9 KB to 2 MB**; there is no size that separates them. Block family does not separate them either. Built by `scripts/mirror_etraining_images.py` (`--dry-run`, idempotent) from `_etraining_images.json`.
 
-**Still not captured:** video narration (no transcripts), and the contents of the 52 attachments (linked, not read). **Screenshots are shown, not READ** — no vision extraction, so a question whose answer exists only *inside* an image still cannot be answered in words. **SPLIT into per-lesson documents (2026-08-06).** Loading each module whole put 17k–84k characters into a KB averaging a few thousand, and `chunkingConfig` is create-time only and does not support `text/plain`, so every document is retrieved WHOLE — one procurement question pulled the entire course. The 8 modules are now **83 lesson documents** (median ~2,470 chars) at `trainings/e_training`, plus the 8 originals rewritten as **overviews** (description, lesson index, attachment list). The parents deliberately do NOT keep the full text: leaving it in both places would make every lesson compete with its own parent, which is the problem the split fixes. Each lesson carries a **deep link in `procedure_url`** (`{share}#/lessons/{id}`), so the chat attachment feature opens the learner at that exact lesson rather than the top of a 23-lesson course. Built by `scripts/split_etraining_lessons.py` (`--dry-run` / `--revert`) from `_etraining_lessons.json`; parent bodies are saved to `_etraining_parent_backup.json` first. **KB is now 468 documents** (manifest 469 rows — the extra is the fileless `form_irb_informed_consent_template`). The 2026-08-06 audit added three: `trainings_spark` and the two test-prep chapters `form_racc_chapter_internal_controls` / `form_racc_chapter_herd_survey`.
+**Still not captured (updated 2026-08-07):** nothing of substance. The three items previously listed here are done or were wrong. Video narration: **there is no video or audio in these modules at all** (see the 2026-08-07 section). The 52 attachments are **downloaded, extracted and loaded** (49 readable, 353,212 chars; 3 unreadable — a legacy `.doc`, a BIFF `.xls`, and a PNG needing OCR). Screenshots are **READ**: 235 of 262 transcribed by Gemini vision into 51 per-lesson documents. One real gap remains: pdfplumber does not read AcroForm field VALUES, so every "(Example)" filled form attachment extracts to exactly its blank template — the KB gets the blank, never the worked example. **SPLIT into per-lesson documents (2026-08-06).** Loading each module whole put 17k–84k characters into a KB averaging a few thousand, and `chunkingConfig` is create-time only and does not support `text/plain`, so every document is retrieved WHOLE — one procurement question pulled the entire course. The 8 modules are now **83 lesson documents** (median ~2,470 chars) at `trainings/e_training`, plus the 8 originals rewritten as **overviews** (description, lesson index, attachment list). The parents deliberately do NOT keep the full text: leaving it in both places would make every lesson compete with its own parent, which is the problem the split fixes. Each lesson carries a **deep link in `procedure_url`** (`{share}#/lessons/{id}`), so the chat attachment feature opens the learner at that exact lesson rather than the top of a 23-lesson course. Built by `scripts/split_etraining_lessons.py` (`--dry-run` / `--revert`) from `_etraining_lessons.json`; parent bodies are saved to `_etraining_parent_backup.json` first. **KB is now 723 live documents** (manifest 724 rows — the extra is the fileless `form_irb_informed_consent_template`; count last verified 2026-08-07). The 2026-08-06 audit added three: `trainings_spark` and the two test-prep chapters `form_racc_chapter_internal_controls` / `form_racc_chapter_herd_survey`.
 
 ## Caching (layers + lifetimes)
 Caching exists to dodge the two real latency costs — the **Gemini call** and the **networked Cloud SQL read** from a **single-worker** backend — NOT to cache authoritative figures. **Cache the expensive (LLM answers), never the authoritative (budgets, statuses, verdicts, deadlines).**
@@ -210,7 +321,7 @@ Two tiers: **short-term** (current chat history) and **long-term** (`UserMemory`
   - Still open: `SMTP_USER` is an **individual's** mailbox + App Password, so email dies if that person leaves or rotates credentials. A service mailbox (not a group) is the durable fix. `SKIP_EMAIL_VERIFICATION` stays `true` until a live send to a **non-Morgan** address is confirmed — same-domain delivery doesn't prove external delivery.
 
 ## Known limitations / open work
-- **The 14 staff PROFILE pages are monitored by nothing.** Every `staff_*` document carries `source_url`/`procedure_url` = the staff **directory** page, so the scraper watches names, titles, phones and emails but **not** the profile pages where the bios, degrees, certifications and publication lists actually live. A new credential or a rewritten bio would never be detected, and a citation cannot deep-link to a person's page. Two related quirks: `/staff-directory/farin-kamangar` and `/staff-directory/farin-kamangar-md-phd` are **byte-identical** (one document, two monitored URLs), and Keyshawn Moncrieffe's document carries detail (PhD, MBA, CCEP, the NSF-funded RISC initiative) that appears on **no page in the crawl** — so nothing in the scrape can verify or refresh it.
+- **RESOLVED 2026-08-07 — the 14 staff PROFILE pages are now monitored.** All 14 `staff_*` documents point `source_url`/`procedure_url` at the person's profile page (the directory is kept as `directory_url`), and Moncrieffe's out-of-prefix profile is in `_ORA_ALIASES`. The original problem, for context: Every `staff_*` document carries `source_url`/`procedure_url` = the staff **directory** page, so the scraper watches names, titles, phones and emails but **not** the profile pages where the bios, degrees, certifications and publication lists actually live. A new credential or a rewritten bio would never be detected, and a citation cannot deep-link to a person's page. Two related quirks: `/staff-directory/farin-kamangar` and `/staff-directory/farin-kamangar-md-phd` are **byte-identical** (one document, two monitored URLs), and Keyshawn Moncrieffe's document carries detail (PhD, MBA, CCEP, the NSF-funded RISC initiative) that appeared on no page in the crawl — **that is now known to be a SCOPE artifact, not unsourced content**: their profile page lives outside the section prefix, and every claim in the document matches it word for word.
 - **The live site contradicts itself on the current F&A rate, and that one is ORA's to fix.** `/pre-award/budget-development` says *"the current on-campus research F&A cost is 53% of the modified total direct cost"*; `/pre-award/fanda-cost-rates` gives **54.00% On-Campus / Organized Research** for 07/01/2025–06/30/2026 (the current period) and 53.00% for the prior year. `pre_award_budget_development` now records both **and points at the F&A Cost Rates page as authoritative**, which is the best the KB can do — it cannot resolve a contradiction that exists on the source. Raise it with ORA as a **website** correction.
 - **A KB content fix is TWO writes, and neither implies the other.** `scripts/apply_kb_gap_fixes.py` writes the committed snapshot (`/forms`, the citation URL map, `kb_tree`, the scraper's URL index — all of which need a **backend redeploy** to take effect); `scripts/push_kb_gap_fixes.py` writes the live datastore (the chatbot, effective immediately). Fixing only the snapshot changes nothing a PI would notice in chat. **And after the datastore write, the chat answer cache must be cleared** (admin → Sync All / `POST /api/admin/knowledge-base/sync-all`): the cache is keyed on `md5(normalized_query : model)` with no content hash, so a cached answer keeps replaying precisely the fact the push just corrected, for up to 7 days.
 - **NSF (and similar Akamai sites)** block server-side URL fetches by IP. **Firecrawl** (set `FIRECRAWL_API_KEY`, free tier ~500 one-time credits) is the reliable path; the Jina/allorigins fallbacks are throttled from Cloud Run. Locally the direct fetch works (residential IP isn't blocked). Uploaded PDFs always work regardless.
