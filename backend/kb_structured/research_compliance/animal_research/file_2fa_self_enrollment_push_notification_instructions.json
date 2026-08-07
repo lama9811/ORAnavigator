@@ -1,0 +1,14 @@
+{
+ "doc_id": "file_2fa_self_enrollment_push_notification_instructions",
+ "title": "2FA Self Enrollment Push Notification Instructions",
+ "category": "research_compliance",
+ "subcategory": "animal_research",
+ "display_label": "2FA Self Enrollment Push Notification Instructions",
+ "source_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/2FA%20Self%20Enrollment%20Push%20Notification%20Instructions.pdf",
+ "procedure_url": "https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal%20Research/2FA%20Self%20Enrollment%20Push%20Notification%20Instructions.pdf",
+ "content": "2FA Self Enrollment Push Notification Instructions\n\nSource document: https://www.morgan.edu/Documents/ADMINISTRATION/OFFICES/ora/Animal Research/2FA Self Enrollment Push Notification Instructions.pdf\nLinked from morgan.edu/ora. Extracted text of the file itself.\n\n2-Factor Authentication (2FA) Self Enrollment - Push Notifications\n____________________________________________________________________________\nSTEP 1 of 7: Start the Enrollment Process\nVisit https://duo-dmgmt.morgan.edu and login using your Morgan username and password. Click Start\nsetup on the next screen.\nSTEP 2 of 7: Select Your Device\nSelect Mobile phone and click Continue.\nSTEP 3 of 7: Enter Your Phone Number\nEnter your device\u2019s phone number. Select the box indicating you\u2019ve entered the correct number. Click\nContinue.\nSTEP 4 of 7: Select Your Device Type\nSelect your phone type. Click Continue.\n1\n\nSTEP 5 of 7: Download the Duo App on Your Mobile Device\nUsing your mobile phone, visit the application store (e.g., App Store or Google Play) to find and\ninstall the Duo Mobile app onto your phone. The Duo Mobile app logo looks like this\nOnce installed, go back to your computer and select the I have Duo Mobile Installed button.\nSTEP 6 of 7: Activate Your Device\nA QR code will appear on the next screen. Go back to your mobile device to open the Duo Mobile app.\nUse your mobile device to scan the QR code. Once completed, a green check will appear over the QR\ncode and you\u2019ll be able to click Continue.\nSTEP 7 of 7: Set Your Device Notification Preference\nWe recommend keeping the default setting (under the When I log in section) in place, so you will always\nhave the choice of how to receive an authentication notice. Click Save. When the wording on the Save\nbutton changes to Saved, you\u2019re all done and successfully enrolled!\nIt is highly recommended that you enroll more\nthan one device, so you have a backup in place.\nClick the Add another device link and follow the\non-screen instructions to get started.\n2",
+ "last_scraped": "2026-08-07",
+ "kb_path": "research_compliance/animal_research",
+ "legacy_category": "form",
+ "extracted_from_file": true
+}

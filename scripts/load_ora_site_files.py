@@ -62,10 +62,42 @@ PLACEMENT = [
     ("D-RED Seminars/", "trainings", "d_red_seminars", "trainings/monthly_d_red_seminars"),
     ("Faculty Development Seminars/", "trainings", "faculty_development",
      "trainings/new_faculty_development_seminars"),
-    ("/TrainingPresentations/", "trainings", "training_presentations",
-     "trainings/training_presentations"),
+    # NOT "trainings/training_presentations" -- that is not a node in the tree.
+    # create_kb_document validates kb_path against kb_tree.node_paths() and
+    # DROPS an unknown one rather than rejecting the write, so an invented path
+    # produces a document that saves fine, answers questions fine, and lands in
+    # the Unfiled bucket with no error anywhere. These two files are a subaward
+    # deck and a funding-database guide; file them where they belong.
+    ("ORA6 Subaward Process", "post_award", "post_award_subawards",
+     "post_award/post_award_subawards"),
+    ("Pivot-RP", "funding_sources", "external_databases",
+     "funding_sources/external_databases"),
 ]
 DEFAULT_PLACEMENT = ("resources", "documents", "resources")
+
+
+def assert_placements_are_real_nodes() -> None:
+    """Fail loudly at start-up rather than silently unfiling documents later.
+
+    The cost of getting this wrong is invisible: the document is created, it is
+    searchable, and only the admin tree shows anything is amiss -- as an Unfiled
+    count nobody is watching.
+    """
+    try:
+        sys.path.insert(0, os.path.join(REPO, "backend"))
+        from kb_tree import node_paths
+    except Exception as e:                      # tree unavailable -> skip, don't block
+        print(f"  (could not validate kb_paths: {e})")
+        return
+    valid = set(node_paths())
+    bad = [p for *_, p in PLACEMENT if p not in valid]
+    if DEFAULT_PLACEMENT[2] not in valid:
+        bad.append(DEFAULT_PLACEMENT[2])
+    if bad:
+        raise SystemExit(
+            "PLACEMENT names paths that are not tree nodes: " + ", ".join(sorted(set(bad)))
+            + "\nValid nodes come from kb_tree.node_paths(); an unknown path is "
+              "dropped on write and the document lands in Unfiled.")
 
 _HEADING = re.compile(
     r"^\s*(?:"
@@ -181,6 +213,7 @@ def main() -> int:
     if not os.path.exists(src):
         print(f"input not found: {src}\nPass --input <missing_files_text.json>")
         return 1
+    assert_placements_are_real_nodes()
     items = [i for i in json.load(open(src)) if i.get("chars", 0) > 0]
     print(f"files with extracted text: {len(items)}")
 
