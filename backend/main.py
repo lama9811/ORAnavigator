@@ -4297,86 +4297,35 @@ async def critique_draft(
 
 
 # ----------------------------------------------------------------------------
-# Section Drafting Coach (Phase 2): outline a proposal section, or give advisory
-# feedback on the PI's own draft of it. Coaching only -- never writes the prose.
+class EirReviewRequest(BaseModel):
+    draft_text: str = ""
 
-@app.get("/api/me/submissions/{submission_id}/sections")
-async def list_coach_sections(
+
+@app.post("/api/me/submissions/{submission_id}/eir-review")
+async def eir_review(
     submission_id: int,
+    payload: EirReviewRequest,
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """The proposal sections the coach can help with, for this submission's sponsor."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-    from services import section_coach as _sc
-    return {"sponsor": sub.sponsor, "sections": _sc.available_sections(sub.sponsor)}
+    """Completeness review of a pasted EiR proposal against NSF 23-598.
 
+    Stateless — reads the submission only for its title (the "Excellence in
+    Research:" prefix check) and its saved budget (the 30% equipment cap). The
+    pasted draft is NOT persisted: it is the PI's unpublished manuscript, and
+    storing it would create a copy nobody asked for.
 
-class SectionCoachRequest(BaseModel):
-    section_key: str
-    mode: str = "outline"          # "outline" | "review"
-    topic: str = ""                # optional: tailors the outline tips
-    draft_text: str = ""           # required for "review"
-
-
-@app.post("/api/me/submissions/{submission_id}/section-coach")
-async def section_coach(
-    submission_id: int,
-    payload: SectionCoachRequest,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Outline a section or review the PI's draft of it. Uses the submission's
-    sponsor + reconstructed solicitation context. Advisory; never authoritative."""
+    The returned `score` is completeness against the solicitation, computed in
+    code from coverage counts (golden rule 1). It is not a funding prediction,
+    and is withheld entirely when the AI layer is unavailable."""
     if not user:
         raise HTTPException(401, "Unauthorized")
     sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
     if sub is None:
         raise HTTPException(404, "Submission not found")
 
-    from services import section_coach as _sc
-    context = _proposals_service.reconstruct_solicitation_context(sub)
-    context["eligibility"] = _eligibility_text_from_notes(sub.notes)   # 'match THIS solicitation'
-    if payload.mode == "review":
-        result = _sc.review_section(sub.sponsor, payload.section_key, payload.draft_text, context)
-    else:
-        result = _sc.outline_section(sub.sponsor, payload.section_key, payload.topic, context)
-    if result is None:
-        raise HTTPException(400, "Unknown proposal section.")
-    return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
-
-
-@app.post("/api/me/submissions/{submission_id}/coherence")
-async def section_coherence(
-    submission_id: int,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Advisory cross-section coherence check: do the PI's SAVED sections agree
-    with each other (and with eligibility + budget)? Reads existing
-    sections_json/budget_json/notes -- no new state. Advisory; never authoritative."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-
-    from services import section_coach as _sc
+    from services import eir_review as _eir
     from services.budget_helper import compute_budget
-
-    raw = getattr(sub, "sections_json", None)
-    drafts = {}
-    if raw:
-        try:
-            drafts = json.loads(raw)
-        except (ValueError, TypeError):
-            drafts = {}
-    if not isinstance(drafts, dict):
-        drafts = {}
 
     budget = None
     raw_b = getattr(sub, "budget_json", None)
@@ -4386,119 +4335,96 @@ async def section_coherence(
         except (ValueError, TypeError):
             budget = None
 
-    context = _proposals_service.reconstruct_solicitation_context(sub)
-    context["eligibility"] = _eligibility_text_from_notes(sub.notes)
-    result = _sc.coherence_check(sub.sponsor, drafts, context, budget)
+    result = _eir.review_eir_draft(payload.draft_text, title=sub.title, budget=budget)
     return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
 
 
-@app.post("/api/me/submissions/{submission_id}/responsiveness")
-async def section_responsiveness(
+# Per-file and total upload ceilings. A full EiR package is a handful of PDFs;
+# these are generous enough for that and small enough that a mis-drop (a video,
+# a dataset) is rejected before it is read into memory.
+_EIR_MAX_FILE_BYTES = 25 * 1024 * 1024      # 25 MB per file
+_EIR_MAX_TOTAL_BYTES = 60 * 1024 * 1024     # 60 MB per request
+_EIR_MAX_FILES = 12
+
+
+@app.post("/api/me/submissions/{submission_id}/eir-review/upload")
+async def eir_review_upload(
     submission_id: int,
+    files: list[UploadFile] = File(...),
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Advisory responsiveness matrix: does each ASK in the solicitation (required
-    elements/attachments, named sections, review criteria, eligibility) appear in
-    the PI's SAVED drafts? Reads existing sections_json/notes -- no new state.
-    Grounded coverage only; never a score or verdict."""
+    """Same EiR review, but from uploaded files instead of pasted text.
+
+    Accepts several files at once because a real EiR package IS several files
+    (Project Description, letters, budget justification). Each is extracted
+    independently and the results are concatenated with the filename as a
+    heading, which also gives the reviewer's locate stage a marker for sections
+    that are otherwise easy to miss.
+
+    A file that cannot be read does NOT fail the request — it comes back in
+    `extraction.files` with an `error`, and the review runs on whatever was
+    readable. Reporting an unreadable file as missing content is the one thing
+    this must never do. Uploads are parsed in memory and never written to disk
+    or persisted."""
     if not user:
         raise HTTPException(401, "Unauthorized")
     sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
     if sub is None:
         raise HTTPException(404, "Submission not found")
+    if not files:
+        raise HTTPException(400, "No files uploaded.")
+    if len(files) > _EIR_MAX_FILES:
+        raise HTTPException(400, f"Too many files (max {_EIR_MAX_FILES}).")
 
-    from services import section_coach as _sc
+    from services import document_text as _dt
+    from services import eir_review as _eir
+    from services.budget_helper import compute_budget
 
-    raw = getattr(sub, "sections_json", None)
-    drafts = {}
-    if raw:
+    extracted, total_bytes = [], 0
+    for upload in files:
+        data = await upload.read()
+        total_bytes += len(data)
+        if len(data) > _EIR_MAX_FILE_BYTES:
+            extracted.append({"filename": upload.filename, "text": "", "pages": 0,
+                              "chars": 0, "truncated": False,
+                              "error": f"Larger than {_EIR_MAX_FILE_BYTES // (1024 * 1024)} MB."})
+            continue
+        if total_bytes > _EIR_MAX_TOTAL_BYTES:
+            raise HTTPException(400, "Those files are too large in total (max 60 MB).")
+        extracted.append(_dt.extract_upload(upload.filename or "file", data))
+
+    draft_text = _dt.combine(extracted)
+    if not draft_text.strip():
+        # Nothing readable. Return the per-file errors rather than a review that
+        # would report every requirement as missing.
+        return {
+            "submission_id": submission_id, "sponsor": sub.sponsor, "result": None,
+            "extraction": {"files": [{k: v for k, v in f.items() if k != "text"}
+                                     for f in extracted], "words": 0},
+            "error": "Couldn't read any text from those files.",
+        }
+
+    budget = None
+    raw_b = getattr(sub, "budget_json", None)
+    if raw_b:
         try:
-            drafts = json.loads(raw)
+            budget = compute_budget(json.loads(raw_b))
         except (ValueError, TypeError):
-            drafts = {}
-    if not isinstance(drafts, dict):
-        drafts = {}
+            budget = None
 
-    context = _proposals_service.reconstruct_solicitation_context(sub)
-    context["eligibility"] = _eligibility_text_from_notes(sub.notes)
-    result = _sc.responsiveness_matrix(sub.sponsor, drafts, context)
-    return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
-
-
-@app.get("/api/me/submissions/{submission_id}/sections/drafts")
-async def get_section_drafts(
-    submission_id: int,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """The PI's saved per-section draft text for this submission."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-    raw = getattr(sub, "sections_json", None)
-    drafts = {}
-    if raw:
-        try:
-            drafts = json.loads(raw)
-        except (ValueError, TypeError):
-            drafts = {}
-    return {"drafts": drafts if isinstance(drafts, dict) else {}}
-
-
-class SectionDraftRequest(BaseModel):
-    section_key: str
-    text: str = ""
-
-
-@app.put("/api/me/submissions/{submission_id}/sections/drafts")
-async def save_section_draft(
-    submission_id: int,
-    payload: SectionDraftRequest,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Save (or clear) the PI's draft text for one section. Coaching only -- this
-    is the PI's own writing; we store it so they can come back to it."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-    raw = getattr(sub, "sections_json", None)
-    drafts = {}
-    if raw:
-        try:
-            drafts = json.loads(raw)
-        except (ValueError, TypeError):
-            drafts = {}
-    if not isinstance(drafts, dict):
-        drafts = {}
-    text = (payload.text or "").strip()
-    if text:
-        drafts[payload.section_key] = text
-    else:
-        drafts.pop(payload.section_key, None)   # empty -> clear
-    sub.sections_json = json.dumps(drafts)
-    db.commit()
-    return {"drafts": drafts}
-
-
-# ----------------------------------------------------------------------------
-# Eligibility-text helper. Pulls the "Eligibility: ..." line out of a
-# submission's solicitation notes; used by the section-coach ("match THIS
-# solicitation"). The interactive Fundability / Eligibility self-check feature
-# was removed, but the extracted eligibility TEXT is still part of ingestion.
-
-def _eligibility_text_from_notes(notes: Optional[str]) -> Optional[str]:
-    """Pull the 'Eligibility: ...' line out of a submission's solicitation notes."""
-    if not notes:
-        return None
-    import re as _re
-    m = _re.search(r"^Eligibility:\s*(.+)$", notes, _re.MULTILINE)
-    return m.group(1).strip() if m else None
+    result = _eir.review_eir_draft(draft_text, title=sub.title, budget=budget)
+    return {
+        "submission_id": submission_id,
+        "sponsor": sub.sponsor,
+        "result": result,
+        # Per-file report so the UI can show what was read and what wasn't. The
+        # extracted TEXT is deliberately not echoed back.
+        "extraction": {
+            "files": [{k: v for k, v in f.items() if k != "text"} for f in extracted],
+            "words": len(draft_text.split()),
+        },
+    }
 
 
 # ----------------------------------------------------------------------------

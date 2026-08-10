@@ -1,0 +1,678 @@
+/* EirReviewModal — paste a whole EiR proposal, get completeness against NSF 23-598.
+   Shell matches DraftCritiqueModal / SolicitationUploadModal.
+
+   Status colours are declared as local tokens so light and dark stay in sync and
+   so the NEUTRAL states (not located / not checked) are visibly a different
+   category from the failures — the UI's job is to keep "we didn't assess this"
+   from reading as "your draft is missing this". */
+
+.eir-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200; /* above the sticky navbar (1000) */
+  padding: 20px;
+  animation: eir-fade-in 0.15s;
+}
+
+@keyframes eir-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.eir-modal {
+  --eir-ok: #5F7A4A;
+  --eir-warn: #C9A24C;
+  --eir-fail: #B23A48;
+  --eir-skip: var(--text-tertiary);
+  --eir-ok-bg: rgba(95, 122, 74, 0.10);
+  --eir-warn-bg: rgba(201, 162, 76, 0.12);
+  --eir-fail-bg: rgba(178, 58, 72, 0.10);
+  --eir-skip-bg: rgba(148, 163, 184, 0.10);
+
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 820px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl, 0 20px 60px rgba(0, 0, 0, 0.4));
+}
+
+body.dark .eir-modal {
+  --eir-ok: #8FAE72;
+  --eir-warn: #E0BC6A;
+  --eir-fail: #E0808C;
+  --eir-ok-bg: rgba(143, 174, 114, 0.14);
+  --eir-warn-bg: rgba(224, 188, 106, 0.14);
+  --eir-fail-bg: rgba(224, 128, 140, 0.14);
+  --eir-skip-bg: rgba(122, 115, 99, 0.16);
+}
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+
+.eir-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.eir-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.eir-sub {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: 3px;
+}
+
+.eir-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  display: inline-flex;
+}
+.eir-close:hover { background: var(--bg-card-hover); }
+
+/* ── input ──────────────────────────────────────────────────────────────── */
+
+.eir-intro {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
+/* ── mode switch ────────────────────────────────────────────────────────── */
+
+.eir-modes {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--bg-card-hover);
+  margin-bottom: 14px;
+}
+
+.eir-mode {
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.eir-mode:hover { color: var(--text-main); }
+.eir-mode.is-active {
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ── drop zone ──────────────────────────────────────────────────────────── */
+
+.eir-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 20px;
+  border: 2px dashed var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s;
+}
+.eir-drop:hover,
+.eir-drop:focus-visible {
+  border-color: var(--border-focus);
+  outline: none;
+}
+.eir-drop.is-over {
+  border-color: var(--border-focus);
+  background: var(--msu-blue-50);
+}
+.eir-drop svg { opacity: 0.6; }
+
+.eir-drop-main { font-size: 0.94rem; color: var(--text-main); font-weight: 500; }
+.eir-drop-main span { color: var(--border-focus); text-decoration: underline; }
+.eir-drop-hint { font-size: 0.79rem; color: var(--text-tertiary); }
+
+.eir-file-input { display: none; }
+
+.eir-filenote {
+  font-size: 0.79rem;
+  color: var(--text-tertiary);
+  line-height: 1.55;
+  margin: 10px 0 0;
+}
+.eir-filenote em { font-style: normal; font-family: ui-monospace, Menlo, monospace; }
+
+/* ── chosen files ───────────────────────────────────────────────────────── */
+
+.eir-filelist { list-style: none; margin: 12px 0 0; padding: 0; }
+
+.eir-fileitem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+.eir-fileitem svg { flex-shrink: 0; opacity: 0.6; }
+
+.eir-filename {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eir-filesize {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.eir-fileremove {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 5px;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.eir-fileremove:hover { color: var(--eir-fail); background: var(--eir-fail-bg); }
+
+/* ── extraction report ──────────────────────────────────────────────────── */
+
+.eir-extract {
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  padding: 11px 13px;
+  margin-top: 14px;
+}
+.eir-extract-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.eir-extract-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 3px 0;
+}
+.eir-extract-row svg { flex-shrink: 0; color: var(--eir-ok); align-self: center; }
+.eir-extract-row.is-bad svg { color: var(--eir-fail); }
+.eir-extract-row.is-bad .eir-extract-detail { color: var(--eir-fail); }
+.eir-extract-detail { flex-shrink: 1; font-variant-numeric: tabular-nums; }
+
+.eir-extract-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--eir-warn);
+  line-height: 1.5;
+}
+.eir-extract-warn svg { flex-shrink: 0; margin-top: 2px; }
+
+.eir-errorbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--eir-fail);
+  background: var(--eir-fail-bg);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+.eir-errorbox svg { flex-shrink: 0; margin-top: 2px; color: var(--eir-fail); }
+
+.eir-textarea {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-main);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.eir-textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--msu-blue-50);
+}
+
+.eir-input-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.eir-wordcount {
+  color: var(--text-tertiary);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.eir-error { color: var(--eir-fail, #B23A48); font-size: 0.85rem; }
+
+.eir-run {
+  margin-left: auto;
+  background: var(--msu-blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.eir-run:hover:not(:disabled) { background: var(--msu-blue-hover); }
+.eir-run:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.eir-privacy {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  margin: 12px 0 0;
+}
+
+/* ── loading ────────────────────────────────────────────────────────────── */
+
+.eir-loading { text-align: center; padding: 48px 20px; }
+.eir-loading p { color: var(--text-secondary); margin: 6px 0 0; }
+.eir-loading-hint { font-size: 0.82rem; color: var(--text-tertiary) !important; }
+
+.eir-spinner {
+  width: 34px; height: 34px;
+  margin: 0 auto 16px;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--msu-blue);
+  border-radius: 50%;
+  animation: eir-spin 0.8s linear infinite;
+}
+@keyframes eir-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .eir-spinner { animation-duration: 2.4s; }
+  .eir-overlay { animation: none; }
+}
+
+/* ── banner (AI offline etc.) ───────────────────────────────────────────── */
+
+.eir-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--eir-warn-bg);
+  border: 1px solid var(--eir-warn);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  color: var(--text-main);
+  margin-bottom: 16px;
+}
+.eir-banner svg { flex-shrink: 0; margin-top: 2px; }
+
+/* ── score ──────────────────────────────────────────────────────────────── */
+
+.eir-score {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  background: var(--bg-card-hover);
+}
+.eir-score-green { border-left-color: var(--eir-ok); }
+.eir-score-amber { border-left-color: var(--eir-warn); }
+.eir-score-red   { border-left-color: var(--eir-fail); }
+
+.eir-score-num {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+.eir-score-pct { font-size: 1.1rem; font-weight: 600; color: var(--text-secondary); }
+
+.eir-score-body { flex: 1; min-width: 0; }
+
+.eir-score-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+/* The caption is the guardrail against reading this as funding odds. Never
+   hide it, never shrink it below legibility. */
+.eir-score-basis {
+  color: var(--text-secondary);
+  font-size: 0.81rem;
+  line-height: 1.5;
+  margin: 4px 0 8px;
+}
+
+.eir-score-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-subtle);
+  overflow: hidden;
+}
+.eir-score-fill { height: 100%; border-radius: 3px; background: var(--text-main); }
+.eir-score-green .eir-score-fill { background: var(--eir-ok); }
+.eir-score-amber .eir-score-fill { background: var(--eir-warn); }
+.eir-score-red   .eir-score-fill { background: var(--eir-fail); }
+
+/* ── priority list ──────────────────────────────────────────────────────── */
+
+.eir-priority {
+  border: 1px solid var(--eir-fail);
+  background: var(--eir-fail-bg);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+.eir-priority-title { font-weight: 700; font-size: 0.9rem; color: var(--text-main); }
+.eir-priority ul { margin: 8px 0 0; padding-left: 20px; }
+.eir-priority li { font-size: 0.87rem; color: var(--text-main); line-height: 1.6; }
+
+/* ── section map ────────────────────────────────────────────────────────── */
+
+.eir-sectionmap {
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+}
+.eir-sectionmap-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.eir-sectionmap-rows { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.eir-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.79rem;
+  border: 1px solid transparent;
+}
+.eir-pill-found {
+  background: var(--eir-ok-bg);
+  color: var(--eir-ok);
+  border-color: var(--eir-ok);
+}
+.eir-pill-missing {
+  background: var(--eir-skip-bg);
+  color: var(--text-tertiary);
+  border-color: var(--border-color);
+}
+.eir-pill-count { opacity: 0.7; font-variant-numeric: tabular-nums; }
+
+.eir-sectionmap-note {
+  margin-top: 9px;
+  font-size: 0.79rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* ── findings ───────────────────────────────────────────────────────────── */
+
+.eir-group { margin-bottom: 22px; }
+
+.eir-group-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin: 0 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.eir-group-sub {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 8px 0 10px;
+}
+
+.eir-finding {
+  border-left: 3px solid var(--border-color);
+  padding: 11px 0 11px 13px;
+  margin-top: 10px;
+}
+.eir-finding.eir-ok   { border-left-color: var(--eir-ok); }
+.eir-finding.eir-warn { border-left-color: var(--eir-warn); }
+.eir-finding.eir-fail { border-left-color: var(--eir-fail); }
+.eir-finding.eir-skip { border-left-color: var(--border-color); }
+
+/* Neutral = "not assessed". Deliberately quieter than a failure so a PI does
+   not read an unlocated section as a gap in their writing. */
+.eir-finding.is-neutral { opacity: 0.72; }
+
+.eir-finding-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.eir-finding-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.eir-tag {
+  display: inline-block;
+  margin-left: 7px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--eir-fail-bg);
+  color: var(--eir-fail);
+  vertical-align: middle;
+}
+.eir-tag-soft { background: var(--eir-skip-bg); color: var(--text-tertiary); }
+
+.eir-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.eir-chip.eir-ok   { background: var(--eir-ok-bg);   color: var(--eir-ok); }
+.eir-chip.eir-warn { background: var(--eir-warn-bg); color: var(--eir-warn); }
+.eir-chip.eir-fail { background: var(--eir-fail-bg); color: var(--eir-fail); }
+.eir-chip.eir-skip { background: var(--eir-skip-bg); color: var(--text-tertiary); }
+
+.eir-finding-note {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-top: 5px;
+}
+
+/* The PI's own words, quoted back as proof. Only ever rendered for a verified
+   quote — the backend drops unverifiable ones (golden rule 2). */
+.eir-evidence {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  margin-top: 7px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: var(--bg-card-hover);
+  font-size: 0.81rem;
+  font-style: italic;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+.eir-evidence svg { flex-shrink: 0; margin-top: 3px; opacity: 0.55; }
+
+.eir-why-toggle {
+  background: none;
+  border: none;
+  padding: 5px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.eir-why-toggle:hover { color: var(--text-secondary); }
+
+.eir-why { margin-top: 7px; }
+.eir-why-plain {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0 0 7px;
+}
+.eir-why-source {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 2px solid var(--border-color);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.eir-why-source cite {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.72rem;
+  font-style: normal;
+  color: var(--text-tertiary);
+}
+
+/* ── reviewer notes + eligibility ───────────────────────────────────────── */
+
+.eir-note {
+  border-left: 3px solid var(--msu-blue-light);
+  padding: 9px 0 9px 13px;
+  margin-top: 10px;
+}
+.eir-note-criterion { font-weight: 600; font-size: 0.88rem; color: var(--text-main); }
+.eir-note-body {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+.eir-eligibility { margin: 0; padding-left: 20px; }
+.eir-eligibility li {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 5px;
+}
+
+/* ── footer ─────────────────────────────────────────────────────────────── */
+
+.eir-cycle {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
+  font-size: 0.81rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.eir-cycle a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  color: var(--border-focus);
+  text-decoration: none;
+}
+.eir-cycle a:hover { text-decoration: underline; }
+
+.eir-disclaimer {
+  font-size: 0.79rem;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  margin: 12px 0 16px;
+}
+
+.eir-back {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.eir-back:hover { background: var(--bg-card-hover); }
+
+/* ── narrow screens ─────────────────────────────────────────────────────── */
+
+@media (max-width: 560px) {
+  .eir-overlay { padding: 0; }
+  .eir-modal { border-radius: 0; max-height: 100vh; padding: 18px 16px; }
+  .eir-score { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .eir-finding-head { flex-direction: column; gap: 5px; }
+  .eir-input-footer { flex-wrap: wrap; }
+  .eir-run { width: 100%; margin-left: 0; }
+}

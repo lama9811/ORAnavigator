@@ -106,7 +106,7 @@ def extract_query(description: str, profile: Optional[dict] = None) -> str:
 
 def _verify_quote(quote: str, source: str) -> str:
     """Keep a Gemini-supplied fit quote only if it really appears in the source
-    text (whitespace collapsed on both sides, like section_coach/_verify_evidence)
+    text (whitespace collapsed on both sides, like services/text_match.quote_in)
     -- a fabricated quote is dropped. Returns the quote or ''."""
     if not quote or not source:
         return ""

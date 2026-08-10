@@ -6,13 +6,13 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, MoreHorizontal, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, ListChecks, MoreHorizontal, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
-import SectionCoachModal from "./SectionCoachModal";
+import EirReviewModal from "./EirReviewModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -53,13 +53,25 @@ function hasSolicitation(submission) {
   );
 }
 
+// Is this proposal going to NSF's HBCU Excellence in Research program?
+// The EiR Review tool is hardcoded to solicitation NSF 23-598, so showing it on
+// an unrelated NSF proposal would check a PI against rules that do not apply to
+// them. Matched on the title/notes rather than the sponsor alone, since "NSF" is
+// most of the tracker. Kept deliberately loose on the PI's side (they may write
+// "EiR", "HBCU-EiR", or the solicitation number) and strict on the program's:
+// "excellence in research" is the program's actual name, not a generic phrase.
+const EIR_RES = [/excellence in research/i, /\bhbcu[-\s]?eir\b/i, /\beir\b/i, /23-?598/];
+function isEirProposal(submission) {
+  const haystack = `${submission?.title || ""}\n${submission?.notes || ""}`;
+  return EIR_RES.some((re) => re.test(haystack));
+}
+
 // The single recommended next action for a proposal, derived purely from its
 // saved state. Drives the "What's next" card + which tool gets the accent.
 // Solicitation is intentionally NOT a step here: it can only be attached at
 // creation today, so it's surfaced as a status (not an actionable next step).
 function nextStep(submission) {
   if (!submission.has_budget) return "budget";
-  if (!submission.has_sections) return "coach";
   if (!submission.has_compliance) return "compliance";
   if (hasSolicitation(submission)) return "critique";
   return "done";
@@ -72,11 +84,6 @@ const STEP_INFO = {
     title: "Build your budget",
     why: "Funders cap how much you can request. Set your numbers first so the rest of the proposal fits within them.",
     action: "Open Budget Helper", open: "budget",
-  },
-  coach: {
-    title: "Draft your sections",
-    why: "Get a section-by-section outline and advisory feedback on your own writing — one section at a time.",
-    action: "Open Drafting Coach", open: "coach",
   },
   compliance: {
     title: "Check what approvals you need",
@@ -553,15 +560,16 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
-  const [showCoach, setShowCoach] = useState(false);
+  const [showEir, setShowEir] = useState(false);
 
   const next = nextStep(submission);
   const solicited = hasSolicitation(submission);
+  const isEir = isEirProposal(submission);
   const openModal = (key) => {
     if (key === "budget") setShowBudget(true);
-    else if (key === "coach") setShowCoach(true);
     else if (key === "compliance") setShowCompliance(true);
     else if (key === "critique") setShowCritique(true);
+    else if (key === "eir") setShowEir(true);
   };
 
   return (
@@ -594,15 +602,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               onClick={() => setShowBudget(true)}
               title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
             />
-            <ToolButton
-              icon={PenLine}
-              label="Drafting coach"
-              status={submission.has_sections ? "draft saved" : null}
-              statusDone={submission.has_sections}
-              primary={next === "coach"}
-              onClick={() => setShowCoach(true)}
-              title="Get an outline for a proposal section, or paste your draft for advisory feedback."
-            />
           </LifecycleStage>
 
           <LifecycleStage label="Review & submit">
@@ -622,6 +621,14 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
                 primary={next === "critique"}
                 onClick={() => setShowCritique(true)}
                 title="Upload a draft PDF and check it against this proposal's solicitation requirements."
+              />
+            )}
+            {isEir && (
+              <ToolButton
+                icon={ListChecks}
+                label="Draft review"
+                onClick={() => setShowEir(true)}
+                title="Paste your whole EiR proposal and check it against every requirement in NSF 23-598."
               />
             )}
           </LifecycleStage>
@@ -661,10 +668,10 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         />
       )}
 
-      {showCoach && (
-        <SectionCoachModal
+      {showEir && (
+        <EirReviewModal
           submission={submission}
-          onClose={() => setShowCoach(false)}
+          onClose={() => setShowEir(false)}
         />
       )}
 
