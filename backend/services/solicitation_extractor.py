@@ -40,6 +40,23 @@ def _get_pdfplumber():
     return _pdfplumber
 
 
+# MODEL (moved to 3.6-flash 2026-08-10).
+# This is the highest-stakes extraction in the app: a wrong budget cap, deadline
+# or page limit propagates into the task checklist, the Budget Helper's
+# prefilled cap and the Draft Critic's checks, and NOTHING downstream
+# re-verifies it. It is also offline, one-shot and latency-tolerant — the same
+# profile that put the KB scraper's adjudicator and the Draft Review tool on
+# 3.6-flash — so judgment quality is worth more here than milliseconds.
+#
+# LOCATION IS NOT OPTIONAL. gemini-3.6-flash answers ONLY on the "global"
+# endpoint and 404s in us-central1 (verified by direct calls; same trap
+# documented for kb_scraper/adjudicator). Model and location must move
+# TOGETHER, which is why they are one env pair — set one without the other and
+# every extraction fails.
+MODEL = os.getenv("SOLICITATION_MODEL", "gemini-3.6-flash")
+MODEL_LOCATION = os.getenv("SOLICITATION_MODEL_LOCATION", "global")
+
+
 def _get_client():
     """Reuse the codebase's Vertex-first / API-key-fallback pattern for
     Gemini. Cached across calls."""
@@ -55,7 +72,7 @@ def _get_client():
         project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
         try:
             _gemini_client = genai.Client(vertexai=True, project=project,
-                                          location="us-central1")
+                                          location=MODEL_LOCATION)
         except Exception:
             api_key = os.getenv("GEMINI_API_KEY", "")
             if api_key:
@@ -140,7 +157,7 @@ def _call_gemini(prompt_text: str, system_instruction: Optional[str] = None) -> 
         if system_instruction:
             config["system_instruction"] = system_instruction
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=MODEL,
             contents=prompt_text,
             config=config,
         )
