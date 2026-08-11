@@ -30,6 +30,13 @@ The chat path: frontend → backend (`vertex_agent.py`) → ADK agent (`adk_agen
   gcloud builds triggers list          # -> empty
   gcloud builds list --limit=10        # -> shows ONLY hand-submitted builds
   ```
+  **THE REGION IS `us-east4`** (confirmed 2026-08-11 by pushing to main and hunting for the build). Both commands above default to `global`, which is why they come back empty and why this file said for months that no trigger existed. The commands that actually work:
+  ```bash
+  gcloud builds list --region=us-east4 --limit=5
+  gcloud builds describe <BUILD_ID> --region=us-east4 --format='value(status,logUrl)'
+  gcloud builds triggers list --region=us-east4
+  ```
+  Observed: a push to `main` at 20:30:48 UTC produced build `7c35d4dc` in `us-east4` at 20:30:59 — eleven seconds later. Ten steps: build/push/deploy for adk, backend and frontend, then a summary.
   Trigger-fired builds and the trigger itself live in a **region** that neither default-scoped command reads, so the evidence for "no trigger" is an artifact of the query, not a fact about the project. Observed 2026-08-07: a build appeared in the Console (`Trigger: deploy-to-main`, branch `main`, commit `001eb85`) that was absent from `gcloud builds list`, and a Cloud Run revision appeared with an image nobody could account for — it was the push firing the trigger. **Confirm from the Cloud Console, or from the serving revision, never from an empty `gcloud builds list`.**
   A manual submit is still possible and is what you want when deploying **uncommitted** work (it uploads the working directory, not the commit):
   ```bash
