@@ -253,15 +253,18 @@ def init_db():
         except (OperationalError, ProgrammingError):
             print("[WARN] 'solicitation_sources' table missing. Creating it now...")
             try:
-                # MEDIUMTEXT, not TEXT: MySQL's TEXT caps at 65,535 bytes and a
-                # real solicitation runs past that, so TEXT would truncate the
-                # document silently — the exact failure this table exists to end.
+                # NOTE: this normally never runs. Base.metadata.create_all()
+                # executes FIRST and creates the table from models.py, so this is
+                # the fallback for a database where create_all could not (e.g.
+                # restricted DDL grants). It is kept in sync with the model on
+                # purpose — the MEDIUMTEXT and the foreign keys below both matter,
+                # and a divergent fallback would be worse than none.
                 conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS solicitation_sources (
                         id INT AUTO_INCREMENT PRIMARY KEY,
                         user_id INT NOT NULL,
                         submission_id INT NULL,
-                        text MEDIUMTEXT NOT NULL,
+                        `text` MEDIUMTEXT NOT NULL,
                         chars INT NOT NULL DEFAULT 0,
                         source_kind VARCHAR(16) NOT NULL DEFAULT 'pdf',
                         filename VARCHAR(255) NULL,
@@ -270,7 +273,11 @@ def init_db():
                         created_at DATETIME NOT NULL,
                         INDEX idx_ss_user (user_id),
                         INDEX idx_ss_submission (submission_id),
-                        INDEX idx_ss_sha (sha256)
+                        INDEX idx_ss_sha (sha256),
+                        CONSTRAINT fk_ss_user FOREIGN KEY (user_id)
+                            REFERENCES users (id),
+                        CONSTRAINT fk_ss_submission FOREIGN KEY (submission_id)
+                            REFERENCES submissions (id) ON DELETE CASCADE
                     )
                 """))
                 conn.commit()

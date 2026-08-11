@@ -332,6 +332,15 @@ def delete_submission(db: Session, submission_id: int, user_id: int) -> bool:
     sub = get_submission(db, submission_id, user_id)
     if sub is None:
         return False
+    # Explicit, not left to the FK. solicitation_sources declares ON DELETE
+    # CASCADE, which MySQL honours and SQLite ignores unless PRAGMA
+    # foreign_keys is ON — so relying on it would leave a stored solicitation
+    # document behind on one engine and not the other. Deleting the proposal
+    # must delete its document everywhere.
+    from models import SolicitationSource
+    db.query(SolicitationSource).filter(
+        SolicitationSource.submission_id == submission_id
+    ).delete(synchronize_session=False)
     db.delete(sub)
     db.commit()
     return True

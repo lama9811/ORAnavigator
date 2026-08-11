@@ -370,3 +370,25 @@ def test_detaching_keeps_the_document_so_reattaching_costs_no_upload(ctx, monkey
     assert r.json()["has_solicitation_requirements"] is False
     assert r.json()["has_solicitation_source"] is True
     assert c.post(f"/api/me/submissions/{bare_id}/solicitation/reread").status_code == 200
+
+
+def test_deleting_a_proposal_deletes_its_stored_document(ctx, monkeypatch):
+    """Not left to the FK: MySQL honours ON DELETE CASCADE, SQLite ignores it
+    unless PRAGMA foreign_keys is ON, so the document would survive on one
+    engine and not the other."""
+    c, bare_id, _ = ctx
+    _fake_read(monkeypatch)
+    read = c.post("/api/me/solicitation-requirements",
+                  files=[("file", ("foa.pdf", b"%PDF-1.4", "application/pdf"))]).json()
+    c.put(f"/api/me/submissions/{bare_id}/solicitation", json={
+        "extracted": {"program_id": "PAR-24-118"},
+        "requirements": read["requirements"], "source_id": read["source_id"]})
+
+    assert c.delete(f"/api/me/submissions/{bare_id}").status_code == 204
+
+    import main as _main
+    from models import SolicitationSource
+    db = next(_main.app.dependency_overrides[_main.get_db]())
+    left = db.query(SolicitationSource).filter(
+        SolicitationSource.submission_id == bare_id).count()
+    assert left == 0, "the stored solicitation outlived its proposal"

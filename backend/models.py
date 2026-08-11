@@ -1,5 +1,14 @@
 # backend/models.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, func
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
+
+# MySQL's TEXT caps at 65,535 BYTES and truncates past it. Any column that can
+# hold a whole document or a large JSON blob must be MEDIUMTEXT (16MB) there.
+# This matters because Base.metadata.create_all() runs BEFORE init_db's
+# migrations, so on a fresh database create_all wins and a later
+# CREATE TABLE IF NOT EXISTS is a no-op — the type declared HERE is the type
+# production gets.
+_BIGTEXT = Text().with_variant(MEDIUMTEXT, 'mysql')
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from db import Base
@@ -206,7 +215,7 @@ class Submission(Base):
     # the derived section list are deliberately NOT stored (see
     # proposals_service.load_solicitation_profile). Nullable: a proposal has none
     # until a solicitation is attached.
-    solicitation_json = Column(Text, nullable=True)
+    solicitation_json = Column(_BIGTEXT, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -258,7 +267,9 @@ class SolicitationSource(Base):
         nullable=True,
         index=True,
     )
-    text = Column(Text, nullable=False)          # MEDIUMTEXT on MySQL (see init_db)
+    # MEDIUMTEXT on MySQL: a solicitation runs past TEXT's 65,535-byte cap, and
+    # a truncated document is the failure this table exists to end.
+    text = Column(_BIGTEXT, nullable=False)
     chars = Column(Integer, nullable=False, default=0)
     # "pdf" | "url" — how it arrived, plus whichever of the two identifiers applies.
     source_kind = Column(String(16), nullable=False, default="pdf")
