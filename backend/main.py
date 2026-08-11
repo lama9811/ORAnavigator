@@ -36,7 +36,7 @@ def iso_utc(dt):
 import pypdf
 import docx
 
-from fastapi import FastAPI, HTTPException, Depends, status, File, UploadFile, Request
+from fastapi import FastAPI, HTTPException, Depends, status, File, Form, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -4237,8 +4237,18 @@ async def confirm_solicitation_submission(
     db: Session = Depends(get_db),
 ):
     """Step 2: commit a user-reviewed extracted dict as a real Submission.
+
     Body shape:
-        { "extracted": {<contract dict>}, "title_override": "optional" }"""
+        { "extracted": {<contract dict>}, "title_override": "optional",
+          "requirements": [...], "merit_criteria": [...],
+          "eligibility_notes": [...], "read_report": {...},
+          "extraction": {...}, "source": {...} }
+
+    Everything after `title_override` is optional and comes from the separate
+    /api/me/solicitation-requirements read. When present it is stored as this
+    proposal's solicitation — THE save point, and the only place the create flow
+    writes it. When absent the proposal is still created; the PI can attach the
+    requirements later rather than being blocked on a slow read."""
     if not user:
         raise HTTPException(401, "Unauthorized")
     extracted = payload.get("extracted")
@@ -4250,6 +4260,11 @@ async def confirm_solicitation_submission(
         db, user_id=user["user_id"], extracted=extracted,
         title_override=title_override,
     )
+
+    stored = _solicitation_payload(payload, extracted)
+    if stored is not None:
+        _proposals_service.save_solicitation_profile(db, sub, stored)
+        db.refresh(sub)
     return _submission_to_dict(sub, include_tasks=True)
 
 
@@ -4321,32 +4336,23 @@ class EirReviewRequest(BaseModel):
     draft_text: str = ""
 
 
-@app.post("/api/me/submissions/{submission_id}/eir-review")
-async def eir_review(
-    submission_id: int,
-    payload: EirReviewRequest,
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Completeness review of a pasted EiR proposal against NSF 23-598.
+_NO_SOLICITATION_DETAIL = (
+    "Attach this proposal's solicitation first — the review is run against its "
+    "requirements."
+)
 
-    Stateless — reads the submission only for its title (the "Excellence in
-    Research:" prefix check) and its saved budget (the 30% equipment cap). The
-    pasted draft is NOT persisted: it is the PI's unpublished manuscript, and
-    storing it would create a copy nobody asked for.
 
-    The returned `score` is completeness against the solicitation, computed in
-    code from coverage counts (golden rule 1). It is not a funding prediction,
-    and is withheld entirely when the AI layer is unavailable."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
+def _require_profile_and_budget(sub):
+    """The two inputs every draft review needs, or a 409 explaining what to do.
 
-    from services import eir_review as _eir
+    409 rather than a review of nothing: with no stored solicitation the engine
+    would score a draft against zero requirements and hand back a confident
+    percentage that means nothing at all. The frontend keys off this status to
+    show the attach panel."""
+    profile = _proposals_service.load_solicitation_profile(sub)
+    if profile is None:
+        raise HTTPException(409, _NO_SOLICITATION_DETAIL)
     from services.budget_helper import compute_budget
-
     budget = None
     raw_b = getattr(sub, "budget_json", None)
     if raw_b:
@@ -4354,33 +4360,60 @@ async def eir_review(
             budget = compute_budget(json.loads(raw_b))
         except (ValueError, TypeError):
             budget = None
+    return profile, budget
 
-    result = _eir.review_eir_draft(payload.draft_text, title=sub.title, budget=budget)
+
+@app.post("/api/me/submissions/{submission_id}/draft-review")
+async def draft_review_endpoint(
+    submission_id: int,
+    payload: EirReviewRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Completeness review of a pasted draft against THIS proposal's solicitation.
+
+    Stateless — the paste is NOT persisted: it is the PI's unpublished
+    manuscript, and storing it would create a copy nobody asked for. The
+    submission is read only for its title and its saved budget.
+
+    The returned `score` is completeness against the stored solicitation,
+    computed in code from coverage counts (golden rule 1). It is not a funding
+    prediction, and is withheld entirely when the AI layer is unavailable."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    from services import draft_review as _dr
+    profile, budget = _require_profile_and_budget(sub)
+    result = _dr.review_draft(payload.draft_text, profile=profile,
+                              title=sub.title, budget=budget)
     return {"submission_id": submission_id, "sponsor": sub.sponsor, "result": result}
 
 
-# Per-file and total upload ceilings. A full EiR package is a handful of PDFs;
+# Per-file and total upload ceilings. A real proposal package IS several PDFs;
 # these are generous enough for that and small enough that a mis-drop (a video,
 # a dataset) is rejected before it is read into memory.
-_EIR_MAX_FILE_BYTES = 25 * 1024 * 1024      # 25 MB per file
-_EIR_MAX_TOTAL_BYTES = 60 * 1024 * 1024     # 60 MB per request
-_EIR_MAX_FILES = 12
+_DRAFT_MAX_FILE_BYTES = 25 * 1024 * 1024      # 25 MB per file
+_DRAFT_MAX_TOTAL_BYTES = 60 * 1024 * 1024     # 60 MB per request
+_DRAFT_MAX_FILES = 12
 
 
-@app.post("/api/me/submissions/{submission_id}/eir-review/upload")
-async def eir_review_upload(
+@app.post("/api/me/submissions/{submission_id}/draft-review/upload")
+async def draft_review_upload(
     submission_id: int,
     files: list[UploadFile] = File(...),
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Same EiR review, but from uploaded files instead of pasted text.
+    """The same review, but from uploaded files instead of pasted text.
 
-    Accepts several files at once because a real EiR package IS several files
-    (Project Description, letters, budget justification). Each is extracted
-    independently and the results are concatenated with the filename as a
-    heading, which also gives the reviewer's locate stage a marker for sections
-    that are otherwise easy to miss.
+    Accepts several files at once because a real proposal package IS several
+    files (narrative, letters, budget justification, the required attachments).
+    Each is extracted independently and the results are concatenated with the
+    filename as a heading, which also gives the locate stage a marker for
+    sections that are otherwise easy to miss.
 
     A file that cannot be read does NOT fail the request — it comes back in
     `extraction.files` with an `error`, and the review runs on whatever was
@@ -4394,23 +4427,25 @@ async def eir_review_upload(
         raise HTTPException(404, "Submission not found")
     if not files:
         raise HTTPException(400, "No files uploaded.")
-    if len(files) > _EIR_MAX_FILES:
-        raise HTTPException(400, f"Too many files (max {_EIR_MAX_FILES}).")
+    if len(files) > _DRAFT_MAX_FILES:
+        raise HTTPException(400, f"Too many files (max {_DRAFT_MAX_FILES}).")
 
     from services import document_text as _dt
-    from services import eir_review as _eir
-    from services.budget_helper import compute_budget
+    from services import draft_review as _dr
+
+    # Before reading a single byte: no solicitation, no review.
+    profile, budget = _require_profile_and_budget(sub)
 
     extracted, total_bytes = [], 0
     for upload in files:
         data = await upload.read()
         total_bytes += len(data)
-        if len(data) > _EIR_MAX_FILE_BYTES:
+        if len(data) > _DRAFT_MAX_FILE_BYTES:
             extracted.append({"filename": upload.filename, "text": "", "pages": 0,
                               "chars": 0, "truncated": False,
-                              "error": f"Larger than {_EIR_MAX_FILE_BYTES // (1024 * 1024)} MB."})
+                              "error": f"Larger than {_DRAFT_MAX_FILE_BYTES // (1024 * 1024)} MB."})
             continue
-        if total_bytes > _EIR_MAX_TOTAL_BYTES:
+        if total_bytes > _DRAFT_MAX_TOTAL_BYTES:
             raise HTTPException(400, "Those files are too large in total (max 60 MB).")
         extracted.append(_dt.extract_upload(upload.filename or "file", data))
 
@@ -4425,15 +4460,7 @@ async def eir_review_upload(
             "error": "Couldn't read any text from those files.",
         }
 
-    budget = None
-    raw_b = getattr(sub, "budget_json", None)
-    if raw_b:
-        try:
-            budget = compute_budget(json.loads(raw_b))
-        except (ValueError, TypeError):
-            budget = None
-
-    result = _eir.review_eir_draft(draft_text, title=sub.title, budget=budget)
+    result = _dr.review_draft(draft_text, profile=profile, title=sub.title, budget=budget)
     return {
         "submission_id": submission_id,
         "sponsor": sub.sponsor,
@@ -4445,6 +4472,249 @@ async def eir_review_upload(
             "words": len(draft_text.split()),
         },
     }
+
+
+# ----------------------------------------------------------------------------
+# Reading a solicitation's REQUIREMENTS — the deep read behind Draft Review.
+#
+# Deliberately its own request, not folded into /from-solicitation or
+# /confirm. The read is 10-18 Gemini calls (chunk -> sweep -> verify), 60-150s,
+# against a 300s Cloud Run request cap on a single-worker backend. Folding it
+# into the contract call would risk a 504 that loses the contract too; folding
+# it into confirm would risk one that leaves the PI unsure whether their
+# proposal exists. Fired from the review step of the upload modal instead, it
+# overlaps the time the PI already spends checking the extracted fields.
+#
+# It SAVES NOTHING. The PI confirms the list, and /confirm (new proposal) or
+# PUT .../solicitation (existing one) is what writes it (golden rule 4).
+
+def _solicitation_warnings(read_report: dict, contract: Optional[dict],
+                           extraction: dict) -> list[str]:
+    """Plain sentences the UI renders verbatim. Every one of them exists so a
+    partial read can never be mistaken for a complete one."""
+    out: list[str] = []
+    blank = int((read_report or {}).get("pages_without_text") or 0)
+    pages = int((read_report or {}).get("pages") or 0)
+    if blank:
+        out.append(
+            f"{blank} of {pages} pages had no extractable text — this looks like a "
+            "scan, so any requirements on those pages were not read."
+        )
+    if (contract or {}).get("truncated"):
+        out.append(
+            "This solicitation is longer than the metadata extractor reads in one "
+            "pass, so the deadline and cap above may be incomplete. The requirement "
+            "list below did read the whole document."
+        )
+    if extraction.get("hit_time_cap"):
+        out.append("Reading ran out of time, so the requirement list may be incomplete.")
+    if extraction.get("hit_round_cap"):
+        out.append(
+            "Reading stopped at its round limit while still finding new "
+            "requirements, so the list may be incomplete."
+        )
+    dropped = int(extraction.get("dropped_unverified") or 0)
+    if dropped:
+        out.append(
+            f"{dropped} proposed requirement(s) were dropped because they could not "
+            "be quoted from the document."
+        )
+    if extraction.get("ai") is False:
+        out.append(
+            "The AI reader is unavailable, so no requirements could be read. You can "
+            "still create the proposal and attach them later."
+        )
+    return out
+
+
+def _read_solicitation_requirements(text: str, contract: Optional[dict]) -> dict:
+    """Shared body: text -> requirements + merit criteria + warnings."""
+    from services import solicitation_requirements as _sr
+    out = _sr.extract_requirements(text)
+    merit = _sr.extract_merit_criteria(text) if out.get("ai") else []
+    extraction = {k: v for k, v in out.items() if k != "requirements"}
+    return {
+        "requirements": out["requirements"],
+        "merit_criteria": merit,
+        "eligibility_notes": ([contract["eligibility"]]
+                              if (contract or {}).get("eligibility") else []),
+        "extraction": extraction,
+    }
+
+
+@app.post("/api/me/solicitation-requirements")
+async def read_solicitation_requirements(
+    file: Optional[UploadFile] = File(None),
+    url: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    """Read a solicitation end to end and return its requirements FOR REVIEW.
+
+    Not under a submission id: on the create flow the proposal does not exist
+    yet. Saves nothing.
+
+    422 ONLY when nothing at all was readable. A partial read comes back 200
+    with a warning — reporting "we could not read 4 of 34 pages" is the whole
+    point, and turning that into an error would throw away the 30 pages we did
+    read."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+
+    from services import solicitation_extractor as _sx
+
+    read_report: dict = {}
+    contract = None
+    if file is not None:
+        data = await file.read()
+        if not data:
+            raise HTTPException(400, "Uploaded file is empty.")
+        if len(data) > _MAX_SOLICITATION_PDF_BYTES:
+            raise HTTPException(413, "PDF is larger than 25 MB.")
+        read = _sx.read_pdf(data)
+        text, read_report = read["text"], {k: v for k, v in read.items() if k != "text"}
+    elif url:
+        from services import url_fetcher
+        try:
+            text = url_fetcher.fetch_solicitation_text(url)
+        except url_fetcher.FetchError as e:
+            raise HTTPException(e.status, e.message)
+        read_report = {"pages": None, "pages_without_text": 0, "chars": len(text or ""),
+                       "engine": "url", "error": None}
+    else:
+        raise HTTPException(400, "Provide a PDF file or a url.")
+
+    if not (text or "").strip():
+        raise HTTPException(
+            422,
+            "Couldn't read any text from that solicitation — it may be scanned or "
+            "image-only. Try a text-based PDF, or create the proposal and attach "
+            "the requirements later.",
+        )
+
+    payload = _read_solicitation_requirements(text, contract)
+    payload["read_report"] = read_report
+    payload["warnings"] = _solicitation_warnings(read_report, contract,
+                                                 payload["extraction"])
+    return payload
+
+
+def _clean_requirement_rows(rows) -> list[dict]:
+    """Server-side validation of a requirement list arriving from the browser.
+
+    The client is never authoritative about what a solicitation says: a row
+    without a verbatim quote has nothing behind it, and ids are recomputed here
+    rather than trusted."""
+    from services import solicitation_requirements as _sr
+    out = []
+    for raw in (rows or []):
+        if not isinstance(raw, dict):
+            continue
+        label = " ".join(str(raw.get("label") or "").split())[:120]
+        source = " ".join(str(raw.get("source") or "").split())[:300]
+        if not label or not source:
+            continue
+        row = {
+            "label": label,
+            "section": raw.get("section"),
+            "kind": "semantic",
+            "scored": bool(raw.get("scored", True)),
+            "source": source,
+            "why": " ".join(str(raw.get("why") or "").split())[:300],
+            "keywords": [str(k).strip().lower() for k in (raw.get("keywords") or [])
+                         if str(k).strip()][:8],
+        }
+        row["id"] = _sr.make_id(row)
+        out.append(row)
+    return out
+
+
+def _solicitation_payload(body: dict, extracted: dict) -> Optional[dict]:
+    """Assemble what gets stored, or None when there is nothing worth storing."""
+    rows = _clean_requirement_rows(body.get("requirements"))
+    if not rows:
+        return None
+    merit = [c for c in (body.get("merit_criteria") or [])
+             if isinstance(c, dict) and c.get("criterion") and c.get("asks")]
+    return {
+        "version": _proposals_service.SOLICITATION_PROFILE_VERSION,
+        "id": extracted.get("program_id") or extracted.get("program_name") or "this solicitation",
+        "title": extracted.get("program_name") or "",
+        "url": body.get("url") or (body.get("source") or {}).get("url"),
+        "source": body.get("source") or {},
+        "contract": extracted,
+        "requirements": rows,
+        "merit_criteria": merit,
+        "eligibility_notes": [str(n) for n in (body.get("eligibility_notes") or []) if n],
+        "read_report": body.get("read_report") or {},
+        "extraction": body.get("extraction") or {},
+        "extracted_at": datetime.now(timezone.utc).isoformat(),
+        "model": os.getenv("SOLICITATION_REQUIREMENTS_MODEL", "gemini-3.6-flash"),
+    }
+
+
+@app.put("/api/me/submissions/{submission_id}/solicitation")
+async def attach_solicitation(
+    submission_id: int,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Attach a reviewed solicitation to a proposal that already exists.
+
+    The single save path for an existing proposal (the create flow saves through
+    /from-solicitation/confirm). It writes three things in one commit, and the
+    second is easy to forget: the profile itself; the notes lines Draft Critic
+    and the frontend's hasSolicitation() read, appended only where absent so a
+    PI's own notes are never overwritten; and any missing required-attachment
+    tasks."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    extracted = payload.get("extracted")
+    if not isinstance(extracted, dict):
+        raise HTTPException(400, "Missing 'extracted' dict in body.")
+
+    stored = _solicitation_payload(payload, extracted)
+    if stored is None:
+        raise HTTPException(400, "No usable requirements to attach — every row needs "
+                                 "a label and a verbatim quote from the solicitation.")
+
+    # Notes: append only what is missing, never overwrite. Two features read
+    # these lines by regex, and a proposal with requirements but no notes lines
+    # would leave them blind to a solicitation it demonstrably has.
+    existing_notes = sub.notes or ""
+    missing = [ln for ln in _proposals_service.solicitation_notes_lines(extracted)
+               if ln not in existing_notes]
+    if missing:
+        sub.notes = ("\n".join([existing_notes.rstrip(), *missing]).strip()
+                     if existing_notes.strip() else "\n".join(missing))
+
+    _proposals_service.save_solicitation_profile(db, sub, stored)
+    _proposals_service.sync_required_attachment_tasks(db, sub, extracted)
+    db.refresh(sub)
+    return _submission_to_dict(sub, include_tasks=True)
+
+
+@app.delete("/api/me/submissions/{submission_id}/solicitation")
+async def detach_solicitation(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Detach the stored solicitation. Clears the column only — the notes lines
+    and the seeded tasks are the PI's now, and silently removing work they may
+    have done against them would be worse than leaving them."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    sub.solicitation_json = None
+    db.commit()
+    db.refresh(sub)
+    return _submission_to_dict(sub, include_tasks=True)
 
 
 # ----------------------------------------------------------------------------

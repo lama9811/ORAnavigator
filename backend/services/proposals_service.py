@@ -616,3 +616,41 @@ def solicitation_summary(sub: Submission) -> Optional[dict]:
         "extraction": stored.get("extraction") or {},
         "extracted_at": stored.get("extracted_at"),
     }
+
+
+def sync_required_attachment_tasks(db: Session, sub: Submission,
+                                   extracted: dict) -> int:
+    """Seed a checklist task per required attachment that has none yet.
+
+    The attach-later counterpart to the seeding create_submission_from_solicitation
+    does. Additive and idempotent: a task the PI already has (from the sponsor
+    template or a previous attach) is left alone, including one they have already
+    ticked off. Returns how many were added."""
+    existing = {(t.title or "").strip().lower() for t in (sub.tasks or [])}
+    next_order = max([t.sort_order or 0 for t in (sub.tasks or [])], default=-1) + 1
+    added = 0
+    for attachment in (extracted or {}).get("required_attachments") or []:
+        att_text = str(attachment).strip()
+        if not att_text:
+            continue
+        title = f"{_REQUIRED_ATTACHMENT_TASK_PREFIX} {att_text}"
+        if title.lower() in existing:
+            continue
+        if any(att_text.lower() in t for t in existing):
+            continue          # the sponsor template already covers it
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=title,
+            description=("Required by the solicitation. Confirm the format and "
+                         "page limit before submission."),
+            kb_doc_id=None,
+            due_offset_days=14,
+            status="pending",
+            sort_order=next_order,
+        ))
+        existing.add(title.lower())
+        next_order += 1
+        added += 1
+    if added:
+        db.commit()
+    return added
