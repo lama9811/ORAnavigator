@@ -106,11 +106,17 @@ _SYSTEM = (
     "destroys a real requirement.\n\n"
 
     "FIELDS\n"
-    "9. 'section' — the part of the proposal the requirement belongs to, snake_case, "
-    "named as THIS solicitation names it (project_description, research_strategy, "
-    "project_summary, budget_justification, data_management_plan, ...). Use null when "
-    "it applies to the proposal as a whole. Never translate one funder's vocabulary "
-    "into another's.\n"
+    "9. 'section' — the part of the APPLICANT'S PROPOSAL the requirement belongs to, "
+    "snake_case: project_summary, project_description, research_strategy, "
+    "budget_justification, data_management_plan, letters_of_collaboration, "
+    "biosketch, references_cited, and so on. Name it as this solicitation names "
+    "that part of a proposal — never translate one funder's vocabulary into "
+    "another's.\n"
+    "   This is NOT the solicitation's own document structure. 'Proposal Preparation "
+    "and Submission Instructions', 'Award Information', 'Section V.A' and the like are "
+    "headings in the SOLICITATION; they are not parts of a proposal and must never be "
+    "used as a section. If a requirement is about the proposal as a whole, or you "
+    "cannot tell which part it belongs to, use null.\n"
     "10. 'scored' — false ONLY where the text marks the ask conditional or optional "
     "('if applicable', 'if available', 'where appropriate', 'optional', 'may'). "
     "Otherwise true. Return conditional rows; never drop them.\n"
@@ -252,15 +258,22 @@ def _coerce(row: dict) -> Optional[dict]:
 
 
 def _ask(prompt: str, system: str = _SYSTEM, key: str = "requirements") -> list:
+    # 32k out, not 8k. MEASURED against a real federal solicitation: one chunk
+    # produced enough rows to hit an 8192-token ceiling mid-string, so the JSON
+    # came back unterminated,
+    # the parse failed, and EVERY requirement in that response was lost — a whole
+    # chunk of the solicitation gone with nothing but a log line. The one failure
+    # this module cannot tolerate is a silent one, and a truncated response looks
+    # exactly like a chunk that had no requirements in it.
     ai = gemini_client.generate_json(
-        prompt, temperature=0.0, max_output_tokens=8192, timeout_s=120,
+        prompt, temperature=0.0, max_output_tokens=32768, timeout_s=180,
         system_instruction=system, model=MODEL, location=MODEL_LOCATION)
     if not ai or not isinstance(ai.get(key), list):
         return []
     return ai[key]
 
 
-def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 2,
+def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 3,
                          budget_s: float = DEFAULT_BUDGET_S) -> dict:
     """Every requirement in `text`, each backed by a verbatim quote from it."""
     text = text or ""

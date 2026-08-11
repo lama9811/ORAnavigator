@@ -28,13 +28,30 @@ function authHeaders() {
 const SPONSORS = ["NSF", "NIH", "DoD", "DoE", "NASA", "USDA", "EPA",
                   "Foundation", "State of Maryland", "Internal"];
 
-export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "" }) {
+export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "",
+                                                  submissionId = null }) {
   // step: "pick" -> "extracting" -> "review" -> "creating"
   const [step, setStep] = useState("pick");
   const [error, setError] = useState("");
   const [extracted, setExtracted] = useState(null);
   const [titleOverride, setTitleOverride] = useState("");
   const fileInputRef = useRef(null);
+  // `submissionId` set = ATTACH MODE: the proposal already exists, so this
+  // modal fills in its solicitation instead of creating anything.
+  const attaching = submissionId != null;
+
+  // The deep read of the whole solicitation, fired once the contract comes back
+  // and the user lands on the review step. It is a separate request because it
+  // takes 60-150s against a 300s request cap — far too long to sit inside the
+  // contract call, and far too risky inside the save. Overlapping it with the
+  // time the user already spends checking the deadline and cap makes it free.
+  //
+  // The File / URL is KEPT for exactly this reason: there is no server-side
+  // place to stash the text between two requests (the backend runs many
+  // instances with no session affinity), so the source is re-sent.
+  const [source, setSource] = useState(null);      // {kind, file?, url?, filename?}
+  const [reqState, setReqState] = useState("idle"); // idle|running|ready|failed
+  const [requirements, setRequirements] = useState(null);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -66,9 +83,36 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
         data.extracted?.program_name || data.extracted?.program_id || "",
       );
       setStep("review");
+      readRequirements({ kind: "pdf", file, filename: file.name });
     } catch (e) {
       setError(e.message || "Couldn't read that PDF.");
       setStep("pick");
+    }
+  };
+
+  // Read every requirement in the solicitation. Deliberately fire-and-display:
+  // it never blocks Create, and a failure here costs the requirement list, not
+  // the proposal.
+  const readRequirements = async (src) => {
+    setSource(src);
+    setReqState("running");
+    setRequirements(null);
+    try {
+      const form = new FormData();
+      if (src.kind === "pdf") form.append("file", src.file, src.filename);
+      else form.append("url", src.url);
+      const res = await fetch(`${API_BASE}/api/me/solicitation-requirements`, {
+        method: "POST", headers: authHeaders(), body: form,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `${res.status} ${res.statusText}`);
+      }
+      setRequirements(await res.json());
+      setReqState("ready");
+    } catch (e) {
+      setRequirements({ error: e.message || "Couldn't read the requirements." });
+      setReqState("failed");
     }
   };
 
@@ -104,6 +148,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
         data.extracted?.program_name || data.extracted?.program_id || "",
       );
       setStep("review");
+      readRequirements({ kind: "url", url });
     } catch (e) {
       setError(e.message || "Couldn't read that URL.");
       setStep("pick");
@@ -114,17 +159,34 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
     setStep("creating");
     setError("");
     try {
-      const res = await fetch(
-        `${API_BASE}/api/me/submissions/from-solicitation/confirm`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({
-            extracted,
-            title_override: titleOverride.trim() || null,
-          }),
-        },
-      );
+      // The requirement list rides along ONLY when it is ready. This is the
+      // save point for both flows, and the one place the solicitation is
+      // written to the database.
+      const solicitation = reqState === "ready" && requirements ? {
+        requirements: requirements.requirements,
+        merit_criteria: requirements.merit_criteria,
+        eligibility_notes: requirements.eligibility_notes,
+        read_report: requirements.read_report,
+        extraction: requirements.extraction,
+        source: { kind: source?.kind, filename: source?.filename || null,
+                  url: source?.url || null },
+      } : {};
+
+      const res = attaching
+        ? await fetch(`${API_BASE}/api/me/submissions/${submissionId}/solicitation`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify({ extracted, ...solicitation }),
+          })
+        : await fetch(`${API_BASE}/api/me/submissions/from-solicitation/confirm`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders() },
+            body: JSON.stringify({
+              extracted,
+              title_override: titleOverride.trim() || null,
+              ...solicitation,
+            }),
+          });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.detail || `${res.status} ${res.statusText}`);
@@ -132,7 +194,8 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
       const submission = await res.json();
       onCreated(submission);
     } catch (e) {
-      setError(e.message || "Couldn't create the proposal.");
+      setError(e.message || (attaching ? "Couldn't attach the solicitation."
+                                       : "Couldn't create the proposal."));
       setStep("review");
     }
   };
@@ -156,7 +219,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
               <ArrowLeft size={11} /> Start over
             </button>
           ) : (
-            <h2>Start from a Solicitation</h2>
+            <h2>{attaching ? "Attach the Solicitation" : "Start from a Solicitation"}</h2>
           )}
           <button className="solicitation-close-btn" onClick={onClose}>
             <X />
@@ -185,6 +248,9 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
             onConfirm={handleConfirm}
             creating={step === "creating"}
             onCancel={onClose}
+            attaching={attaching}
+            reqState={reqState}
+            requirements={requirements}
           />
         )}
       </div>
@@ -296,9 +362,83 @@ function ExtractingStep() {
 // STEP 3 -- Review & edit
 // ============================================================
 
+// What the whole-document read found, shown while the user checks the fields
+// above it. This is the list the Draft Review will judge their draft against,
+// so they get to see every ask and the sentence it came from BEFORE it is
+// saved — the only real check on a requirement list a model produced.
+function RequirementsPanel({ state, data }) {
+  const [open, setOpen] = useState(false);
+  if (state === "idle") return null;
+
+  if (state === "running") {
+    return (
+      <div className="solicitation-requirements">
+        <strong>Reading the whole solicitation…</strong>
+        <p>
+          Every requirement it states, quoted. This takes about a minute — keep
+          checking the fields above, and you can create the proposal at any time.
+        </p>
+      </div>
+    );
+  }
+
+  if (state === "failed") {
+    return (
+      <div className="solicitation-requirements">
+        <strong>Couldn't read the requirements</strong>
+        <p>
+          {data?.error} You can still create the proposal and attach the
+          solicitation later — nothing is lost.
+        </p>
+      </div>
+    );
+  }
+
+  const rows = data?.requirements || [];
+  const warnings = data?.warnings || [];
+  const rr = data?.read_report || {};
+  return (
+    <div className="solicitation-requirements">
+      <strong>
+        {rows.length} requirement{rows.length === 1 ? "" : "s"} found
+      </strong>
+      {(rr.pages || rr.chars) && (
+        <p className="solicitation-read-report">
+          {rr.pages ? `${rr.pages} pages read` : `${rr.chars.toLocaleString()} characters read`}
+          {rr.pages_without_text ? `, ${rr.pages_without_text} with no text layer` : ""}.
+        </p>
+      )}
+      {warnings.map((w, i) => (
+        <p key={i} className="solicitation-requirements-warning">{w}</p>
+      ))}
+      {rows.length > 0 && (
+        <>
+          <button type="button" className="solicitation-req-toggle"
+                  onClick={() => setOpen((v) => !v)}>
+            {open ? "Hide" : "Show"} what your draft will be checked against
+          </button>
+          {open && (
+            <ul className="solicitation-req-list">
+              {rows.map((r) => (
+                <li key={r.id}>
+                  <span className="solicitation-req-label">{r.label}</span>
+                  <span className="solicitation-req-quote">
+                    <Quote size={10} /> {r.source}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function ReviewStep({
   extracted, titleOverride, onTitleChange, onChange,
-  onConfirm, creating, onCancel,
+  onConfirm, creating, onCancel, attaching = false,
+  reqState = "idle", requirements = null,
 }) {
   const sq = extracted.source_quotes || {};
   const unv = new Set(extracted.unverified_fields || []);
@@ -311,17 +451,21 @@ function ReviewStep({
         fix it before creating the proposal.
       </p>
 
-      <Field
-        label="Proposal title"
-        hint="What this proposal will be called in your tracker"
-      >
-        <input
-          type="text"
-          value={titleOverride}
-          onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="e.g. NSF CAREER on microbial bioremediation"
-        />
-      </Field>
+      {/* Attach mode fills in an EXISTING proposal, so its title is not up for
+          renaming here. */}
+      {!attaching && (
+        <Field
+          label="Proposal title"
+          hint="What this proposal will be called in your tracker"
+        >
+          <input
+            type="text"
+            value={titleOverride}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder="e.g. NSF CAREER on microbial bioremediation"
+          />
+        </Field>
+      )}
 
       <FieldRow>
         <Field label="Sponsor">
@@ -438,6 +582,8 @@ function ReviewStep({
         </span>
       </label>
 
+      <RequirementsPanel state={reqState} data={requirements} />
+
       <div className="solicitation-actions">
         <button
           type="button"
@@ -451,13 +597,22 @@ function ReviewStep({
           type="button"
           className="btn-primary"
           onClick={onConfirm}
-          disabled={creating || !titleOverride.trim() || !verified}
+          // NEVER blocked on the requirement read. If it is still running the
+          // button says so and saves without the list; the solicitation can be
+          // attached afterwards. Waiting on a slow read would be the one thing
+          // that could lose the PI their work.
+          disabled={creating || (!attaching && !titleOverride.trim()) || !verified}
           title={!verified
             ? "Confirm you've checked the deadline and budget cap first"
             : ""}
         >
           <Check size={11} />{" "}
-          {creating ? "Creating..." : "Create Proposal"}
+          {creating
+            ? (attaching ? "Attaching..." : "Creating...")
+            : reqState === "running"
+              ? (attaching ? "Attach without the requirement list"
+                           : "Create without the requirement list")
+              : (attaching ? "Attach to this proposal" : "Create Proposal")}
         </button>
       </div>
     </div>

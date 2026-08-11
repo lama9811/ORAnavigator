@@ -676,3 +676,57 @@ body.dark .eir-modal {
   .eir-input-footer { flex-wrap: wrap; }
   .eir-run { width: 100%; margin-left: 0; }
 }
+
+/* ── No solicitation attached ───────────────────────────────────────────────
+   The review needs a solicitation to judge against. This panel replaces the
+   input entirely rather than letting a PI run a review that would score their
+   draft against nothing. */
+.eir-attach-first {
+  padding: 28px 26px 24px;
+  text-align: center;
+}
+.eir-attach-first h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #0f172a;
+}
+.eir-attach-first p {
+  margin: 0 auto 18px;
+  max-width: 46ch;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.eir-attach-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.eir-secondary {
+  padding: 8px 16px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 6px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  cursor: pointer;
+}
+.eir-secondary:hover { background: #f8fafc; }
+
+/* How well the solicitation could be read. Rendered ONLY when it is not clean,
+   because a silent partial read is how "few requirements found" gets mistaken
+   for "few requirements exist". */
+.eir-read-report {
+  display: flex;
+  gap: 9px;
+  margin: 12px 22px 0;
+  padding: 9px 12px;
+  border-left: 3px solid #d97706;
+  border-radius: 4px;
+  background: rgba(217, 119, 6, 0.06);
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.eir-read-report p { margin: 0; }
+.eir-read-report p + p { margin-top: 4px; }

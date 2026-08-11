@@ -12,7 +12,7 @@ import SolicitationUploadModal from "./SolicitationUploadModal";
 import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
-import EirReviewModal from "./EirReviewModal";
+import DraftReviewModal from "./DraftReviewModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -46,24 +46,14 @@ function daysUntil(iso) {
 // update this helper too or the button will silently desync.
 const SOLICITATION_NOTE_RES = [/^Budget cap:/m, /^Page limits:/m, /^Required attachments:/m];
 function hasSolicitation(submission) {
+  // A stored solicitation profile is authoritative. The notes/task heuristics
+  // below still answer for proposals created before that column existed.
+  if (submission?.has_solicitation_requirements) return true;
   const notes = submission?.notes || "";
   if (SOLICITATION_NOTE_RES.some((re) => re.test(notes))) return true;
   return (submission?.tasks || []).some((t) =>
     (t.title || "").trim().startsWith("Prepare required attachment:")
   );
-}
-
-// Is this proposal going to NSF's HBCU Excellence in Research program?
-// The EiR Review tool is hardcoded to solicitation NSF 23-598, so showing it on
-// an unrelated NSF proposal would check a PI against rules that do not apply to
-// them. Matched on the title/notes rather than the sponsor alone, since "NSF" is
-// most of the tracker. Kept deliberately loose on the PI's side (they may write
-// "EiR", "HBCU-EiR", or the solicitation number) and strict on the program's:
-// "excellence in research" is the program's actual name, not a generic phrase.
-const EIR_RES = [/excellence in research/i, /\bhbcu[-\s]?eir\b/i, /\beir\b/i, /23-?598/];
-function isEirProposal(submission) {
-  const haystack = `${submission?.title || ""}\n${submission?.notes || ""}`;
-  return EIR_RES.some((re) => re.test(haystack));
 }
 
 // The single recommended next action for a proposal, derived purely from its
@@ -561,10 +551,10 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
   const [showEir, setShowEir] = useState(false);
+  const [showSolicitation, setShowSolicitation] = useState(false);
 
   const next = nextStep(submission);
   const solicited = hasSolicitation(submission);
-  const isEir = isEirProposal(submission);
   const openModal = (key) => {
     if (key === "budget") setShowBudget(true);
     else if (key === "compliance") setShowCompliance(true);
@@ -585,10 +575,10 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               label="Solicitation"
               status={solicited ? "attached" : "not attached"}
               statusDone={solicited}
-              disabled
+              onClick={() => setShowSolicitation(true)}
               title={solicited
-                ? "This proposal has the funder's rules attached (budget cap, page limits, required attachments)."
-                : "Funder rules are attached when you start a proposal from a solicitation."}
+                ? "The funder's rules attached to this proposal. Upload a newer solicitation to replace them."
+                : "Attach the funder's solicitation — it sets the budget cap and page limits, and every requirement in it becomes a Draft Review check."}
             />
           </LifecycleStage>
 
@@ -623,14 +613,15 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
                 title="Upload a draft PDF and check it against this proposal's solicitation requirements."
               />
             )}
-            {isEir && (
-              <ToolButton
-                icon={ListChecks}
-                label="Draft review"
-                onClick={() => setShowEir(true)}
-                title="Paste your whole EiR proposal and check it against every requirement in NSF 23-598."
-              />
-            )}
+            <ToolButton
+              icon={ListChecks}
+              label="Draft review"
+              status={submission.has_solicitation_requirements ? null : "needs solicitation"}
+              onClick={() => setShowEir(true)}
+              title={submission.has_solicitation_requirements
+                ? "Paste or upload your whole package and check it against every requirement in this proposal's solicitation."
+                : "Attach this proposal's solicitation, then every requirement in it becomes a check."}
+            />
           </LifecycleStage>
 
           <OverflowMenu
@@ -669,9 +660,20 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
       )}
 
       {showEir && (
-        <EirReviewModal
+        <DraftReviewModal
           submission={submission}
           onClose={() => setShowEir(false)}
+          onAttach={() => { setShowEir(false); setShowSolicitation(true); }}
+        />
+      )}
+
+      {/* One attach UI, reused: the same modal that starts a proposal from a
+          solicitation fills one in on a proposal that already exists. */}
+      {showSolicitation && (
+        <SolicitationUploadModal
+          submissionId={submission.id}
+          onClose={() => setShowSolicitation(false)}
+          onCreated={() => { setShowSolicitation(false); onRefresh(); }}
         />
       )}
 

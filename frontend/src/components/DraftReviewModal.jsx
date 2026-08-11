@@ -1,13 +1,18 @@
-// EirReviewModal.jsx
+// DraftReviewModal.jsx
 //
-// NSF 23-598 (HBCU-EiR) completeness review.
+// Completeness of a draft against THIS proposal's own solicitation — whichever
+// funder it came from. No solicitation is special-cased anywhere.
 //
+//   0. No solicitation stored -> the attach panel, NOT a review. Scoring a
+//      draft against zero requirements would hand back a confident percentage
+//      that means nothing at all.
 //   1. PI uploads their proposal files (PDF / .docx / text — several at once,
-//      because a real EiR package IS several files), or pastes text instead.
-//   2. POST /api/me/submissions/{id}/eir-review/upload  (multipart)
-//      or   POST /api/me/submissions/{id}/eir-review    (pasted text)
-//      -> backend extracts, locates the sections, runs the rule-based checks,
-//         asks the model for grounded coverage, computes a completeness score.
+//      because a real package IS several files), or pastes text instead.
+//   2. POST /api/me/submissions/{id}/draft-review/upload  (multipart)
+//      or   POST /api/me/submissions/{id}/draft-review    (pasted text)
+//      -> backend loads the stored solicitation, locates the sections, runs the
+//         rule-based checks, asks the model for grounded coverage, computes a
+//         completeness score.
 //   3. Findings render grouped by section, each with the verbatim solicitation
 //      sentence behind it and (for anything found) a quote from the PI's text.
 //
@@ -32,7 +37,7 @@ import {
   MinusCircle, Quote, Trash2, Upload, X, XCircle,
 } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
-import "./EirReviewModal.css";
+import "./DraftReviewModal.css";
 
 const API_BASE = getApiBase();
 
@@ -55,15 +60,20 @@ const STATUS_META = {
   unclear:          { label: "Unassessed",   Icon: MinusCircle,   cls: "eir-skip", neutral: true },
 };
 
-const SECTION_LABELS = {
-  project_summary: "Project Summary",
-  project_description: "Project Description",
-  broader_impacts: "Broader Impacts",
-  institutional_support_letter: "Letter of Institutional Support",
-  collaboration_letters: "Letters of Collaboration",
-  budget_justification: "Budget Justification",
-  references: "References Cited",
-};
+// Section labels come from the RESULT, not a table here: the sections are
+// whatever this solicitation names, so any hardcoded map would be wrong for
+// every funder but the one it was written for.
+function sectionLabels(result) {
+  const out = {};
+  for (const s of result?.sections_located || []) out[s.key] = s.label;
+  for (const s of result?.sections_missing || []) out[s.key] = s.label;
+  return out;
+}
+
+function titleCase(key) {
+  return String(key || "").split("_").filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
 
 function StatusChip({ status }) {
   const meta = STATUS_META[status] || STATUS_META.unclear;
@@ -84,7 +94,7 @@ function humanSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function EirReviewModal({ submission, onClose }) {
+export default function DraftReviewModal({ submission, onClose, onAttach }) {
   const [mode, setMode] = useState("upload");  // upload | paste
   const [files, setFiles] = useState([]);
   const [draft, setDraft] = useState("");
@@ -126,12 +136,12 @@ export default function EirReviewModal({ submission, onClose }) {
         const form = new FormData();
         files.forEach((f) => form.append("files", f, f.name));
         res = await fetch(
-          `${API_BASE}/api/me/submissions/${submission.id}/eir-review/upload`,
+          `${API_BASE}/api/me/submissions/${submission.id}/draft-review/upload`,
           { method: "POST", headers: { ...authHeaders() }, body: form }
         );
       } else {
         res = await fetch(
-          `${API_BASE}/api/me/submissions/${submission.id}/eir-review`,
+          `${API_BASE}/api/me/submissions/${submission.id}/draft-review`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -164,6 +174,9 @@ export default function EirReviewModal({ submission, onClose }) {
     }
   }
 
+  const summary = submission?.solicitation_summary || null;
+  const hasSolicitation = Boolean(submission?.has_solicitation_requirements);
+
   return createPortal(
     <div className="eir-overlay" onClick={onClose}>
       <div className="eir-modal" onClick={(e) => e.stopPropagation()}>
@@ -171,7 +184,10 @@ export default function EirReviewModal({ submission, onClose }) {
           <div>
             <h2>Draft Review</h2>
             <div className="eir-sub">
-              Completeness against NSF 23-598 &mdash; HBCU Excellence in Research
+              {summary
+                ? <>Completeness against <b>{summary.id}</b>
+                    {summary.title ? ` — ${summary.title}` : ""}</>
+                : "Checked against the solicitation attached to this proposal"}
             </div>
           </div>
           <button className="eir-close" onClick={onClose} aria-label="Close">
@@ -179,7 +195,31 @@ export default function EirReviewModal({ submission, onClose }) {
           </button>
         </header>
 
-        {step === "input" && (
+        {/* No solicitation, no review. Scoring a draft against zero
+            requirements would produce a confident percentage that means
+            nothing, so this asks for the solicitation instead. */}
+        {!hasSolicitation && (
+          <div className="eir-attach-first">
+            <h3>Attach this proposal's solicitation first</h3>
+            <p>
+              This review checks your draft against the funder's own
+              requirements — every one it states, quoted from the document. Once
+              the solicitation is attached, each requirement becomes a check.
+            </p>
+            <div className="eir-attach-actions">
+              {onAttach && (
+                <button className="eir-run" onClick={onAttach}>
+                  Attach the solicitation
+                </button>
+              )}
+              <button className="eir-secondary" onClick={onClose}>Not now</button>
+            </div>
+          </div>
+        )}
+
+        {hasSolicitation && summary && <ReadReport summary={summary} />}
+
+        {hasSolicitation && step === "input" && (
           <InputView
             mode={mode} setMode={setMode}
             files={files} addFiles={addFiles}
@@ -190,13 +230,13 @@ export default function EirReviewModal({ submission, onClose }) {
           />
         )}
 
-        {step === "running" && (
+        {hasSolicitation && step === "running" && (
           <div className="eir-loading">
             <div className="eir-spinner" />
             <p>
               {mode === "upload"
-                ? "Reading your files, then checking each NSF requirement…"
-                : "Finding your sections, then checking each NSF requirement…"}
+                ? "Reading your files, then checking each requirement…"
+                : "Finding your sections, then checking each requirement…"}
             </p>
             <p className="eir-loading-hint">
               This reads the whole proposal, so it takes about 20 seconds.
@@ -204,7 +244,7 @@ export default function EirReviewModal({ submission, onClose }) {
           </div>
         )}
 
-        {step === "results" && result && (
+        {hasSolicitation && step === "results" && result && (
           <ResultsView
             result={result}
             extraction={extraction}
@@ -214,6 +254,29 @@ export default function EirReviewModal({ submission, onClose }) {
       </div>
     </div>,
     document.body
+  );
+}
+
+// How well the solicitation could be read, shown ONLY when it is not clean.
+// A silent partial read is how "few requirements" gets mistaken for "few
+// requirements exist".
+function ReadReport({ summary }) {
+  const rr = summary.read_report || {};
+  const ex = summary.extraction || {};
+  const problems = [];
+  if (rr.pages_without_text) {
+    problems.push(
+      `${rr.pages_without_text} of ${rr.pages} pages had no extractable text, so ` +
+      "requirements on those pages were not read.");
+  }
+  if (ex.hit_time_cap) problems.push("Reading ran out of time, so the list may be incomplete.");
+  if (ex.hit_round_cap) problems.push("Reading stopped at its round limit, so the list may be incomplete.");
+  if (!problems.length) return null;
+  return (
+    <div className="eir-read-report">
+      <AlertTriangle size={13} />
+      <div>{problems.map((p, i) => <p key={i}>{p}</p>)}</div>
+    </div>
   );
 }
 
@@ -478,6 +541,7 @@ function FindingRow({ f }) {
 
 function ResultsView({ result, extraction, onBack }) {
   const findings = result.findings || [];
+  const labels = sectionLabels(result);
   // Group in solicitation order; the backend already sorted, so first-seen
   // section order is the authored order.
   const groups = [];
@@ -485,7 +549,8 @@ function ResultsView({ result, extraction, onBack }) {
     const key = f.section || "_whole";
     let g = groups.find((x) => x.key === key);
     if (!g) {
-      g = { key, label: SECTION_LABELS[key] || "Whole proposal", items: [] };
+      g = { key, label: key === "_whole" ? "Whole proposal"
+                                       : (labels[key] || titleCase(key)), items: [] };
       groups.push(g);
     }
     g.items.push(f);
