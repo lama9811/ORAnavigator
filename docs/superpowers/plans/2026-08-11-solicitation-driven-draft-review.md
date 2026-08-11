@@ -6,6 +6,8 @@
 
 **Architecture:** The existing four-stage engine (`eir_review.py`) is already generic in shape; it is hardcoded only because it imports `eir_solicitation` directly. We introduce a **solicitation profile** — sections + requirement rows + deterministic check callables — and parameterize the engine on it. A new extractor reads any solicitation PDF *completely* (chunked, sweep-until-dry, every row quote-verified) and produces that profile, which is stored on the submission in a new `solicitation_json` column and reviewed by the PI before it is saved.
 
+**NSF 23-598 is removed from the product.** There is ONE code path — attach a solicitation, get reviewed against it — and no branch, entry point, endpoint, or UI check anywhere that knows which solicitation it is. `services/eir_review.py` and the eight NSF-specific check functions are **deleted**, not shimmed. `eir_solicitation.py` moves to `tests/fixtures/nsf_23_598.py`, where it is test data and nothing else: it is the only human-verified requirement list in the repo, so Task 8 measures the generic extractor against it. If it stayed under `services/`, the next reader would reasonably assume the product still special-cases NSF.
+
 **Tech Stack:** FastAPI + SQLAlchemy (single-worker uvicorn), `services/gemini_client` → `gemini-3.6-flash` on `location="global"`, pdfplumber, React 19 + Vite.
 
 ## Global Constraints
@@ -30,11 +32,11 @@
 
 | File | Responsibility |
 |---|---|
-| `backend/services/solicitation_profile.py` (new) | The shape the engine consumes: `make_profile`, `from_eir`, `build_generic`, `sections_from`, `aliases_for`, `requirements_for`. No LLM, no DB. |
-| `backend/services/eir_checks.py` (new) | The eight NSF 23-598-specific deterministic check callables, moved verbatim out of `eir_review.py`. |
+| `backend/services/solicitation_profile.py` (new) | The shape the engine consumes: `make_profile`, `build_generic`, `sections_from`, `aliases_for`, `requirements_for`. No LLM, no DB. |
 | `backend/services/generic_checks.py` (new) | Deterministic checks that work for any solicitation: page limit, attachment present, budget vs cap. |
 | `backend/services/draft_review.py` (new, from `eir_review.py`) | The four-stage engine, parameterized on a profile. |
-| `backend/services/eir_review.py` (shrinks to a shim) | `review_eir_draft()` → `draft_review.review_draft(profile=from_eir())`. Keeps existing callers and tests working. |
+| `backend/services/eir_review.py` (**deleted**) | Was the NSF 23-598 entry point. Nothing replaces it — the generic path is the only path. |
+| `backend/services/eir_solicitation.py` → `backend/tests/fixtures/nsf_23_598.py` | Leaves `services/` entirely. Read only by tests: the recall measurement (Task 8) and as realistic profile data for engine tests. |
 | `backend/services/solicitation_requirements.py` (new) | Reads a whole solicitation and returns quote-verified requirement rows + a read report. |
 | `backend/services/solicitation_extractor.py` (modify) | Add a read report; stop truncating silently. |
 | `backend/models.py` (modify) | `Submission.solicitation_json`. |
@@ -52,10 +54,9 @@
 - Test: `backend/tests/test_solicitation_profile.py`
 
 **Interfaces:**
-- Consumes: `services.eir_solicitation` (existing constants `SECTIONS`, `EIR_REQUIREMENTS`, `MERIT_CRITERIA`, `ELIGIBILITY_NOTES`, `SOLICITATION_ID/TITLE/URL`).
+- Consumes: nothing. This module is data-shaping only — no LLM, no DB, no imports from other services.
 - Produces:
   - `make_profile(*, id, title, url=None, sections, requirements, checks=None, merit_criteria=None, eligibility_notes=None) -> dict`
-  - `from_eir() -> dict`
   - `aliases_for(label: str) -> list[str]`
   - `sections_from(requirements: list[dict], page_limits: dict | None = None, attachments: list[str] | None = None) -> dict`
   - `requirements_for(profile: dict, section: str | None) -> list[dict]`
@@ -94,17 +95,13 @@ def test_sections_also_come_from_page_limits_and_attachments():
     assert "biosketch" in sections
 
 
-def test_the_eir_profile_carries_every_curated_requirement_and_section():
-    from services import eir_solicitation as sol
-    profile = sp.from_eir()
-    assert profile["id"] == sol.SOLICITATION_ID
-    assert len(profile["requirements"]) == len(sol.EIR_REQUIREMENTS)
-    assert set(profile["sections"]) == set(sol.SECTIONS)
-    # Every deterministic row's check must resolve to a real callable, or the
-    # engine would silently skip it.
-    for req in profile["requirements"]:
-        if req["kind"] == "deterministic":
-            assert callable(profile["checks"][req["check"]])
+def test_nothing_in_the_profile_module_knows_about_any_named_solicitation():
+    # The point of the whole change: one path, no funder-specific branch. A
+    # regression here would be someone re-adding a from_nsf()/from_nih() helper.
+    import inspect
+    src = inspect.getsource(sp).lower()
+    for token in ("23-598", "eir", "hbcu", "excellence in research"):
+        assert token not in src
 
 
 def test_requirements_for_none_returns_the_whole_document_rows():
@@ -222,26 +219,6 @@ def make_profile(*, id: str, title: str, url: Optional[str] = None,
     }
 
 
-def from_eir() -> dict:
-    """NSF 23-598 as a profile — the hand-curated rows, unchanged.
-
-    Retained because it is the only human-verified requirement list we have, and
-    it is what tests/test_solicitation_requirements_recall.py measures the
-    generic extractor against."""
-    from services import eir_solicitation as sol
-    from services import eir_checks
-    return make_profile(
-        id=sol.SOLICITATION_ID,
-        title=sol.SOLICITATION_TITLE,
-        url=sol.SOLICITATION_URL,
-        sections=dict(sol.SECTIONS),
-        requirements=list(sol.EIR_REQUIREMENTS),
-        checks=eir_checks.CHECKS,
-        merit_criteria=list(sol.MERIT_CRITERIA),
-        eligibility_notes=list(sol.ELIGIBILITY_NOTES),
-    )
-
-
 def requirements_for(profile: dict, section: Optional[str]) -> list[dict]:
     """Rows belonging to `section`; None -> the whole-document rows."""
     return [r for r in profile.get("requirements", []) if r.get("section") == section]
@@ -254,7 +231,7 @@ def scored_requirements(profile: dict) -> list[dict]:
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `cd backend && python3 -m pytest tests/test_solicitation_profile.py -v`
-Expected: PASS — except `test_the_eir_profile_carries_every_curated_requirement_and_section`, which needs `services/eir_checks.py` from Task 2. Mark it `@pytest.mark.xfail(reason="eir_checks lands in Task 2", strict=False)` now and REMOVE the marker in Task 2 Step 5.
+Expected: PASS (all five). This task has no dependency on any later one.
 
 - [ ] **Step 5: Commit**
 
@@ -265,55 +242,63 @@ git commit -m "feat(review): a solicitation profile the reviewer can be handed"
 
 ---
 
-### Task 2: Move the EiR checks out, parameterize the engine
+### Task 2: Delete the NSF 23-598 path, parameterize the engine
 
-This is a **pure refactor**. `tests/test_eir_review.py` must pass untouched at the end — that is the whole verification.
+The engine keeps every behavior it has; what goes is the funder-specific half.
+**This task DELETES code and DELETES tests** — read the coverage note in Step 1
+before starting, because some of what is removed is genuinely useful and its
+removal is a decision, not an accident.
 
 **Files:**
-- Create: `backend/services/eir_checks.py`
 - Create: `backend/services/draft_review.py` (git mv from `backend/services/eir_review.py`)
-- Modify: `backend/services/eir_review.py` (becomes a 20-line shim)
-- Test: `backend/tests/test_eir_review.py` (unchanged), `backend/tests/test_draft_review_generic.py` (new)
+- Create: `backend/tests/fixtures/__init__.py`, `backend/tests/fixtures/nsf_23_598.py` (git mv from `backend/services/eir_solicitation.py`)
+- Create: `backend/tests/test_draft_review.py` (engine behavior, ported)
+- Delete: `backend/services/eir_review.py` (the shim is NOT kept), `backend/tests/test_eir_review.py`
+- Test: `backend/tests/test_draft_review.py`, `backend/tests/test_draft_review_generic.py` (new)
 
 **Interfaces:**
-- Consumes: `solicitation_profile.from_eir()`, `solicitation_profile.requirements_for()` from Task 1.
+- Consumes: `solicitation_profile.make_profile`, `.requirements_for`, `.sections_from` from Task 1.
 - Produces:
-  - `eir_checks.CHECKS: dict[str, callable]` — keys `title_prefix`, `loi_number`, `institutional_letter_length`, `collaboration_letter_format`, `no_support_letters`, `no_cost_sharing`, `equipment_cap`, `dc_meeting_travel`. Each callable is `fn(ctx: dict, req: dict) -> tuple[str, str, str]` returning `(status, detail, evidence)`.
   - `draft_review.review_draft(draft_text, *, profile, title=None, budget=None, use_ai=True) -> dict`
   - `draft_review.locate_sections(text, sections, *, use_ai=True) -> tuple[dict, bool]`
   - `draft_review.run_deterministic(text, spans, profile, *, title=None, budget=None) -> list[dict]`
   - `draft_review.score(findings, *, solicitation_id) -> dict | None`
-  - `eir_review.review_eir_draft(...)` — signature unchanged.
+  - `draft_review.MAX_DRAFT_CHARS: int` (unchanged, 120_000)
+  - No `review_eir_draft` anywhere. No module under `services/` mentions NSF 23-598.
 
-- [ ] **Step 1: Move the file and the checks**
+- [ ] **Step 1: Delete the NSF-specific code, and know what goes with it**
 
 ```bash
-cd backend && git mv services/eir_review.py services/draft_review.py
+cd backend
+git mv services/eir_review.py services/draft_review.py
+mkdir -p tests/fixtures && touch tests/fixtures/__init__.py
+git mv services/eir_solicitation.py tests/fixtures/nsf_23_598.py
 ```
 
-Cut the eight `_check_*` functions and the module-level regexes they use
-(`_LOI_RE`, `_SUPPORT_LETTER_RE`, `_COST_SHARE_RE`, `_NEGATION_WINDOW`,
+Delete from `draft_review.py` the eight `_check_*` functions, the
+`_DETERMINISTIC_CHECKS` table, and the regexes and constants only they used:
+`_LOI_RE`, `_SUPPORT_LETTER_RE`, `_COST_SHARE_RE`, `_NEGATION_WINDOW`,
 `_NEGATIONS`, `_COLLAB_SPINE`, `_DC_TRAVEL_RE`, `_EVERY_YEAR_RE`,
-`_negated_nearby`, `WORDS_PER_PAGE`) out of `draft_review.py` into a new
-`services/eir_checks.py`. **Change every check's signature from `fn(ctx)` to
-`fn(ctx, req)`** — the generic checks in Task 3 need the row to know which
-section and limit they are checking, and one table means one signature. The
-bodies are otherwise copied verbatim, including their comments; they keep
-importing `services.eir_solicitation` for `TITLE_PREFIX`, `EQUIPMENT_MAX_PCT`,
-`INSTITUTIONAL_LETTER_MAX_PAGES`. End the file with:
+`_negated_nearby`, `WORDS_PER_PAGE`.
 
-```python
-CHECKS = {
-    "title_prefix": _check_title_prefix,
-    "loi_number": _check_loi_number,
-    "institutional_letter_length": _check_institutional_letter_length,
-    "collaboration_letter_format": _check_collaboration_letter_format,
-    "no_support_letters": _check_no_support_letters,
-    "no_cost_sharing": _check_no_cost_sharing,
-    "equipment_cap": _check_equipment_cap,
-    "dc_meeting_travel": _check_dc_meeting_travel,
-}
-```
+**COVERAGE THAT GOES AWAY, deliberately.** `tests/test_eir_review.py` holds 50
+tests. Roughly 18 of them test the eight deleted checks — the NSF title prefix,
+the LOI number in the Project Summary, the 30% equipment cap arithmetic, the
+prohibited letters of support, the cost-sharing negation window ("no cost
+sharing is included" must not be flagged as offering it), the mandated
+collaboration sentence, and the DC grantee-meeting travel rule. Those tests are
+deleted with the code they test. **This is real capability leaving the product**,
+accepted as the price of one uniform path: for an EiR proposal those rules now
+reach a PI only if the extractor pulls them out of the PDF as quoted semantic
+rows. The remaining ~30 tests cover the ENGINE and are ported in Step 3 — do not
+delete those.
+
+`tests/fixtures/nsf_23_598.py` needs one edit after the move: it is test data, so
+replace its module docstring's "This module is DATA ONLY" preamble with a note
+saying it is no longer imported by any service, that it is the only
+human-verified requirement list in the repo, and that Task 8's recall test is
+what it is for. Nothing under `backend/services/` may import it — a grep for
+`eir_solicitation` outside `tests/` must come back empty.
 
 - [ ] **Step 2: Replace every `sol.` reference in `draft_review.py` with the profile**
 
@@ -322,9 +307,12 @@ Mechanical, six places. `sol.SECTIONS` → the `sections` argument;
 `solicitation_profile.requirements_for(profile, k)`; `sol.MERIT_CRITERIA` →
 `profile["merit_criteria"]`; `sol.ELIGIBILITY_NOTES` →
 `profile["eligibility_notes"]`; `_solicitation_meta()` → returns
-`{"id","title","url"}` off the profile, and the EiR-only `cycle` moves into the
-shim. `_DETERMINISTIC_CHECKS` is deleted; `run_deterministic` now resolves each
-row through `profile["checks"]` falling back to `generic_checks.CHECKS`:
+`{"id","title","url"}` off the profile. The `cycle` key it used to carry
+(`loi_deadline` / `full_proposal_deadline`) is **dropped entirely** — those dates
+are computed from NSF 23-598's recurrence rules and have no generic equivalent;
+the proposal's own `deadline` field already carries what a PI needs.
+`run_deterministic` resolves each row through `profile["checks"]`, falling back
+to `generic_checks.CHECKS`:
 
 ```python
 def run_deterministic(text: str, spans: dict, profile: dict, *,
@@ -359,41 +347,67 @@ Also generalize the two hardcoded EiR facts in the assembly step:
 — guard both with `if key in profile["sections"]` so a solicitation without a
 Broader Impacts section is unaffected.
 
-- [ ] **Step 3: Reduce `eir_review.py` to a shim**
+- [ ] **Step 3: Port the ~30 engine tests, delete the rest**
+
+```bash
+cd backend && git mv tests/test_eir_review.py tests/test_draft_review.py
+```
+
+`test_draft_review.py` keeps the tests that exercise the ENGINE and drops the
+ones that exercised the deleted checks. Keep and re-point:
+
+- **Locate** — `test_heading_fallback_locates_sections_without_ai`,
+  `test_located_spans_do_not_overlap_and_follow_document_order`,
+  `test_a_mention_in_a_paragraph_is_not_a_heading`,
+  `test_missing_section_is_reported_as_unlocated_not_missing`,
+  `test_unlocated_requirements_are_excluded_from_the_score`
+- **Span assembly** — the three `project_description_span` tests
+- **Grounding** — `test_addressed_without_a_verifiable_quote_is_demoted`,
+  `test_addressed_with_a_real_quote_survives`,
+  `test_hard_wrapped_draft_still_matches_the_quote`,
+  `test_model_cannot_invent_a_requirement`,
+  `test_a_requirement_the_model_skipped_is_unclear_not_missing`,
+  `test_an_unrecognised_status_falls_back_to_not_found`
+- **Score** — `test_score_is_arithmetic_over_coverage`,
+  `test_unscored_conditional_requirements_do_not_count_against_the_draft`,
+  `test_score_bands`, `test_score_is_none_when_nothing_was_assessed`,
+  `test_a_flagged_prohibition_costs_points`
+- **Assembly / offline** — `test_offline_suppresses_the_score_but_keeps_the_rule_checks`,
+  `test_offline_semantic_rows_are_unclear_never_a_hard_absence_claim`,
+  `test_empty_paste_returns_a_prompt_not_a_zero_score`,
+  `test_every_requirement_gets_exactly_one_finding`,
+  `test_findings_follow_solicitation_order`,
+  `test_every_finding_carries_its_solicitation_source_text`,
+  `test_result_reports_which_sections_were_found_and_which_were_not`
+
+Delete: the three `*_deadline*` tests, the eighteen tests of the deleted checks
+(title prefix, LOI number, support letters, cost sharing, equipment cap, DC
+travel, collaboration letters, institutional letter length),
+`test_solicitation_metadata_points_at_the_next_open_cycle`,
+`test_conditional_requirements_are_marked_unscored_in_the_solicitation`, and
+`test_every_deterministic_requirement_has_a_real_check_function`.
+
+Each kept test changes only in how it gets its subject: instead of calling
+`review_eir_draft(...)`, it builds a profile from the fixture's semantic rows —
+realistic data, no NSF code path — via one shared helper at the top of the file:
 
 ```python
-# backend/services/eir_review.py
-"""NSF 23-598 entry point, kept so existing callers and tests are untouched.
-
-The engine moved to services/draft_review.py and is now handed a profile; this
-supplies the hand-curated NSF 23-598 one. See
-docs/superpowers/specs/2026-08-11-solicitation-driven-draft-review-design.md."""
-
-from __future__ import annotations
-
-from typing import Optional
-
-from services import draft_review, solicitation_profile
-from services import eir_solicitation as sol
-
-MAX_DRAFT_CHARS = draft_review.MAX_DRAFT_CHARS
+from tests.fixtures import nsf_23_598 as fx
+from services import draft_review, solicitation_profile as sp
 
 
-def review_eir_draft(draft_text: str, *, title: Optional[str] = None,
-                     budget: Optional[dict] = None,
-                     use_ai: bool = True) -> dict:
-    result = draft_review.review_draft(
-        draft_text, profile=solicitation_profile.from_eir(),
-        title=title, budget=budget, use_ai=use_ai)
-    # The recurring LOI / full-proposal cycle is stated as a RULE in NSF 23-598
-    # and computed in eir_solicitation. No other solicitation has an equivalent,
-    # so it is attached here rather than in the generic engine.
-    from datetime import date
-    year = date.today().year
-    if date.today() > sol.full_proposal_deadline(year):
-        year += 1
-    result["solicitation"]["cycle"] = sol.cycle_dates(year)
-    return result
+def fixture_profile():
+    """A realistic profile from human-verified NSF 23-598 rows.
+
+    Test DATA only: nothing under services/ imports this, and the engine cannot
+    tell these rows from ones the extractor produced. Using real requirement
+    text keeps these tests honest — synthetic one-line requirements would not
+    exercise the locate stage the way a real heading does."""
+    rows = [r for r in fx.EIR_REQUIREMENTS if r["kind"] == "semantic"]
+    return sp.make_profile(
+        id=fx.SOLICITATION_ID, title=fx.SOLICITATION_TITLE, url=fx.SOLICITATION_URL,
+        sections=dict(fx.SECTIONS), requirements=rows,
+        merit_criteria=list(fx.MERIT_CRITERIA))
 ```
 
 - [ ] **Step 4: Write the generic-path test**
@@ -448,22 +462,30 @@ def test_no_finding_is_ever_reported_against_a_requirement_the_profile_lacks():
     assert {f["id"] for f in result["findings"]} <= {"aims", "training"}
 ```
 
-- [ ] **Step 5: Remove the xfail marker added in Task 1 Step 4, then run BOTH suites**
+- [ ] **Step 5: Run the ported suites and prove nothing under services/ names NSF**
 
 Run:
 ```bash
-cd backend && python3 -m pytest tests/test_eir_review.py tests/test_draft_review_generic.py \
-  tests/test_solicitation_profile.py -v
+cd backend && python3 -m pytest tests/test_draft_review.py \
+  tests/test_draft_review_generic.py tests/test_solicitation_profile.py -v
+grep -ril "eir_solicitation\|23-598\|hbcu" services/ ; echo "exit=$?"
 ```
-Expected: PASS. `test_eir_review.py` must pass **with no edits to it** — if it needed editing, the refactor changed behavior and is wrong.
+Expected: tests PASS, and the grep prints **nothing** (`exit=1`). A hit means a
+funder-specific branch survived, which is the one thing this task exists to
+remove.
 
-- [ ] **Step 6: Run the full suite and commit**
+- [ ] **Step 6: Delete the old API tests, run the full suite, commit**
+
+`tests/test_eir_review_api_e2e.py` targets the `/eir-review` routes, which Task 6
+deletes. Leave it in place for now — it still passes, because the routes are
+still there until Task 6 — and delete it there, so this task's commit stays a
+clean engine change.
 
 ```bash
 cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 \
   python3 -m pytest -q --ignore=tests/test_agent_instruction.py
 git add -A backend/services backend/tests
-git commit -m "refactor(review): parameterize the draft reviewer on a solicitation profile"
+git commit -m "refactor(review): drop the NSF 23-598 path; the reviewer takes a profile"
 ```
 
 ---
@@ -558,11 +580,14 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'services.generic_check
 
 These are the rules whose input is a NUMBER the contract already carries — page
 limits, required attachment names, the budget cap — so they are decided by code
-for every funder (golden rule 1). Solicitation-specific arithmetic that nobody
-extracted a number for (EiR's 30% equipment cap, its 2-page letter) lives in
-services/eir_checks.py and is only reachable through the curated profile.
+for every funder (golden rule 1). This module is the WHOLE deterministic layer:
+there is no per-funder check table. A solicitation-specific rule nobody extracted
+a number for (a 30% equipment ceiling, a "no cost sharing" prohibition) reaches
+the PI as a quoted semantic row instead, judged by the model rather than by
+arithmetic. That is the accepted cost of one uniform path — see the design doc.
 
-Signature contract, shared with eir_checks: fn(ctx, req) -> (status, detail, evidence).
+Signature contract: fn(ctx, req) -> (status, detail, evidence). `req` carries
+`check_args`, so one table serves every check without per-funder wiring.
 """
 
 from __future__ import annotations
@@ -1343,7 +1368,7 @@ git commit -m "feat(proposals): store each proposal's solicitation profile"
   - `PUT /api/me/submissions/{id}/solicitation-requirements` — JSON `{profile}`; saves the confirmed set.
   - `POST /api/me/submissions/{id}/draft-review` — JSON `{draft_text}`.
   - `POST /api/me/submissions/{id}/draft-review/upload` — multipart `files`.
-  - `/eir-review` and `/eir-review/upload` remain, delegating to the same handlers.
+  - `/eir-review` and `/eir-review/upload` are **deleted**, along with `tests/test_eir_review_api_e2e.py`. Nothing outside this repo calls them: the only caller is `EirReviewModal.jsx`, which Task 7 replaces. Leaving an alias would leave a second path into the reviewer that no test covers.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1389,11 +1414,12 @@ def test_extract_does_not_save_until_confirmed(client, auth_headers, submission,
     assert listing.json()["has_solicitation_requirements"] is False
 
 
-def test_the_eir_alias_still_answers(client, auth_headers, submission):
+def test_the_eir_routes_are_gone(client, auth_headers, submission):
+    # One path into the reviewer. A surviving alias would be an untested second.
     r = client.post(f"/api/me/submissions/{submission.id}/eir-review",
                     json={"draft_text": "Project Summary\nWe will study polymers."},
                     headers=auth_headers)
-    assert r.status_code in (200, 409)   # 200 = curated EiR path still available
+    assert r.status_code == 404
 ```
 
 Reuse the fixture style in `tests/test_eir_review_api_e2e.py` (FastAPI `TestClient` with `dependency_overrides` for `get_db` / `get_current_user`). Add a `submission_with_solicitation` fixture whose `solicitation_json` holds the `PAR-24-118` payload from Task 5's test.
@@ -1487,18 +1513,18 @@ they could not be quoted from the document."*; `rows["ai"] is False` → *"The A
 extractor is unavailable — no requirements could be read."*
 
 The `PUT` validates that every incoming row carries a non-empty `source` and a
-`label`, then calls `save_solicitation_profile`. Rewrite the two `/eir-review`
-handlers as thin wrappers that call the same functions, so both paths share one
-implementation.
+`label`, then calls `save_solicitation_profile`. Finally **delete** the two
+`/eir-review` handlers, the `_EIR_MAX_*` upload ceilings' EiR naming (rename to
+`_DRAFT_MAX_*`), and `tests/test_eir_review_api_e2e.py`.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run:
 ```bash
 cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 \
-  python3 -m pytest tests/test_draft_review_api_e2e.py tests/test_eir_review_api_e2e.py -v
+  python3 -m pytest tests/test_draft_review_api_e2e.py -v
 ```
-Expected: PASS
+Expected: PASS, including `test_the_eir_routes_are_gone`
 
 - [ ] **Step 5: Run the full suite and commit**
 
@@ -1583,7 +1609,7 @@ git commit -m "feat(ui): Draft Review on every proposal, against its own solicit
 - Create: `backend/tests/test_solicitation_requirements_recall.py`
 
 **Interfaces:**
-- Consumes: `solicitation_requirements.extract_requirements`, `eir_solicitation.EIR_REQUIREMENTS`.
+- Consumes: `solicitation_requirements.extract_requirements`, `tests.fixtures.nsf_23_598.EIR_REQUIREMENTS`.
 - Produces: an opt-in integration test, skipped unless `EIR_SOLICITATION_PDF` points at a real NSF 23-598 PDF and ADC is present.
 
 - [ ] **Step 1: Write the test**
@@ -1592,9 +1618,10 @@ git commit -m "feat(ui): Draft Review on every proposal, against its own solicit
 # backend/tests/test_solicitation_requirements_recall.py
 """Does the GENERIC extractor recover the hand-curated NSF 23-598 rows?
 
-eir_solicitation.py is the only human-verified requirement list in this repo, so
-it is the yardstick for the derived path. OPT-IN: needs a real PDF and live
-Gemini, so it never runs in the normal suite.
+tests/fixtures/nsf_23_598.py is the only human-verified requirement list in this
+repo — no service imports it — so it is the yardstick for the extractor that now
+does this job for every solicitation. OPT-IN: needs a real PDF and live Gemini,
+so it never runs in the normal suite.
 
     EIR_SOLICITATION_PDF=/path/nsf23-598.pdf python3 -m pytest \\
       tests/test_solicitation_requirements_recall.py -v -s
@@ -1614,7 +1641,7 @@ def _live_gemini(monkeypatch):
 
 
 def test_generic_extraction_recovers_the_curated_semantic_requirements():
-    from services import eir_solicitation as sol
+    from tests.fixtures import nsf_23_598 as fx
     from services import solicitation_extractor as se
     from services import solicitation_requirements as sr
 
@@ -1626,7 +1653,7 @@ def test_generic_extraction_recovers_the_curated_semantic_requirements():
     found = " ".join(r["label"].lower() + " " + r["source"].lower()
                      for r in out["requirements"])
 
-    curated = [r for r in sol.EIR_REQUIREMENTS
+    curated = [r for r in fx.EIR_REQUIREMENTS
                if r["kind"] == "semantic" and r.get("scored")]
     missed = [r["label"] for r in curated
               if not any(kw in found for kw in (r.get("keywords") or [r["label"].lower()]))]
@@ -1641,7 +1668,7 @@ def test_generic_extraction_recovers_the_curated_semantic_requirements():
 
 - [ ] **Step 2: Run it once against the real PDF**
 
-Download NSF 23-598 from `eir_solicitation.SOLICITATION_URL`, then:
+Download NSF 23-598 from `tests/fixtures/nsf_23_598.py`'s `SOLICITATION_URL`, then:
 ```bash
 cd backend && EIR_SOLICITATION_PDF=/tmp/nsf23-598.pdf python3 -m pytest \
   tests/test_solicitation_requirements_recall.py -v -s
@@ -1666,15 +1693,26 @@ git commit -m "test(solicitation): measure generic extraction against the curate
 
 - [ ] **Step 1: Rewrite the two bullets**
 
-Replace the EiR Review bullet with a Draft Review one that records: the profile
-indirection; that requirements are extracted per solicitation, quote-verified,
-and PI-confirmed before saving; that `solicitation_json` holds them and `checks`
-is never persisted; that `eir_solicitation.py` is now a test fixture, not a
-runtime branch; that the chunk + sweep-until-dry exists because one pass
-measurably drops rows (3 vs 5 attachments on identical input); and that
+**Delete** the EiR Review bullet — the feature it describes no longer exists —
+and replace it with a Draft Review one recording: the profile indirection; that
+requirements are extracted per solicitation, quote-verified, and PI-confirmed
+before saving; that `solicitation_json` holds them and `checks` is never
+persisted; that the chunk + sweep-until-dry exists because one pass measurably
+drops rows (3 vs 5 attachments on identical input); and that
 `extract_from_text`'s 250k truncation is now reported rather than silent. Keep
 every existing note about `could_not_locate`, the score's meaning, and the
-region-locked model — they are unchanged and still load-bearing.
+region-locked model — unchanged and still load-bearing.
+
+Three deletions matter as much as the additions, because each is a trap for the
+next reader: **(1)** NSF 23-598 is no longer special-cased anywhere — no
+`isEirProposal`, no `/eir-review`, no `eir_*` module under `services/`; **(2)**
+`tests/fixtures/nsf_23_598.py` is **test data that looks like dead code** and
+must not be deleted — it is the only human-verified requirement list in the repo
+and the sole yardstick for the extractor; **(3)** the eight NSF-specific
+deterministic checks are **gone**, so the 30% equipment cap, the cost-sharing
+prohibition and the mandated collaboration sentence are now only as good as what
+the extractor pulls out of the PDF. Someone will eventually notice EiR reviews
+got weaker; the file should already say why.
 
 - [ ] **Step 2: Commit**
 
@@ -1689,13 +1727,18 @@ git commit -m "docs(claude): Draft Review is solicitation-driven, not EiR-only"
 
 **Spec coverage.** §1 requirements-as-data → Task 5. §2 the extractor, chunking,
 sweep, quote-verify, read report → Task 4. §3 engine parameterization → Tasks 2
-and 3 (including the stated loss of EiR's bespoke arithmetic, which survives
-only through the curated profile). §4 fixture → Task 8. §5 UI → Task 7. §6
-endpoints → Task 6. Docs → Task 9.
+and 3. §4 fixture → Tasks 2 and 8. §5 UI → Task 7. §6 endpoints → Task 6. Docs →
+Task 9.
 
-**Known ordering constraint.** Task 1's `from_eir` test depends on `eir_checks`,
-created in Task 2 — flagged with an `xfail` in Task 1 Step 4 and removed in Task 2
-Step 5. Every other task consumes only earlier tasks.
+**Deviation from the spec, on the user's instruction (2026-08-11):** the spec
+kept NSF 23-598 as a curated runtime profile alongside the derived path. It does
+not — *"I don't need the NSF EiR to be hardcoded."* There is one path. The
+curated rows survive only as `tests/fixtures/nsf_23_598.py`, and the eight
+NSF-specific deterministic checks plus their ~18 tests are deleted outright
+(Task 2, Step 1).
+
+**Ordering.** Every task consumes only earlier ones; there are no forward
+dependencies left.
 
 **Type consistency.** Check signature is `fn(ctx, req) -> (status, detail, evidence)`
 in Tasks 2 and 3. Profile keys `{id,title,url,sections,requirements,checks,merit_criteria,eligibility_notes}`
