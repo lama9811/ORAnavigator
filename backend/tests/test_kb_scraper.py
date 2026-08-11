@@ -113,7 +113,7 @@ def test_alias_matching_does_not_swallow_similarly_named_sections(url):
 
 def test_whitespace_differences_are_not_a_change():
     """A reflowed paragraph is the same page. Same principle as the evidence
-    check in section_coach."""
+    check in services/text_match.quote_in."""
     assert fp.fingerprint("The F&A rate\n\nis 54%.") == fp.fingerprint("The F&A rate is 54%.")
 
 

@@ -1,7 +1,7 @@
 """Shared Gemini client helper — one reusable phone line to Gemini 2.5 Flash.
 
 Factored out of the (older) inline pattern in services/solicitation_extractor.py so
-the new ADVISORY AI layers (Draft Critic AI review, Deadline Watcher personalized
+the ADVISORY AI layers (Draft Review coverage, Deadline Watcher personalized
 emails) all share one client + one set of safety guarantees:
 
   - Vertex-first, API-key fallback, cached client (no per-call init cost).
@@ -27,6 +27,17 @@ from typing import Optional
 _genai = None
 _client = None
 _init_attempted = False
+
+# The model + region every existing caller gets. Do NOT change these to "upgrade"
+# callers wholesale — the chat path is latency-critical and deliberately on Flash.
+DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_LOCATION = "us-central1"
+
+# Clients for any NON-default region, built lazily and cached per location.
+# Needed because some models are region-locked: gemini-3.6-flash answers ONLY on
+# the "global" endpoint and 404s in us-central1 (same trap kb_scraper/adjudicator
+# hit — see CLAUDE.md). Keyed by location string.
+_alt_clients: dict = {}
 
 # Transient rate-limit / quota errors are retryable; other errors fail fast to
 # the caller's deterministic fallback. Backoffs are the per-retry sleeps (so
@@ -58,7 +69,7 @@ def get_client():
         project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
         try:
             _client = genai.Client(vertexai=True, project=project,
-                                   location="us-central1")
+                                   location=DEFAULT_LOCATION)
         except Exception:
             api_key = os.getenv("GEMINI_API_KEY", "")
             if api_key:
@@ -66,6 +77,33 @@ def get_client():
     except Exception as e:
         print(f"   [GEMINI] client init failed: {e}")
     return _client
+
+
+def _client_for(location: Optional[str]):
+    """Client for `location`, or None if AI is unavailable.
+
+    Deliberately probes the DEFAULT client first and returns None if that is
+    None. Two reasons, both load-bearing:
+      - It preserves the "fast None when unavailable" contract for every region,
+        so an alternate-region caller still falls back deterministically offline.
+      - tests/conftest.py disables the whole AI layer by pinning get_client() ->
+        None. Building an alternate-region client without this probe would make
+        REAL network calls during the unit suite, which is exactly what that
+        fixture exists to prevent.
+    """
+    base = get_client()
+    if base is None or not location or location == DEFAULT_LOCATION:
+        return base
+    if location in _alt_clients:
+        return _alt_clients[location]
+    client = None
+    try:
+        project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
+        client = _genai.Client(vertexai=True, project=project, location=location)
+    except Exception as e:
+        print(f"   [GEMINI] client init failed for location={location}: {e}")
+    _alt_clients[location] = client
+    return client
 
 
 def _build_config(temperature: float, max_output_tokens: int,
@@ -100,12 +138,19 @@ def _build_config(temperature: float, max_output_tokens: int,
 def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
               json_mode: bool, timeout_s: Optional[float],
               system_instruction: Optional[str] = None,
-              thinking_budget: Optional[int] = None) -> Optional[str]:
+              thinking_budget: Optional[int] = None,
+              model: Optional[str] = None,
+              location: Optional[str] = None) -> Optional[str]:
     """Single Gemini round-trip → raw response text, or None on any failure.
-    Never raises."""
-    client = get_client()
+    Never raises.
+
+    `model`/`location` default to DEFAULT_MODEL @ DEFAULT_LOCATION, so every
+    pre-existing caller is byte-for-byte unchanged. Pass both together when a
+    model is region-locked (gemini-3.6-flash needs location="global")."""
+    client = _client_for(location)
     if client is None:
         return None
+    model = model or DEFAULT_MODEL
     # One attempt, plus a bounded retry-with-backoff on transient 429 /
     # RESOURCE_EXHAUSTED errors (common under burst load). Non-retryable errors
     # return None immediately so the caller falls back to its deterministic path.
@@ -113,7 +158,7 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
         try:
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model=model,
                     contents=prompt,
                     config=_build_config(temperature, max_output_tokens, json_mode,
                                          timeout_s, system_instruction, thinking_budget),
@@ -121,7 +166,7 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
             except TypeError:
                 # SDK rejected the http_options timeout key — retry without it.
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model=model,
                     contents=prompt,
                     config=_build_config(temperature, max_output_tokens, json_mode,
                                          None, system_instruction, thinking_budget),
@@ -141,20 +186,25 @@ def generate_text(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 2048,
                   timeout_s: Optional[float] = None,
                   system_instruction: Optional[str] = None,
-                  thinking_budget: Optional[int] = None) -> Optional[str]:
+                  thinking_budget: Optional[int] = None,
+                  model: Optional[str] = None,
+                  location: Optional[str] = None) -> Optional[str]:
     """Free-text Gemini call. Returns the text, or None if unavailable/failed."""
     return _generate(prompt, temperature=temperature,
                      max_output_tokens=max_output_tokens,
                      json_mode=False, timeout_s=timeout_s,
                      system_instruction=system_instruction,
-                     thinking_budget=thinking_budget)
+                     thinking_budget=thinking_budget,
+                     model=model, location=location)
 
 
 def generate_json(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 4096,
                   timeout_s: Optional[float] = None,
                   system_instruction: Optional[str] = None,
-                  thinking_budget: Optional[int] = None) -> Optional[dict]:
+                  thinking_budget: Optional[int] = None,
+                  model: Optional[str] = None,
+                  location: Optional[str] = None) -> Optional[dict]:
     """JSON Gemini call. Forces application/json, strips any markdown fences,
     parses with strict=False (tolerates control chars from PDF text). Returns a
     dict, or None on unavailable / malformed / non-dict output. Never raises."""
@@ -162,7 +212,8 @@ def generate_json(prompt: str, *, temperature: float = 0.0,
                     max_output_tokens=max_output_tokens,
                     json_mode=True, timeout_s=timeout_s,
                     system_instruction=system_instruction,
-                    thinking_budget=thinking_budget)
+                    thinking_budget=thinking_budget,
+                    model=model, location=location)
     if not raw:
         return None
     text = raw.strip()

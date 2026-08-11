@@ -563,3 +563,57 @@ body.dark .solicitation-quote {
   flex-shrink: 0;
   cursor: pointer;
 }
+
+/* ── The whole-document requirement read ────────────────────────────────────
+   Shown on the review step while the user checks the extracted fields. This is
+   the list Draft Review will judge their draft against, so every ask and the
+   sentence behind it is visible BEFORE anything is saved. */
+.solicitation-requirements {
+  margin: 16px 0 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-left: 3px solid #1d3a6b;
+  border-radius: 6px;
+  background: rgba(29, 58, 107, 0.03);
+  font-size: 12px;
+}
+.solicitation-requirements strong { font-size: 13px; color: #1d3a6b; }
+.solicitation-requirements p { margin: 4px 0 0; color: #475569; line-height: 1.5; }
+.solicitation-read-report { font-variant-numeric: tabular-nums; }
+/* Warnings are how a partial read stays visible. Never hide these. */
+.solicitation-requirements-warning {
+  margin-top: 6px !important;
+  padding-left: 10px;
+  border-left: 2px solid #d97706;
+  color: #92400e !important;
+}
+.solicitation-req-toggle {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d3a6b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.solicitation-req-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.solicitation-req-list li {
+  padding: 7px 0;
+  border-top: 1px solid var(--border, #e2e8f0);
+}
+.solicitation-req-label { display: block; font-weight: 600; color: #0f172a; }
+.solicitation-req-quote {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-style: italic;
+  line-height: 1.45;
+}

@@ -6,13 +6,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, MoreHorizontal, PenLine, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, Download, ExternalLink, FileText, HelpCircle, Lightbulb, ListChecks, MoreHorizontal, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
-import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
-import SectionCoachModal from "./SectionCoachModal";
+import DraftReviewModal from "./DraftReviewModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -37,8 +36,7 @@ function daysUntil(iso) {
 }
 
 // True when a proposal carries solicitation rules (budget cap / page limits /
-// required attachments) for Draft Critic to check a draft against. Manual
-// proposals have none, so the "Critique Draft" button is hidden for them.
+// required attachments). Drives the Solicitation button's "attached" badge.
 // Mirrors the backend SOURCE OF TRUTH in
 // backend/services/proposals_service.reconstruct_solicitation_context — if the
 // line-anchored notes formats (^Budget cap: / ^Page limits: / ^Required
@@ -46,6 +44,9 @@ function daysUntil(iso) {
 // update this helper too or the button will silently desync.
 const SOLICITATION_NOTE_RES = [/^Budget cap:/m, /^Page limits:/m, /^Required attachments:/m];
 function hasSolicitation(submission) {
+  // A stored solicitation profile is authoritative. The notes/task heuristics
+  // below still answer for proposals created before that column existed.
+  if (submission?.has_solicitation_requirements) return true;
   const notes = submission?.notes || "";
   if (SOLICITATION_NOTE_RES.some((re) => re.test(notes))) return true;
   return (submission?.tasks || []).some((t) =>
@@ -59,10 +60,11 @@ function hasSolicitation(submission) {
 // creation today, so it's surfaced as a status (not an actionable next step).
 function nextStep(submission) {
   if (!submission.has_budget) return "budget";
-  if (!submission.has_sections) return "coach";
   if (!submission.has_compliance) return "compliance";
-  if (hasSolicitation(submission)) return "critique";
-  return "done";
+  // Draft Review needs a solicitation to judge against, so attaching one comes
+  // first when it is missing.
+  if (!submission.has_solicitation_requirements) return "solicitation";
+  return "review";
 }
 
 // Plain-language guidance for each step — the heart of the first-timer
@@ -73,20 +75,20 @@ const STEP_INFO = {
     why: "Funders cap how much you can request. Set your numbers first so the rest of the proposal fits within them.",
     action: "Open Budget Helper", open: "budget",
   },
-  coach: {
-    title: "Draft your sections",
-    why: "Get a section-by-section outline and advisory feedback on your own writing — one section at a time.",
-    action: "Open Drafting Coach", open: "coach",
-  },
   compliance: {
     title: "Check what approvals you need",
     why: "Approvals like IRB, IACUC, and COI training take time to obtain. Find out early which ones apply to you.",
     action: "Check compliance", open: "compliance",
   },
-  critique: {
-    title: "Critique your full draft",
-    why: "Check your assembled draft against this solicitation's requirements — page limits, attachments, budget — before you submit.",
-    action: "Critique draft", open: "critique",
+  solicitation: {
+    title: "Attach the funder's solicitation",
+    why: "Every requirement the funder states becomes a check on your draft — and it sets your budget cap and page limits at the same time.",
+    action: "Attach solicitation", open: "solicitation",
+  },
+  review: {
+    title: "Check your draft against the solicitation",
+    why: "Paste or upload your whole package and see, requirement by requirement, what the funder asked for and whether your draft addresses it.",
+    action: "Open Draft Review", open: "eir",
   },
   done: {
     title: "You've covered the core steps",
@@ -525,7 +527,7 @@ function NextStepCard({ stepKey, solicited, onAction }) {
       <div className="np-why">{info.why}</div>
       {!solicited && (
         <div className="np-tip">
-          Tip: starting a proposal from a solicitation unlocks tailored checks and the draft critique.
+          Tip: attaching the funder's solicitation turns every requirement it states into a check on your draft.
         </div>
       )}
       {info.open && (
@@ -550,18 +552,18 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   // it's the headline + countdown; the sponsor deadline is shown as secondary.
   const headlineDeadline = submission.internal_deadline || submission.deadline;
   const dleft = daysUntil(headlineDeadline);
-  const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
-  const [showCoach, setShowCoach] = useState(false);
+  const [showEir, setShowEir] = useState(false);
+  const [showSolicitation, setShowSolicitation] = useState(false);
 
   const next = nextStep(submission);
   const solicited = hasSolicitation(submission);
   const openModal = (key) => {
     if (key === "budget") setShowBudget(true);
-    else if (key === "coach") setShowCoach(true);
     else if (key === "compliance") setShowCompliance(true);
-    else if (key === "critique") setShowCritique(true);
+    else if (key === "solicitation") setShowSolicitation(true);
+    else if (key === "eir") setShowEir(true);
   };
 
   return (
@@ -575,12 +577,16 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
             <ToolButton
               icon={FileText}
               label="Solicitation"
-              status={solicited ? "attached" : "not attached"}
-              statusDone={solicited}
-              disabled
-              title={solicited
-                ? "This proposal has the funder's rules attached (budget cap, page limits, required attachments)."
-                : "Funder rules are attached when you start a proposal from a solicitation."}
+              status={submission.has_solicitation_requirements ? "attached"
+                      : solicited ? "rules only" : "not attached"}
+              statusDone={submission.has_solicitation_requirements}
+              primary={next === "solicitation"}
+              onClick={() => setShowSolicitation(true)}
+              title={submission.has_solicitation_requirements
+                ? "This proposal's solicitation is stored, including every requirement Draft Review checks against."
+                : solicited
+                  ? "This proposal has the funder's numbers (cap, page limits, attachments) but not its requirement list — that was added later. Upload the solicitation once to read it in full."
+                  : "Attach the funder's solicitation — it sets the budget cap and page limits, and every requirement in it becomes a Draft Review check."}
             />
           </LifecycleStage>
 
@@ -594,15 +600,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               onClick={() => setShowBudget(true)}
               title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
             />
-            <ToolButton
-              icon={PenLine}
-              label="Drafting coach"
-              status={submission.has_sections ? "draft saved" : null}
-              statusDone={submission.has_sections}
-              primary={next === "coach"}
-              onClick={() => setShowCoach(true)}
-              title="Get an outline for a proposal section, or paste your draft for advisory feedback."
-            />
           </LifecycleStage>
 
           <LifecycleStage label="Review & submit">
@@ -615,15 +612,16 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               onClick={() => setShowCompliance(true)}
               title="Check which approvals your project needs — IRB, IACUC, COI, RCR, export control."
             />
-            {solicited && (
-              <ToolButton
-                icon={ClipboardCheck}
-                label="Critique draft"
-                primary={next === "critique"}
-                onClick={() => setShowCritique(true)}
-                title="Upload a draft PDF and check it against this proposal's solicitation requirements."
-              />
-            )}
+            <ToolButton
+              icon={ListChecks}
+              label="Draft review"
+              status={submission.has_solicitation_requirements ? null : "needs solicitation"}
+              primary={next === "review"}
+              onClick={() => setShowEir(true)}
+              title={submission.has_solicitation_requirements
+                ? "Paste or upload your whole package and check it against every requirement in this proposal's solicitation."
+                : "Attach this proposal's solicitation, then every requirement in it becomes a check."}
+            />
           </LifecycleStage>
 
           <OverflowMenu
@@ -637,13 +635,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           />
         </div>
       </header>
-
-      {showCritique && (
-        <DraftCritiqueModal
-          submission={submission}
-          onClose={() => setShowCritique(false)}
-        />
-      )}
 
       {showBudget && (
         <BudgetHelperModal
@@ -661,10 +652,22 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         />
       )}
 
-      {showCoach && (
-        <SectionCoachModal
+      {showEir && (
+        <DraftReviewModal
           submission={submission}
-          onClose={() => setShowCoach(false)}
+          onClose={() => setShowEir(false)}
+          onAttach={() => { setShowEir(false); setShowSolicitation(true); }}
+          onRefresh={onRefresh}
+        />
+      )}
+
+      {/* One attach UI, reused: the same modal that starts a proposal from a
+          solicitation fills one in on a proposal that already exists. */}
+      {showSolicitation && (
+        <SolicitationUploadModal
+          submissionId={submission.id}
+          onClose={() => setShowSolicitation(false)}
+          onCreated={() => { setShowSolicitation(false); onRefresh(); }}
         />
       )}
 

@@ -110,45 +110,22 @@ def create_submission(
     return sub
 
 
-def create_submission_from_solicitation(
-    db: Session,
-    user_id: int,
-    extracted: dict,
-    title_override: Optional[str] = None,
-) -> Submission:
-    """Build a Submission from an extractor dict (see services/
-    solicitation_extractor.py). Title defaults to extracted program_name
-    or program_id; user can override via title_override. Tasks are the
-    sponsor template PLUS solicitation-specific tasks for each
-    required_attachment that isn't already in the generic checklist.
+def solicitation_notes_lines(extracted: dict) -> list[str]:
+    """The human-readable AND machine-parseable summary of an extracted
+    solicitation, one line per fact.
 
-    The user has reviewed/edited the extracted dict in the UI before this
-    call -- we trust what's passed in. This function does not call out
-    to Gemini."""
-    sponsor = (extracted.get("sponsor") or "Internal").strip() or "Internal"
-    program_name = extracted.get("program_name") or extracted.get("program_id") or "Proposal"
-    title = (title_override or program_name).strip() or "Proposal"
-
-    # Parse deadline from contract: ISO datetime / plain date / None
-    deadline_raw = extracted.get("deadline")
-    deadline: Optional[datetime] = None
-    if isinstance(deadline_raw, str) and deadline_raw.strip():
-        try:
-            deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
-        except ValueError:
-            try:
-                deadline = datetime.strptime(deadline_raw[:10], "%Y-%m-%d")
-            except ValueError:
-                deadline = None
-
-    # Build a structured notes blob carrying the rest of the extracted
-    # metadata. This is human-readable AND machine-parseable for any
-    # future downstream feature (calendar export, draft critic, etc.).
-    notes_lines = []
+    Lifted out of create_submission_from_solicitation so the attach-later path
+    writes exactly the same lines. It has to be the same text: the frontend's
+    hasSolicitation() reads them by regex to badge the Solicitation button, and
+    reconstruct_solicitation_context (below) parses them back out, so a proposal
+    that demonstrably has a solicitation but is missing these lines leaves the UI
+    quietly disagreeing with the database."""
+    extracted = extracted or {}
+    notes_lines: list[str] = []
     if extracted.get("program_id"):
         notes_lines.append(f"Program ID: {extracted['program_id']}")
     # Multi-category / recurring solicitations have several deadlines; the
-    # `deadline` field above carries only the earliest (most restrictive). Surface
+    # `deadline` column carries only the earliest (most restrictive). Surface
     # the full breakdown here so the human sees every category's date.
     if extracted.get("deadline_details"):
         dd = " ".join(str(extracted["deadline_details"]).split())
@@ -190,15 +167,50 @@ def create_submission_from_solicitation(
                 parts.append(f"{key}: {int(mv.group())}p")
         if parts:
             notes_lines.append(f"Page limits: {', '.join(parts)}")
-    # Persist the FULL required-attachments list verbatim. Draft Critic
-    # reads this as the authoritative set; the per-attachment tasks seeded
-    # below are deduped against the sponsor template and so are a lossy
+    # Persist the FULL required-attachments list verbatim as the authoritative
+    # set; the per-attachment tasks seeded
+    # elsewhere are deduped against the sponsor template and so are a lossy
     # subset. ";"-separated because attachment names contain commas
     # (e.g. "Facilities, Equipment and Other Resources").
     req_atts = [str(a).strip() for a in (extracted.get("required_attachments") or [])
                 if str(a).strip()]
     if req_atts:
         notes_lines.append(f"Required attachments: {'; '.join(req_atts)}")
+    return notes_lines
+
+
+def create_submission_from_solicitation(
+    db: Session,
+    user_id: int,
+    extracted: dict,
+    title_override: Optional[str] = None,
+) -> Submission:
+    """Build a Submission from an extractor dict (see services/
+    solicitation_extractor.py). Title defaults to extracted program_name
+    or program_id; user can override via title_override. Tasks are the
+    sponsor template PLUS solicitation-specific tasks for each
+    required_attachment that isn't already in the generic checklist.
+
+    The user has reviewed/edited the extracted dict in the UI before this
+    call -- we trust what's passed in. This function does not call out
+    to Gemini."""
+    sponsor = (extracted.get("sponsor") or "Internal").strip() or "Internal"
+    program_name = extracted.get("program_name") or extracted.get("program_id") or "Proposal"
+    title = (title_override or program_name).strip() or "Proposal"
+
+    # Parse deadline from contract: ISO datetime / plain date / None
+    deadline_raw = extracted.get("deadline")
+    deadline: Optional[datetime] = None
+    if isinstance(deadline_raw, str) and deadline_raw.strip():
+        try:
+            deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                deadline = datetime.strptime(deadline_raw[:10], "%Y-%m-%d")
+            except ValueError:
+                deadline = None
+
+    notes_lines = solicitation_notes_lines(extracted)
     notes = "\n".join(notes_lines) if notes_lines else None
 
     sub = Submission(
@@ -320,6 +332,15 @@ def delete_submission(db: Session, submission_id: int, user_id: int) -> bool:
     sub = get_submission(db, submission_id, user_id)
     if sub is None:
         return False
+    # Explicit, not left to the FK. solicitation_sources declares ON DELETE
+    # CASCADE, which MySQL honours and SQLite ignores unless PRAGMA
+    # foreign_keys is ON — so relying on it would leave a stored solicitation
+    # document behind on one engine and not the other. Deleting the proposal
+    # must delete its document everywhere.
+    from models import SolicitationSource
+    db.query(SolicitationSource).filter(
+        SolicitationSource.submission_id == submission_id
+    ).delete(synchronize_session=False)
     db.delete(sub)
     db.commit()
     return True
@@ -418,7 +439,7 @@ def delete_task(db: Session, submission_id: int, task_id: int,
 
 
 # =====================================================================
-# Solicitation context reconstruction (for Draft Critic, etc.)
+# Solicitation context reconstruction (see the note on the function)
 # =====================================================================
 
 import re as _re
@@ -444,11 +465,17 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
       - page_limits: parsed from notes line "Page limits: project_description: 15p, ..."
       - required_attachments: read from tasks titled "Prepare required attachment: X"
 
-    Returns the shape Draft Critic expects:
+    Returns:
         {budget_cap: int|None, page_limits: dict, required_attachments: list[str]}
 
-    For submissions created MANUALLY (not from a solicitation), every
-    field is empty/None and Draft Critic falls back to sponsor defaults."""
+    For submissions created MANUALLY (not from a solicitation), every field is
+    empty/None.
+
+    NO FEATURE READS THIS TODAY. Its consumer, Draft Critic, was removed
+    2026-08-11 — Draft Review replaced it and reads the structured
+    `solicitation_json` column instead. Kept because it is the only parser of
+    the `notes` solicitation lines, which two write paths still produce, and its
+    tests document that round-trip."""
     out: dict = {
         "budget_cap": None,
         "budget_cap_details": [],
@@ -521,3 +548,217 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
     out["required_attachments"] = ordered
 
     return out
+
+
+# ── The solicitation profile a proposal is reviewed against ─────────────────
+# Stored as TEXT + json.dumps on Submission.solicitation_json (golden rule 5).
+# This is what "the draft review is according to the solicitation" rests on: no
+# stored profile, no review.
+
+import json as _json
+
+SOLICITATION_PROFILE_VERSION = 1
+
+
+def save_solicitation_profile(db: Session, sub: Submission, payload: dict) -> None:
+    """Persist the profile the PI confirmed.
+
+    `checks` is dropped on the way in: it holds callables, which do not
+    serialize, and load_solicitation_profile re-attaches them from code. Storing
+    a stale copy of anything derivable is how two halves of one fact drift
+    apart."""
+    stored = {k: v for k, v in (payload or {}).items() if k not in ("checks", "sections")}
+    stored.setdefault("version", SOLICITATION_PROFILE_VERSION)
+    sub.solicitation_json = _json.dumps(stored)
+    sub.updated_at = _now().replace(tzinfo=None)
+    db.commit()
+    db.refresh(sub)
+
+
+def load_solicitation_profile(sub: Submission) -> Optional[dict]:
+    """The stored profile, rebuilt into the shape draft_review.review_draft takes.
+
+    Returns None — never an empty profile — when nothing is stored or the blob is
+    unreadable. Reviewing a draft against zero requirements would still produce a
+    confident percentage, and that number would mean nothing at all; a caller
+    that gets None can tell the PI to attach their solicitation instead.
+
+    Deterministic rows and the section universe are REBUILT here rather than
+    read back, so they always track the contract the PI actually confirmed."""
+    raw = getattr(sub, "solicitation_json", None)
+    if not raw:
+        return None
+    try:
+        stored = _json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    rows = [r for r in (stored.get("requirements") or [])
+            if isinstance(r, dict) and r.get("kind") != "deterministic"]
+    if not rows:
+        return None
+    from services import solicitation_profile as _sp
+    return _sp.build_generic(
+        stored.get("contract") or {},
+        rows,
+        id=stored.get("id") or "this solicitation",
+        title=stored.get("title") or "",
+        url=stored.get("url"),
+        merit_criteria=stored.get("merit_criteria") or [],
+        eligibility_notes=stored.get("eligibility_notes") or [],
+    )
+
+
+def solicitation_summary(sub: Submission) -> Optional[dict]:
+    """The small header the UI needs — what this proposal is judged against, and
+    how well the solicitation could be read — without shipping every row."""
+    raw = getattr(sub, "solicitation_json", None)
+    if not raw:
+        return None
+    try:
+        stored = _json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    return {
+        "id": stored.get("id"),
+        "title": stored.get("title"),
+        "url": stored.get("url"),
+        "requirement_count": len(stored.get("requirements") or []),
+        "read_report": stored.get("read_report") or {},
+        "extraction": stored.get("extraction") or {},
+        "extracted_at": stored.get("extracted_at"),
+    }
+
+
+def sync_required_attachment_tasks(db: Session, sub: Submission,
+                                   extracted: dict) -> int:
+    """Seed a checklist task per required attachment that has none yet.
+
+    The attach-later counterpart to the seeding create_submission_from_solicitation
+    does. Additive and idempotent: a task the PI already has (from the sponsor
+    template or a previous attach) is left alone, including one they have already
+    ticked off. Returns how many were added."""
+    existing = {(t.title or "").strip().lower() for t in (sub.tasks or [])}
+    next_order = max([t.sort_order or 0 for t in (sub.tasks or [])], default=-1) + 1
+    added = 0
+    for attachment in (extracted or {}).get("required_attachments") or []:
+        att_text = str(attachment).strip()
+        if not att_text:
+            continue
+        title = f"{_REQUIRED_ATTACHMENT_TASK_PREFIX} {att_text}"
+        if title.lower() in existing:
+            continue
+        if any(att_text.lower() in t for t in existing):
+            continue          # the sponsor template already covers it
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=title,
+            description=("Required by the solicitation. Confirm the format and "
+                         "page limit before submission."),
+            kb_doc_id=None,
+            due_offset_days=14,
+            status="pending",
+            sort_order=next_order,
+        ))
+        existing.add(title.lower())
+        next_order += 1
+        added += 1
+    if added:
+        db.commit()
+    return added
+
+
+# ── The stored solicitation document ────────────────────────────────────────
+# Written once when the document is READ, so a PI is never asked for the same
+# solicitation twice and its requirements can be re-read without them.
+
+import hashlib as _hashlib
+
+# An unbound row is a read the user started and never confirmed. Reaped rather
+# than kept forever; a day is long enough for any realistic session.
+_UNBOUND_SOURCE_TTL = timedelta(days=1)
+
+
+def save_solicitation_source(db: Session, *, user_id: int, text: str,
+                             source_kind: str = "pdf",
+                             filename: Optional[str] = None,
+                             url: Optional[str] = None) -> Optional[int]:
+    """Persist a solicitation's text and return its id, or None if empty.
+
+    Written UNBOUND (submission_id NULL) because on the create flow the proposal
+    does not exist yet; bind_solicitation_source attaches it at confirm."""
+    text = text or ""
+    if not text.strip():
+        return None
+    from models import SolicitationSource
+
+    # Reap abandoned reads before adding another.
+    cutoff = _now().replace(tzinfo=None) - _UNBOUND_SOURCE_TTL
+    db.query(SolicitationSource).filter(
+        SolicitationSource.user_id == user_id,
+        SolicitationSource.submission_id.is_(None),
+        SolicitationSource.created_at < cutoff,
+    ).delete(synchronize_session=False)
+
+    row = SolicitationSource(
+        user_id=user_id, submission_id=None, text=text, chars=len(text),
+        source_kind=source_kind, filename=filename, url=url,
+        sha256=_hashlib.sha256(text.encode("utf-8", "ignore")).hexdigest(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row.id
+
+
+def bind_solicitation_source(db: Session, *, source_id, user_id: int,
+                             submission_id: int) -> bool:
+    """Attach a stored document to a submission. Returns False if it does not
+    exist or belongs to someone else — a source id from the client is never
+    trusted to name a row this user may not touch.
+
+    Any document previously bound to this submission is replaced, so re-attaching
+    a newer solicitation leaves exactly one source per proposal."""
+    try:
+        source_id = int(source_id)
+    except (TypeError, ValueError):
+        return False
+    from models import SolicitationSource
+    row = db.query(SolicitationSource).filter(
+        SolicitationSource.id == source_id,
+        SolicitationSource.user_id == user_id,
+    ).first()
+    if row is None:
+        return False
+    db.query(SolicitationSource).filter(
+        SolicitationSource.submission_id == submission_id,
+        SolicitationSource.id != row.id,
+    ).delete(synchronize_session=False)
+    row.submission_id = submission_id
+    db.commit()
+    return True
+
+
+def load_solicitation_source(db: Session, submission_id: int) -> Optional[dict]:
+    """The stored document for a submission: {id, text, chars, source_kind,
+    filename, url, created_at}. None when nothing was kept — which is every
+    proposal whose solicitation was attached before this table existed."""
+    from models import SolicitationSource
+    row = (db.query(SolicitationSource)
+             .filter(SolicitationSource.submission_id == submission_id)
+             .order_by(SolicitationSource.id.desc())
+             .first())
+    if row is None:
+        return None
+    return {"id": row.id, "text": row.text, "chars": row.chars,
+            "source_kind": row.source_kind, "filename": row.filename,
+            "url": row.url, "created_at": row.created_at}
+
+
+def has_solicitation_source(db: Session, submission_id: int) -> bool:
+    from models import SolicitationSource
+    return db.query(SolicitationSource.id).filter(
+        SolicitationSource.submission_id == submission_id).first() is not None

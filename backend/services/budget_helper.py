@@ -21,6 +21,19 @@ DEFAULT_FA_YEAR = "fy_2025_2026"
 DEFAULT_FA_KEY = "organized_research_on_campus"
 DEFAULT_FRINGE = "faculty_ay"
 SUBAWARD_MTDC_CAP = 25_000.0  # only the first $25k of each subaward is in MTDC
+# NOTE (2026-08-10): 2 CFR 200.1 raised this to $50,000, but NSF states that
+# "NICRAs negotiated prior to October 1, 2024 must continue to be honored", so
+# the operative figure is whatever Morgan's CURRENT rate agreement specifies --
+# a date, not a calendar rule. Confirm Morgan's NICRA date with ORA before
+# changing this, and ideally make it per-institution: a subrecipient can sit on
+# a different agreement than the prime in the same budget.
+
+# Categories that are ordinarily bought ONCE rather than every year of a
+# multi-year project. Only these are eligible for one-time treatment; personnel
+# and F&A are always recomputed per year.
+_ONE_TIME_ELIGIBLE = ("equipment", "travel", "supplies", "participant_support",
+                      "other", "subawards")
+DEFAULT_ONE_TIME_CATEGORIES = ("equipment",)
 
 FA_RATES = {
     "fy_2025_2026": {
@@ -199,6 +212,20 @@ def compute_budget(inputs: dict) -> dict:
         esc = 0.0
     years = min(years, 10)  # sanity cap
 
+    # ONE-TIME vs RECURRING (fixed 2026-08-10).
+    # Every non-salary line used to be re-run verbatim for every year, so a
+    # single $60,000 instrument became $180,000 in the table, the cumulative
+    # total AND the cap check -- with no input that could express "Year 1 only".
+    # Equipment is a capital purchase and defaults to one-time; travel and
+    # supplies are genuinely annual and keep repeating. The caller can override
+    # in either direction, and the resolved treatment is reported on the
+    # `multi_year` block + as an advisory, because silence is what made the
+    # original behaviour a bug rather than a choice.
+    one_time = inputs.get("one_time_categories")
+    if one_time is None:
+        one_time = list(DEFAULT_ONE_TIME_CATEGORIES)
+    one_time = [c for c in one_time if c in _ONE_TIME_ELIGIBLE]
+
     # Year 1 drives the familiar top-level fields (with NO cap at this level --
     # the sponsor cap on a multi-year award is a PROJECT total, checked below).
     base = _compute_single({**inputs, "cap": None, "project_years": None})
@@ -215,7 +242,13 @@ def compute_budget(inputs: dict) -> dict:
             except (TypeError, ValueError):
                 pass
             people.append(p2)
-        cy = _compute_single({**inputs, "people": people, "cap": None, "project_years": None})
+        year_inputs = {**inputs, "people": people, "cap": None, "project_years": None}
+        if i > 0:
+            for cat in one_time:
+                year_inputs[cat] = 0
+            if "subawards" in one_time:
+                year_inputs["subawards"] = []
+        cy = _compute_single(year_inputs)
         year_results.append(cy)
         # Year-over-year salary growth makes escalation visible to the PI (numbers
         # straight from the per-year breakdown -- never invented).
@@ -237,10 +270,20 @@ def compute_budget(inputs: dict) -> dict:
         cap = float(inputs.get("cap")) if inputs.get("cap") not in (None, "") else 0.0
     except (TypeError, ValueError):
         cap = 0.0
+
+    # CAP BASIS (fixed 2026-08-10).
+    # solicitation_extractor is explicitly instructed "If stated per year,
+    # return the per-year value", but this compared that number against the
+    # CUMULATIVE total -- so "$200,000/year for 3 years" reported as over a
+    # $200,000 cap, telling a correctly-budgeted PI to cut two thirds of their
+    # project. The basis is now an input. Default stays "cumulative" so existing
+    # behaviour is unchanged for anything that doesn't set it.
+    basis = "per_year" if str(inputs.get("cap_basis") or "").strip() == "per_year" else "cumulative"
+    measured = max((y["total"] for y in per_year), default=0.0) if basis == "per_year" else cum["total"]
     if not cap:
         cap_status, cap_overage, cap_out = "none", 0.0, None
-    elif cum["total"] > cap:
-        cap_status, cap_overage, cap_out = "over", round(cum["total"] - cap, 2), cap
+    elif measured > cap:
+        cap_status, cap_overage, cap_out = "over", round(measured - cap, 2), cap
     else:
         cap_status, cap_overage, cap_out = "ok", 0.0, cap
 
@@ -252,11 +295,37 @@ def compute_budget(inputs: dict) -> dict:
         "cap": cap_out,
         "cap_status": cap_status,
         "cap_overage": cap_overage,
-        "cap_basis": "cumulative",  # the cap is the whole-project total, not per-year
+        # "cumulative" = the cap is the whole-project total; "per_year" = it
+        # applies to each year and the overage is the WORST year, not the sum.
+        "cap_basis": basis,
+        "one_time_categories": list(one_time),
     }
+
+    # TRIM SUGGESTIONS (fixed 2026-08-10).
+    # These are computed inside _compute_single from its own cap_status, which
+    # is forced to "none" here by `cap: None` -- so the "ideas to get under the
+    # cap" panel never rendered for a multi-year proposal, i.e. never rendered
+    # when it mattered. Recompute at this level against the real verdict.
+    base["trim_suggestions"] = suggest_trims(
+        {**base, "cap_status": cap_status, "cap_overage": cap_overage}
+    )
     # Multi-year-only advisories (escalation sanity) can't live in the per-year
     # _compute_single (it never sees escalation_pct), so append them at this level.
     base["advisories"] = (base.get("advisories") or []) + multi_year_advisories(base["multi_year"])
+
+    # Say out loud which lines were charged once and which recur. The original
+    # bug was not that equipment repeated -- it was that nothing told the PI.
+    charged_once = [c for c in one_time if (base.get(c) if c != "subawards"
+                                            else base.get("subawards_total"))]
+    if charged_once:
+        pretty = ", ".join(c.replace("_", " ") for c in charged_once)
+        base["advisories"].append({
+            "severity": "info", "field": "project_years",
+            "message": (f"{pretty.capitalize()} is budgeted in Year 1 only, not repeated "
+                        f"in each of the {years} years."),
+            "fix": ("If it recurs annually, clear it from the one-time list; if a different "
+                    "line is a single purchase, add it."),
+        })
     base["table"] = _budget_table(year_results, multi=True)
     return base
 
@@ -488,11 +557,29 @@ def draft_justification(budget: dict) -> str:
         )
         paras.append("")
 
-    paras.append(
-        f"Total project cost. Total direct costs are {_fmt(budget['direct_costs'])} and F&A "
-        f"costs are {_fmt(budget['fa_amount'])}, for a total project cost of "
-        f"{_fmt(budget['total'])}."
-    )
+    # CLOSING TOTAL (fixed 2026-08-10).
+    # budget["direct_costs"]/["fa_amount"]/["total"] are YEAR 1 on a multi-year
+    # budget. This paragraph used them unqualified, so the justification said
+    # "the cumulative project cost across all 3 years is $352,144" and then, two
+    # paragraphs later, "for a total project cost of $116,056" -- Year 1 wearing
+    # the label "total project cost". A PI pasting that into a proposal
+    # understates their request by two thirds. On multi-year the closing total is
+    # now the CUMULATIVE figure, and the Year-1 numbers are labelled as Year 1.
+    if my and my.get("years"):
+        cum_block = my["cumulative"]
+        paras.append(
+            f"Total project cost. Year 1 direct costs are {_fmt(budget['direct_costs'])} with "
+            f"{_fmt(budget['fa_amount'])} in F&A. Across all {my['project_years']} years, total "
+            f"direct costs are {_fmt(cum_block['direct_costs'])} and F&A costs are "
+            f"{_fmt(cum_block['fa_amount'])}, for a total project cost of "
+            f"{_fmt(cum_block['total'])}."
+        )
+    else:
+        paras.append(
+            f"Total project cost. Total direct costs are {_fmt(budget['direct_costs'])} and F&A "
+            f"costs are {_fmt(budget['fa_amount'])}, for a total project cost of "
+            f"{_fmt(budget['total'])}."
+        )
     return "\n".join(paras)
 
 
@@ -545,18 +632,33 @@ def budget_to_csv(budget: dict) -> str:
     for i, s in enumerate(budget.get("subawards") or [], 1):
         if s:
             w.writerow(["Subaward", f"#{i}", f"{s:.2f}"])
-    w.writerow([])
-    w.writerow(["Total direct costs", "", f"{budget.get('direct_costs', 0):.2f}"])
-    w.writerow([f"F&A ({budget.get('fa_rate_label', '')}, {budget.get('fa_rate', 0)*100:.0f}%)",
-                f"on MTDC base {budget.get('mtdc_base', 0):.2f}", f"{budget.get('fa_amount', 0):.2f}"])
-    w.writerow(["TOTAL PROJECT COST", "", f"{budget.get('total', 0):.2f}"])
     my = budget.get("multi_year")
+    # ROW LABELS (fixed 2026-08-10).
+    # On a multi-year budget every top-level figure is YEAR 1, but the rows were
+    # labelled "Total direct costs" / "TOTAL PROJECT COST" -- so the CSV, the
+    # artifact most likely to be forwarded to ORA, read as a complete project
+    # budget and was off by a factor of N. Label the Year-1 rows as Year 1 and
+    # reserve "TOTAL PROJECT COST" for the cumulative figure.
+    suffix = " (Year 1)" if my else ""
+    w.writerow([])
+    w.writerow([f"Total direct costs{suffix}", "", f"{budget.get('direct_costs', 0):.2f}"])
+    w.writerow([f"F&A ({budget.get('fa_rate_label', '')}, {budget.get('fa_rate', 0)*100:.0f}%){suffix}",
+                f"on MTDC base {budget.get('mtdc_base', 0):.2f}", f"{budget.get('fa_amount', 0):.2f}"])
     if my:
+        w.writerow([f"Year 1 total", "", f"{budget.get('total', 0):.2f}"])
         w.writerow([])
         w.writerow([f"Multi-year ({my['project_years']} yrs, {my['escalation_pct']:.0f}% escalation)", "", ""])
         for yr in my["years"]:
             w.writerow([f"Year {yr['year']}", "total", f"{yr['total']:.2f}"])
-        w.writerow(["Cumulative total", "", f"{my['cumulative']['total']:.2f}"])
+        if my.get("one_time_categories"):
+            w.writerow(["Charged in Year 1 only",
+                        ", ".join(c.replace("_", " ") for c in my["one_time_categories"]), ""])
+        w.writerow(["Total direct costs (all years)", "", f"{my['cumulative']['direct_costs']:.2f}"])
+        w.writerow(["Total F&A (all years)", "", f"{my['cumulative']['fa_amount']:.2f}"])
+        w.writerow(["TOTAL PROJECT COST", f"all {my['project_years']} years",
+                    f"{my['cumulative']['total']:.2f}"])
+    else:
+        w.writerow(["TOTAL PROJECT COST", "", f"{budget.get('total', 0):.2f}"])
     return buf.getvalue()
 
 

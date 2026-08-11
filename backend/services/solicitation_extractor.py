@@ -40,6 +40,23 @@ def _get_pdfplumber():
     return _pdfplumber
 
 
+# MODEL (moved to 3.6-flash 2026-08-10).
+# This is the highest-stakes extraction in the app: a wrong budget cap, deadline
+# or page limit propagates into the task checklist, the Budget Helper's
+# prefilled cap and Draft Review's deterministic checks, and NOTHING downstream
+# re-verifies it. It is also offline, one-shot and latency-tolerant — the same
+# profile that put the KB scraper's adjudicator and the Draft Review tool on
+# 3.6-flash — so judgment quality is worth more here than milliseconds.
+#
+# LOCATION IS NOT OPTIONAL. gemini-3.6-flash answers ONLY on the "global"
+# endpoint and 404s in us-central1 (verified by direct calls; same trap
+# documented for kb_scraper/adjudicator). Model and location must move
+# TOGETHER, which is why they are one env pair — set one without the other and
+# every extraction fails.
+MODEL = os.getenv("SOLICITATION_MODEL", "gemini-3.6-flash")
+MODEL_LOCATION = os.getenv("SOLICITATION_MODEL_LOCATION", "global")
+
+
 def _get_client():
     """Reuse the codebase's Vertex-first / API-key-fallback pattern for
     Gemini. Cached across calls."""
@@ -55,7 +72,7 @@ def _get_client():
         project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
         try:
             _gemini_client = genai.Client(vertexai=True, project=project,
-                                          location="us-central1")
+                                          location=MODEL_LOCATION)
         except Exception:
             api_key = os.getenv("GEMINI_API_KEY", "")
             if api_key:
@@ -140,7 +157,7 @@ def _call_gemini(prompt_text: str, system_instruction: Optional[str] = None) -> 
         if system_instruction:
             config["system_instruction"] = system_instruction
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model=MODEL,
             contents=prompt_text,
             config=config,
         )
@@ -224,7 +241,7 @@ def _coerce_cap_details(raw) -> list:
 
 
 # Map a full sponsor name back to the canonical short token the rest of the
-# app keys on (get_template + draft_critic._sponsor_default_sections expect
+# app keys on (get_template + the proposal-section defaults expect
 # exactly "NSF"/"NIH"/"DoD"/"DoE"/...). Gemini may return "National Science
 # Foundation" or "Department of Energy"; without this, sponsor-specific
 # templates/sections silently fall back to generic. Real foundations / unknown
@@ -421,35 +438,66 @@ def extract_from_text(text: str) -> Optional[dict]:
         return None
     out = _coerce_extracted(parsed)
     out["unverified_fields"] = _verify_source_quotes(out, snippet)
+    # WAS SILENT. The cap above drops the tail of a long FOA, and this module's
+    # own system prompt says the load-bearing facts ("Award Information",
+    # "Eligibility", page limits) often appear well into the document — so the
+    # truncation lands precisely where the damage is. Reported, not hidden: the
+    # caller surfaces it as a warning rather than presenting a partial read as a
+    # complete one. (services/solicitation_requirements.py does not truncate at
+    # all; it chunks.)
+    out["input_chars"] = len(text)
+    out["truncated"] = len(text) > _MAX_PROMPT_CHARS
     return out
 
 
-def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """PDF -> plain text via pdfplumber. Tested via the integration smoke
-    test, not unit-tested (depends on real PDFs)."""
+def read_pdf(pdf_bytes: bytes) -> dict:
+    """PDF -> text, WITH an account of what was actually readable.
+
+    Returns {"text", "pages", "pages_without_text", "chars", "engine", "error"}.
+
+    WHY THE REPORT EXISTS. pdfplumber yields nothing for a scanned or
+    image-only page and there is no OCR here, so a scan reads as a short, clean,
+    complete-looking document. Downstream that becomes "this solicitation asks
+    for very little" — a confident claim built on an empty read. The caller must
+    be able to tell a thin solicitation from a failed one, which is the same
+    invariant kb_scraper's looks_unreadable() enforces: an unreadable input is
+    never reported as absent content.
+    """
+    empty = {"text": "", "pages": 0, "pages_without_text": 0, "chars": 0,
+             "engine": "pdfplumber", "error": None}
     if not pdf_bytes:
-        return ""
+        return empty
     try:
         pdfp = _get_pdfplumber()
     except ImportError:
         print("   [SOLICITATION] pdfplumber not installed")
-        return ""
-    pages_text = []
+        return {**empty, "engine": "unavailable", "error": "pdfplumber not installed"}
+    pages_text, blank = [], 0
     try:
         with pdfp.open(BytesIO(pdf_bytes)) as pdf:
             for page in pdf.pages:
                 t = page.extract_text() or ""
-                if t:
+                if t.strip():
                     pages_text.append(t)
+                else:
+                    blank += 1
     except Exception as e:
         print(f"   [SOLICITATION] PDF parse failed: {e}")
-        return ""
-    joined = "\n\n".join(pages_text)
+        return {**empty, "error": str(e)}
     # pdfplumber can emit control characters (e.g. a "fi"/"fl" ligature glyph
     # as \x1f). Those are illegal inside JSON strings and made Gemini's echoed
     # source_quotes unparseable -> the whole extraction returned None on an
     # otherwise-fine PDF. Strip them (keep \t \n \r).
-    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", joined)
+    joined = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", "\n\n".join(pages_text))
+    return {"text": joined, "pages": len(pages_text) + blank,
+            "pages_without_text": blank, "chars": len(joined),
+            "engine": "pdfplumber", "error": None}
+
+
+def extract_text_from_pdf(pdf_bytes: bytes) -> str:
+    """Text only. Kept so existing callers are byte-identical; prefer read_pdf(),
+    which also tells you how much of the document was actually readable."""
+    return read_pdf(pdf_bytes)["text"]
 
 
 def extract_from_pdf_bytes(pdf_bytes: bytes) -> Optional[dict]:

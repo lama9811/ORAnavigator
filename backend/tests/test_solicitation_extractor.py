@@ -345,3 +345,59 @@ def test_coerce_cap_details_absent_or_single_is_empty_list():
     }
     out = sx._coerce_extracted(raw)
     assert out["budget_cap_details"] == []
+
+
+# ── read_pdf: telling a thin solicitation from a failed read ────────────────
+
+def test_truncation_is_reported_rather_than_silent(monkeypatch):
+    """A long FOA loses its tail to _MAX_PROMPT_CHARS. That has to be visible:
+    the module's own prompt says the load-bearing facts appear late."""
+    monkeypatch.setattr(sx, "_call_gemini", lambda *a, **k: '{"sponsor": "NSF"}')
+    out = sx.extract_from_text("x" * (sx._MAX_PROMPT_CHARS + 10))
+    assert out["truncated"] is True
+    assert out["input_chars"] == sx._MAX_PROMPT_CHARS + 10
+
+
+def test_a_short_solicitation_is_not_reported_as_truncated(monkeypatch):
+    monkeypatch.setattr(sx, "_call_gemini", lambda *a, **k: '{"sponsor": "NSF"}')
+    out = sx.extract_from_text("Proposals are due June 1.")
+    assert out["truncated"] is False
+
+
+def test_read_pdf_on_empty_bytes_reports_zero_rather_than_raising():
+    out = sx.read_pdf(b"")
+    assert out == {"text": "", "pages": 0, "pages_without_text": 0, "chars": 0,
+                   "engine": "pdfplumber", "error": None}
+
+
+def test_read_pdf_counts_pages_that_yielded_no_text(monkeypatch):
+    """A scanned page returns "" from pdfplumber. It must be COUNTED, not
+    dropped -- otherwise a 34-page scan looks like a complete 0-page read."""
+    class _Page:
+        def __init__(self, t): self._t = t
+        def extract_text(self): return self._t
+
+    class _PDF:
+        pages = [_Page("Real text on page one."), _Page(""), _Page("   ")]
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    monkeypatch.setattr(sx, "_get_pdfplumber", lambda: type("P", (), {"open": staticmethod(lambda *a, **k: _PDF())}))
+    out = sx.read_pdf(b"%PDF-fake")
+    assert out["pages"] == 3
+    assert out["pages_without_text"] == 2
+    assert "Real text" in out["text"]
+
+
+def test_a_corrupt_pdf_reports_an_error_rather_than_empty_success(monkeypatch):
+    class _Boom:
+        @staticmethod
+        def open(*a, **k): raise ValueError("not a pdf")
+    monkeypatch.setattr(sx, "_get_pdfplumber", lambda: _Boom)
+    out = sx.read_pdf(b"garbage")
+    assert out["chars"] == 0
+    assert out["error"] == "not a pdf"
+
+
+def test_extract_text_from_pdf_still_returns_a_plain_string():
+    assert sx.extract_text_from_pdf(b"") == ""

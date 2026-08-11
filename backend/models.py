@@ -1,5 +1,14 @@
 # backend/models.py
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, func
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
+
+# MySQL's TEXT caps at 65,535 BYTES and truncates past it. Any column that can
+# hold a whole document or a large JSON blob must be MEDIUMTEXT (16MB) there.
+# This matters because Base.metadata.create_all() runs BEFORE init_db's
+# migrations, so on a fresh database create_all wins and a later
+# CREATE TABLE IF NOT EXISTS is a no-op — the type declared HERE is the type
+# production gets.
+_BIGTEXT = Text().with_variant(MEDIUMTEXT, 'mysql')
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from db import Base
@@ -198,6 +207,15 @@ class Submission(Base):
     # PI is working on ({"project_summary": "...", ...}). Nullable. The coach
     # gives feedback on this text; we never auto-write it.
     sections_json = Column(Text, nullable=True)
+    # Draft Review: JSON string of the solicitation this proposal is judged
+    # against — {version, id, title, url, source, contract, requirements,
+    # merit_criteria, eligibility_notes, read_report, extraction, extracted_at,
+    # model}. Written when the PI confirms an extracted solicitation; the
+    # reviewer refuses to score a draft without it. The `checks` callables and
+    # the derived section list are deliberately NOT stored (see
+    # proposals_service.load_solicitation_profile). Nullable: a proposal has none
+    # until a solicitation is attached.
+    solicitation_json = Column(_BIGTEXT, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -209,6 +227,57 @@ class Submission(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+
+
+class SolicitationSource(Base):
+    """The solicitation document's TEXT, kept once so it is never asked for twice.
+
+    WHY THIS TABLE EXISTS
+    ---------------------
+    The ingestion flow used to run one Gemini pass over an uploaded solicitation,
+    write the deadline/cap/page-limits into Submission.notes, and DISCARD the
+    document. Nothing needed the text at the time. When Draft Review arrived and
+    did need it, every proposal created before that had to be re-uploaded — a
+    665-character summary cannot be turned back into 43 requirements. Keeping the
+    text means:
+      * a PI is never asked for the same document twice;
+      * requirements can be RE-READ without them (the extraction prompt improved
+        twice in one day, once taking a solicitation from 20 requirements to 43 —
+        stored text is what lets existing proposals get that for free);
+      * a stored quote can always be checked against the source it came from.
+
+    ITS OWN TABLE, NOT A COLUMN ON Submission. A solicitation runs to ~300KB, and
+    list_submissions loads whole Submission rows — a column would put megabytes
+    on every proposals page load. Here it is fetched only when something actually
+    reads it.
+
+    submission_id is NULLABLE ON PURPOSE: the text is written when the document is
+    READ, which on the create flow happens before the proposal exists. The row is
+    bound to its submission at confirm. Unbound rows older than a day are reaped
+    (see proposals_service.save_solicitation_source)."""
+    __tablename__ = "solicitation_sources"
+
+    id = Column(Integer, primary_key=True, index=True)
+    # Owner, recorded at write time so a row can only ever be bound to a
+    # submission belonging to the same user.
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    submission_id = Column(
+        Integer,
+        ForeignKey("submissions.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    # MEDIUMTEXT on MySQL: a solicitation runs past TEXT's 65,535-byte cap, and
+    # a truncated document is the failure this table exists to end.
+    text = Column(_BIGTEXT, nullable=False)
+    chars = Column(Integer, nullable=False, default=0)
+    # "pdf" | "url" — how it arrived, plus whichever of the two identifiers applies.
+    source_kind = Column(String(16), nullable=False, default="pdf")
+    filename = Column(String(255), nullable=True)
+    url = Column(Text, nullable=True)
+    # Lets a re-upload of the identical document be recognised as such.
+    sha256 = Column(String(64), nullable=True, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 
 class SubmissionTask(Base):
