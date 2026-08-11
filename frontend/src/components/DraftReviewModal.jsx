@@ -176,6 +176,11 @@ export default function DraftReviewModal({ submission, onClose, onAttach }) {
 
   const summary = submission?.solicitation_summary || null;
   const hasSolicitation = Boolean(submission?.has_solicitation_requirements);
+  // This proposal WAS set up from a solicitation — its notes carry the funder's
+  // numbers — but predates requirement extraction. It is a different situation
+  // from a hand-made proposal, and gets different words below.
+  const priorSolicitation = !hasSolicitation
+    && /^(Budget cap|Page limits|Required attachments|Program ID):/m.test(submission?.notes || "");
 
   return createPortal(
     <div className="eir-overlay" onClick={onClose}>
@@ -200,16 +205,43 @@ export default function DraftReviewModal({ submission, onClose, onAttach }) {
             nothing, so this asks for the solicitation instead. */}
         {!hasSolicitation && (
           <div className="eir-attach-first">
-            <h3>Attach this proposal's solicitation first</h3>
-            <p>
-              This review checks your draft against the funder's own
-              requirements — every one it states, quoted from the document. Once
-              the solicitation is attached, each requirement becomes a check.
-            </p>
+            {/* A proposal STARTED from a solicitation still lands here, and
+                telling that PI to "attach the solicitation" would read as though
+                the app lost what they already gave it. It didn't: it kept a
+                summary (cap, page limits, attachments) and never kept the
+                document's text, so the requirement list has to be read from the
+                document once. Say that, rather than implying they skipped a step. */}
+            {priorSolicitation ? (
+              <>
+                <h3>This proposal needs its solicitation read in full</h3>
+                <p>
+                  We have this funder's <b>numbers</b> from when you set the
+                  proposal up — budget cap, page limits, required attachments —
+                  but not the list of everything the solicitation actually asks
+                  you to include. Reading requirements is new, and the document's
+                  text was never stored, so it has to be read once.
+                </p>
+                <p>
+                  Upload the same solicitation again and every requirement in it,
+                  quoted, becomes a check on your draft. Proposals you start from
+                  now on will already have this.
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>Attach this proposal's solicitation first</h3>
+                <p>
+                  This review checks your draft against the funder's own
+                  requirements — every one it states, quoted from the document.
+                  Once the solicitation is attached, each requirement becomes a
+                  check.
+                </p>
+              </>
+            )}
             <div className="eir-attach-actions">
               {onAttach && (
                 <button className="eir-run" onClick={onAttach}>
-                  Attach the solicitation
+                  {priorSolicitation ? "Read the solicitation" : "Attach the solicitation"}
                 </button>
               )}
               <button className="eir-secondary" onClick={onClose}>Not now</button>

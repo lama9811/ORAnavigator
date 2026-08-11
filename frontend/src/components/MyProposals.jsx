@@ -577,13 +577,16 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
             <ToolButton
               icon={FileText}
               label="Solicitation"
-              status={solicited ? "attached" : "not attached"}
-              statusDone={solicited}
+              status={submission.has_solicitation_requirements ? "attached"
+                      : solicited ? "rules only" : "not attached"}
+              statusDone={submission.has_solicitation_requirements}
               primary={next === "solicitation"}
               onClick={() => setShowSolicitation(true)}
-              title={solicited
-                ? "The funder's rules attached to this proposal. Upload a newer solicitation to replace them."
-                : "Attach the funder's solicitation — it sets the budget cap and page limits, and every requirement in it becomes a Draft Review check."}
+              title={submission.has_solicitation_requirements
+                ? "This proposal's solicitation is stored, including every requirement Draft Review checks against."
+                : solicited
+                  ? "This proposal has the funder's numbers (cap, page limits, attachments) but not its requirement list — that was added later. Upload the solicitation once to read it in full."
+                  : "Attach the funder's solicitation — it sets the budget cap and page limits, and every requirement in it becomes a Draft Review check."}
             />
           </LifecycleStage>
 
