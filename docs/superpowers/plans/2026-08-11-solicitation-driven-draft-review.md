@@ -876,22 +876,93 @@ CHUNK_CHARS = 60_000
 CHUNK_OVERLAP = 4_000
 
 _SYSTEM = (
-    "You extract the REQUIREMENTS a grant solicitation places on an applicant's "
-    "proposal, for a university research office. You output DATA ONLY from the text "
-    "given.\n"
-    "RULES:\n"
-    "1. A requirement is something the applicant must (or should) INCLUDE, DO, or "
-    "ADDRESS in their proposal. Extract every one you find.\n"
-    "2. 'source' MUST be a VERBATIM quote from the text given, <=300 characters, "
-    "copied character for character. A requirement you cannot quote will be discarded.\n"
-    "3. 'section' is the part of the proposal the requirement belongs to, in "
-    "snake_case, named as the solicitation names it (project_description, "
-    "research_strategy, project_summary, budget_justification, ...). Use null if it "
-    "applies to the whole proposal.\n"
-    "4. 'scored' is false ONLY when the solicitation marks it conditional or optional "
-    "('if applicable', 'if available', 'optional', 'where appropriate'); otherwise true.\n"
-    "5. Never invent, never merge two requirements into one, never generalize. "
-    "Administrative facts (deadlines, portals, page counts) are NOT requirements here."
+    "You extract, for a university research office, EVERY requirement a grant "
+    "solicitation places on an applicant's proposal. You output DATA ONLY from the "
+    "text given to you.\n\n"
+
+    "WHAT COUNTS AS A REQUIREMENT\n"
+    "A requirement is anything the applicant must INCLUDE in, DO for, or ADDRESS in "
+    "their proposal: content, structure, format, limits, prohibitions, and conditions "
+    "the proposal itself must demonstrate.\n"
+    "Signal words, none of which may be skimmed past: must, shall, should, is/are "
+    "required, will, is expected to, needs to, include, provide, describe, address, "
+    "submit, attach, specify, identify, demonstrate, no more than, at least, may not, "
+    "is prohibited, is not allowed, limited to.\n"
+    "Requirements ALSO appear with none of those words — as bare imperative headings, "
+    "and as the items of a list introduced by something like 'The Project Description "
+    "must contain the following:'. Every item of such a list is its own requirement.\n\n"
+
+    "COMPLETENESS IS THE POINT OF THIS TASK\n"
+    "1. Read the text you are given from its FIRST line to its LAST. Do not stop "
+    "early, do not sample, do not summarise. A partial answer here tells a faculty "
+    "member their proposal is complete when it is not.\n"
+    "2. There is no maximum. If the text holds forty requirements, return forty. Never "
+    "trim the list for brevity, or because the items feel repetitive.\n"
+    "3. Read the parts that are easy to skip: bulleted and numbered lists, tables, "
+    "figure and table captions, footnotes, endnotes, appendices, boxed notes, "
+    "parenthetical asides, and text under headings that look administrative.\n"
+    "4. SPLIT, never merge. 'Include a timeline and a description of experimental "
+    "methods' is TWO requirements. One row per distinct ask, even when several share "
+    "one sentence.\n"
+    "5. If the same ask is restated later with MORE specificity, return the specific "
+    "statement as its own row and quote that statement.\n"
+    "6. When the text imposes a requirement by pointing elsewhere ('prepared in "
+    "accordance with PAPPG Chapter II.D.2'), return the pointer itself as a "
+    "requirement, quoted. Never invent what the referenced document says.\n"
+    "7. If a passage genuinely contains no requirement, return an empty array. Never "
+    "manufacture one to appear thorough.\n\n"
+
+    "QUOTING — ENFORCED IN CODE, NOT A STYLE NOTE\n"
+    "8. 'source' MUST be a VERBATIM quote from the text given, copied character for "
+    "character, <=300 characters. Do not paraphrase, do not tidy it, do not correct "
+    "typos, do not join distant sentences. Every row is checked against the document "
+    "and a row whose quote is not found there is DISCARDED — so an imperfect copy "
+    "destroys a real requirement.\n\n"
+
+    "FIELDS\n"
+    "9. 'section' — the part of the proposal the requirement belongs to, snake_case, "
+    "named as THIS solicitation names it (project_description, research_strategy, "
+    "project_summary, budget_justification, data_management_plan, ...). Use null when "
+    "it applies to the proposal as a whole. Never translate one funder's vocabulary "
+    "into another's.\n"
+    "10. 'scored' — false ONLY where the text marks the ask conditional or optional "
+    "('if applicable', 'if available', 'where appropriate', 'optional', 'may'). "
+    "Otherwise true. Return conditional rows; never drop them.\n"
+    "11. 'label' — a short imperative name (<=80 chars) for what the applicant must "
+    "do. 'why' — one sentence on why a reviewer cares. 'keywords' — lowercase words or "
+    "phrases a real draft would use for this.\n\n"
+
+    "OUT OF SCOPE\n"
+    "12. Do NOT extract administrative metadata: submission deadlines, submission "
+    "portals, award sizes and durations, contact names, agency background, review "
+    "timelines. Those are captured separately. A LIMIT the proposal must respect (a "
+    "page count, a budget ceiling the narrative must fit) IS in scope."
+)
+
+# The sweep runs with a DIFFERENT job description. Asking the same prompt again
+# returns the same list; asking "what did the first reader miss?" is what finds
+# the tail. The measured failure — 3 attachments on one pass, 5 on the next from
+# identical input — is a recall problem, so the second reader is told that
+# recall, not tidiness, is what it is for.
+_SWEEP_SYSTEM = (
+    "You audit a requirement list against the solicitation text it was extracted "
+    "from, and report ONLY what is missing from it.\n\n"
+    "You are the second reader. The first pass over this text missed requirements — "
+    "that is why you exist. 'Nothing is missing' is the right answer only when it is "
+    "true.\n"
+    "1. Work through the text from its first line to its last. For each requirement "
+    "you find, check the ALREADY EXTRACTED list: if it is there, ignore it; if it is "
+    "not, return it.\n"
+    "2. Match by MEANING, not wording. A different phrasing of an ask already on the "
+    "list is not missing.\n"
+    "3. Look hardest where a first pass fails: items after the third or fourth bullet "
+    "of a long list, requirements inside tables and footnotes, asks buried mid-"
+    "paragraph after a long descriptive passage, the second and third clauses of "
+    "compound sentences, and anything in the last third of the text.\n"
+    "4. An empty array is a valid and common answer. Never pad it with rephrasings of "
+    "rows already on the list, and never invent.\n"
+    "5. Same quoting rule, enforced the same way: 'source' is a VERBATIM quote from "
+    "this text, <=300 characters. Unquotable rows are discarded."
 )
 
 _SCHEMA_HINT = (
@@ -948,10 +1019,10 @@ def _coerce(row: dict) -> Optional[dict]:
     }
 
 
-def _ask(prompt: str) -> list:
+def _ask(prompt: str, system: str = _SYSTEM) -> list:
     ai = gemini_client.generate_json(
         prompt, temperature=0.0, max_output_tokens=8192, timeout_s=120,
-        system_instruction=_SYSTEM, model=MODEL, location=MODEL_LOCATION)
+        system_instruction=system, model=MODEL, location=MODEL_LOCATION)
     if not ai or not isinstance(ai.get("requirements"), list):
         return []
     return ai["requirements"]
@@ -1005,7 +1076,8 @@ def extract_requirements(text: str, *, use_ai: bool = True,
                 f"SOLICITATION TEXT:\n\"\"\"\n{chunk}\n\"\"\"\n\n"
                 f"ALREADY EXTRACTED (do NOT repeat these): {known}\n\n"
                 "List ONLY requirements present in the text above that are missing from "
-                f"that list. Return an empty array if there are none.\n{_SCHEMA_HINT}"))
+                f"that list. Return an empty array if there are none.\n{_SCHEMA_HINT}",
+                _SWEEP_SYSTEM))
         if added == 0:
             break
     else:
