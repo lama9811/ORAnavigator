@@ -40,13 +40,31 @@ def aliases_for(label: str) -> list[str]:
     return out
 
 
-def _section_key(name: str) -> str:
+def section_key(name: str) -> str:
+    """The canonical key for a section name. PUBLIC because more than one module
+    has to arrive at the same key independently: sections_from() files a section
+    under it, and generic_checks looks a located span up by it. Two definitions
+    would drift and the lookup would silently miss."""
     key = re.sub(r"[^a-z0-9]+", "_", (name or "").strip().lower()).strip("_")
     return key or "other"
 
 
 def _section_label(key: str) -> str:
     return " ".join(w.capitalize() for w in key.split("_"))
+
+
+def heading_regex(alias: str) -> re.Pattern:
+    """A heading LINE for `alias`: optional numbering/bullets, the alias, then
+    optional punctuation — and nothing else on the line.
+
+    Anchored per-line so a passing mention inside a paragraph never counts as a
+    heading. PUBLIC and shared: the locate stage uses it to segment a draft, and
+    generic_checks uses it to tell a real attachment section from a sentence
+    that merely names one ("as described in our Data Management Plan")."""
+    return re.compile(
+        r"^[ \t]*(?:[\dIVXivx]+[.)]\s*)*(?:[-–—*•]\s*)?" + re.escape(alias) + r"\s*:?\s*$",
+        re.IGNORECASE | re.MULTILINE,
+    )
 
 
 def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
@@ -60,7 +78,7 @@ def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
     sections: dict = {}
 
     def add(raw_key: str, label: Optional[str] = None) -> None:
-        key = _section_key(raw_key)
+        key = section_key(raw_key)
         if not key or key in sections:
             return
         lbl = label or _section_label(key)
@@ -100,3 +118,31 @@ def requirements_for(profile: dict, section: Optional[str]) -> list[dict]:
 
 def scored_requirements(profile: dict) -> list[dict]:
     return [r for r in profile.get("requirements", []) if r.get("scored")]
+
+
+def build_generic(contract: dict, requirements: list[dict], *, id: str, title: str,
+                  url: Optional[str] = None,
+                  merit_criteria: Optional[list] = None,
+                  eligibility_notes: Optional[list] = None) -> dict:
+    """A profile for an arbitrary solicitation.
+
+    `requirements` are the SEMANTIC rows read out of the document; the
+    deterministic rows are derived here from the contract's hard numbers rather
+    than stored, so they always track the contract the PI actually confirmed —
+    edit the page limit and the check that enforces it moves with it.
+
+    Sections are likewise derived, never persisted: a stored section list could
+    drift out of step with the requirements that name it."""
+    from services import generic_checks
+    contract = contract or {}
+    rows = list(requirements or []) + generic_checks.contract_requirements(contract)
+    return make_profile(
+        id=id, title=title, url=url,
+        sections=sections_from(rows,
+                               page_limits=contract.get("page_limits"),
+                               attachments=contract.get("required_attachments")),
+        requirements=rows,
+        checks=generic_checks.CHECKS,
+        merit_criteria=merit_criteria,
+        eligibility_notes=eligibility_notes,
+    )

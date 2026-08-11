@@ -134,16 +134,6 @@ def _spans_from_markers(text: str, markers: dict, sections: dict) -> dict:
     return spans
 
 
-def _heading_regex(alias: str) -> re.Pattern:
-    """A heading line for `alias`: optional numbering/bullets, the alias, then
-    optional punctuation — and nothing else on the line. Anchored per-line so a
-    passing mention inside a paragraph never counts as a heading."""
-    return re.compile(
-        r"^[ \t]*(?:[\dIVXivx]+[.)]\s*)*(?:[-–—*•]\s*)?" + re.escape(alias) + r"\s*:?\s*$",
-        re.IGNORECASE | re.MULTILINE,
-    )
-
-
 def _locate_fallback(text: str, sections: dict) -> dict:
     """Deterministic segmentation: scan for heading lines matching known aliases.
     Used when the model is unavailable, and to fill sections the model missed."""
@@ -151,7 +141,7 @@ def _locate_fallback(text: str, sections: dict) -> dict:
     for key, meta in sections.items():
         best = None
         for alias in meta.get("aliases") or []:
-            m = _heading_regex(alias).search(text)
+            m = sp.heading_regex(alias).search(text)
             if m and (best is None or m.start() < best.start()):
                 best = m
         if best is not None:
@@ -540,7 +530,14 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
 
     notes: list[dict] = []
     if jobs or use_ai:
-        with ThreadPoolExecutor(max_workers=max(1, len(jobs) + 1)) as pool:
+        # CAPPED, and the cap is load-bearing. With a hand-written solicitation
+        # this pool was ~6 wide because the section list was hand-written. An
+        # EXTRACTED profile can name 25 sections, and an uncapped pool would fire
+        # 25 concurrent Gemini calls per review — a 429 storm, and a request that
+        # blows the 300s Cloud Run cap. Six at a time keeps the fan-out fast
+        # (the reason it is concurrent at all: 39s sequential -> ~15s) without
+        # letting a verbose solicitation take the service down.
+        with ThreadPoolExecutor(max_workers=min(6, max(1, len(jobs) + 1))) as pool:
             futures = [pool.submit(_review_section, *job) for job in jobs]
             notes_future = pool.submit(_reviewer_notes, spans, profile) if use_ai else None
             for fut in futures:
