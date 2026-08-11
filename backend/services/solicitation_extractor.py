@@ -438,35 +438,66 @@ def extract_from_text(text: str) -> Optional[dict]:
         return None
     out = _coerce_extracted(parsed)
     out["unverified_fields"] = _verify_source_quotes(out, snippet)
+    # WAS SILENT. The cap above drops the tail of a long FOA, and this module's
+    # own system prompt says the load-bearing facts ("Award Information",
+    # "Eligibility", page limits) often appear well into the document — so the
+    # truncation lands precisely where the damage is. Reported, not hidden: the
+    # caller surfaces it as a warning rather than presenting a partial read as a
+    # complete one. (services/solicitation_requirements.py does not truncate at
+    # all; it chunks.)
+    out["input_chars"] = len(text)
+    out["truncated"] = len(text) > _MAX_PROMPT_CHARS
     return out
 
 
-def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """PDF -> plain text via pdfplumber. Tested via the integration smoke
-    test, not unit-tested (depends on real PDFs)."""
+def read_pdf(pdf_bytes: bytes) -> dict:
+    """PDF -> text, WITH an account of what was actually readable.
+
+    Returns {"text", "pages", "pages_without_text", "chars", "engine", "error"}.
+
+    WHY THE REPORT EXISTS. pdfplumber yields nothing for a scanned or
+    image-only page and there is no OCR here, so a scan reads as a short, clean,
+    complete-looking document. Downstream that becomes "this solicitation asks
+    for very little" — a confident claim built on an empty read. The caller must
+    be able to tell a thin solicitation from a failed one, which is the same
+    invariant kb_scraper's looks_unreadable() enforces: an unreadable input is
+    never reported as absent content.
+    """
+    empty = {"text": "", "pages": 0, "pages_without_text": 0, "chars": 0,
+             "engine": "pdfplumber", "error": None}
     if not pdf_bytes:
-        return ""
+        return empty
     try:
         pdfp = _get_pdfplumber()
     except ImportError:
         print("   [SOLICITATION] pdfplumber not installed")
-        return ""
-    pages_text = []
+        return {**empty, "engine": "unavailable", "error": "pdfplumber not installed"}
+    pages_text, blank = [], 0
     try:
         with pdfp.open(BytesIO(pdf_bytes)) as pdf:
             for page in pdf.pages:
                 t = page.extract_text() or ""
-                if t:
+                if t.strip():
                     pages_text.append(t)
+                else:
+                    blank += 1
     except Exception as e:
         print(f"   [SOLICITATION] PDF parse failed: {e}")
-        return ""
-    joined = "\n\n".join(pages_text)
+        return {**empty, "error": str(e)}
     # pdfplumber can emit control characters (e.g. a "fi"/"fl" ligature glyph
     # as \x1f). Those are illegal inside JSON strings and made Gemini's echoed
     # source_quotes unparseable -> the whole extraction returned None on an
     # otherwise-fine PDF. Strip them (keep \t \n \r).
-    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", joined)
+    joined = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", "\n\n".join(pages_text))
+    return {"text": joined, "pages": len(pages_text) + blank,
+            "pages_without_text": blank, "chars": len(joined),
+            "engine": "pdfplumber", "error": None}
+
+
+def extract_text_from_pdf(pdf_bytes: bytes) -> str:
+    """Text only. Kept so existing callers are byte-identical; prefer read_pdf(),
+    which also tells you how much of the document was actually readable."""
+    return read_pdf(pdf_bytes)["text"]
 
 
 def extract_from_pdf_bytes(pdf_bytes: bytes) -> Optional[dict]:
