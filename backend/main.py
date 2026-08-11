@@ -232,6 +232,19 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add sections_json column: {e}")
 
+        # 5e. Add submissions.solicitation_json if missing (Draft Review — the
+        # solicitation each proposal is reviewed against).
+        try:
+            conn.execute(text("SELECT solicitation_json FROM submissions LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'solicitation_json' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN solicitation_json MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'solicitation_json' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add solicitation_json column: {e}")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -3618,11 +3631,18 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         "has_compliance": bool(getattr(s, "compliance_json", None)),
         # Drafting Coach: whether a section draft has been saved (badge / next-step).
         "has_sections": bool(getattr(s, "sections_json", None)),
+        # Draft Review: whether this proposal has a solicitation to be reviewed
+        # against. Drives the tool's badge and its attach-first empty state.
+        "has_solicitation_requirements": bool(getattr(s, "solicitation_json", None)),
         "created_at": iso_utc(s.created_at),
         "updated_at": iso_utc(s.updated_at),
     }
     if include_tasks:
         out["tasks"] = [_submission_task_to_dict(t) for t in s.tasks]
+        # Detail view only: enough for the review modal's header to name the
+        # solicitation and show how well it could be read, without shipping
+        # every requirement row on the list view.
+        out["solicitation_summary"] = _proposals_service.solicitation_summary(s)
         raw = getattr(s, "budget_json", None)
         if raw:
             try:

@@ -198,6 +198,15 @@ class Submission(Base):
     # PI is working on ({"project_summary": "...", ...}). Nullable. The coach
     # gives feedback on this text; we never auto-write it.
     sections_json = Column(Text, nullable=True)
+    # Draft Review: JSON string of the solicitation this proposal is judged
+    # against — {version, id, title, url, source, contract, requirements,
+    # merit_criteria, eligibility_notes, read_report, extraction, extracted_at,
+    # model}. Written when the PI confirms an extracted solicitation; the
+    # reviewer refuses to score a draft without it. The `checks` callables and
+    # the derived section list are deliberately NOT stored (see
+    # proposals_service.load_solicitation_profile). Nullable: a proposal has none
+    # until a solicitation is attached.
+    solicitation_json = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

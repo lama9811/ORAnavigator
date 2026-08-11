@@ -110,45 +110,22 @@ def create_submission(
     return sub
 
 
-def create_submission_from_solicitation(
-    db: Session,
-    user_id: int,
-    extracted: dict,
-    title_override: Optional[str] = None,
-) -> Submission:
-    """Build a Submission from an extractor dict (see services/
-    solicitation_extractor.py). Title defaults to extracted program_name
-    or program_id; user can override via title_override. Tasks are the
-    sponsor template PLUS solicitation-specific tasks for each
-    required_attachment that isn't already in the generic checklist.
+def solicitation_notes_lines(extracted: dict) -> list[str]:
+    """The human-readable AND machine-parseable summary of an extracted
+    solicitation, one line per fact.
 
-    The user has reviewed/edited the extracted dict in the UI before this
-    call -- we trust what's passed in. This function does not call out
-    to Gemini."""
-    sponsor = (extracted.get("sponsor") or "Internal").strip() or "Internal"
-    program_name = extracted.get("program_name") or extracted.get("program_id") or "Proposal"
-    title = (title_override or program_name).strip() or "Proposal"
-
-    # Parse deadline from contract: ISO datetime / plain date / None
-    deadline_raw = extracted.get("deadline")
-    deadline: Optional[datetime] = None
-    if isinstance(deadline_raw, str) and deadline_raw.strip():
-        try:
-            deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
-        except ValueError:
-            try:
-                deadline = datetime.strptime(deadline_raw[:10], "%Y-%m-%d")
-            except ValueError:
-                deadline = None
-
-    # Build a structured notes blob carrying the rest of the extracted
-    # metadata. This is human-readable AND machine-parseable for any
-    # future downstream feature (calendar export, draft critic, etc.).
-    notes_lines = []
+    Lifted out of create_submission_from_solicitation so the attach-later path
+    writes exactly the same lines. It has to be the same text: Draft Critic
+    (reconstruct_solicitation_context, below) and the frontend's hasSolicitation()
+    both read these lines by regex, so a proposal that demonstrably has a
+    solicitation but is missing them leaves two features quietly disagreeing
+    about the same fact."""
+    extracted = extracted or {}
+    notes_lines: list[str] = []
     if extracted.get("program_id"):
         notes_lines.append(f"Program ID: {extracted['program_id']}")
     # Multi-category / recurring solicitations have several deadlines; the
-    # `deadline` field above carries only the earliest (most restrictive). Surface
+    # `deadline` column carries only the earliest (most restrictive). Surface
     # the full breakdown here so the human sees every category's date.
     if extracted.get("deadline_details"):
         dd = " ".join(str(extracted["deadline_details"]).split())
@@ -192,13 +169,48 @@ def create_submission_from_solicitation(
             notes_lines.append(f"Page limits: {', '.join(parts)}")
     # Persist the FULL required-attachments list verbatim. Draft Critic
     # reads this as the authoritative set; the per-attachment tasks seeded
-    # below are deduped against the sponsor template and so are a lossy
+    # elsewhere are deduped against the sponsor template and so are a lossy
     # subset. ";"-separated because attachment names contain commas
     # (e.g. "Facilities, Equipment and Other Resources").
     req_atts = [str(a).strip() for a in (extracted.get("required_attachments") or [])
                 if str(a).strip()]
     if req_atts:
         notes_lines.append(f"Required attachments: {'; '.join(req_atts)}")
+    return notes_lines
+
+
+def create_submission_from_solicitation(
+    db: Session,
+    user_id: int,
+    extracted: dict,
+    title_override: Optional[str] = None,
+) -> Submission:
+    """Build a Submission from an extractor dict (see services/
+    solicitation_extractor.py). Title defaults to extracted program_name
+    or program_id; user can override via title_override. Tasks are the
+    sponsor template PLUS solicitation-specific tasks for each
+    required_attachment that isn't already in the generic checklist.
+
+    The user has reviewed/edited the extracted dict in the UI before this
+    call -- we trust what's passed in. This function does not call out
+    to Gemini."""
+    sponsor = (extracted.get("sponsor") or "Internal").strip() or "Internal"
+    program_name = extracted.get("program_name") or extracted.get("program_id") or "Proposal"
+    title = (title_override or program_name).strip() or "Proposal"
+
+    # Parse deadline from contract: ISO datetime / plain date / None
+    deadline_raw = extracted.get("deadline")
+    deadline: Optional[datetime] = None
+    if isinstance(deadline_raw, str) and deadline_raw.strip():
+        try:
+            deadline = datetime.fromisoformat(deadline_raw.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                deadline = datetime.strptime(deadline_raw[:10], "%Y-%m-%d")
+            except ValueError:
+                deadline = None
+
+    notes_lines = solicitation_notes_lines(extracted)
     notes = "\n".join(notes_lines) if notes_lines else None
 
     sub = Submission(
@@ -521,3 +533,86 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
     out["required_attachments"] = ordered
 
     return out
+
+
+# ── The solicitation profile a proposal is reviewed against ─────────────────
+# Stored as TEXT + json.dumps on Submission.solicitation_json (golden rule 5).
+# This is what "the draft review is according to the solicitation" rests on: no
+# stored profile, no review.
+
+import json as _json
+
+SOLICITATION_PROFILE_VERSION = 1
+
+
+def save_solicitation_profile(db: Session, sub: Submission, payload: dict) -> None:
+    """Persist the profile the PI confirmed.
+
+    `checks` is dropped on the way in: it holds callables, which do not
+    serialize, and load_solicitation_profile re-attaches them from code. Storing
+    a stale copy of anything derivable is how two halves of one fact drift
+    apart."""
+    stored = {k: v for k, v in (payload or {}).items() if k not in ("checks", "sections")}
+    stored.setdefault("version", SOLICITATION_PROFILE_VERSION)
+    sub.solicitation_json = _json.dumps(stored)
+    sub.updated_at = _now().replace(tzinfo=None)
+    db.commit()
+    db.refresh(sub)
+
+
+def load_solicitation_profile(sub: Submission) -> Optional[dict]:
+    """The stored profile, rebuilt into the shape draft_review.review_draft takes.
+
+    Returns None — never an empty profile — when nothing is stored or the blob is
+    unreadable. Reviewing a draft against zero requirements would still produce a
+    confident percentage, and that number would mean nothing at all; a caller
+    that gets None can tell the PI to attach their solicitation instead.
+
+    Deterministic rows and the section universe are REBUILT here rather than
+    read back, so they always track the contract the PI actually confirmed."""
+    raw = getattr(sub, "solicitation_json", None)
+    if not raw:
+        return None
+    try:
+        stored = _json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    rows = [r for r in (stored.get("requirements") or [])
+            if isinstance(r, dict) and r.get("kind") != "deterministic"]
+    if not rows:
+        return None
+    from services import solicitation_profile as _sp
+    return _sp.build_generic(
+        stored.get("contract") or {},
+        rows,
+        id=stored.get("id") or "this solicitation",
+        title=stored.get("title") or "",
+        url=stored.get("url"),
+        merit_criteria=stored.get("merit_criteria") or [],
+        eligibility_notes=stored.get("eligibility_notes") or [],
+    )
+
+
+def solicitation_summary(sub: Submission) -> Optional[dict]:
+    """The small header the UI needs — what this proposal is judged against, and
+    how well the solicitation could be read — without shipping every row."""
+    raw = getattr(sub, "solicitation_json", None)
+    if not raw:
+        return None
+    try:
+        stored = _json.loads(raw)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(stored, dict):
+        return None
+    return {
+        "id": stored.get("id"),
+        "title": stored.get("title"),
+        "url": stored.get("url"),
+        "requirement_count": len(stored.get("requirements") or []),
+        "read_report": stored.get("read_report") or {},
+        "extraction": stored.get("extraction") or {},
+        "extracted_at": stored.get("extracted_at"),
+    }
