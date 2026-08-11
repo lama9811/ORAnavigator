@@ -2,8 +2,8 @@
 
 WHY THIS EXISTS
 ---------------
-The reviewer used to import services/eir_solicitation directly, which is why it
-only worked for one hardcoded solicitation. A PROFILE is that same information
+The reviewer used to import one hardcoded solicitation module directly, which is
+why it only worked for that one funder. A PROFILE is that same information
 as data, so the engine can be handed any solicitation — the one it was written
 for, or anything a PI attaches — and behave identically.
 

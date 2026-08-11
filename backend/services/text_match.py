@@ -15,7 +15,7 @@ Extracted from services/section_coach._quote_in when the Drafting Coach was
 removed (2026-08-10). It had already been factored out of that module's
 _verify_evidence precisely so every grounded feature shares ONE definition;
 this just gives it a home that doesn't belong to any one feature. Callers today:
-services/eir_review.py. The same rule is independently implemented in
+services/draft_review.py. The same rule is independently implemented in
 kb_scraper (adjudicator / file_adjudicator / fingerprint), which runs as a
 separate Cloud Run Job and cannot import from backend/.
 """

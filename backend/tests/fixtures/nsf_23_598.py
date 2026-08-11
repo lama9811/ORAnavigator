@@ -1,18 +1,23 @@
 """NSF 23-598 (HBCU Excellence in Research) as structured, quotable data.
 
-This module is DATA ONLY — no LLM, no network, no DB (mirrors forms_catalog.py
-and sample_proposals.py). services/eir_review.py is the engine that uses it.
+TEST DATA. **No module under `backend/services/` imports this**, and none may —
+it used to be `services/eir_solicitation.py`, the hardcoded solicitation that
+made the draft reviewer work for exactly one funder. The engine now takes a
+`solicitation_profile` dict as an argument, so this file survives only as a
+fixture, and the engine cannot tell these rows from ones the extractor produced.
 
-WHY A HARDCODED SOLICITATION AND NOT THE GENERIC EXTRACTOR
-----------------------------------------------------------
-solicitation_extractor.py reads an arbitrary PDF with Gemini and returns a
-best-effort contract. That is the right tool when the funder is unknown. It is
-the WRONG tool here: EiR's requirements are a fixed, enumerated list that a
-human read out of the published solicitation once, and re-deriving them from a
-PDF on every run would let the model quietly drop one. Every row below carries
-the VERBATIM solicitation sentence it came from (`source`), so the UI can always
-show a PI *why* something is required and a reviewer can audit the list against
-the published document.
+WHY IT IS KEPT AT ALL
+---------------------
+It is the only HUMAN-VERIFIED requirement list in the repo: every row was read
+out of the published solicitation by a person and carries the VERBATIM sentence
+it came from (`source`). That makes it the measuring stick for the extractor —
+Task 8's recall test drives `solicitation_extractor` over the real NSF 23-598
+PDF and checks how many of these requirements it recovers. Synthetic rows could
+not do that job, because the question being asked is "does the model find what a
+human found?".
+
+It is also realistic input for the engine's own tests: real headings and real
+requirement prose exercise the locate stage the way one-line stubs cannot.
 
 Requirement rows are the fixed universe of asks. The model NEVER adds to it — it
 only assigns coverage to rows defined here, so the AI can never invent an ask.
