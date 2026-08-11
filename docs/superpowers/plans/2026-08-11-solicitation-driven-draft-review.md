@@ -99,9 +99,11 @@ def test_nothing_in_the_profile_module_knows_about_any_named_solicitation():
     # The point of the whole change: one path, no funder-specific branch. A
     # regression here would be someone re-adding a from_nsf()/from_nih() helper.
     import inspect
+    import re
     src = inspect.getsource(sp).lower()
-    for token in ("23-598", "eir", "hbcu", "excellence in research"):
-        assert token not in src
+    # \b on "eir" is load-bearing: a bare substring test matches "their".
+    for token in (r"23-598", r"\beir\b", r"\bhbcu\b", r"excellence in research"):
+        assert not re.search(token, src), f"funder-specific token in profile module: {token}"
 
 
 def test_requirements_for_none_returns_the_whole_document_rows():
