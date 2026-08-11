@@ -46,9 +46,11 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
   // contract call, and far too risky inside the save. Overlapping it with the
   // time the user already spends checking the deadline and cap makes it free.
   //
-  // The File / URL is KEPT for exactly this reason: there is no server-side
-  // place to stash the text between two requests (the backend runs many
-  // instances with no session affinity), so the source is re-sent.
+  // The File / URL is kept in state because the two requests are independent
+  // and the backend runs many instances with no session affinity. The server
+  // STORES the document's text on the first read and returns a source_id, which
+  // is bound to the proposal at save — so this is the last time the PI is asked
+  // for this document.
   const [source, setSource] = useState(null);      // {kind, file?, url?, filename?}
   const [reqState, setReqState] = useState("idle"); // idle|running|ready|failed
   const [requirements, setRequirements] = useState(null);
@@ -170,6 +172,9 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
         extraction: requirements.extraction,
         source: { kind: source?.kind, filename: source?.filename || null,
                   url: source?.url || null },
+        // Binds the stored document to this proposal. Without it the text is
+        // kept but orphaned, and the PI would be asked for the file again.
+        source_id: requirements.source_id,
       } : {};
 
       const res = attaching

@@ -257,3 +257,116 @@ def test_detaching_clears_the_solicitation_and_the_review_refuses_again(ctx):
     assert r.json()["has_solicitation_requirements"] is False
     assert c.post(f"/api/me/submissions/{withsol_id}/draft-review",
                   json={"draft_text": DRAFT}).status_code == 409
+
+
+# ── the stored solicitation document ────────────────────────────────────────
+# The whole point: a PI is asked for the document ONCE.
+
+def _fake_read(monkeypatch, text="Applicants must state the aims."):
+    from services import solicitation_extractor as sx
+    from services import solicitation_requirements as sr
+    monkeypatch.setattr(sx, "read_pdf", lambda data: {
+        "text": text, "pages": 12, "pages_without_text": 0, "chars": len(text),
+        "engine": "pdfplumber", "error": None})
+    monkeypatch.setattr(sr, "extract_requirements", lambda *a, **k: {
+        "requirements": [{"id": "x_aims", "label": "Specific aims", "section": "x",
+                          "kind": "semantic", "scored": True,
+                          "source": "must state the aims", "why": "", "keywords": []}],
+        "ai": True, "rounds": 1, "chunks": 1, "chars": len(text),
+        "dropped_unverified": 0, "hit_round_cap": False, "hit_time_cap": False,
+        "elapsed_s": 1.0})
+    monkeypatch.setattr(sr, "extract_merit_criteria", lambda *a, **k: [])
+
+
+def test_reading_a_solicitation_stores_the_document(ctx, monkeypatch):
+    c, _, _ = ctx
+    _fake_read(monkeypatch)
+    r = c.post("/api/me/solicitation-requirements",
+               files=[("file", ("foa.pdf", b"%PDF-1.4", "application/pdf"))])
+    assert r.status_code == 200
+    assert r.json()["source_id"], "the document must be kept, not discarded"
+
+
+def test_attaching_binds_the_document_to_the_proposal(ctx, monkeypatch):
+    c, bare_id, _ = ctx
+    _fake_read(monkeypatch)
+    read = c.post("/api/me/solicitation-requirements",
+                  files=[("file", ("foa.pdf", b"%PDF-1.4", "application/pdf"))]).json()
+    r = c.put(f"/api/me/submissions/{bare_id}/solicitation", json={
+        "extracted": {"program_id": "PAR-24-118"},
+        "requirements": read["requirements"],
+        "source_id": read["source_id"],
+    })
+    assert r.status_code == 200
+    assert r.json()["has_solicitation_source"] is True
+
+
+def test_requirements_can_be_reread_without_asking_for_the_file_again(ctx, monkeypatch):
+    """The payoff. The extraction prompt improved twice in one day; without the
+    stored text every existing proposal would need another upload to benefit."""
+    c, bare_id, _ = ctx
+    _fake_read(monkeypatch)
+    read = c.post("/api/me/solicitation-requirements",
+                  files=[("file", ("foa.pdf", b"%PDF-1.4", "application/pdf"))]).json()
+    c.put(f"/api/me/submissions/{bare_id}/solicitation", json={
+        "extracted": {"program_id": "PAR-24-118"},
+        "requirements": read["requirements"], "source_id": read["source_id"]})
+
+    # A better extractor lands...
+    from services import solicitation_requirements as sr
+    monkeypatch.setattr(sr, "extract_requirements", lambda *a, **k: {
+        "requirements": [
+            {"id": "x_aims", "label": "Specific aims", "section": "x",
+             "kind": "semantic", "scored": True, "source": "must state the aims",
+             "why": "", "keywords": []},
+            {"id": "x_timeline", "label": "Timeline", "section": "x",
+             "kind": "semantic", "scored": True, "source": "must state the aims",
+             "why": "", "keywords": []}],
+        "ai": True, "rounds": 2, "chunks": 1, "chars": 31,
+        "dropped_unverified": 0, "hit_round_cap": False, "hit_time_cap": False,
+        "elapsed_s": 2.0})
+
+    r = c.post(f"/api/me/submissions/{bare_id}/solicitation/reread")
+    assert r.status_code == 200
+    assert len(r.json()["requirements"]) == 2      # no upload asked for
+    assert r.json()["read_report"]["engine"] == "stored"
+
+
+def test_reread_refuses_when_no_document_was_kept(ctx):
+    # Every proposal whose solicitation predates this table.
+    c, bare_id, _ = ctx
+    r = c.post(f"/api/me/submissions/{bare_id}/solicitation/reread")
+    assert r.status_code == 409
+    assert "upload it once" in r.json()["detail"]
+
+
+def test_a_source_belonging_to_another_user_cannot_be_bound(ctx, monkeypatch):
+    c, bare_id, _ = ctx
+    from services import proposals_service as ps
+    import main as _main
+    # A document stored by somebody else.
+    gen = _main.app.dependency_overrides[_main.get_db]()
+    db = next(gen)
+    other = ps.save_solicitation_source(db, user_id=9999, text="not yours")
+    r = c.put(f"/api/me/submissions/{bare_id}/solicitation", json={
+        "extracted": {"program_id": "X"},
+        "requirements": [{"label": "A", "source": "not yours"}],
+        "source_id": other,
+    })
+    assert r.status_code == 200
+    assert r.json()["has_solicitation_source"] is False   # binding refused
+
+
+def test_detaching_keeps_the_document_so_reattaching_costs_no_upload(ctx, monkeypatch):
+    c, bare_id, _ = ctx
+    _fake_read(monkeypatch)
+    read = c.post("/api/me/solicitation-requirements",
+                  files=[("file", ("foa.pdf", b"%PDF-1.4", "application/pdf"))]).json()
+    c.put(f"/api/me/submissions/{bare_id}/solicitation", json={
+        "extracted": {"program_id": "PAR-24-118"},
+        "requirements": read["requirements"], "source_id": read["source_id"]})
+
+    r = c.delete(f"/api/me/submissions/{bare_id}/solicitation")
+    assert r.json()["has_solicitation_requirements"] is False
+    assert r.json()["has_solicitation_source"] is True
+    assert c.post(f"/api/me/submissions/{bare_id}/solicitation/reread").status_code == 200

@@ -245,6 +245,42 @@ def init_db():
             except Exception as e:
                 print(f"[ERROR] Failed to add solicitation_json column: {e}")
 
+        # 5f. Create solicitation_sources if missing (the stored solicitation
+        # TEXT, so a PI is never asked for the same document twice).
+        try:
+            conn.execute(text("SELECT id FROM solicitation_sources LIMIT 1"))
+            print("[OK] solicitation_sources table exists")
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'solicitation_sources' table missing. Creating it now...")
+            try:
+                # MEDIUMTEXT, not TEXT: MySQL's TEXT caps at 65,535 bytes and a
+                # real solicitation runs past that, so TEXT would truncate the
+                # document silently — the exact failure this table exists to end.
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS solicitation_sources (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        user_id INT NOT NULL,
+                        submission_id INT NULL,
+                        text MEDIUMTEXT NOT NULL,
+                        chars INT NOT NULL DEFAULT 0,
+                        source_kind VARCHAR(16) NOT NULL DEFAULT 'pdf',
+                        filename VARCHAR(255) NULL,
+                        url TEXT NULL,
+                        sha256 VARCHAR(64) NULL,
+                        created_at DATETIME NOT NULL,
+                        INDEX idx_ss_user (user_id),
+                        INDEX idx_ss_submission (submission_id),
+                        INDEX idx_ss_sha (sha256)
+                    )
+                """))
+                conn.commit()
+                print("[OK] Successfully created 'solicitation_sources' table!")
+            except Exception as e:
+                # SQLite (local dev) rejects the MySQL-specific DDL above;
+                # Base.metadata.create_all already made the table there.
+                print(f"[INFO] solicitation_sources DDL not applied ({e}); "
+                      "relying on metadata create_all.")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -3643,6 +3679,13 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         # solicitation and show how well it could be read, without shipping
         # every requirement row on the list view.
         out["solicitation_summary"] = _proposals_service.solicitation_summary(s)
+        # Whether the solicitation DOCUMENT is on file, so the UI can offer
+        # "re-read" instead of asking for the upload again. Detail view only:
+        # on the list view this would be one extra query per proposal.
+        from sqlalchemy.orm import object_session as _object_session
+        _sess = _object_session(s)
+        out["has_solicitation_source"] = bool(
+            _sess and _proposals_service.has_solicitation_source(_sess, s.id))
         raw = getattr(s, "budget_json", None)
         if raw:
             try:
@@ -4264,7 +4307,14 @@ async def confirm_solicitation_submission(
     stored = _solicitation_payload(payload, extracted)
     if stored is not None:
         _proposals_service.save_solicitation_profile(db, sub, stored)
-        db.refresh(sub)
+    # Bind the document itself, even when no requirements came back: a failed
+    # read should still leave the text on the proposal so it can be re-read
+    # without asking the PI for the file again.
+    if payload.get("source_id"):
+        _proposals_service.bind_solicitation_source(
+            db, source_id=payload["source_id"], user_id=user["user_id"],
+            submission_id=sub.id)
+    db.refresh(sub)
     return _submission_to_dict(sub, include_tasks=True)
 
 
@@ -4496,6 +4546,7 @@ async def read_solicitation_requirements(
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Read a solicitation end to end and return its requirements FOR REVIEW.
 
@@ -4540,10 +4591,22 @@ async def read_solicitation_requirements(
             "the requirements later.",
         )
 
+    # KEEP THE DOCUMENT. Written before the model runs, so a read that times out
+    # or comes back empty still leaves the text stored — the whole point is that
+    # the PI is never asked for the same solicitation twice, and "the extraction
+    # failed" is exactly when you least want to ask them again.
+    source_id = _proposals_service.save_solicitation_source(
+        db, user_id=user["user_id"], text=text,
+        source_kind="pdf" if file is not None else "url",
+        filename=(file.filename if file is not None else None), url=url)
+
     payload = _read_solicitation_requirements(text, contract)
     payload["read_report"] = read_report
     payload["warnings"] = _solicitation_warnings(read_report, contract,
                                                  payload["extraction"])
+    # The client passes this back at confirm / attach, which binds the stored
+    # document to the proposal.
+    payload["source_id"] = source_id
     return payload
 
 
@@ -4642,8 +4705,61 @@ async def attach_solicitation(
 
     _proposals_service.save_solicitation_profile(db, sub, stored)
     _proposals_service.sync_required_attachment_tasks(db, sub, extracted)
+    if payload.get("source_id"):
+        _proposals_service.bind_solicitation_source(
+            db, source_id=payload["source_id"], user_id=user["user_id"],
+            submission_id=sub.id)
     db.refresh(sub)
     return _submission_to_dict(sub, include_tasks=True)
+
+
+@app.post("/api/me/submissions/{submission_id}/solicitation/reread")
+async def reread_solicitation_requirements(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Re-read the requirements from the solicitation ALREADY STORED for this
+    proposal. No upload, no URL, nothing asked of the PI.
+
+    This is what storing the document buys. The extraction prompt improved twice
+    in a single day — once taking one solicitation from 20 requirements to 43 —
+    and without the stored text every existing proposal would have needed another
+    upload to benefit. 409 when nothing was kept, which is every proposal whose
+    solicitation was attached before the text was stored.
+
+    Saves nothing on its own: the new list comes back for review and the PI
+    confirms it through PUT .../solicitation, exactly like a fresh read
+    (golden rule 4)."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id,
+                                            user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+
+    source = _proposals_service.load_solicitation_source(db, submission_id)
+    if source is None:
+        raise HTTPException(409, "No stored solicitation for this proposal — "
+                                 "upload it once and it will be kept.")
+
+    contract = None
+    raw = getattr(sub, "solicitation_json", None)
+    if raw:
+        try:
+            contract = (json.loads(raw) or {}).get("contract")
+        except (ValueError, TypeError):
+            contract = None
+
+    payload = _read_solicitation_requirements(source["text"], contract)
+    read_report = {"pages": None, "pages_without_text": 0,
+                   "chars": source["chars"], "engine": "stored", "error": None}
+    payload["read_report"] = read_report
+    payload["warnings"] = _solicitation_warnings(read_report, contract,
+                                                 payload["extraction"])
+    payload["source_id"] = source["id"]
+    payload["contract"] = contract or {}
+    return payload
 
 
 @app.delete("/api/me/submissions/{submission_id}/solicitation")
@@ -4652,9 +4768,11 @@ async def detach_solicitation(
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Detach the stored solicitation. Clears the column only — the notes lines
-    and the seeded tasks are the PI's now, and silently removing work they may
-    have done against them would be worse than leaving them."""
+    """Detach the stored solicitation. Clears the profile column only.
+
+    The notes lines and the seeded tasks are the PI's now, and silently removing
+    work they may have done against them would be worse than leaving them. The
+    stored DOCUMENT is kept too, so re-attaching never costs another upload."""
     if not user:
         raise HTTPException(401, "Unauthorized")
     sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])

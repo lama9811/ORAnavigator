@@ -660,3 +660,96 @@ def sync_required_attachment_tasks(db: Session, sub: Submission,
     if added:
         db.commit()
     return added
+
+
+# ── The stored solicitation document ────────────────────────────────────────
+# Written once when the document is READ, so a PI is never asked for the same
+# solicitation twice and its requirements can be re-read without them.
+
+import hashlib as _hashlib
+
+# An unbound row is a read the user started and never confirmed. Reaped rather
+# than kept forever; a day is long enough for any realistic session.
+_UNBOUND_SOURCE_TTL = timedelta(days=1)
+
+
+def save_solicitation_source(db: Session, *, user_id: int, text: str,
+                             source_kind: str = "pdf",
+                             filename: Optional[str] = None,
+                             url: Optional[str] = None) -> Optional[int]:
+    """Persist a solicitation's text and return its id, or None if empty.
+
+    Written UNBOUND (submission_id NULL) because on the create flow the proposal
+    does not exist yet; bind_solicitation_source attaches it at confirm."""
+    text = text or ""
+    if not text.strip():
+        return None
+    from models import SolicitationSource
+
+    # Reap abandoned reads before adding another.
+    cutoff = _now().replace(tzinfo=None) - _UNBOUND_SOURCE_TTL
+    db.query(SolicitationSource).filter(
+        SolicitationSource.user_id == user_id,
+        SolicitationSource.submission_id.is_(None),
+        SolicitationSource.created_at < cutoff,
+    ).delete(synchronize_session=False)
+
+    row = SolicitationSource(
+        user_id=user_id, submission_id=None, text=text, chars=len(text),
+        source_kind=source_kind, filename=filename, url=url,
+        sha256=_hashlib.sha256(text.encode("utf-8", "ignore")).hexdigest(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row.id
+
+
+def bind_solicitation_source(db: Session, *, source_id, user_id: int,
+                             submission_id: int) -> bool:
+    """Attach a stored document to a submission. Returns False if it does not
+    exist or belongs to someone else — a source id from the client is never
+    trusted to name a row this user may not touch.
+
+    Any document previously bound to this submission is replaced, so re-attaching
+    a newer solicitation leaves exactly one source per proposal."""
+    try:
+        source_id = int(source_id)
+    except (TypeError, ValueError):
+        return False
+    from models import SolicitationSource
+    row = db.query(SolicitationSource).filter(
+        SolicitationSource.id == source_id,
+        SolicitationSource.user_id == user_id,
+    ).first()
+    if row is None:
+        return False
+    db.query(SolicitationSource).filter(
+        SolicitationSource.submission_id == submission_id,
+        SolicitationSource.id != row.id,
+    ).delete(synchronize_session=False)
+    row.submission_id = submission_id
+    db.commit()
+    return True
+
+
+def load_solicitation_source(db: Session, submission_id: int) -> Optional[dict]:
+    """The stored document for a submission: {id, text, chars, source_kind,
+    filename, url, created_at}. None when nothing was kept — which is every
+    proposal whose solicitation was attached before this table existed."""
+    from models import SolicitationSource
+    row = (db.query(SolicitationSource)
+             .filter(SolicitationSource.submission_id == submission_id)
+             .order_by(SolicitationSource.id.desc())
+             .first())
+    if row is None:
+        return None
+    return {"id": row.id, "text": row.text, "chars": row.chars,
+            "source_kind": row.source_kind, "filename": row.filename,
+            "url": row.url, "created_at": row.created_at}
+
+
+def has_solicitation_source(db: Session, submission_id: int) -> bool:
+    from models import SolicitationSource
+    return db.query(SolicitationSource.id).filter(
+        SolicitationSource.submission_id == submission_id).first() is not None

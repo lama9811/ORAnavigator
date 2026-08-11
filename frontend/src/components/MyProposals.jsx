@@ -657,6 +657,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           submission={submission}
           onClose={() => setShowEir(false)}
           onAttach={() => { setShowEir(false); setShowSolicitation(true); }}
+          onRefresh={onRefresh}
         />
       )}
 

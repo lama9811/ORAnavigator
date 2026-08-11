@@ -94,7 +94,7 @@ function humanSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function DraftReviewModal({ submission, onClose, onAttach }) {
+export default function DraftReviewModal({ submission, onClose, onAttach, onRefresh }) {
   const [mode, setMode] = useState("upload");  // upload | paste
   const [files, setFiles] = useState([]);
   const [draft, setDraft] = useState("");
@@ -181,6 +181,51 @@ export default function DraftReviewModal({ submission, onClose, onAttach }) {
   // from a hand-made proposal, and gets different words below.
   const priorSolicitation = !hasSolicitation
     && /^(Budget cap|Page limits|Required attachments|Program ID):/m.test(submission?.notes || "");
+  // The document itself is on file, so the requirements can be read again
+  // without asking for it. This is what storing the text buys.
+  const canReread = Boolean(submission?.has_solicitation_source);
+  const [rereading, setRereading] = useState(false);
+
+  async function reread() {
+    setRereading(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/me/submissions/${submission.id}/solicitation/reread`,
+        { method: "POST", headers: authHeaders() },
+      );
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.detail || `Re-read failed (${res.status})`);
+      }
+      const body = await res.json();
+      const save = await fetch(
+        `${API_BASE}/api/me/submissions/${submission.id}/solicitation`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            extracted: body.contract || {},
+            requirements: body.requirements,
+            merit_criteria: body.merit_criteria,
+            eligibility_notes: body.eligibility_notes,
+            read_report: body.read_report,
+            extraction: body.extraction,
+            source_id: body.source_id,
+          }),
+        },
+      );
+      if (!save.ok) {
+        const b = await save.json().catch(() => ({}));
+        throw new Error(b.detail || `Couldn't save the requirements (${save.status})`);
+      }
+      onRefresh?.();
+    } catch (e) {
+      setError(e.message || "Couldn't re-read the solicitation.");
+    } finally {
+      setRereading(false);
+    }
+  }
 
   return createPortal(
     <div className="eir-overlay" onClick={onClose}>
@@ -211,7 +256,17 @@ export default function DraftReviewModal({ submission, onClose, onAttach }) {
                 summary (cap, page limits, attachments) and never kept the
                 document's text, so the requirement list has to be read from the
                 document once. Say that, rather than implying they skipped a step. */}
-            {priorSolicitation ? (
+            {canReread ? (
+              <>
+                <h3>Read this proposal's solicitation for its requirements</h3>
+                <p>
+                  The solicitation is already on file — we just have not read out
+                  its requirement list yet. No upload needed; this takes about a
+                  minute and every requirement it states, quoted, becomes a check
+                  on your draft.
+                </p>
+              </>
+            ) : priorSolicitation ? (
               <>
                 <h3>This proposal needs its solicitation read in full</h3>
                 <p>
@@ -238,8 +293,13 @@ export default function DraftReviewModal({ submission, onClose, onAttach }) {
                 </p>
               </>
             )}
+            {error && <div className="eir-error">{error}</div>}
             <div className="eir-attach-actions">
-              {onAttach && (
+              {canReread ? (
+                <button className="eir-run" onClick={reread} disabled={rereading}>
+                  {rereading ? "Reading the solicitation…" : "Read its requirements"}
+                </button>
+              ) : onAttach && (
                 <button className="eir-run" onClick={onAttach}>
                   {priorSolicitation ? "Read the solicitation" : "Attach the solicitation"}
                 </button>
