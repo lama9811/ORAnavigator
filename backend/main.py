@@ -4269,69 +4269,18 @@ async def confirm_solicitation_submission(
 
 
 # ----------------------------------------------------------------------------
-# Draft Critic: upload a draft PDF, get a mechanical pre-submission check
-# against the solicitation already attached to this Submission. No LLM call,
-# so no hallucination risk -- every check is deterministic from the PDF text.
-
-_MAX_DRAFT_PDF_BYTES = 25 * 1024 * 1024  # 25 MB, same as solicitation upload
-
-
-@app.post("/api/me/submissions/{submission_id}/critique")
-async def critique_draft(
-    submission_id: int,
-    file: UploadFile = File(...),
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """Run Draft Critic on an uploaded draft PDF. The submission's
-    existing solicitation context (page limits, required attachments,
-    budget cap) is reconstructed from notes + tasks and passed in.
-    Submissions created manually still get a useful critique against
-    sponsor-default sections."""
-    if not user:
-        raise HTTPException(401, "Unauthorized")
-
-    sub = _proposals_service.get_submission(
-        db, submission_id=submission_id, user_id=user["user_id"],
-    )
-    if sub is None:
-        raise HTTPException(404, "Submission not found")
-
-    filename = (file.filename or "").lower()
-    ctype = (file.content_type or "").lower()
-    if not (filename.endswith(".pdf") or "pdf" in ctype):
-        raise HTTPException(400, "Only PDF uploads are supported.")
-
-    pdf_bytes = await file.read()
-    if not pdf_bytes:
-        raise HTTPException(400, "Uploaded file is empty.")
-    if len(pdf_bytes) > _MAX_DRAFT_PDF_BYTES:
-        raise HTTPException(413, "PDF is larger than 25 MB.")
-
-    from services import draft_critic as _dc
-    solicitation = _proposals_service.reconstruct_solicitation_context(sub)
-    critique = _dc.critique_pdf(
-        pdf_bytes=pdf_bytes,
-        sponsor=sub.sponsor,
-        solicitation=solicitation,
-    )
-    if critique is None:
-        raise HTTPException(
-            422,
-            "Couldn't read this PDF -- the file may be scanned or "
-            "image-only. Try a text-based PDF.",
-        )
-
-    return {
-        "submission_id": submission_id,
-        "submission_title": sub.title,
-        "sponsor": sub.sponsor,
-        "solicitation_context": solicitation,
-        "critique": critique,
-    }
+# REMOVED 2026-08-11 — Draft Critic (POST .../critique) and services/draft_critic.py.
+# Product decision. Draft Review replaces it and does strictly more: the same
+# mechanical checks (page limits, required attachments, budget vs cap) now run
+# as deterministic rows inside services/generic_checks.py, driven by the stored
+# solicitation rather than by sponsor defaults, plus the requirement coverage
+# Draft Critic never had. Do not re-add.
+#
+# proposals_service.reconstruct_solicitation_context SURVIVES it, unused by any
+# feature today: it is the only parser of the `notes` solicitation lines, which
+# two write paths still produce, and its tests document that round-trip.
 
 
-# ----------------------------------------------------------------------------
 class EirReviewRequest(BaseModel):
     draft_text: str = ""
 

@@ -115,11 +115,11 @@ def solicitation_notes_lines(extracted: dict) -> list[str]:
     solicitation, one line per fact.
 
     Lifted out of create_submission_from_solicitation so the attach-later path
-    writes exactly the same lines. It has to be the same text: Draft Critic
-    (reconstruct_solicitation_context, below) and the frontend's hasSolicitation()
-    both read these lines by regex, so a proposal that demonstrably has a
-    solicitation but is missing them leaves two features quietly disagreeing
-    about the same fact."""
+    writes exactly the same lines. It has to be the same text: the frontend's
+    hasSolicitation() reads them by regex to badge the Solicitation button, and
+    reconstruct_solicitation_context (below) parses them back out, so a proposal
+    that demonstrably has a solicitation but is missing these lines leaves the UI
+    quietly disagreeing with the database."""
     extracted = extracted or {}
     notes_lines: list[str] = []
     if extracted.get("program_id"):
@@ -167,8 +167,8 @@ def solicitation_notes_lines(extracted: dict) -> list[str]:
                 parts.append(f"{key}: {int(mv.group())}p")
         if parts:
             notes_lines.append(f"Page limits: {', '.join(parts)}")
-    # Persist the FULL required-attachments list verbatim. Draft Critic
-    # reads this as the authoritative set; the per-attachment tasks seeded
+    # Persist the FULL required-attachments list verbatim as the authoritative
+    # set; the per-attachment tasks seeded
     # elsewhere are deduped against the sponsor template and so are a lossy
     # subset. ";"-separated because attachment names contain commas
     # (e.g. "Facilities, Equipment and Other Resources").
@@ -430,7 +430,7 @@ def delete_task(db: Session, submission_id: int, task_id: int,
 
 
 # =====================================================================
-# Solicitation context reconstruction (for Draft Critic, etc.)
+# Solicitation context reconstruction (see the note on the function)
 # =====================================================================
 
 import re as _re
@@ -456,11 +456,17 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
       - page_limits: parsed from notes line "Page limits: project_description: 15p, ..."
       - required_attachments: read from tasks titled "Prepare required attachment: X"
 
-    Returns the shape Draft Critic expects:
+    Returns:
         {budget_cap: int|None, page_limits: dict, required_attachments: list[str]}
 
-    For submissions created MANUALLY (not from a solicitation), every
-    field is empty/None and Draft Critic falls back to sponsor defaults."""
+    For submissions created MANUALLY (not from a solicitation), every field is
+    empty/None.
+
+    NO FEATURE READS THIS TODAY. Its consumer, Draft Critic, was removed
+    2026-08-11 — Draft Review replaced it and reads the structured
+    `solicitation_json` column instead. Kept because it is the only parser of
+    the `notes` solicitation lines, which two write paths still produce, and its
+    tests document that round-trip."""
     out: dict = {
         "budget_cap": None,
         "budget_cap_details": [],

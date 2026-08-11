@@ -43,7 +43,7 @@ def _get_pdfplumber():
 # MODEL (moved to 3.6-flash 2026-08-10).
 # This is the highest-stakes extraction in the app: a wrong budget cap, deadline
 # or page limit propagates into the task checklist, the Budget Helper's
-# prefilled cap and the Draft Critic's checks, and NOTHING downstream
+# prefilled cap and Draft Review's deterministic checks, and NOTHING downstream
 # re-verifies it. It is also offline, one-shot and latency-tolerant — the same
 # profile that put the KB scraper's adjudicator and the Draft Review tool on
 # 3.6-flash — so judgment quality is worth more here than milliseconds.
@@ -241,7 +241,7 @@ def _coerce_cap_details(raw) -> list:
 
 
 # Map a full sponsor name back to the canonical short token the rest of the
-# app keys on (get_template + draft_critic._sponsor_default_sections expect
+# app keys on (get_template + the proposal-section defaults expect
 # exactly "NSF"/"NIH"/"DoD"/"DoE"/...). Gemini may return "National Science
 # Foundation" or "Department of Energy"; without this, sponsor-specific
 # templates/sections silently fall back to generic. Real foundations / unknown

@@ -6,10 +6,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, ClipboardCheck, Download, ExternalLink, FileText, HelpCircle, Lightbulb, ListChecks, MoreHorizontal, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, Download, ExternalLink, FileText, HelpCircle, Lightbulb, ListChecks, MoreHorizontal, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
-import DraftCritiqueModal from "./DraftCritiqueModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
 import DraftReviewModal from "./DraftReviewModal";
@@ -37,8 +36,7 @@ function daysUntil(iso) {
 }
 
 // True when a proposal carries solicitation rules (budget cap / page limits /
-// required attachments) for Draft Critic to check a draft against. Manual
-// proposals have none, so the "Critique Draft" button is hidden for them.
+// required attachments). Drives the Solicitation button's "attached" badge.
 // Mirrors the backend SOURCE OF TRUTH in
 // backend/services/proposals_service.reconstruct_solicitation_context — if the
 // line-anchored notes formats (^Budget cap: / ^Page limits: / ^Required
@@ -63,8 +61,10 @@ function hasSolicitation(submission) {
 function nextStep(submission) {
   if (!submission.has_budget) return "budget";
   if (!submission.has_compliance) return "compliance";
-  if (hasSolicitation(submission)) return "critique";
-  return "done";
+  // Draft Review needs a solicitation to judge against, so attaching one comes
+  // first when it is missing.
+  if (!submission.has_solicitation_requirements) return "solicitation";
+  return "review";
 }
 
 // Plain-language guidance for each step — the heart of the first-timer
@@ -80,10 +80,15 @@ const STEP_INFO = {
     why: "Approvals like IRB, IACUC, and COI training take time to obtain. Find out early which ones apply to you.",
     action: "Check compliance", open: "compliance",
   },
-  critique: {
-    title: "Critique your full draft",
-    why: "Check your assembled draft against this solicitation's requirements — page limits, attachments, budget — before you submit.",
-    action: "Critique draft", open: "critique",
+  solicitation: {
+    title: "Attach the funder's solicitation",
+    why: "Every requirement the funder states becomes a check on your draft — and it sets your budget cap and page limits at the same time.",
+    action: "Attach solicitation", open: "solicitation",
+  },
+  review: {
+    title: "Check your draft against the solicitation",
+    why: "Paste or upload your whole package and see, requirement by requirement, what the funder asked for and whether your draft addresses it.",
+    action: "Open Draft Review", open: "eir",
   },
   done: {
     title: "You've covered the core steps",
@@ -522,7 +527,7 @@ function NextStepCard({ stepKey, solicited, onAction }) {
       <div className="np-why">{info.why}</div>
       {!solicited && (
         <div className="np-tip">
-          Tip: starting a proposal from a solicitation unlocks tailored checks and the draft critique.
+          Tip: attaching the funder's solicitation turns every requirement it states into a check on your draft.
         </div>
       )}
       {info.open && (
@@ -547,7 +552,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   // it's the headline + countdown; the sponsor deadline is shown as secondary.
   const headlineDeadline = submission.internal_deadline || submission.deadline;
   const dleft = daysUntil(headlineDeadline);
-  const [showCritique, setShowCritique] = useState(false);
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
   const [showEir, setShowEir] = useState(false);
@@ -558,7 +562,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const openModal = (key) => {
     if (key === "budget") setShowBudget(true);
     else if (key === "compliance") setShowCompliance(true);
-    else if (key === "critique") setShowCritique(true);
+    else if (key === "solicitation") setShowSolicitation(true);
     else if (key === "eir") setShowEir(true);
   };
 
@@ -575,6 +579,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               label="Solicitation"
               status={solicited ? "attached" : "not attached"}
               statusDone={solicited}
+              primary={next === "solicitation"}
               onClick={() => setShowSolicitation(true)}
               title={solicited
                 ? "The funder's rules attached to this proposal. Upload a newer solicitation to replace them."
@@ -604,19 +609,11 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               onClick={() => setShowCompliance(true)}
               title="Check which approvals your project needs — IRB, IACUC, COI, RCR, export control."
             />
-            {solicited && (
-              <ToolButton
-                icon={ClipboardCheck}
-                label="Critique draft"
-                primary={next === "critique"}
-                onClick={() => setShowCritique(true)}
-                title="Upload a draft PDF and check it against this proposal's solicitation requirements."
-              />
-            )}
             <ToolButton
               icon={ListChecks}
               label="Draft review"
               status={submission.has_solicitation_requirements ? null : "needs solicitation"}
+              primary={next === "review"}
               onClick={() => setShowEir(true)}
               title={submission.has_solicitation_requirements
                 ? "Paste or upload your whole package and check it against every requirement in this proposal's solicitation."
@@ -635,13 +632,6 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           />
         </div>
       </header>
-
-      {showCritique && (
-        <DraftCritiqueModal
-          submission={submission}
-          onClose={() => setShowCritique(false)}
-        />
-      )}
 
       {showBudget && (
         <BudgetHelperModal

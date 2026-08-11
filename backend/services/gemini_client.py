@@ -1,7 +1,7 @@
 """Shared Gemini client helper — one reusable phone line to Gemini 2.5 Flash.
 
 Factored out of the (older) inline pattern in services/solicitation_extractor.py so
-the new ADVISORY AI layers (Draft Critic AI review, Deadline Watcher personalized
+the ADVISORY AI layers (Draft Review coverage, Deadline Watcher personalized
 emails) all share one client + one set of safety guarantees:
 
   - Vertex-first, API-key fallback, cached client (no per-call init cost).

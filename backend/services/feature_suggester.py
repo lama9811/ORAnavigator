@@ -64,8 +64,8 @@ _FEATURES = [
         "route": "/my-proposals",
         "title": "Build it step by step",
         "body": "The Proposals workspace walks you through a guided pathway — "
-                "solicitation intake, budget helper, drafting coach, compliance, "
-                "and a pre-submission critique.",
+                "solicitation intake, budget helper, compliance, "
+                "and a draft review against the funder's own requirements.",
         "cta": "Open Proposals",
         "triggers": [
             "write a proposal", "writing a proposal", "start a proposal",
