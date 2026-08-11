@@ -144,19 +144,41 @@ def test_generic_extraction_recovers_the_curated_requirements():
 
 def test_two_reads_of_one_document_are_reported_not_asserted():
     """gemini-3.6-flash is not deterministic. This PRINTS how much two reads of
-    the same document differ and never fails on it: the number is real
-    information for a commit message, and a gate on it would flake forever.
-    Extraction runs once per solicitation and is stored, so the variance costs a
-    PI nothing — but it is exactly why the requirement list is shown to them."""
+    the same document differ and never fails on it: the number belongs in a
+    commit message, and a gate on it would flake forever. Extraction runs once
+    per solicitation and is stored, so the variance costs a PI nothing — but it
+    is exactly why the requirement list is shown to them before it is saved.
+
+    MEASURED BY QUOTE, NOT BY ID. Ids are derived from the model's own label, so
+    an id-based comparison scores "cap equipment budget allocation at 30 percent"
+    and "cap equipment expenses at 30 of total budget" as two different
+    requirements when they are one requirement phrased twice. That comparison
+    reported 0.12 on a pair of runs that had actually found the same rules — it
+    measured wording churn and called it instability. What matters is whether the
+    same SOLICITATION SENTENCES were found, so both runs are compared on the
+    quotes they carry."""
     from services import solicitation_requirements as sr
 
     text = _read_document()
     a = sr.extract_requirements(text)["requirements"]
     b = sr.extract_requirements(text)["requirements"]
+
+    def covered(row, others):
+        target = _shingles(row["source"])
+        if not target:
+            return False
+        return any(len(target & _shingles(o["source"])) / len(target) >= _OVERLAP_FLOOR
+                   for o in others)
+
+    a_in_b = sum(1 for r in a if covered(r, b))
+    b_in_a = sum(1 for r in b if covered(r, a))
     ids_a, ids_b = {r["id"] for r in a}, {r["id"] for r in b}
-    jaccard = len(ids_a & ids_b) / max(1, len(ids_a | ids_b))
-    print(f"\n--- stability ---")
-    print(f"  run A: {len(a)} rows   run B: {len(b)} rows   "
-          f"jaccard {jaccard:.2f}")
-    print(f"  only in A: {sorted(ids_a - ids_b)[:5]}")
-    print(f"  only in B: {sorted(ids_b - ids_a)[:5]}")
+
+    print(f"\n--- stability (two reads of the same document) ---")
+    print(f"  run A: {len(a)} rows   run B: {len(b)} rows")
+    print(f"  by QUOTE  : {a_in_b}/{len(a)} of A found in B "
+          f"({a_in_b / max(1, len(a)):.0%}), "
+          f"{b_in_a}/{len(b)} of B found in A ({b_in_a / max(1, len(b)):.0%})")
+    print(f"  by ID     : jaccard "
+          f"{len(ids_a & ids_b) / max(1, len(ids_a | ids_b)):.2f} "
+          f"(label wording, not coverage — see the docstring)")
