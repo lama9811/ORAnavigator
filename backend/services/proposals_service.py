@@ -135,6 +135,11 @@ def solicitation_notes_lines(extracted: dict) -> list[str]:
         notes_lines.append(f"Eligibility: {extracted['eligibility']}")
     if extracted.get("budget_cap"):
         notes_lines.append(f"Budget cap: ${extracted['budget_cap']:,}")
+    elif str(extracted.get("budget_cap_status") or "").strip().lower() == "not_stated":
+        # A POSITIVE finding, worth a line of its own: this solicitation sets no
+        # per-award maximum. Without it the PI is told once at review time and
+        # then sees an empty field forever, indistinguishable from "we missed it".
+        notes_lines.append("Budget cap: none stated")
     # Multi-category solicitations (NSF/NIH Category I/II/III, tracks) carry a
     # different award max per category; `budget_cap` above is only the smallest.
     # Surface every category cap as a parseable line so the Budget Helper can
@@ -459,6 +464,9 @@ import re as _re
 # phrase embedded mid-sentence in another notes field (e.g. Eligibility) can't
 # win over the real, line-leading entry.
 _BUDGET_NOTE_RE = _re.compile(r"^Budget cap:\s*\$?([\d,]+)", _re.MULTILINE)
+# The no-cap FINDING, distinct from the line being absent altogether (unknown).
+_NO_BUDGET_CAP_NOTE_RE = _re.compile(r"^Budget cap:\s*none stated\s*$",
+                                     _re.MULTILINE | _re.IGNORECASE)
 _CATEGORY_CAPS_NOTE_RE = _re.compile(r"^Category caps:\s*(.+)", _re.MULTILINE)
 _PAGE_LIMITS_NOTE_RE = _re.compile(r"^Page limits:\s*(.+)", _re.MULTILINE)
 _REQUIRED_ATTACHMENTS_NOTE_RE = _re.compile(r"^Required attachments:\s*(.+)", _re.MULTILINE)
@@ -489,6 +497,10 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
     out: dict = {
         "budget_cap": None,
         "budget_cap_details": [],
+        # None means UNKNOWN and is the right answer for every proposal whose
+        # notes predate the "none stated" line — absence of the line is not
+        # evidence the funder set no cap.
+        "budget_cap_status": None,
         "page_limits": {},
         "required_attachments": [],
     }
@@ -499,8 +511,11 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
         if m:
             try:
                 out["budget_cap"] = int(m.group(1).replace(",", ""))
+                out["budget_cap_status"] = "stated"
             except ValueError:
                 pass
+        elif _NO_BUDGET_CAP_NOTE_RE.search(notes):
+            out["budget_cap_status"] = "not_stated"
         cc = _CATEGORY_CAPS_NOTE_RE.search(notes)
         if cc:
             # "Category I — $30,000,000; Category III — $500,000"

@@ -401,3 +401,49 @@ def test_a_corrupt_pdf_reports_an_error_rather_than_empty_success(monkeypatch):
 
 def test_extract_text_from_pdf_still_returns_a_plain_string():
     assert sx.extract_text_from_pdf(b"") == ""
+
+
+# ---------- budget_cap_status: "no cap stated" is not the same as "unknown" --
+#
+# An empty Budget cap field used to mean two incompatible things at once: the
+# solicitation states no per-award cap, or we failed to find one. The UI could
+# only nag ("confirm it against the PDF"), which on a no-cap solicitation sends
+# the PI hunting for a number that does not exist -- and on NSF 23-598 the only
+# dollar figure in 17 pages is the $28,000,000 PROGRAM pool, i.e. precisely the
+# wrong value to type in. Same error class as could_not_locate != not_found.
+
+def test_cap_status_is_stated_when_a_cap_was_extracted():
+    out = sx._coerce_extracted({"budget_cap": 600000, "budget_cap_status": None})
+    assert out["budget_cap_status"] == "stated"
+
+
+def test_cap_status_not_stated_survives_when_there_is_no_cap():
+    out = sx._coerce_extracted({"budget_cap": None, "budget_cap_status": "not_stated"})
+    assert out["budget_cap_status"] == "not_stated"
+    assert out["budget_cap"] is None
+
+
+def test_cap_status_is_unknown_when_the_model_says_nothing():
+    """Silence is not evidence of absence — this is the "go check" case."""
+    assert sx._coerce_extracted({"budget_cap": None})["budget_cap_status"] is None
+    assert sx._coerce_extracted({"budget_cap": None, "budget_cap_status": ""})["budget_cap_status"] is None
+
+
+def test_an_extracted_cap_overrides_a_contradictory_not_stated():
+    """The VALUE is authoritative, never the model's claim about it — the two
+    can never disagree on screen."""
+    out = sx._coerce_extracted({"budget_cap": 600000, "budget_cap_status": "not_stated"})
+    assert out["budget_cap_status"] == "stated"
+
+
+def test_cap_status_rejects_a_junk_value():
+    assert sx._coerce_extracted({"budget_cap": None,
+                                 "budget_cap_status": "probably not"})["budget_cap_status"] is None
+
+
+def test_cap_status_is_not_flagged_unverified_without_a_quote():
+    """"The document states no cap" is an ABSENCE claim; most solicitations that
+    have no cap simply say nothing, so there is no sentence to quote. Requiring
+    one would flag every correct no-cap read as unverified."""
+    out = sx._coerce_extracted({"budget_cap": None, "budget_cap_status": "not_stated"})
+    assert "budget_cap_status" not in sx._verify_source_quotes(out, "some solicitation text")

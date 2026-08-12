@@ -584,3 +584,62 @@ def test_internal_routing_deadline_counts_five_weekdays():
 def test_internal_routing_deadline_zero_days_is_identity():
     deadline = datetime(2026, 7, 20)
     assert ps.internal_routing_deadline(deadline, business_days=0) == deadline
+
+
+# ---------------------------------------------------------------------------
+# "No cap stated" must survive the notes round-trip
+#
+# The finding is only useful if it reaches the proposal. Without a notes line
+# the PI sees the honest "this solicitation sets no cap" once, at review time,
+# and an ambiguous empty field forever after.
+# ---------------------------------------------------------------------------
+
+def _extracted(**over):
+    base = {
+        "sponsor": "NSF", "program_id": "NSF 23-598", "program_name": "HBCU-EiR",
+        "deadline": "2026-07-28", "deadline_details": None,
+        "page_limits": {}, "required_attachments": [], "eligibility": None,
+        "budget_cap": None, "budget_cap_details": [], "budget_cap_status": None,
+        "submission_portal": None, "source_quotes": {},
+    }
+    base.update(over)
+    return base
+
+
+def test_notes_record_that_no_cap_was_stated():
+    lines = ps.solicitation_notes_lines(_extracted(budget_cap_status="not_stated"))
+    assert any("none stated" in ln.lower() for ln in lines), lines
+
+
+def test_notes_say_nothing_when_the_cap_is_merely_unknown():
+    """Silence in the notes is right here — we have no finding to record."""
+    lines = ps.solicitation_notes_lines(_extracted(budget_cap_status=None))
+    assert not any("budget cap" in ln.lower() for ln in lines), lines
+
+
+def test_reconstruct_round_trips_no_cap_stated(db):
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=_extracted(budget_cap_status="not_stated"),
+    )
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap_status"] == "not_stated"
+    assert ctx["budget_cap"] is None
+
+
+def test_reconstruct_reports_a_real_cap_as_stated(db):
+    sub = ps.create_submission_from_solicitation(
+        db, user_id=db.user_id, extracted=_extracted(budget_cap=600000,
+                                                     budget_cap_status="stated"),
+    )
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap"] == 600000
+    assert ctx["budget_cap_status"] == "stated"
+
+
+def test_reconstruct_leaves_cap_status_unknown_on_an_old_proposal(db):
+    """Every proposal predating this column has notes with no cap line at all;
+    that is unknown, and must not read as "no cap"."""
+    sub = ps.create_submission_from_solicitation(db, user_id=db.user_id,
+                                                 extracted=_extracted())
+    ctx = ps.reconstruct_solicitation_context(sub)
+    assert ctx["budget_cap_status"] is None

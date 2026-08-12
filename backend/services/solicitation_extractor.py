@@ -92,8 +92,17 @@ def _get_client():
 _CONTRACT_KEYS = (
     "sponsor", "program_id", "program_name", "deadline", "deadline_details",
     "page_limits", "required_attachments", "eligibility",
-    "budget_cap", "budget_cap_details", "submission_portal", "source_quotes",
+    "budget_cap", "budget_cap_details", "budget_cap_status",
+    "submission_portal", "source_quotes",
 )
+
+# budget_cap_status separates the two things an empty budget_cap used to mean.
+# "not_stated" is a POSITIVE finding (the solicitation imposes no per-award
+# maximum); None is ignorance. Conflating them made the UI nag a PI to go find
+# a number that does not exist -- and on NSF 23-598 the only dollar figure in
+# the whole document is the $28,000,000 program pool, so the hunt ends at
+# exactly the wrong value.
+_CAP_STATUS_VALUES = ("stated", "not_stated")
 
 
 # Strict rules passed as the model's SYSTEM INSTRUCTION; the solicitation text is
@@ -108,7 +117,7 @@ ABSOLUTE RULES:
 3. NEVER GUESS OR INVENT. If a value is not explicitly stated, return null (or {} / [] for object/array fields). Do not fill a "reasonable" default. NEVER guess a deadline. If the text gives NO deadline, return null for both deadline and deadline_details. If it gives MULTIPLE deadlines (different categories/tracks or recurring dates), set deadline to the SINGLE EARLIEST upcoming date explicitly stated, and list EVERY deadline with its category/condition in deadline_details (see below).
 4. QUOTES ARE VERBATIM. Every source_quotes value must be an exact substring of the SOLICITATION TEXT -- do not paraphrase, summarize, normalize, or fix typos. Fabricated quotes are automatically detected and the field is flagged for human review.
 5. MOST RESTRICTIVE WINS. If different values are given for different applicant types or conditions, return the SMALLEST / most restrictive (smallest budget cap, smallest page limit) so an applicant is never told they have more room than they do; record the full breakdown in source_quotes.
-6. budget_cap = the maximum PER PROPOSAL / PER AWARD, NEVER the total program budget or "anticipated funding amount". If stated per year, return the per-year value.
+6. budget_cap = the maximum PER PROPOSAL / PER AWARD, NEVER the total program budget or "anticipated funding amount". If stated per year, return the per-year value. ALSO set budget_cap_status: "stated" when you found a per-award maximum, "not_stated" when you read the document and it imposes NO per-award maximum (either it says so outright -- e.g. "proposals do not have budgetary restrictions" -- or it gives only a program-wide total and an award count), null ONLY if you genuinely cannot tell. "not_stated" is a real finding and is more useful to the applicant than an empty field: say it whenever the text supports it. A percentage limit on one cost category (e.g. "equipment may not exceed 30% of the budget") is NOT a budget cap -- it does not make budget_cap_status "stated".
 7. page_limits: ALWAYS include the main narrative cap (Project Description / Research Narrative / Research Strategy / Proposal Narrative) when stated; {} only if the PDF truly states no page limit anywhere.
 
 Return ONLY a JSON object with EXACTLY these fields (unknown -> null, or {} / []):
@@ -123,6 +132,7 @@ Return ONLY a JSON object with EXACTLY these fields (unknown -> null, or {} / []
   "eligibility": one or two sentence summary of who may apply, including any alternate path stressed, or null,
   "budget_cap": integer dollar maximum per proposal/award (e.g. 600000), no commas/symbols, or null,
   "budget_cap_details": when the solicitation defines MULTIPLE proposal categories/tracks with DIFFERENT award maxima, an array of {"category": <name as written, e.g. "Category I">, "cap": <integer dollar maximum for that category, no commas/symbols>}; for a stated RANGE (e.g. "$10 million to $30 million") use the MAXIMUM as cap; [] if there is only one category/cap,
+  "budget_cap_status": "stated" | "not_stated" | null -- see rule 6. When "not_stated" AND the document says so explicitly, put that sentence in source_quotes under "budget_cap_status",
   "submission_portal": the submission system(s); if more than one is accepted list ALL comma-separated (e.g. "Research.gov, Grants.gov"), or null,
   "source_quotes": object mapping each FILLED field name -> a <=200-char VERBATIM quote from the text supporting it. Example: {"deadline": "Proposals are due no later than 5:00 p.m. on June 12, 2026."}
 }
@@ -322,6 +332,16 @@ def _coerce_extracted(raw: dict) -> dict:
     # Per-category caps (additive; budget_cap above stays the single
     # most-restrictive value). Empty list when the solicitation has one cap.
     out["budget_cap_details"] = _coerce_cap_details(out.get("budget_cap_details"))
+
+    # The VALUE decides the status, never the model's claim about it, so the
+    # two can never contradict each other on screen. Only the no-cap finding is
+    # taken from the model, and only as one of two known tokens.
+    if out["budget_cap"] is not None:
+        out["budget_cap_status"] = "stated"
+    else:
+        claimed = out.get("budget_cap_status")
+        claimed = claimed.strip().lower() if isinstance(claimed, str) else None
+        out["budget_cap_status"] = claimed if claimed == "not_stated" else None
 
     # source_quotes must be a dict
     if not isinstance(out["source_quotes"], dict):

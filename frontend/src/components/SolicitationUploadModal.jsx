@@ -521,15 +521,40 @@ function ReviewStep({
             placeholder="YYYY-MM-DD or full ISO date"
           />
         </Field>
-        <Field label="Budget cap (USD)" critical sourceQuote={sq.budget_cap} unverified={unv.has("budget_cap")}>
+        {/* An empty cap means one of two different things, and the PI must be
+            able to tell them apart. "not_stated" is a FINDING — the funder sets
+            no per-award maximum — so the field goes calm: no "verify" tag, no
+            warning to go hunt. Hunting is actively harmful on such a
+            solicitation: NSF 23-598's only dollar figure in 17 pages is the
+            $28,000,000 program-wide pool, i.e. exactly the wrong number to
+            type here. A null status still nags, because then we really don't
+            know. Typing a cap flips it back to "stated". */}
+        <Field
+          label="Budget cap (USD)"
+          critical={extracted.budget_cap_status !== "not_stated"}
+          sourceQuote={sq.budget_cap || (extracted.budget_cap_status === "not_stated"
+            ? sq.budget_cap_status : null)}
+          unverified={unv.has("budget_cap")}
+          hint={extracted.budget_cap_status === "not_stated"
+            ? "This solicitation states no per-award cap — leave this blank. Budget to the scope of the work, and check the solicitation for limits on particular cost categories (e.g. equipment as a share of the budget)."
+            : undefined}
+        >
           <input
             type="number"
             value={extracted.budget_cap ?? ""}
-            onChange={(e) => onChange(
-              "budget_cap",
-              e.target.value === "" ? null : Number(e.target.value),
-            )}
-            placeholder="e.g. 600000"
+            onChange={(e) => {
+              const v = e.target.value === "" ? null : Number(e.target.value);
+              onChange("budget_cap", v);
+              // Keep the status honest against what is actually in the box, so
+              // the calm note can never sit above a filled-in number.
+              if (v !== null && extracted.budget_cap_status !== "stated") {
+                onChange("budget_cap_status", "stated");
+              } else if (v === null && extracted.budget_cap_status === "stated") {
+                onChange("budget_cap_status", null);
+              }
+            }}
+            placeholder={extracted.budget_cap_status === "not_stated"
+              ? "No cap stated" : "e.g. 600000"}
           />
         </Field>
       </FieldRow>
