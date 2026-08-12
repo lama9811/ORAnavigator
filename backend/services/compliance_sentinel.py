@@ -19,6 +19,7 @@ required item resolves a live URL, so a rename fails the build).
 
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from services import forms_catalog
@@ -43,15 +44,37 @@ def _is_answered(v) -> bool:
 
 # Federal sponsors that mandate RCR training (NSF/NIH). Matched case-insensitively
 # against the Submission.sponsor string.
-_RCR_SPONSORS = ("nsf", "nih")
+#
+# BOTH spellings are listed deliberately. A proposal created from a solicitation
+# has its sponsor canonicalized to a token ("NSF") by
+# solicitation_extractor._canon_sponsor, but proposals_service.create_submission
+# — the by-hand path — stores whatever the PI typed. Matching only the
+# abbreviation meant "National Institutes of Health" was told a federal FCOI
+# disclosure was NOT required.
+_RCR_SPONSORS = ("nsf", "national science foundation",
+                 "nih", "national institutes of health")
 # Sponsors under the PHS umbrella whose FCOI rule applies to ALL investigators
 # regardless of whether they disclosed a personal financial interest.
-_PHS_SPONSORS = ("nih", "phs")
+_PHS_SPONSORS = ("nih", "national institutes of health",
+                 "phs", "public health service")
+# The app's own token for "no external funder" (proposals_service.create_submission
+# defaults to it, and the extractor contract lists it). This is the ONLY sponsor we
+# can clear of a federal training mandate, because there is no federal award behind
+# it — every other unrecognized string is unknown, not exempt.
+_INTERNAL_SPONSORS = ("internal",)
 
 
 def _sponsor_matches(sponsor: Optional[str], needles: tuple[str, ...]) -> bool:
+    """True iff the sponsor names one of these funders.
+
+    Matched on WORD BOUNDARIES, not as a bare substring: "Maryland Technology
+    Transfer Fund" contains "nsf" (tra-NSF-er) and used to pick up NSF's RCR
+    mandate. `\\b` still matches next to punctuation, so "NSF/NIH", "nsf 23-598"
+    and "NIH-NIGMS" keep working."""
     s = (sponsor or "").strip().lower()
-    return any(n in s for n in needles)
+    if not s:
+        return False
+    return any(re.search(rf"\b{re.escape(n)}\b", s) for n in needles)
 
 
 # ── rule table ─────────────────────────────────────────────────────────────
@@ -88,20 +111,37 @@ def _rule_coi(answers, sponsor):
 
 
 def _rule_rcr(answers, sponsor):
+    """NSF/NIH is the mandate we can CONFIRM; it is not the set of sponsors that
+    have one.
+
+    This used to clear every other sponsor outright — "this sponsor does not
+    mandate RCR training" for DOE, DOD, NASA, USDA and every foundation. That is
+    a positive claim the rule table cannot support (the CHIPS and Science Act
+    s.10634 directs all federal research agencies to require RCR), and it is the
+    same error as reporting an unreadable page as a deleted one: absence of
+    knowledge rendered as absence of a requirement."""
     doc = "form_citi_training_program"
     if _sponsor_matches(sponsor, _RCR_SPONSORS):
         return "required", doc
-    return "not_required", doc
+    if _sponsor_matches(sponsor, _INTERNAL_SPONSORS):
+        return "not_required", doc
+    return "review", doc
 
 
 def _rule_export_security(answers, sponsor):
+    """Two triggers, so BOTH must be answered before this can be cleared.
+
+    It used to clear on either one (`or`), which both asserted an answer the PI
+    never gave — "you indicated no export-controlled technology AND no foreign
+    collaboration" off a single "no" — and cleared a rule while half its input
+    was unknown. Unanswered is `review`, never absence of a requirement."""
     if _is_yes(answers.get("export_controlled")):
         return "required", "compliance_research_security_technology_control_plan"
     if _is_yes(answers.get("foreign_collaboration")):
-        return "review", "compliance_research_security_nspm_33"
-    if _is_answered(answers.get("export_controlled")) or _is_answered(answers.get("foreign_collaboration")):
+        return "review", "compliance_research_security_nspm_33", "review_foreign"
+    if _is_answered(answers.get("export_controlled")) and _is_answered(answers.get("foreign_collaboration")):
         return "not_required", "compliance_research_security_technology_control_plan"
-    return "review", "compliance_research_security_nspm_33"
+    return "review", "compliance_research_security_nspm_33", "review_unanswered"
 
 
 # id, human title, evaluator, plain-English why-templates (by status), timing,
@@ -149,8 +189,8 @@ RULES = [
         "eval": _rule_rcr,
         "why": {
             "required": "This sponsor (NSF/NIH) mandates Responsible Conduct of Research training for covered personnel on the project.",
-            "not_required": "This sponsor does not mandate RCR training, so it is not required for this project.",
-            "review": "Check whether your sponsor requires RCR training.",
+            "not_required": "This project has no external sponsor, so no federal RCR training mandate applies.",
+            "review": "Check your solicitation for a Responsible Conduct of Research requirement, or ask ORA. Most federal agencies require RCR training; this tool can only confirm the mandate automatically for NSF and NIH.",
         },
         "timing": "NSF requires RCR training for students/postdocs; NIH for trainees. CITI modules take a few hours.",
         "task_title": "Complete RCR (CITI) training for project personnel",
@@ -162,7 +202,12 @@ RULES = [
         "why": {
             "required": "Your project involves export-controlled or sensitive technology, so a Technology Control Plan (TCP) and export-control review are required.",
             "not_required": "You indicated no export-controlled technology and no foreign collaboration, so an export-control review is not required.",
-            "review": "Your project involves foreign collaborators or international elements — a Research Security review (NSPM-33) may apply. Check with ORA before proceeding.",
+            # Two ways to land on "review", and they are not the same statement:
+            # one reports what the PI told us, the other reports that we do not
+            # yet know. Keyed separately via the rule's optional third return.
+            "review_foreign": "Your project involves foreign collaborators or international elements — a Research Security review (NSPM-33) may apply. Check with ORA before proceeding.",
+            "review_unanswered": "Answer both the export-control and foreign-collaboration questions — either one can trigger a Research Security review (NSPM-33) or a Technology Control Plan.",
+            "review": "Confirm whether your project involves export-controlled technology or foreign collaborators — either can trigger a Research Security review.",
         },
         "timing": "Export / Research-Security reviews can gate your ability to start — involve ORA early.",
         "task_title": "Request Export Control / Technology Control Plan review with ORA",
@@ -207,15 +252,19 @@ def assess_compliance(answers: Optional[dict], sponsor: Optional[str] = None) ->
     summary = {"required": 0, "not_required": 0, "review": 0}
     for rule in RULES:
         try:
-            status, doc_id = rule["eval"](answers, sponsor)
+            # A rule returns (status, doc_id), or (status, doc_id, why_key) when
+            # one status has more than one honest explanation.
+            outcome = rule["eval"](answers, sponsor)
+            status, doc_id = outcome[0], outcome[1]
+            why_key = outcome[2] if len(outcome) > 2 else status
         except Exception:
-            status, doc_id = "review", rule.get("default_doc", "")
+            status, doc_id, why_key = "review", rule.get("default_doc", ""), "review"
         summary[status] = summary.get(status, 0) + 1
         item = {
             "id": rule["id"],
             "title": rule["title"],
             "status": status,
-            "why": rule["why"].get(status, ""),
+            "why": rule["why"].get(why_key) or rule["why"].get(status, ""),
             "timing": rule["timing"] if status in ("required", "review") else "",
         }
         item.update(_resolve_doc(doc_id))

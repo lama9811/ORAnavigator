@@ -95,8 +95,31 @@ def test_rcr_required_for_nih():
 
 
 def test_rcr_not_required_for_internal():
+    """"Internal" is not an unrecognized sponsor — it is the app's own token for
+    "no external funder", and a federal RCR mandate flows from a federal award."""
     r = assess_compliance({}, sponsor="Internal")
     assert _item(r, "rcr")["status"] == "not_required"
+
+
+def test_rcr_unrecognized_sponsor_is_review_not_cleared():
+    """We can only CONFIRM the mandate for NSF/NIH. Every other federal agency
+    plausibly has one too (CHIPS and Science Act s.10634 directs all federal
+    research agencies to require RCR), so "this sponsor does not mandate RCR"
+    was a positive claim from ignorance."""
+    for sponsor in ("Department of Energy", "DoD", "NASA", "USDA",
+                    "Alfred P. Sloan Foundation"):
+        assert _item(assess_compliance({}, sponsor=sponsor), "rcr")["status"] == "review", sponsor
+
+
+def test_rcr_unknown_sponsor_is_review():
+    """A blank sponsor is unknown, not exempt."""
+    for sponsor in (None, "", "   "):
+        assert _item(assess_compliance({}, sponsor=sponsor), "rcr")["status"] == "review", repr(sponsor)
+
+
+def test_rcr_review_does_not_claim_the_sponsor_has_no_mandate():
+    why = _item(assess_compliance({}, sponsor="Department of Energy"), "rcr")["why"].lower()
+    assert "does not mandate" not in why
 
 
 def test_sponsor_match_is_case_insensitive():
@@ -209,3 +232,64 @@ def test_truthy_yes_variants_trigger():
     for val in ("YES", "Yes", "y", "true", "True"):
         r = assess_compliance({"human_subjects": val}, sponsor="Internal")
         assert _item(r, "irb")["status"] == "required", val
+
+
+# ---------------------------------------------------------------------------
+# Sponsor matching — the mandate must not turn on how the PI typed the funder
+#
+# The sponsor-derived rules (RCR, PHS-COI) used a bare substring test, which
+# failed in BOTH directions: a proposal created by hand carries whatever the PI
+# typed (`create_submission` does not canonicalize), so the full agency name
+# missed its own federal mandate, while an unrelated funder matched by accident.
+# ---------------------------------------------------------------------------
+
+def test_full_agency_name_triggers_rcr():
+    """"National Science Foundation" is the same mandate as "NSF"."""
+    for sponsor in ("National Science Foundation", "National Institutes of Health"):
+        r = assess_compliance({}, sponsor=sponsor)
+        assert _item(r, "rcr")["status"] == "required", sponsor
+
+
+def test_full_agency_name_triggers_phs_coi():
+    """PHS FCOI applies to all investigators — spelled out or abbreviated."""
+    for sponsor in ("National Institutes of Health", "Public Health Service", "NIH"):
+        r = assess_compliance({"financial_interest": "no"}, sponsor=sponsor)
+        assert _item(r, "coi")["status"] == "required", sponsor
+
+
+def test_agency_abbreviation_inside_an_unrelated_word_does_not_trigger():
+    """"Maryland Technology Transfer Fund" contains "nsf" (tra-nsf-er)."""
+    for sponsor in ("Maryland Technology Transfer Fund", "Transfer Foundation"):
+        r = assess_compliance({}, sponsor=sponsor)
+        assert _item(r, "rcr")["status"] != "required", sponsor
+
+
+def test_abbreviation_still_matches_next_to_punctuation():
+    """The canonical tokens and real-world spellings must keep working."""
+    for sponsor in ("NSF", "nsf 23-598", "NSF/NIH", "NIH-NIGMS"):
+        r = assess_compliance({}, sponsor=sponsor)
+        assert _item(r, "rcr")["status"] == "required", sponsor
+
+
+# ---------------------------------------------------------------------------
+# The explanation must never assert an answer the PI did not give
+# ---------------------------------------------------------------------------
+
+def test_export_unanswered_foreign_collaboration_is_not_cleared():
+    """Only export_controlled answered: the other trigger is still unknown, so
+    this cannot resolve to "not required" — and must not claim the PI said
+    there was no foreign collaboration."""
+    r = assess_compliance({"export_controlled": "no"}, sponsor="Internal")
+    it = _item(r, "export_security")
+    assert it["status"] == "review"
+    assert "no foreign collaboration" not in it["why"].lower()
+
+
+def test_export_review_from_unanswered_does_not_assert_foreign_collaborators():
+    """The NSPM-33 wording ("your project involves foreign collaborators") is
+    true only when the PI actually said yes."""
+    unanswered = assess_compliance({}, sponsor="Internal")
+    assert "involves foreign collaborators" not in _item(unanswered, "export_security")["why"].lower()
+
+    declared = assess_compliance({"foreign_collaboration": "yes"}, sponsor="Internal")
+    assert "foreign collaborat" in _item(declared, "export_security")["why"].lower()
