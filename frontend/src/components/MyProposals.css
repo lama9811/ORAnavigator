@@ -610,6 +610,55 @@ body.dark .proposal-progress-bar {
   margin-bottom: 4px;
 }
 
+/* The solicitation's own words on a task. Quiet and set apart — it is
+   evidence the PI can check, not instruction copy competing with the title. */
+.task-quote {
+  margin: 0 0 6px;
+  padding: 4px 0 4px 9px;
+  border-left: 2px solid var(--border, #d8dee6);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+/* Checklist groups: which tasks came from the funder's document, and which
+   are Morgan/ORA process that appears in no solicitation. */
+.task-group + .task-group {
+  margin-top: 22px;
+}
+
+.task-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-group-title {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.task-group-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface-2, #eef1f5);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.task-group-hint {
+  margin: 3px 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
 .task-meta {
   display: inline-flex;
   align-items: center;

@@ -54,6 +54,12 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
   const [source, setSource] = useState(null);      // {kind, file?, url?, filename?}
   const [reqState, setReqState] = useState("idle"); // idle|running|ready|failed
   const [requirements, setRequirements] = useState(null);
+  // The stored document's id, returned by the CONTRACT read — i.e. as soon as
+  // the PI hands the file over, before the slow requirement read has started.
+  // It is sent at save no matter how the requirement read ends, which is the
+  // whole point: a PI who clicks Create early used to leave the text orphaned
+  // and get asked for the same file again from Draft Review.
+  const [sourceId, setSourceId] = useState(null);
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -81,11 +87,13 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
       }
       const data = await res.json();
       setExtracted(data.extracted);
+      setSourceId(data.source_id || null);
       setTitleOverride(
         data.extracted?.program_name || data.extracted?.program_id || "",
       );
       setStep("review");
-      readRequirements({ kind: "pdf", file, filename: file.name });
+      readRequirements({ kind: "pdf", file, filename: file.name,
+                         sourceId: data.source_id || null });
     } catch (e) {
       setError(e.message || "Couldn't read that PDF.");
       setStep("pick");
@@ -101,7 +109,11 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
     setRequirements(null);
     try {
       const form = new FormData();
-      if (src.kind === "pdf") form.append("file", src.file, src.filename);
+      // The contract step already read and STORED this document. Reading it
+      // back beats re-uploading it: one read of the file, one row per
+      // solicitation, and no second trip over a 25MB PDF.
+      if (src.sourceId) form.append("source_id", String(src.sourceId));
+      else if (src.kind === "pdf") form.append("file", src.file, src.filename);
       else form.append("url", src.url);
       const res = await fetch(`${API_BASE}/api/me/solicitation-requirements`, {
         method: "POST", headers: authHeaders(), body: form,
@@ -146,11 +158,12 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
       }
       const data = await res.json();
       setExtracted(data.extracted);
+      setSourceId(data.source_id || null);
       setTitleOverride(
         data.extracted?.program_name || data.extracted?.program_id || "",
       );
       setStep("review");
-      readRequirements({ kind: "url", url });
+      readRequirements({ kind: "url", url, sourceId: data.source_id || null });
     } catch (e) {
       setError(e.message || "Couldn't read that URL.");
       setStep("pick");
@@ -172,16 +185,20 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
         extraction: requirements.extraction,
         source: { kind: source?.kind, filename: source?.filename || null,
                   url: source?.url || null },
-        // Binds the stored document to this proposal. Without it the text is
-        // kept but orphaned, and the PI would be asked for the file again.
-        source_id: requirements.source_id,
       } : {};
+      // The DOCUMENT is bound unconditionally, outside that gate. It used to sit
+      // inside it, so a PI who hit Create before the 60-150s read finished — or
+      // whose read failed — left the stored text orphaned and was asked to
+      // upload the very same file again when they opened Draft Review. Binding
+      // it here means the proposal owns the document whatever the read did.
+      const boundSourceId = sourceId || requirements?.source_id || null;
 
       const res = attaching
         ? await fetch(`${API_BASE}/api/me/submissions/${submissionId}/solicitation`, {
             method: "PUT",
             headers: { "Content-Type": "application/json", ...authHeaders() },
-            body: JSON.stringify({ extracted, ...solicitation }),
+            body: JSON.stringify({ extracted, ...solicitation,
+                                   source_id: boundSourceId }),
           })
         : await fetch(`${API_BASE}/api/me/submissions/from-solicitation/confirm`, {
             method: "POST",
@@ -190,6 +207,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
               extracted,
               title_override: titleOverride.trim() || null,
               ...solicitation,
+              source_id: boundSourceId,
             }),
           });
       if (!res.ok) {

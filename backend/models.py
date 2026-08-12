@@ -304,6 +304,22 @@ class SubmissionTask(Base):
     status = Column(String(16), nullable=False, default="pending")  # pending, done
     notes = Column(Text, nullable=True)
     sort_order = Column(Integer, nullable=False, default=0)
+    # WHERE THIS TASK CAME FROM. The checklist mixes two kinds of item and used
+    # to present them identically, which is how a hardcoded "NSF requires a
+    # 2-page Data Management Plan" ended up reading as something this
+    # solicitation said. Three values:
+    #   "solicitation"    — generated from a stored requirement; source_quote
+    #                       holds the funder's own words and source_ref its id
+    #   "ora_process"     — Morgan/ORA workflow (routing form, AOR submission,
+    #                       F&A). True regardless of funder, in no solicitation
+    #   "sponsor_template" — a guess from the sponsor name, kept only until a
+    #                       real solicitation is attached, then retired
+    # NULL on every task that predates this column: unlabelled, and the UI
+    # groups it with the process tasks rather than claiming a source it has
+    # no evidence for.
+    source = Column(String(32), nullable=True)
+    source_ref = Column(String(128), nullable=True)   # requirement id, for idempotency
+    source_quote = Column(Text, nullable=True)        # verbatim, golden rule 2
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

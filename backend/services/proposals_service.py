@@ -100,6 +100,7 @@ def create_submission(
             due_offset_days=t.get("due_offset_days"),
             status="pending",
             sort_order=order,
+            source=t.get("source"),
         ))
 
     # Mirror into long-term memory
@@ -241,6 +242,7 @@ def create_submission_from_solicitation(
             due_offset_days=t.get("due_offset_days"),
             status="pending",
             sort_order=order,
+            source=t.get("source"),
         ))
 
     # Add a task per solicitation-listed attachment that isn't already
@@ -265,6 +267,14 @@ def create_submission_from_solicitation(
             due_offset_days=14,
             status="pending",
             sort_order=next_order,
+            # From the solicitation's contract, but with no quote behind it —
+            # the attachment NAME, not the sentence that demanded it. When the
+            # full requirement read lands, sync_solicitation_requirement_tasks
+            # replaces these with quoted rows (the unmatched source_ref is what
+            # retires them), which is also what stops one attachment appearing
+            # twice under two slightly different names.
+            source="solicitation",
+            source_ref=f"attachment:{att_text.lower()}",
         ))
         next_order += 1
 
@@ -633,6 +643,99 @@ def solicitation_summary(sub: Submission) -> Optional[dict]:
     }
 
 
+def sync_solicitation_requirement_tasks(db: Session, sub: Submission,
+                                        profile: dict) -> dict:
+    """Rebuild the checklist's solicitation half from the stored requirements.
+
+    One task per requirement, each carrying the funder's own sentence in
+    `source_quote`. That quote is the whole point: before this, the checklist
+    mixed tasks read out of the document with tasks guessed from the sponsor's
+    name — a hardcoded "NSF requires a 2-page Data Management Plan" sat beside
+    genuinely extracted items, styled identically, and a PI could not tell them
+    apart. A row we cannot quote does not become a task at all (golden rule 2).
+
+    What it does to what is already there, and why each rule exists:
+      * `solicitation` tasks are keyed by `source_ref` (the requirement id), so
+        re-reading is idempotent and a ticked-off task stays ticked. Requirement
+        ids are NOT stable across two reads of one document (see CLAUDE.md), so
+        this preserves status within a profile, not across a fresh extraction —
+        which is the honest limit, not a bug to paper over.
+      * `sponsor_template` tasks are RETIRED: they were a guess standing in for
+        a document nobody had read, and now the document has been read. Only
+        while still `pending` — deleting something the PI ticked off erases
+        their record of having done it.
+      * `ora_process` tasks are never touched. The Internal Routing Form is in
+        no solicitation and is still mandatory.
+      * A task with no `source` is never touched either: that is every task
+        predating this column, plus anything the PI added by hand.
+
+    Returns {"added", "removed", "kept"}.
+    """
+    from services.checklist_filter import is_checklist_task
+
+    rows = [r for r in (profile or {}).get("requirements") or []
+            if isinstance(r, dict) and (r.get("source") or "").strip()
+            and (r.get("label") or "").strip() and (r.get("id") or "").strip()]
+    # Only the asks a tick-box can actually help with. A real solicitation
+    # yields ~45 requirements and most are content inside one section, which
+    # Draft Review checks against the draft itself — a checkbox there could
+    # only invite the PI to assert they had covered it. Measured on the
+    # human-verified NSF 23-598 list: 24 requirements -> 7 tasks, and none of
+    # the thirteen Project Description rows survives. The STORED profile keeps
+    # all of them; this filters the checklist, not the review.
+    rows = [r for r in rows if is_checklist_task(r)]
+    wanted = {str(r["id"]): r for r in rows}
+
+    existing = list(sub.tasks or [])
+    by_ref = {t.source_ref: t for t in existing
+              if t.source == "solicitation" and t.source_ref}
+
+    removed = 0
+    for t in existing:
+        stale_requirement = (t.source == "solicitation" and t.source_ref not in wanted)
+        superseded_guess = (t.source == "sponsor_template")
+        if (stale_requirement or superseded_guess) and t.status != "done":
+            db.delete(t)
+            removed += 1
+
+    next_order = max([t.sort_order or 0 for t in existing], default=-1) + 1
+    added = 0
+    for ref, r in wanted.items():
+        found = by_ref.get(ref)
+        if found is not None:
+            # Refresh the wording; the PI's status and notes are theirs.
+            found.title = str(r["label"]).strip()
+            found.source_quote = str(r["source"]).strip()
+            found.description = _requirement_task_description(r)
+            continue
+        db.add(SubmissionTask(
+            submission_id=sub.id,
+            title=str(r["label"]).strip(),
+            description=_requirement_task_description(r),
+            kb_doc_id=None,
+            due_offset_days=r.get("due_offset_days") or 14,
+            status="pending",
+            sort_order=next_order,
+            source="solicitation",
+            source_ref=ref,
+            source_quote=str(r["source"]).strip(),
+        ))
+        next_order += 1
+        added += 1
+
+    db.commit()
+    return {"added": added, "removed": removed, "kept": len(wanted) - added}
+
+
+def _requirement_task_description(r: dict) -> str:
+    """One plain sentence. Deliberately does NOT restate the quote — the quote
+    is a field of its own, rendered as the funder's words rather than ours."""
+    if not (r.get("scored", True)):
+        return ("Conditional — the solicitation asks for this only if it applies "
+                "to your project.")
+    return "Required by this solicitation."
+
+
 def sync_required_attachment_tasks(db: Session, sub: Submission,
                                    extracted: dict) -> int:
     """Seed a checklist task per required attachment that has none yet.
@@ -740,6 +843,31 @@ def bind_solicitation_source(db: Session, *, source_id, user_id: int,
     row.submission_id = submission_id
     db.commit()
     return True
+
+
+def load_solicitation_source_by_id(db: Session, *, source_id,
+                                   user_id: int) -> Optional[dict]:
+    """A stored document by its own id, scoped to its owner.
+
+    Used by the requirements read so the create flow reads one document once
+    instead of uploading it twice. The id comes from the client, and the row
+    holds the PI's unpublished solicitation, so ownership is a filter in the
+    query rather than a check after it — None when it does not exist OR belongs
+    to somebody else, which the caller reports identically."""
+    try:
+        source_id = int(source_id)
+    except (TypeError, ValueError):
+        return None
+    from models import SolicitationSource
+    row = db.query(SolicitationSource).filter(
+        SolicitationSource.id == source_id,
+        SolicitationSource.user_id == user_id,
+    ).first()
+    if row is None:
+        return None
+    return {"id": row.id, "text": row.text, "chars": row.chars,
+            "source_kind": row.source_kind, "filename": row.filename,
+            "url": row.url, "created_at": row.created_at}
 
 
 def load_solicitation_source(db: Session, submission_id: int) -> Optional[dict]:

@@ -145,10 +145,25 @@ _NIH_EXTRA = [
 ]
 
 
+# WHERE EACH SEEDED TASK COMES FROM, recorded on the task itself.
+#
+# The generic checklist is Morgan/ORA workflow — the Internal Routing Form, the
+# AOR submitting rather than the PI, Morgan's F&A rate. True on every proposal,
+# stated in no solicitation, and it must survive a solicitation being attached.
+#
+# The per-sponsor extras are a GUESS from the sponsor's name. They assert things
+# no document was read for ("NSF requires a 2-page Data Management Plan …
+# Required on all NSF proposals"), which is fine as a starting point and wrong
+# the moment the real solicitation is on file and says something else. They are
+# therefore retired — if still untouched — once requirements are attached.
+def _tag(items: list[dict], source: str) -> list[dict]:
+    return [dict(t, source=source) for t in items]
+
+
 TEMPLATES = {
-    "generic": _GENERIC_CHECKLIST,
-    "NSF": _GENERIC_CHECKLIST + _NSF_EXTRA,
-    "NIH": _GENERIC_CHECKLIST + _NIH_EXTRA,
+    "generic": _tag(_GENERIC_CHECKLIST, "ora_process"),
+    "NSF": _tag(_GENERIC_CHECKLIST, "ora_process") + _tag(_NSF_EXTRA, "sponsor_template"),
+    "NIH": _tag(_GENERIC_CHECKLIST, "ora_process") + _tag(_NIH_EXTRA, "sponsor_template"),
 }
 
 
@@ -186,7 +201,7 @@ def get_template(
     base = TEMPLATES.get(key, TEMPLATES["generic"])
     tasks = [dict(t) for t in base]
     if key == "NSF" and _is_education_program(program_name, program_id):
-        tasks.append(dict(_NSF_EIR_TASK))
+        tasks.append(dict(_NSF_EIR_TASK, source="sponsor_template"))
     return tasks
 
 

@@ -288,6 +288,28 @@ def init_db():
                 print(f"[INFO] solicitation_sources DDL not applied ({e}); "
                       "relying on metadata create_all.")
 
+        # 5g. Add submission_tasks provenance columns if missing. The checklist
+        # mixes solicitation-derived tasks with Morgan/ORA process tasks, and
+        # showing them identically is what let a hardcoded page limit read as
+        # something the funder said. NULL means "predates this" — grouped with
+        # process tasks, never claimed as the solicitation's.
+        for _col, _ddl in (
+            ("source", "VARCHAR(32) NULL"),
+            ("source_ref", "VARCHAR(128) NULL"),
+            ("source_quote", "TEXT NULL"),
+        ):
+            try:
+                conn.execute(text(f"SELECT {_col} FROM submission_tasks LIMIT 1"))
+            except (OperationalError, ProgrammingError):
+                print(f"[WARN] 'submission_tasks.{_col}' column missing. Adding it now...")
+                try:
+                    conn.execute(text(
+                        f"ALTER TABLE submission_tasks ADD COLUMN {_col} {_ddl}"))
+                    conn.commit()
+                    print(f"[OK] Successfully added '{_col}' column!")
+                except Exception as e:
+                    print(f"[ERROR] Failed to add {_col} column: {e}")
+
         # 6. Check if support_tickets table exists
         try:
             conn.execute(text("SELECT id FROM support_tickets LIMIT 1"))
@@ -3723,6 +3745,12 @@ def _submission_task_to_dict(t) -> dict:
         "sort_order": t.sort_order,
         # Phase 4: short how-to + sample for known tasks (None if no match).
         "guidance": guidance_for(t.title),
+        # Provenance. The UI groups on this so a PI can see which tasks were
+        # read out of their solicitation (and check the quote) and which are
+        # Morgan/ORA process that no funder states. NULL for tasks predating
+        # the column and for the PI's own additions.
+        "source": getattr(t, "source", None),
+        "source_quote": getattr(t, "source_quote", None),
     }
 
 
@@ -4218,10 +4246,22 @@ _MAX_SOLICITATION_PDF_BYTES = 25 * 1024 * 1024  # 25 MB
 async def extract_solicitation(
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Step 1: parse a sponsor PDF and return the extracted JSON. Does
     NOT create a Submission -- the user reviews/edits, then calls the
-    confirm endpoint."""
+    confirm endpoint.
+
+    IT DOES, HOWEVER, KEEP THE DOCUMENT. This is the first and often the only
+    moment the PI hands us the file, and the text is already in hand here. The
+    deep requirement read is a separate 60-150s request that deliberately does
+    not block Create, so storing the text there alone left a real hole: a PI who
+    clicked Create early, or whose read failed, got a proposal carrying the
+    funder's numbers and no document — and was asked to upload the same file
+    again when they opened Draft Review. Saved unbound; /confirm binds it.
+
+    Reads via read_pdf() rather than extract_from_pdf_bytes() for one reason:
+    the one-shot form throws the text away, and the text is the point."""
     if not user:
         raise HTTPException(401, "Unauthorized")
     filename = (file.filename or "").lower()
@@ -4236,7 +4276,15 @@ async def extract_solicitation(
         raise HTTPException(413, "PDF is larger than 25 MB.")
 
     from services import solicitation_extractor as _sx
-    extracted = _sx.extract_from_pdf_bytes(pdf_bytes)
+    read = _sx.read_pdf(pdf_bytes)
+    text = read.get("text") or ""
+    # Stored BEFORE the model runs. A Gemini failure must not also cost the
+    # document — that is exactly when you least want to ask the PI for it again.
+    source_id = _proposals_service.save_solicitation_source(
+        db, user_id=user["user_id"], text=text, source_kind="pdf",
+        filename=file.filename, url=None)
+
+    extracted = _sx.extract_from_text(text) if text.strip() else None
     if extracted is None:
         raise HTTPException(
             422,
@@ -4244,7 +4292,9 @@ async def extract_solicitation(
             "image-only. Try a text-based PDF, or create the proposal "
             "manually.",
         )
-    return {"extracted": extracted}
+    # The client passes this back at confirm, which binds the stored document
+    # to the new proposal.
+    return {"extracted": extracted, "source_id": source_id}
 
 
 class SolicitationUrlRequest(BaseModel):
@@ -4255,11 +4305,16 @@ class SolicitationUrlRequest(BaseModel):
 async def extract_solicitation_from_url(
     payload: SolicitationUrlRequest,
     user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """Step 1 (URL variant): fetch a sponsor solicitation URL (an HTML page or a
     linked PDF), extract the same structured JSON the PDF flow returns. Does NOT
     create a Submission -- the user reviews/edits, then calls the confirm
-    endpoint. Same response shape as /from-solicitation so the UI is shared."""
+    endpoint. Same response shape as /from-solicitation so the UI is shared.
+
+    Keeps the fetched text for the same reason the PDF path does, and with more
+    urgency: some funder sites block cloud-datacenter IPs, so a URL that reads
+    once may not read again."""
     if not user:
         raise HTTPException(401, "Unauthorized")
 
@@ -4269,6 +4324,10 @@ async def extract_solicitation_from_url(
     except url_fetcher.FetchError as e:
         raise HTTPException(e.status, e.message)
 
+    source_id = _proposals_service.save_solicitation_source(
+        db, user_id=user["user_id"], text=text or "", source_kind="url",
+        filename=None, url=payload.url)
+
     extracted = _sx.extract_from_text(text)
     if extracted is None:
         raise HTTPException(
@@ -4277,7 +4336,7 @@ async def extract_solicitation_from_url(
             "solicitation, or the content is image-only. Try the PDF upload, or "
             "create the proposal manually.",
         )
-    return {"extracted": extracted}
+    return {"extracted": extracted, "source_id": source_id}
 
 
 @app.post("/api/me/submissions/from-solicitation/confirm")
@@ -4314,6 +4373,7 @@ async def confirm_solicitation_submission(
     stored = _solicitation_payload(payload, extracted)
     if stored is not None:
         _proposals_service.save_solicitation_profile(db, sub, stored)
+        _proposals_service.sync_solicitation_requirement_tasks(db, sub, stored)
     # Bind the document itself, even when no requirements came back: a failed
     # read should still leave the text on the proposal so it can be re-read
     # without asking the PI for the file again.
@@ -4552,13 +4612,19 @@ def _read_solicitation_requirements(text: str, contract: Optional[dict]) -> dict
 async def read_solicitation_requirements(
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None),
+    source_id: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Read a solicitation end to end and return its requirements FOR REVIEW.
 
     Not under a submission id: on the create flow the proposal does not exist
-    yet. Saves nothing.
+    yet. Saves no requirements — the PI confirms them (golden rule 4) — though
+    it does keep the document when it is the one reading it.
+
+    Takes a `source_id` in preference to a file or a url: the contract step has
+    already read and stored this exact document, so re-uploading it would cost
+    the PI a second upload and leave two rows for one solicitation.
 
     422 ONLY when nothing at all was readable. A partial read comes back 200
     with a warning — reporting "we could not read 4 of 34 pages" is the whole
@@ -4571,7 +4637,16 @@ async def read_solicitation_requirements(
 
     read_report: dict = {}
     contract = None
-    if file is not None:
+    stored = None
+    if source_id:
+        stored = _proposals_service.load_solicitation_source_by_id(
+            db, source_id=source_id, user_id=user["user_id"])
+        if stored is None:
+            raise HTTPException(404, "That stored solicitation could not be found.")
+        text = stored["text"]
+        read_report = {"pages": None, "pages_without_text": 0,
+                       "chars": stored["chars"], "engine": "stored", "error": None}
+    elif file is not None:
         data = await file.read()
         if not data:
             raise HTTPException(400, "Uploaded file is empty.")
@@ -4588,7 +4663,7 @@ async def read_solicitation_requirements(
         read_report = {"pages": None, "pages_without_text": 0, "chars": len(text or ""),
                        "engine": "url", "error": None}
     else:
-        raise HTTPException(400, "Provide a PDF file or a url.")
+        raise HTTPException(400, "Provide a stored source_id, a PDF file or a url.")
 
     if not (text or "").strip():
         raise HTTPException(
@@ -4601,11 +4676,16 @@ async def read_solicitation_requirements(
     # KEEP THE DOCUMENT. Written before the model runs, so a read that times out
     # or comes back empty still leaves the text stored — the whole point is that
     # the PI is never asked for the same solicitation twice, and "the extraction
-    # failed" is exactly when you least want to ask them again.
-    source_id = _proposals_service.save_solicitation_source(
-        db, user_id=user["user_id"], text=text,
-        source_kind="pdf" if file is not None else "url",
-        filename=(file.filename if file is not None else None), url=url)
+    # failed" is exactly when you least want to ask them again. Skipped when the
+    # text CAME from storage: that would leave two rows for one document, and
+    # only the newest would ever be bound.
+    if stored is None:
+        source_id = _proposals_service.save_solicitation_source(
+            db, user_id=user["user_id"], text=text,
+            source_kind="pdf" if file is not None else "url",
+            filename=(file.filename if file is not None else None), url=url)
+    else:
+        source_id = stored["id"]
 
     payload = _read_solicitation_requirements(text, contract)
     payload["read_report"] = read_report
@@ -4696,7 +4776,13 @@ async def attach_solicitation(
         raise HTTPException(400, "Missing 'extracted' dict in body.")
 
     stored = _solicitation_payload(payload, extracted)
-    if stored is None:
+    # No requirement list is not, on its own, nothing to attach. The modal's own
+    # button offers "Attach without the requirement list" — for a read that
+    # failed, or a PI who did not want to wait 60-150s — and refusing it here
+    # discarded the DOCUMENT too, so the very next screen asked them to upload
+    # the same file again. Keep whatever we were actually given; refuse only
+    # when that is nothing at all.
+    if stored is None and not payload.get("source_id"):
         raise HTTPException(400, "No usable requirements to attach — every row needs "
                                  "a label and a verbatim quote from the solicitation.")
 
@@ -4710,7 +4796,19 @@ async def attach_solicitation(
         sub.notes = ("\n".join([existing_notes.rstrip(), *missing]).strip()
                      if existing_notes.strip() else "\n".join(missing))
 
-    _proposals_service.save_solicitation_profile(db, sub, stored)
+    if stored is not None:
+        _proposals_service.save_solicitation_profile(db, sub, stored)
+        # The checklist's solicitation half, one quoted task per requirement.
+        # This also retires the sponsor-name guesses ("NSF requires a 2-page
+        # Data Management Plan") that the real document now supersedes.
+        _proposals_service.sync_solicitation_requirement_tasks(db, sub, stored)
+    else:
+        db.commit()          # the notes lines above, which nothing else commits
+    # ALWAYS, even with a full requirement list: `required_attachments` is a
+    # separate contract field, and a required attachment the requirement read
+    # happened to miss is the single likeliest reason a submission is rejected
+    # outright. Deduped against the tasks that now exist, so an attachment the
+    # requirements DID cover does not appear twice.
     _proposals_service.sync_required_attachment_tasks(db, sub, extracted)
     if payload.get("source_id"):
         _proposals_service.bind_solicitation_source(

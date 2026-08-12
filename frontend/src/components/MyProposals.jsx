@@ -727,15 +727,63 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         <NextStepCard stepKey={next} solicited={solicited} onAction={openModal} />
       )}
 
-      <section className="proposal-tasks">
-        <h2>Checklist</h2>
-        <ul className="task-list">
-          {tasks.map((t) => (
-            <TaskRow key={t.id} task={t} onToggle={onToggleTask} deadline={submission.deadline} />
-          ))}
-        </ul>
-      </section>
+      <ChecklistBySource
+        tasks={tasks}
+        onToggleTask={onToggleTask}
+        deadline={submission.deadline}
+      />
     </div>
+  );
+}
+
+// The checklist, split by WHERE EACH TASK CAME FROM.
+//
+// One flat list put "NSF requires a 2-page Data Management Plan" — a number
+// hardcoded in proposal_templates.py — beside tasks read out of the PI's actual
+// solicitation, in identical styling. The PI had no way to tell which was
+// which, and the hardcoded one is wrong for any solicitation that says
+// something else. Grouping is the fix: a task claiming to come from the
+// solicitation now sits under that heading and shows the funder's own sentence.
+//
+// Unlabelled tasks (everything predating the `source` column, plus anything the
+// PI added themselves) fall into the process group rather than being claimed
+// as the solicitation's — an absent label is not evidence.
+function ChecklistBySource({ tasks, onToggleTask, deadline }) {
+  const fromSolicitation = tasks.filter((t) => t.source === "solicitation");
+  const rest = tasks.filter((t) => t.source !== "solicitation");
+  const groups = [
+    fromSolicitation.length && {
+      key: "sol",
+      title: "From this solicitation",
+      hint: "Read out of the funder's own document — each shows the sentence it came from.",
+      items: fromSolicitation,
+    },
+    rest.length && {
+      key: "ora",
+      title: "Morgan State / ORA process",
+      hint: "How a proposal gets submitted here. Required regardless of funder, and stated in no solicitation.",
+      items: rest,
+    },
+  ].filter(Boolean);
+
+  return (
+    <section className="proposal-tasks">
+      <h2>Checklist</h2>
+      {groups.map((g) => (
+        <div className="task-group" key={g.key}>
+          <div className="task-group-head">
+            <h3 className="task-group-title">{g.title}</h3>
+            <span className="task-group-count">{g.items.length}</span>
+          </div>
+          <p className="task-group-hint">{g.hint}</p>
+          <ul className="task-list">
+            {g.items.map((t) => (
+              <TaskRow key={t.id} task={t} onToggle={onToggleTask} deadline={deadline} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -777,6 +825,11 @@ function TaskRow({ task, onToggle, deadline }) {
         <div className="task-title">{task.title}</div>
         {task.description && (
           <div className="task-description">{task.description}</div>
+        )}
+        {/* The funder's own sentence, verbatim. This is what makes the group
+            heading checkable rather than a claim the PI has to trust. */}
+        {task.source_quote && (
+          <blockquote className="task-quote">{task.source_quote}</blockquote>
         )}
         <div className="task-meta-row">
           {task.due_offset_days != null && (

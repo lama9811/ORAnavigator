@@ -9,13 +9,34 @@ os.environ.setdefault("JWT_SECRET", "test-secret-for-url-endpoint")
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
+import deps
 import main
+from db import Base
 from services import url_fetcher
 
 
 @pytest.fixture
 def client():
+    # This route stores the fetched text (so the PI is never asked for the same
+    # solicitation twice), which makes it a DB route — hence the override.
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False},
+                           poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def _override_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    main.app.dependency_overrides[main.get_db] = _override_db
+    main.app.dependency_overrides[deps.get_db] = _override_db
     main.app.dependency_overrides[main.get_current_user] = lambda: {
         "user_id": 1, "email": "pi@morgan.edu", "role": "user",
     }
