@@ -59,6 +59,17 @@ const STATUS_META = {
   could_not_locate: { label: "Not located",  Icon: HelpCircle,    cls: "eir-skip", neutral: true },
   not_checked:      { label: "Not checked",  Icon: MinusCircle,   cls: "eir-skip", neutral: true },
   unclear:          { label: "Unassessed",   Icon: MinusCircle,   cls: "eir-skip", neutral: true },
+  // The rule lives in a rulebook this app never read, so nothing about it was
+  // verified. Neutral like the other "we did not assess this" states — but it
+  // gets its OWN word, because "Not checked" reads as an omission on our side
+  // that a re-run might fix, and this one never will.
+  delegated:        { label: "Not ours to check", Icon: ExternalLink, cls: "eir-skip", neutral: true },
+  // A real requirement that no DOCUMENT can satisfy — a portal click, who signs
+  // the submission, how many proposals a PI may hold. Measured: 7 of 29 assessed
+  // rows on a real proposal, every one scored `not_found` and listed under "Fix
+  // these first", none fixable by writing. Neutral, out of the score, and its
+  // note names the tool that DOES handle it.
+  not_in_draft:     { label: "Done at submission", Icon: MinusCircle, cls: "eir-skip", neutral: true },
 };
 
 // Section labels come from the RESULT, not a table here: the sections are
@@ -103,6 +114,31 @@ export default function DraftReviewModal({ submission, onClose, onAttach, onRefr
   const [result, setResult] = useState(null);
   const [extraction, setExtraction] = useState(null);
   const [error, setError] = useState("");
+  // A review saved earlier. Offered on the input step so the PI can reopen it
+  // instead of pasting and waiting again — the whole point of saving.
+  const [savedAt, setSavedAt] = useState(submission?.draft_review_saved_at || null);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+
+  async function openSaved() {
+    setLoadingSaved(true);
+    setError("");
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/me/submissions/${submission.id}/draft-review/saved`,
+        { headers: authHeaders() },
+      );
+      if (!res.ok) throw new Error("That saved review is no longer available.");
+      const body = await res.json();
+      setResult(body.result);
+      setExtraction(body.extraction || null);
+      setSavedAt(body.saved_at || savedAt);
+      setStep("results");
+    } catch (e) {
+      setError(e.message || "Couldn't open the saved review.");
+    } finally {
+      setLoadingSaved(false);
+    }
+  }
 
   const words = draft.trim() ? draft.trim().split(/\s+/).length : 0;
   const canRun = mode === "upload" ? files.length > 0 : Boolean(draft.trim());
@@ -351,6 +387,18 @@ export default function DraftReviewModal({ submission, onClose, onAttach, onRefr
 
         {hasSolicitation && summary && <ReadReport summary={summary} />}
 
+        {hasSolicitation && step === "input" && savedAt && (
+          <div className="eir-saved-banner">
+            <FileText size={13} />
+            <span>
+              You saved a review of this proposal {timeAgo(savedAt)}.
+            </span>
+            <button className="eir-secondary" onClick={openSaved} disabled={loadingSaved}>
+              {loadingSaved ? "Opening…" : "Open it"}
+            </button>
+          </div>
+        )}
+
         {hasSolicitation && step === "input" && (
           <InputView
             mode={mode} setMode={setMode}
@@ -380,6 +428,9 @@ export default function DraftReviewModal({ submission, onClose, onAttach, onRefr
           <ResultsView
             result={result}
             extraction={extraction}
+            submission={submission}
+            savedAt={savedAt}
+            onSaved={(at) => { setSavedAt(at); onRefresh?.(); }}
             onBack={() => setStep("input")}
           />
         )}
@@ -513,10 +564,18 @@ function InputView({
 }) {
   return (
     <div className="eir-input-view">
+      {/* BOTH shapes, said plainly. This read as though a multi-file package
+          were required — "upload them together", then a note about filenames
+          telling your sections apart — so a PI holding one combined PDF, which
+          is what most people have, could reasonably think they had to split it
+          up first. One file works: `document_text.combine` emits the filename
+          as a heading and the locate stage then segments on the headings
+          INSIDE the text, which is where they are in a single document. */}
       <p className="eir-intro">
-        Upload your whole EiR package &mdash; Project Summary, Project
-        Description, letters, budget justification. Upload them together; the
-        reviewer reads each file and checks the package as a whole.
+        Upload your whole proposal &mdash; one combined PDF, or the separate
+        files if that is how you keep it. Either works. Whatever you give it,
+        the reviewer reads the lot and checks the package as a whole, so include
+        the letters, the budget justification and every required attachment.
       </p>
 
       <div className="eir-modes" role="tablist">
@@ -537,21 +596,14 @@ function InputView({
       </div>
 
       {mode === "upload" ? (
-        <>
-          <DropZone files={files} addFiles={addFiles} removeFile={removeFile} />
-          <p className="eir-filenote">
-            Keep the filenames descriptive &mdash; the reviewer uses them to tell
-            your sections apart, so <em>Letter of Institutional Support.pdf</em>
-            {" "}works better than <em>doc3.pdf</em>.
-          </p>
-        </>
+        <DropZone files={files} addFiles={addFiles} removeFile={removeFile} />
       ) : (
         <textarea
           className="eir-textarea"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={
-            "Excellence in Research: Your Title Here\n\n" +
+            "Your Proposal Title\n\n" +
             "Project Summary\n...\n\n" +
             "Project Description\n...\n\n" +
             "Broader Impacts\n...\n\n" +
@@ -587,7 +639,7 @@ function InputView({
 // The completeness figure. Rendered ONLY when the backend supplies one; when the
 // AI layer is down the backend sends null and we show its message instead of a
 // misleadingly low number.
-function ScorePanel({ score }) {
+function ScorePanel({ score, solicitationId }) {
   if (!score) return null;
   return (
     <div className={`eir-score eir-score-${score.band}`}>
@@ -595,7 +647,9 @@ function ScorePanel({ score }) {
         {score.percent}<span className="eir-score-pct">%</span>
       </div>
       <div className="eir-score-body">
-        <div className="eir-score-title">Completeness against NSF 23-598</div>
+        <div className="eir-score-title">
+          Completeness against {solicitationId || "this solicitation"}
+        </div>
         <div className="eir-score-basis">{score.basis}</div>
         <div className="eir-score-bar">
           <div className="eir-score-fill" style={{ width: `${score.percent}%` }} />
@@ -605,15 +659,27 @@ function ScorePanel({ score }) {
   );
 }
 
+// WHERE each section was found — a locate result, never a verdict.
+//
+// This carried a ✓ in the same green as an "Addressed" finding, so an 85-word
+// Project Summary appeared under a green tick and read as approved. All that
+// was ever measured here is that a heading by that name exists in the paste.
+// The word count is kept and given prominence for the same reason the pill
+// lost its tick: it is the one honest signal about size, and a PI can judge
+// "85 words" for themselves where the tool cannot state a minimum the
+// solicitation never sets.
 function SectionMap({ located, missing }) {
   return (
     <div className="eir-sectionmap">
-      <div className="eir-sectionmap-title">What the reviewer found in your paste</div>
+      <div className="eir-sectionmap-title">Where your sections were found</div>
+      <p className="eir-sectionmap-lede">
+        Found, not judged &mdash; the checks below do the judging.
+      </p>
       <div className="eir-sectionmap-rows">
         {located.map((s) => (
           <span key={s.key} className="eir-pill eir-pill-found">
-            <Check size={11} /> {s.label}
-            <span className="eir-pill-count">{s.word_count.toLocaleString()}w</span>
+            <FileText size={11} /> {s.label}
+            <span className="eir-pill-count">{s.word_count.toLocaleString()} words</span>
           </span>
         ))}
         {missing.map((s) => (
@@ -633,7 +699,7 @@ function SectionMap({ located, missing }) {
   );
 }
 
-function FindingRow({ f }) {
+function FindingRow({ f, solicitationId }) {
   const [open, setOpen] = useState(false);
   const meta = STATUS_META[f.status] || STATUS_META.unclear;
   return (
@@ -643,6 +709,12 @@ function FindingRow({ f }) {
           {f.label}
           {f.prohibition && <span className="eir-tag">prohibited</span>}
           {!f.scored && <span className="eir-tag eir-tag-soft">advisory</span>}
+          {/* Shown on RIDERS too — rows that were genuinely checked but whose
+              rule continues in a document we never read. Without it, a row
+              reading "Addressed" hides that only part of it was verified. */}
+          {f.delegated_to && (
+            <span className="eir-tag eir-tag-defer">defers to {f.delegated_to}</span>
+          )}
         </span>
         <StatusChip status={f.status} />
       </div>
@@ -663,7 +735,7 @@ function FindingRow({ f }) {
           {f.why && <p className="eir-why-plain">{f.why}</p>}
           <blockquote className="eir-why-source">
             &ldquo;{f.solicitation_says}&rdquo;
-            <cite>NSF 23-598</cite>
+            {solicitationId && <cite>{solicitationId}</cite>}
           </blockquote>
         </div>
       )}
@@ -671,13 +743,216 @@ function FindingRow({ f }) {
   );
 }
 
-function ResultsView({ result, extraction, onBack }) {
-  const findings = result.findings || [];
+// Mechanical errors: found by code, quoted from the draft, and NOT scored.
+//
+// Placed ABOVE the score on purpose. These are the cheapest things to fix and
+// the most embarrassing to submit — a leftover "[insert name]" reads as an
+// unfinished proposal however complete the draft is against the solicitation.
+// They stay out of the percentage because a placeholder is not incompleteness,
+// and because a number that already gets over-read should not absorb a
+// different kind of problem.
+function MistakesPanel({ mistakes }) {
+  if (!mistakes?.length) return null;
+  return (
+    <div className="eir-mistakes">
+      <div className="eir-mistakes-head">
+        <AlertTriangle size={14} />
+        {mistakes.length === 1
+          ? "1 mistake to fix before you submit"
+          : `${mistakes.length} mistakes to fix before you submit`}
+      </div>
+      <p className="eir-mistakes-lede">
+        Found in your text by a rule, not a judgement &mdash; each one quotes
+        where it is. These do not affect the completeness score.
+      </p>
+      {mistakes.map((m, i) => (
+        <div key={`${m.kind}:${i}`} className="eir-mistake">
+          <div className="eir-mistake-label">{m.label}</div>
+          <div className="eir-mistake-detail">{m.detail}</div>
+          {m.evidence && (
+            <div className="eir-evidence">
+              <Quote size={12} /> <span>{m.evidence}</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// What this solicitation hands off to someone else's rulebook.
+//
+// It sits NEXT TO THE SCORE deliberately: the score is completeness against the
+// requirements we could read, and this is the honest statement of what that
+// excludes. A PI whose Project Summary requirement is one line long ("include
+// the LOI number in addition to all the requirements outlined in the PAPPG")
+// otherwise reads "Addressed" as "my summary is fine", when the rules that
+// would fail it were never in the document we read.
+function DelegationNotice({ books }) {
+  if (!books?.length) return null;
+  // The count is TOTALLED here rather than printed per rulebook. Printed per
+  // rulebook it produced the identical sentence twice — "1 requirement in your
+  // solicitation points here and could not be checked", once for the PAPPG and
+  // once for Build America Buy America — which is the same say-it-twice problem
+  // that crowded this panel before.
+  const unchecked = books.reduce((n, b) => n + (b.unchecked || 0), 0);
+  return (
+    <div className="eir-delegation">
+      <div className="eir-delegation-head">
+        <ExternalLink size={13} /> Your solicitation says to follow these. This
+        review has not read them.
+      </div>
+      <ul className="eir-delegation-list">
+        {books.map((b) => (
+          <li key={b.name}>
+            {b.url ? (
+              <a className="eir-delegation-name" href={b.url}
+                 target="_blank" rel="noreferrer">
+                {b.name} <ExternalLink size={10} />
+              </a>
+            ) : (
+              <span className="eir-delegation-name">{b.name}</span>
+            )}
+            {b.short && <span className="eir-delegation-short">, {b.short}</span>}
+          </li>
+        ))}
+      </ul>
+      <p className="eir-delegation-foot">
+        {/* WHY it could not be checked, not just that it wasn't. Asked directly
+            — "why can't it be checked?" — and the honest answer is that the
+            solicitation states a pointer rather than the rule, so there is no
+            rule here to hold the draft against. */}
+        {unchecked > 0 && (
+          <>
+            {unchecked} requirement{unchecked === 1 ? "" : "s"} in your
+            solicitation say{unchecked === 1 ? "s" : ""} only &ldquo;follow{" "}
+            {books.length === 1 ? "this" : "one of these"}&rdquo; &mdash; the
+            rule itself is in that document, not in your solicitation, so there
+            was nothing to check your draft against.{" "}
+          </>
+        )}
+        Read {books.length === 1 ? "it" : "them"} yourself before you submit.
+      </p>
+    </div>
+  );
+}
+
+// The review as a file the PI can keep, print, or send to ORA. Built here from
+// the same object on screen, so the copy can never disagree with what they read.
+// Markdown because it opens anywhere and stays readable as plain text.
+function reviewToMarkdown(result, submission) {
+  const sol = result.solicitation || {};
+  const L = [];
+  L.push(`# Draft Review — ${submission?.title || "proposal"}`);
+  L.push("");
+  L.push(`Checked against: ${sol.id || "the attached solicitation"}` +
+         (sol.title ? ` — ${sol.title}` : ""));
+  L.push(`Reviewed: ${new Date().toLocaleString()}`);
+  if (result.score) {
+    L.push("");
+    L.push(`## Completeness: ${result.score.percent}%`);
+    L.push(result.score.basis);
+  }
+  if (result.mistakes?.length) {
+    L.push("");
+    L.push(`## Mistakes to fix (${result.mistakes.length})`);
+    L.push("_Found by a rule, not a judgement. These do not affect the score._");
+    for (const m of result.mistakes) {
+      L.push("");
+      L.push(`- **${m.label}** — ${m.detail}`);
+      if (m.evidence) L.push(`  > ${m.evidence}`);
+    }
+  }
+  if (result.delegated?.length) {
+    L.push("");
+    L.push("## Rules this review did not read");
+    for (const b of result.delegated) {
+      L.push(`- **${b.name}**${b.short ? `, ${b.short}` : ""}${b.url ? ` — ${b.url}` : ""}`);
+    }
+  }
   const labels = sectionLabels(result);
+  const groups = {};
+  for (const f of result.findings || []) {
+    if (f.status === "delegated") continue;
+    (groups[f.section || "_whole"] ||= []).push(f);
+  }
+  L.push("");
+  L.push("## Requirements");
+  for (const [key, items] of Object.entries(groups)) {
+    L.push("");
+    L.push(`### ${key === "_whole" ? "Whole proposal" : (labels[key] || titleCase(key))}`);
+    for (const f of items) {
+      const meta = STATUS_META[f.status] || STATUS_META.unclear;
+      L.push("");
+      L.push(`**${f.label}** — ${meta.label}` +
+             (f.delegated_to ? ` (defers to ${f.delegated_to})` : ""));
+      if (f.note) L.push(f.note);
+      if (f.evidence) L.push(`  > Your text: ${f.evidence}`);
+      if (f.solicitation_says) L.push(`  > ${sol.id || "Solicitation"}: ${f.solicitation_says}`);
+    }
+  }
+  if (result.eligibility_notes?.length) {
+    L.push("");
+    L.push("## Eligibility — check these yourself");
+    for (const n of result.eligibility_notes) L.push(`- ${n}`);
+  }
+  L.push("");
+  L.push("_Completeness against the solicitation. Not a judgement of the science, " +
+         "and not a prediction of funding._");
+  return L.join("\n");
+}
+
+function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt }) {
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+
+  async function onSave() {
+    setSaving(true);
+    setSaveMsg("");
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/me/submissions/${submission.id}/draft-review/save`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ result, extraction }),
+        },
+      );
+      if (!res.ok) throw new Error(`Couldn't save (${res.status})`);
+      const body = await res.json();
+      onSaved?.(body.saved_at);
+      setSaveMsg("Saved to this proposal — you can reopen it without re-running.");
+    } catch (e) {
+      setSaveMsg(e.message || "Couldn't save this review.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const findings = result.findings || [];
+  // Whatever solicitation this proposal actually came from. Read defensively:
+  // the engine takes a profile now, and a profile with no id is a valid one.
+  const sol = result.solicitation || {};
+  const solId = sol.id || "";
+  const labels = sectionLabels(result);
+  // section key -> words located under it. Only located sections have one; a
+  // section that was never found has no count, which is correct — there is no
+  // text to measure, and a "0 words" badge would read as an empty section
+  // rather than an absent one.
+  const wordCounts = Object.fromEntries(
+    (result.sections_located || []).map((s) => [s.key, s.word_count]));
   // Group in solicitation order; the backend already sorted, so first-seen
   // section order is the authored order.
   const groups = [];
   for (const f of findings) {
+    // A POINTER-ONLY row ("Follow PAPPG guidelines for proposal preparation")
+    // says nothing about the draft — its whole content is "go and read that
+    // document", which the notice above states ONCE, grouped by rulebook, with
+    // a plain description and a link. Rendering it again as a finding put the
+    // identical sentence on screen twice and spent a slot in the findings list,
+    // beside rows that DO say something about the PI's text. It stays in the
+    // payload (the API reports everything) and out of the display.
+    if (f.status === "delegated") continue;
     const key = f.section || "_whole";
     let g = groups.find((x) => x.key === key);
     if (!g) {
@@ -700,7 +975,11 @@ function ResultsView({ result, extraction, onBack }) {
         </div>
       )}
 
-      <ScorePanel score={result.score} />
+      <MistakesPanel mistakes={result.mistakes} />
+
+      <ScorePanel score={result.score} solicitationId={solId} />
+
+      <DelegationNotice books={result.delegated} />
 
       {/* Shown on results too: if one of five files failed to read, that fact
           has to travel WITH the score, or the score silently means less than
@@ -727,20 +1006,41 @@ function ResultsView({ result, extraction, onBack }) {
         missing={result.sections_missing || []}
       />
 
-      {groups.map((g) => (
-        <section key={g.key} className="eir-group">
-          <h3 className="eir-group-title">{g.label}</h3>
-          {g.items.map((f) => <FindingRow key={f.id} f={f} />)}
-        </section>
-      ))}
+      {groups.map((g) => {
+        // The banner above states the caveat globally; this puts it on the
+        // section the PI is actually reading. The case it exists for: a
+        // Project Summary whose only stated rule is "include the LOI number in
+        // addition to all the requirements outlined in the PAPPG" — every row
+        // here can be green while the rules that would fail it were never read.
+        // How much text this section actually holds, next to its findings. The
+        // section map has it too, but that is a panel you scroll past — this is
+        // where you are when you read "Addressed", and it is the difference
+        // between a section that exists and one that says something.
+        const words = wordCounts[g.key];
+        return (
+          <section key={g.key} className="eir-group">
+            <h3 className="eir-group-title">
+              {g.label}
+              {words != null && (
+                <span className="eir-group-words">
+                  {words.toLocaleString()} {words === 1 ? "word" : "words"}
+                </span>
+              )}
+            </h3>
+            {g.items.map((f) => (
+              <FindingRow key={f.id} f={f} solicitationId={solId} />
+            ))}
+          </section>
+        );
+      })}
 
       {result.reviewer_notes?.length > 0 && (
         <section className="eir-group">
           <h3 className="eir-group-title">How a panel might read this</h3>
           <p className="eir-group-sub">
-            Advisory impressions against NSF&rsquo;s two merit review criteria.
-            These are opinions, not coverage checks &mdash; nothing here affects
-            the score.
+            Advisory impressions against the merit review criteria this
+            solicitation states. These are opinions, not coverage checks
+            &mdash; nothing here affects the score.
           </p>
           {result.reviewer_notes.map((n) => (
             <div key={n.criterion} className="eir-note">
@@ -764,22 +1064,52 @@ function ResultsView({ result, extraction, onBack }) {
         </section>
       )}
 
-      <div className="eir-cycle">
-        <strong>{result.solicitation.id}</strong> &middot; Letter of Intent{" "}
-        {result.solicitation.cycle.loi_deadline} (required) &middot; Full
-        proposal {result.solicitation.cycle.full_proposal_deadline}
-        <a href={result.solicitation.url} target="_blank" rel="noreferrer">
-          Read the solicitation <ExternalLink size={11} />
-        </a>
-      </div>
+      {/* The LOI / full-proposal `cycle` dates went with the NSF 23-598
+          hardcoding: they were computed from that one solicitation's recurrence
+          rules, and no other solicitation states its deadlines as rules. This
+          block kept reading them, so `cycle.loi_deadline` threw on EVERY
+          successful review and the whole app fell to the error boundary. The
+          proposal's own deadline is what a PI needs and it is on the detail
+          screen already — this footer just names the document reviewed. */}
+      {(solId || sol.title || sol.url) && (
+        <div className="eir-cycle">
+          {solId && <strong>{solId}</strong>}
+          {sol.title ? `${solId ? " · " : ""}${sol.title}` : ""}
+          {sol.url && (
+            <a href={sol.url} target="_blank" rel="noreferrer">
+              Read the solicitation <ExternalLink size={11} />
+            </a>
+          )}
+        </div>
+      )}
 
       <p className="eir-disclaimer">
-        This checks completeness against NSF 23-598. It does not judge the
-        science, and it is not a prediction of funding. Read the solicitation
-        yourself before you submit.
+        This checks completeness against {solId || "the attached solicitation"}.
+        It does not judge the science, and it is not a prediction of funding.
+        Read the solicitation yourself before you submit.
       </p>
 
-      <button className="eir-back" onClick={onBack}>Review another draft</button>
+      <div className="eir-results-actions">
+        <button className="eir-back" onClick={onBack}>Review another draft</button>
+        <button className="eir-secondary" onClick={() => {
+          const blob = new Blob([reviewToMarkdown(result, submission)],
+                                { type: "text/markdown;charset=utf-8" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = `draft-review-${(submission?.title || "proposal")
+            .replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 60)}.md`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(a.href);
+        }}>
+          Download a copy
+        </button>
+        <button className="eir-run eir-save" onClick={onSave} disabled={saving}>
+          {saving ? "Saving…" : savedAt ? "Update saved review" : "Save this review"}
+        </button>
+      </div>
+      {saveMsg && <p className="eir-savemsg">{saveMsg}</p>}
     </div>
   );
 }

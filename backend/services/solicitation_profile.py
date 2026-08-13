@@ -53,6 +53,62 @@ def _section_label(key: str) -> str:
     return " ".join(w.capitalize() for w in key.split("_"))
 
 
+# Words that carry no meaning in a section NAME. Deliberately the same set as
+# solicitation_requirements._SECTION_FILLER, and NOT imported from there: this
+# module is data-only (no LLM, no network, no DB) and that import would drag
+# gemini_client in behind it. A test asserts the two stay identical, because a
+# silent divergence here re-splits sections that should be one.
+_SECTION_FILLER = {"the", "a", "an", "of", "for", "and", "section", "sections",
+                   "part", "your", "proposal", "proposals"}
+
+
+def _singular(word: str) -> str:
+    """Naive, with the same guard canon_section uses so "analysis" survives."""
+    if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
+        return word[:-1]
+    return word
+
+
+def section_signature(name: str) -> frozenset:
+    """The SET of meaning-carrying words in a section name.
+
+    Two names denote the same part of a proposal when their signatures match.
+    A SET, so a repeated word collapses ("Budget and Budget Justification" ->
+    {budget, justification}); filler-stripped, so connectives do not split a
+    section ("Letter of Intent" -> {letter, intent}).
+
+    Set EQUALITY, never containment — that is the whole safety property.
+    Containment would fold "Project Description Supplementary Documents" into
+    "Project Description" and silently lose a real section; equality cannot,
+    because the extra words are real ones.
+    """
+    words = re.sub(r"[^a-z0-9]+", " ", (name or "").strip().lower()).split()
+    return frozenset(_singular(w) for w in words if w not in _SECTION_FILLER)
+
+
+def resolve_section_key(sections: dict, name: str) -> Optional[str]:
+    """Which section in `sections` does `name` refer to, or None.
+
+    PUBLIC because generic_checks looks up an attachment's span by the
+    solicitation's verbatim name while the section may be filed under the
+    canonicalised one. An exact key hit wins; otherwise the signature decides.
+    """
+    if not sections:
+        return None
+    key = section_key(name)
+    if key in sections:
+        return key
+    sig = section_signature(name)
+    if not sig:
+        return None
+    for k, meta in sections.items():
+        if section_signature(meta.get("label") or k) == sig:
+            return k
+        if any(section_signature(a) == sig for a in (meta.get("aliases") or [])):
+            return k
+    return None
+
+
 def heading_regex(alias: str) -> re.Pattern:
     """A heading LINE for `alias`: optional numbering/bullets, the alias, then
     optional punctuation — and nothing else on the line.
@@ -76,13 +132,40 @@ def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
     and the attachments it requires by name. A requirement whose section is not
     otherwise known still gets a section here, so it can never be dropped."""
     sections: dict = {}
+    # signature -> key, so the same part of a proposal arriving under two names
+    # merges instead of splitting. The three sources use different vocabulary:
+    # requirement rows carry a canonicalised key ("letter_intent"), attachments
+    # arrive verbatim from the solicitation ("Letter of Intent").
+    by_signature: dict = {}
 
     def add(raw_key: str, label: Optional[str] = None) -> None:
         key = section_key(raw_key)
-        if not key or key in sections:
+        if not key:
             return
         lbl = label or _section_label(key)
+        sig = section_signature(lbl) or section_signature(key)
+
+        existing = by_signature.get(sig) if sig else None
+        if existing is not None and existing != key:
+            # Same section, different words for it. Keep the key already in use
+            # (requirement rows point at it) and WIDEN the aliases, so a PI who
+            # writes either heading is located. Prefer the authored label when
+            # it is the fuller one: "Letter of Intent" is what the solicitation
+            # calls it, "Letter Intent" is an artefact of canonicalisation and
+            # is a heading nobody would ever type.
+            meta = sections[existing]
+            for alias in aliases_for(lbl):
+                if alias not in meta["aliases"]:
+                    meta["aliases"].append(alias)
+            if label and len(lbl) > len(meta["label"]):
+                meta["label"] = lbl
+            return
+
+        if key in sections:
+            return
         sections[key] = {"label": lbl, "aliases": aliases_for(lbl)}
+        if sig:
+            by_signature[sig] = key
 
     for req in requirements or []:
         if req.get("section"):

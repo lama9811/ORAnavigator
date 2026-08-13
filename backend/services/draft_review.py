@@ -54,7 +54,10 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
+from services import delegated_rules
+from services import draft_scope
 from services import gemini_client
+from services import mechanical_checks
 from services import solicitation_profile as sp
 # The shared whitespace-collapsing membership test (golden rule 2). Deliberately
 # imported rather than re-implemented so every grounded feature uses ONE
@@ -497,7 +500,71 @@ def _finding(req: dict, status: str, note: str, evidence: str, *, source: str) -
         "solicitation_says": req["source"],
         "why": req.get("why", ""),
         "source": source,   # check | ai | fallback | locate — for debugging/UI
+        # Set by apply_delegation() below, never by a model.
+        "delegated_to": None,
     }
+
+
+def apply_draft_scope(findings: list[dict]) -> list[dict]:
+    """Stop grading a DOCUMENT on things only a submission can satisfy.
+
+    Measured on a real proposal: 7 of 29 assessed requirements were portal
+    clicks, who-signs-the-submission rules, or limits on how many proposals a PI
+    may have. All scored `not_found`, all counted against the draft, all in "Fix
+    these first" — and none fixable by writing. They become `not_in_draft`,
+    which is absent from _CREDIT and therefore out of the denominator, and their
+    note says where they ARE handled: the checklist.
+
+    Applied at review time, not stored, so improving `draft_scope` retroactively
+    fixes every profile already in the database.
+    """
+    for f in findings:
+        # `delegated` is the stronger statement — the rule lives in a document we
+        # never read. Do not overwrite it.
+        if f.get("status") == "delegated":
+            continue
+        if draft_scope.is_draft_checkable(f.get("label", ""),
+                                          f.get("solicitation_says", "")):
+            continue
+        f["status"] = "not_in_draft"
+        f["evidence"] = ""
+        f["note"] = draft_scope.NOTE
+    return findings
+
+
+def apply_delegation(findings: list[dict]) -> list[dict]:
+    """Mark rows whose rule lives in a document this app never read.
+
+    Deterministic and applied HERE rather than stored on the extracted
+    requirement, so improving `delegated_rules` retroactively fixes every
+    proposal already in the database — the same reason compliance_sentinel
+    recomputes its verdicts on every load.
+
+    A POINTER-ONLY row ("Adhere to PAPPG guidelines") is unassessable: its
+    status becomes `delegated`, which is absent from _CREDIT and therefore out
+    of the score's denominator, next to could_not_locate and unclear. Reporting
+    it "addressed" was the bug — a five-line Project Summary passed because the
+    only rule about it lives in the PAPPG.
+
+    A RIDER keeps whatever status it earned. "Include the LOI number in addition
+    to all the requirements outlined in the PAPPG" IS checkable, WAS checked and
+    came back not_found; demoting it would delete a true finding about the
+    draft to make room for a caveat.
+    """
+    for f in findings:
+        target, pointer_only = delegated_rules.classify(
+            f.get("label", ""), f.get("solicitation_says", ""))
+        f["delegated_to"] = target
+        if target is None:
+            continue
+        if pointer_only:
+            f["status"] = "delegated"
+            f["evidence"] = ""       # nothing was verified, so quote nothing
+            f["note"] = delegated_rules.note_for(target, pointer_only=True)
+        # A rider keeps its note EXACTLY as the reviewer wrote it. The caveat is
+        # carried by its `defers to X` tag and stated once above the findings;
+        # repeating it inside every note buried the real feedback.
+    return findings
 
 
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
@@ -521,7 +588,7 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             "solicitation": _solicitation_meta(profile),
             "ai": False, "findings": [], "reviewer_notes": [], "score": None,
             "sections_located": [], "sections_missing": list(sections),
-            "word_count": 0,
+            "word_count": 0, "mistakes": [],
             "message": "Paste your proposal to get a completeness review.",
         }
 
@@ -569,6 +636,13 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
 
     ai_reviewed = any(f["source"] == "ai" for f in findings)
 
+    # BEFORE score(): a pointer-only row must be out of the denominator, and a
+    # model verdict on a rule it was never shown must not survive into the UI.
+    findings = apply_delegation(findings)
+    # AFTER delegation, so a delegated row keeps its stronger status, and before
+    # score() so an out-of-scope row leaves the denominator.
+    findings = apply_draft_scope(findings)
+
     order = {r["id"]: i for i, r in enumerate(requirements)}
     findings.sort(key=lambda f: order.get(f["id"], 999))
 
@@ -591,6 +665,15 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             {"key": k, "label": v["label"]} for k, v in sections.items() if k not in spans
         ],
         "word_count": len(text.split()),
+        # Mechanical errors — placeholders, dangling figure references, a total
+        # that contradicts the saved budget. Deterministic and quoted, and
+        # deliberately OUTSIDE `findings` and outside the score: a leftover
+        # "TBD" is not incompleteness against the solicitation, and folding the
+        # two together would make a number that is already over-read mean less.
+        "mistakes": mechanical_checks.find_mistakes(text, budget=budget),
+        # One row per rulebook this solicitation points into, with a plain
+        # description and how many of its requirements went unchecked.
+        "delegated": delegated_rules.summarize(findings),
         "eligibility_notes": profile.get("eligibility_notes") or [],
         "message": None if ai_used else (
             "The AI reviewer is unavailable, so only the rule-based checks ran and the "

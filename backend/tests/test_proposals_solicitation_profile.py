@@ -126,3 +126,44 @@ def test_the_notes_lines_helper_produces_what_draft_critic_parses_back():
     assert "Budget cap: $500,000" in joined
     assert "Page limits: research_strategy: 12p" in joined
     assert "Required attachments: Data Management Plan; Biosketch" in joined
+
+
+# ── section keys are re-canonicalised ON LOAD, so fixes are retroactive ─────
+
+def test_a_stored_solicitation_heading_is_repaired_on_load():
+    """Same principle as compliance_sentinel recomputing its verdicts: the
+    section universe is REBUILT here, so improving canon_section must fix every
+    profile already in the database rather than only the next extraction.
+
+    A row filed under the solicitation's own heading can never be located in a
+    draft, so it reports "Not located" and drops out of the score — silently
+    unchecked. At whole-document scope it is assessed against the paste.
+    """
+    payload = {**PAYLOAD, "requirements": [
+        {"id": "a", "label": "Comply with domestic sourcing", "kind": "semantic",
+         "section": "vii_award_administration_information", "scored": True,
+         "source": "Iron and steel must be produced domestically.", "why": "",
+         "keywords": []},
+        {"id": "b", "label": "State the specific aims", "kind": "semantic",
+         "section": "research_strategy", "scored": True,
+         "source": "State the specific aims.", "why": "", "keywords": []},
+    ]}
+    profile = ps.load_solicitation_profile(_Sub(payload))
+
+    assert "vii_award_administration_information" not in profile["sections"]
+    by_id = {r["id"]: r for r in profile["requirements"]}
+    assert by_id["a"]["section"] is None, "should fall back to whole-document scope"
+    assert by_id["b"]["section"] == "research_strategy", "a real section is untouched"
+
+
+def test_repairing_a_section_does_not_change_requirement_ids():
+    """Ids are the checklist's `source_ref`. Re-canonicalising a section must not
+    renumber them, or a ticked-off task would lose its row."""
+    payload = {**PAYLOAD, "requirements": [
+        {"id": "vii_award_administration_information_comply", "label": "Comply",
+         "section": "VII. Award Administration Information", "kind": "semantic",
+         "scored": True, "source": "Iron and steel must be domestic.", "why": "",
+         "keywords": []},
+    ]}
+    profile = ps.load_solicitation_profile(_Sub(payload))
+    assert profile["requirements"][0]["id"] == "vii_award_administration_information_comply"

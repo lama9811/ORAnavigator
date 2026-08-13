@@ -623,6 +623,20 @@ def load_solicitation_profile(sub: Submission) -> Optional[dict]:
             if isinstance(r, dict) and r.get("kind") != "deterministic"]
     if not rows:
         return None
+    # RE-CANONICALISE the stored section keys, so improving canon_section fixes
+    # every profile already in the database instead of only the next extraction
+    # — the same reason compliance_sentinel recomputes its verdicts on load. A
+    # row stored under the solicitation's own heading (`preparation_instruction`,
+    # `vii_award_administration_information`) can never be located in a draft, so
+    # it reports "Not located" and drops out of the score, unchecked. Resolving
+    # it to None files it at whole-document scope, where it IS assessed.
+    #
+    # `id` is deliberately left alone: it is the checklist's `source_ref`, and
+    # renumbering it would orphan a task the PI has already ticked off.
+    from services.solicitation_requirements import canon_section as _canon
+    for row in rows:
+        if row.get("section"):
+            row["section"] = _canon(row["section"])
     from services import solicitation_profile as _sp
     return _sp.build_generic(
         stored.get("contract") or {},

@@ -29,6 +29,13 @@ function authHeaders() {
 const SPONSORS = ["NSF", "NIH", "DoD", "DoE", "NASA", "USDA", "EPA",
                   "Foundation", "State of Maryland", "Internal"];
 
+// How long Create will wait for a requirement read that is already in flight.
+// Deliberately short: it exists to catch a read that lands in the same instant
+// as the click, NOT to make the PI wait out a 60-150s read. Anything longer
+// would re-introduce the exact risk the "never blocked on the read" rule
+// exists to prevent.
+const REQUIREMENT_GRACE_MS = 2000;
+
 export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "",
                                                   submissionId = null,
                                                   initialSourceId = null }) {
@@ -102,34 +109,55 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
     }
   };
 
+  // THE SAME READ, MIRRORED INTO A REF, and the ref is what the save reads.
+  //
+  // handleConfirm used to gate on `reqState` — a value captured by the render
+  // that painted the Create button. A read landing between that paint and the
+  // click was therefore thrown away while sitting in memory. Observed in
+  // production: the requirement read returned 200 at 14:49:23.9 and Create hit
+  // the server at 14:49:24.1, so the proposal was written with no requirements
+  // and the PI paid a second 28s read to recover a list we already had.
+  //
+  // A ref is read at CLICK time, so the window closes entirely.
+  const readRef = useRef({ state: "idle", data: null, promise: null });
+
   // Read every requirement in the solicitation. Deliberately fire-and-display:
   // it never blocks Create, and a failure here costs the requirement list, not
   // the proposal.
-  const readRequirements = async (src) => {
+  const readRequirements = (src) => {
     setSource(src);
     setReqState("running");
     setRequirements(null);
-    try {
-      const form = new FormData();
-      // The contract step already read and STORED this document. Reading it
-      // back beats re-uploading it: one read of the file, one row per
-      // solicitation, and no second trip over a 25MB PDF.
-      if (src.sourceId) form.append("source_id", String(src.sourceId));
-      else if (src.kind === "pdf") form.append("file", src.file, src.filename);
-      else form.append("url", src.url);
-      const res = await fetch(`${API_BASE}/api/me/solicitation-requirements`, {
-        method: "POST", headers: authHeaders(), body: form,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail || `${res.status} ${res.statusText}`);
+    readRef.current = { state: "running", data: null, promise: null };
+    const run = (async () => {
+      try {
+        const form = new FormData();
+        // The contract step already read and STORED this document. Reading it
+        // back beats re-uploading it: one read of the file, one row per
+        // solicitation, and no second trip over a 25MB PDF.
+        if (src.sourceId) form.append("source_id", String(src.sourceId));
+        else if (src.kind === "pdf") form.append("file", src.file, src.filename);
+        else form.append("url", src.url);
+        const res = await fetch(`${API_BASE}/api/me/solicitation-requirements`, {
+          method: "POST", headers: authHeaders(), body: form,
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.detail || `${res.status} ${res.statusText}`);
+        }
+        const data = await res.json();
+        readRef.current = { state: "ready", data, promise: readRef.current.promise };
+        setRequirements(data);
+        setReqState("ready");
+      } catch (e) {
+        const failed = { error: e.message || "Couldn't read the requirements." };
+        readRef.current = { state: "failed", data: failed, promise: readRef.current.promise };
+        setRequirements(failed);
+        setReqState("failed");
       }
-      setRequirements(await res.json());
-      setReqState("ready");
-    } catch (e) {
-      setRequirements({ error: e.message || "Couldn't read the requirements." });
-      setReqState("failed");
-    }
+    })();
+    readRef.current.promise = run;
+    return run;
   };
 
   // Reuse a document this PI already read but never attached. Same request as
@@ -222,15 +250,32 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
     setStep("creating");
     setError("");
     try {
+      // STILL never blocked on the read — waiting out a 150s call is the one
+      // thing that could lose the PI their work, and that rule stands. But a
+      // read that is a moment from landing is not a slow read, and discarding
+      // it costs them a second 28s pass over the same document. So an IN-FLIGHT
+      // read gets a short, bounded grace and nothing more; if it has not
+      // arrived by then we save without it exactly as before.
+      //
+      // Saving WITH a list after the button offered to save without one is not
+      // a broken promise — it is strictly the outcome the PI wanted.
+      if (readRef.current.state === "running" && readRef.current.promise) {
+        await Promise.race([
+          readRef.current.promise,
+          new Promise((resolve) => setTimeout(resolve, REQUIREMENT_GRACE_MS)),
+        ]);
+      }
+      // Read at CLICK time, never from a render snapshot — see readRef above.
+      const read = readRef.current;
       // The requirement list rides along ONLY when it is ready. This is the
       // save point for both flows, and the one place the solicitation is
       // written to the database.
-      const solicitation = reqState === "ready" && requirements ? {
-        requirements: requirements.requirements,
-        merit_criteria: requirements.merit_criteria,
-        eligibility_notes: requirements.eligibility_notes,
-        read_report: requirements.read_report,
-        extraction: requirements.extraction,
+      const solicitation = read.state === "ready" && read.data ? {
+        requirements: read.data.requirements,
+        merit_criteria: read.data.merit_criteria,
+        eligibility_notes: read.data.eligibility_notes,
+        read_report: read.data.read_report,
+        extraction: read.data.extraction,
         source: { kind: source?.kind, filename: source?.filename || null,
                   url: source?.url || null },
       } : {};
@@ -239,7 +284,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
       // whose read failed — left the stored text orphaned and was asked to
       // upload the very same file again when they opened Draft Review. Binding
       // it here means the proposal owns the document whatever the read did.
-      const boundSourceId = sourceId || requirements?.source_id || null;
+      const boundSourceId = sourceId || read.data?.source_id || null;
 
       const res = attaching
         ? await fetch(`${API_BASE}/api/me/submissions/${submissionId}/solicitation`, {
@@ -840,6 +885,22 @@ function AttachmentEditor({ value, onChange }) {
   );
 }
 
+// Page-limit keys are INTERNAL: `section_key()` produces them so the reviewer
+// and the checklist can look a section up under one name. They were being
+// printed to the PI raw — "letter_of_institutional_support: 2p" — the only
+// snake_case in a modal that is otherwise plain English, and it reads like a
+// leaked variable rather than a rule from their solicitation.
+const _SMALL_WORDS = new Set(["of", "and", "or", "the", "a", "an", "for", "in", "to"]);
+
+function humanizeSectionKey(key) {
+  const words = String(key || "").split(/[_\s]+/).filter(Boolean);
+  return words
+    .map((w, i) => (i > 0 && _SMALL_WORDS.has(w.toLowerCase())
+      ? w.toLowerCase()
+      : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
 function PageLimitsDisplay({ value }) {
   const entries = Object.entries(value);
   if (entries.length === 0) {
@@ -853,7 +914,8 @@ function PageLimitsDisplay({ value }) {
     <div className="solicitation-pagelimits">
       {entries.map(([section, n]) => (
         <span key={section} className="solicitation-pagelimit">
-          <b>{section}:</b> {n}p
+          <b>{humanizeSectionKey(section)}:</b>{" "}
+          {n} {Number(n) === 1 ? "page" : "pages"}
         </span>
       ))}
     </div>

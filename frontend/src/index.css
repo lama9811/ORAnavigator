@@ -402,6 +402,20 @@ body.dark ::selection {
   color: var(--text-secondary, #64748B);
   max-width: 32ch;
 }
+/* The raw error text on a render crash. Monospace and dimmed: it is evidence to
+   quote in a report, not something the user is expected to act on. Wraps rather
+   than overflowing — a TypeError message can be long. */
+.route-error p.route-error-detail {
+  margin-top: 10px;
+  max-width: 52ch;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #64748B);
+  background: rgba(100, 116, 139, 0.09);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-wrap: anywhere;
+}
 .route-error button {
   margin-top: 14px;
   padding: 10px 24px;

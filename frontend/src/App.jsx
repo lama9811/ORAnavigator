@@ -52,10 +52,17 @@ function RequireAuth({ children }) {
 // fallback) on mobile. This catches that failure and grabs a fresh copy ONCE
 // (a 10s timestamp guard prevents a reload loop if the chunk is genuinely gone),
 // falling back to a visible "Reload" card instead of a dead dark screen.
+// It also catches a component that THREW while rendering, and those two need
+// different words. A stale chunk really is fixed by a refresh; a render crash
+// never is, and telling the user "a refresh usually clears it" sent them
+// reloading forever while the same TypeError fired every time — which is how a
+// dead Draft Review read for weeks as a loading glitch. The message is now
+// chosen from which failure actually happened, and a render crash reports the
+// error text so it can be acted on instead of guessed at.
 class ChunkErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { failed: false };
+    this.state = { failed: false, detail: "" };
   }
   static getDerivedStateFromError(error) {
     const msg = (error && (error.message || String(error))) || "";
@@ -66,17 +73,36 @@ class ChunkErrorBoundary extends React.Component {
       if (Date.now() - last > 10000) {
         sessionStorage.setItem("ora_chunk_reload_at", String(Date.now()));
         window.location.reload();
-        return { failed: false };
+        return { failed: false, detail: "" };
       }
+      return { failed: true, detail: "" };
     }
-    return { failed: true };
+    // Not a download failure: the app loaded and a screen crashed rendering.
+    return { failed: true, detail: msg || "An unexpected error." };
+  }
+  componentDidCatch(error, info) {
+    // Keep the stack in the console even in production — without it the only
+    // record of a render crash is a screenshot of this card.
+    console.error("[ORA] render error:", error, info?.componentStack);
   }
   render() {
     if (this.state.failed) {
+      const isRenderCrash = Boolean(this.state.detail);
       return (
         <div className="route-error" role="alert">
           <h2>Something went wrong</h2>
-          <p>The app couldn't finish loading. A refresh usually clears it.</p>
+          {isRenderCrash ? (
+            <>
+              <p>
+                This screen hit an error and stopped. Reloading will bring the
+                app back, but it is likely to happen again on the same screen
+                &mdash; please report it.
+              </p>
+              <p className="route-error-detail">{this.state.detail}</p>
+            </>
+          ) : (
+            <p>The app couldn't finish loading. A refresh usually clears it.</p>
+          )}
           <button
             type="button"
             onClick={() => {

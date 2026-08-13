@@ -32,7 +32,8 @@ from __future__ import annotations
 
 import re
 
-from services.solicitation_profile import heading_regex, section_key
+from services.solicitation_profile import (
+    heading_regex, resolve_section_key, section_key)
 
 # ~550 words/page at typical federal formatting (11pt, single-spaced, 1" margins).
 # Used ONLY to estimate a pasted section's length, and every message built from it
@@ -42,6 +43,28 @@ WORDS_PER_PAGE = 550
 
 def _norm_ws(s: str) -> str:
     return " ".join((s or "").split())
+
+
+def _quote_if_it_names(quote: str, name: str, fallback: str) -> str:
+    """The shared contract quote, but ONLY for the row it actually supports.
+
+    `source_quotes` carries ONE entry for `required_attachments` and one for
+    `page_limits`, and stamping it onto every row produced rows citing a
+    sentence about a different document — "Project Summary included" justified
+    by "The proposal must include a letter by the chair, dean, or chief academic
+    officer". A user found it under "Why is this required?", where every row
+    showed the same wrong sentence.
+
+    That is worse than no quote: golden rule 2 exists so a claim can be checked
+    against the funder's own words, and a quote that does not support its row
+    looks like evidence while being none. The test is deliberately strict — the
+    row's name must appear in the quote verbatim — because the honest fallback
+    (a plain statement of what was extracted) costs nothing.
+    """
+    quote = _norm_ws(quote)[:300]
+    if quote and _norm_ws(name).lower() in quote.lower():
+        return quote
+    return fallback
 
 
 def contract_requirements(contract: dict) -> list[dict]:
@@ -71,8 +94,9 @@ def contract_requirements(contract: dict) -> list[dict]:
             "flag_if_present": True,
             "check": "page_limit",
             "check_args": {"section": key, "limit": limit},
-            "source": _norm_ws(quotes.get("page_limits") or "")[:300]
-                      or f"Extracted page limit: {label} — {limit} pages.",
+            "source": _quote_if_it_names(
+                quotes.get("page_limits") or "", label,
+                f"Extracted page limit: {label} — {limit} pages."),
             "why": "Most funders return an over-length section without review.",
             "keywords": [],
         })
@@ -92,8 +116,9 @@ def contract_requirements(contract: dict) -> list[dict]:
             "kind": "deterministic", "scored": True,
             "check": "attachment_present",
             "check_args": {"name": name, "section_key": key},
-            "source": _norm_ws(quotes.get("required_attachments") or "")[:300]
-                      or f"The solicitation lists {name} as a required attachment.",
+            "source": _quote_if_it_names(
+                quotes.get("required_attachments") or "", name,
+                f"The solicitation lists {name} as a required attachment."),
             "why": "A missing required attachment is a compliance rejection, not a weakness.",
             "keywords": [],
         })
@@ -164,10 +189,26 @@ def _check_attachment_present(ctx: dict, req: dict) -> tuple:
         return "not_checked", "No attachment name to look for.", ""
     text = ctx.get("text") or ""
 
-    key = args.get("section_key") or section_key(name)
+    # Resolve through the SECTION UNIVERSE, not the raw name. The solicitation
+    # calls this "Budget and Budget Justification" while the section is filed
+    # under the canonicalised `budget_justification` the requirement rows use —
+    # so a verbatim-key lookup missed the span, both fallbacks then searched for
+    # the long name as a whole heading line, and a Budget Justification sitting
+    # in the draft was reported "No Budget and Budget Justification found": a
+    # required attachment declared missing when it is present.
+    sections = ((ctx.get("profile") or {}).get("sections")) or {}
+    key = (resolve_section_key(sections, name)
+           or args.get("section_key") or section_key(name))
     span = (ctx.get("spans") or {}).get(key)
     if span:
-        return "addressed", f"Found a {name} section in what you pasted.", \
+        # HOW MUCH is under the heading, not just that the heading exists. Without
+        # it a 12-word stub and a full narrative read identically — "Found a
+        # Project Description section" — which is the presence-as-approval trap
+        # this tool keeps falling into. Deliberately a COUNT and not a verdict:
+        # no minimum is asserted, because the solicitation states none.
+        words = len((span.get("text") or "").split())
+        size = f" ({words} {'word' if words == 1 else 'words'})" if words else ""
+        return "addressed", f"Found a {name} section in what you pasted{size}.", \
             _norm_ws(span.get("marker") or "")[:160]
 
     m = heading_regex(name).search(text)

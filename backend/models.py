@@ -216,6 +216,16 @@ class Submission(Base):
     # proposals_service.load_solicitation_profile). Nullable: a proposal has none
     # until a solicitation is attached.
     solicitation_json = Column(_BIGTEXT, nullable=True)
+    # The LAST SAVED Draft Review — {result, extraction, saved_at}. Written only
+    # when the PI presses Save, never automatically: the review is otherwise
+    # stateless because the paste is their unpublished manuscript.
+    #
+    # WHAT THIS DOES PERSIST, and it was a deliberate choice: the findings carry
+    # EVIDENCE QUOTES from the draft, so saving stores fragments of that
+    # manuscript. The draft itself is still never stored. Sized like
+    # solicitation_json (~30-60KB) and kept on the same row for the same reason
+    # — one fewer table for data that has exactly one owner.
+    draft_review_json = Column(_BIGTEXT, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

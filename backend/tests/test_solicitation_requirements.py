@@ -59,7 +59,10 @@ def test_a_row_whose_quote_is_not_in_the_document_is_dropped(monkeypatch):
          "source": "the proposal must include a haiku about polymers",
          "why": "", "keywords": [], "scored": True},
     ]))
-    out = sr.extract_requirements(SOLICITATION, max_rounds=0)
+    # ONE reader: the fake answers every call, so leaving the sweep and the
+    # targeted pass on would count the same invented row once per reader and
+    # turn this into an assertion about how many readers exist.
+    out = sr.extract_requirements(SOLICITATION, max_rounds=0, targeted=False)
     labels = {r["label"] for r in out["requirements"]}
     assert "Sustainability plan" in labels
     assert "Invented ask" not in labels
@@ -221,6 +224,75 @@ def test_merit_criteria_offline_is_empty_not_an_error():
 
 # ── the guarantee behind the whole change ───────────────────────────────────
 
+def test_the_targeted_pass_runs_even_when_the_sweep_found_nothing_new(monkeypatch):
+    """The whole point of the third reader.
+
+    A sweep that returns nothing new means the two generic readers AGREE — not
+    that the document is exhausted. Measured against the human-verified list,
+    four real requirements survived a converged sweep, including an outright
+    prohibition. If someone ever "optimises" the targeted pass to run only when
+    the sweep is still productive, it will never run on the documents that need
+    it most, and nothing else here would go red."""
+    calls = []
+
+    def fake(prompt, **kw):
+        calls.append(kw.get("system_instruction", ""))
+        # First pass finds one row; every sweep round finds nothing new, so the
+        # loop converges immediately.
+        if kw.get("system_instruction") == sr._SYSTEM:
+            return {"requirements": [
+                {"label": "Sustainability plan", "section": "project_description",
+                 "source": "must include a sustainability plan", "why": "",
+                 "keywords": [], "scored": True}]}
+        if kw.get("system_instruction") == sr._TARGETED_SYSTEM:
+            return {"requirements": [
+                {"label": "Data Management Plan", "section": None,
+                 "source": "Proposals must include a Data Management Plan",
+                 "why": "", "keywords": [], "scored": True}]}
+        return {"requirements": []}
+
+    monkeypatch.setattr(sr.gemini_client, "generate_json", fake)
+    out = sr.extract_requirements(SOLICITATION)
+
+    assert sr._TARGETED_SYSTEM in calls, "the targeted pass never ran"
+    assert out["targeted_ran"] is True
+    assert out["targeted_added"] == 1
+    labels = {r["label"] for r in out["requirements"]}
+    assert "Data Management Plan" in labels, (
+        "the row only the targeted reader found is missing from the result")
+
+
+def test_the_targeted_pass_still_verifies_quotes(monkeypatch):
+    """It is a third reader, not a trusted one — golden rule 2 applies to it
+    exactly as it does to the other two."""
+    def fake(prompt, **kw):
+        if kw.get("system_instruction") == sr._TARGETED_SYSTEM:
+            return {"requirements": [
+                {"label": "Invented ask", "section": None,
+                 "source": "the proposal must include a haiku about polymers",
+                 "why": "", "keywords": [], "scored": True}]}
+        return {"requirements": []}
+
+    monkeypatch.setattr(sr.gemini_client, "generate_json", fake)
+    out = sr.extract_requirements(SOLICITATION)
+
+    assert "Invented ask" not in {r["label"] for r in out["requirements"]}
+    assert out["dropped_unverified"] >= 1
+    assert out["targeted_added"] == 0
+
+
+def test_a_deliberate_skip_is_not_reported_as_a_time_cap(monkeypatch):
+    """`targeted=False` means we chose not to run it; `hit_time_cap` means we
+    ran out of clock. Conflating them would put a "the list may be incomplete"
+    warning in front of a PI for a reason that never happened."""
+    monkeypatch.setattr(sr.gemini_client, "generate_json",
+                        lambda prompt, **kw: {"requirements": []})
+    out = sr.extract_requirements(SOLICITATION, targeted=False)
+
+    assert out["targeted_ran"] is False
+    assert out["hit_time_cap"] is False
+
+
 def test_this_module_names_no_funder():
     import inspect
     src = inspect.getsource(sr).lower()
@@ -256,3 +328,61 @@ def test_the_requirement_read_disables_thinking(monkeypatch):
     assert seen.get("thinking_budget") == 0, (
         "thinking must be explicitly disabled; measured 72s -> 26s with no recall cost"
     )
+
+
+# ── the solicitation's own structure is not a part of a proposal ────────────
+#
+# `_SYSTEM` rule 9 forbids naming a section after a heading of the SOLICITATION,
+# and the model mostly complies — but a minority leak every run. Seen live:
+# `vii_award_administration_information`, `preparation_instruction`,
+# `budgetary_information`. Two artefacts in one string, and they need different
+# treatment: `vii` is the FOA's own section NUMBER, and "Award Administration
+# Information" is the FOA's own heading.
+#
+# It is not cosmetic. A section that names no real part of a proposal can never
+# be located in a draft, so every requirement filed under it is reported
+# "Not located" and DROPS OUT of the score's denominator — silently unchecked.
+# Resolving to None instead files the row at whole-document scope, where
+# draft_review assesses it against the Project Description span or the whole
+# paste. A wider search is the right failure: the requirement still gets checked.
+
+def test_a_leading_section_number_is_not_part_of_the_name():
+    """"VII. Award Administration Information" reached the key as
+    `vii_award_administration_information` because canon_section strips the
+    period before any numbering rule could see it."""
+    assert sr.canon_section("VII. Award Administration Information") is None
+    assert sr.canon_section("2. Project Description") == "project_description"
+    assert sr.canon_section("IV Project Summary") == "project_summary"
+
+
+def test_a_bare_section_number_is_no_section_at_all():
+    assert sr.canon_section("VII.") is None
+    assert sr.canon_section("3") is None
+
+
+@pytest.mark.parametrize("heading", [
+    "Award Administration Information",
+    "Program Description",
+    "Eligibility Information",
+    "Budgetary Information",
+    "Proposal Preparation and Submission Instructions",
+    "Preparation Instructions",
+    "Award Information",
+    "Agency Contacts",
+    "Reporting Requirements",
+    "Additional Information",
+])
+def test_a_solicitation_heading_is_whole_document_scope(heading):
+    assert sr.canon_section(heading) is None
+
+
+@pytest.mark.parametrize("real", [
+    "Project Description", "Project Summary", "Budget Justification",
+    "Data Management Plan", "Letters of Collaboration", "Biosketch",
+    "Facilities, Equipment and Other Resources", "References Cited",
+    # A PI's own Project Description very often opens with one of these. They
+    # must NOT be swept up by the deny-list.
+    "Introduction", "Background", "Results from Prior NSF Support",
+])
+def test_a_real_part_of_a_proposal_survives(real):
+    assert sr.canon_section(real) is not None

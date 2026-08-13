@@ -47,3 +47,78 @@ def test_requirements_for_none_returns_the_whole_document_rows():
     ]
     profile = sp.make_profile(id="X", title="X", sections={}, requirements=reqs)
     assert [r["id"] for r in sp.requirements_for(profile, None)] == ["a"]
+
+
+# ── one part of a proposal, named two ways ──────────────────────────────────
+#
+# The section universe is assembled from three sources that use DIFFERENT
+# vocabulary for the same thing: requirement rows carry a canonicalised key
+# (filler words stripped), while required-attachment names arrive verbatim from
+# the solicitation. So one Budget Justification became two sections —
+# `budget_justification` and `budget_and_budget_justification` — and one Letter
+# of Intent became `letter_intent` and `letter_of_intent`.
+#
+# Not cosmetic. Measured on a real proposal: the attachment check looks its
+# section up by the verbatim key, never finds a span (the PI wrote the short
+# heading), and its fallbacks search for the LONG name as a whole line — so a
+# Budget Justification sitting in the draft was reported "No Budget and Budget
+# Justification found", i.e. a required attachment declared MISSING when it is
+# present. That is the error class this tool exists to prevent.
+
+def test_one_section_named_two_ways_is_merged():
+    sections = sp.sections_from(
+        [{"section": "budget_justification"}],
+        attachments=["Budget and Budget Justification"])
+    assert len(sections) == 1, f"expected one section, got {list(sections)}"
+    assert "budget_justification" in sections
+
+
+def test_the_merged_section_keeps_BOTH_headings_as_aliases():
+    """The point of merging rather than dropping: a PI may type either name, and
+    the locate stage matches whole heading lines against these aliases."""
+    sections = sp.sections_from(
+        [{"section": "budget_justification"}],
+        attachments=["Budget and Budget Justification"])
+    aliases = sections["budget_justification"]["aliases"]
+    assert "budget justification" in aliases
+    assert "budget and budget justification" in aliases
+
+
+def test_merging_fixes_a_section_no_PI_could_ever_match():
+    """`letter_intent` is what canonicalisation produces, and its only alias was
+    "letter intent" — which nobody writes. The solicitation's own "Letter of
+    Intent" was a SEPARATE section, so the seven LOI requirements sat under a
+    heading that could not be located."""
+    sections = sp.sections_from(
+        [{"section": "letter_intent"}], attachments=["Letter of Intent"])
+    assert len(sections) == 1
+    assert "letter of intent" in sections["letter_intent"]["aliases"]
+
+
+def test_sections_that_merely_share_words_are_NOT_merged():
+    """The guard. Containment would fold a genuinely distinct section into its
+    parent; only the same SET of content words counts as the same section."""
+    sections = sp.sections_from(
+        [{"section": "project_description"}],
+        attachments=["Project Description Supplementary Documents"])
+    assert len(sections) == 2
+
+
+def test_resolve_finds_the_merged_section_by_either_name():
+    sections = sp.sections_from(
+        [{"section": "budget_justification"}],
+        attachments=["Budget and Budget Justification"])
+    assert sp.resolve_section_key(sections, "Budget and Budget Justification") \
+        == "budget_justification"
+    assert sp.resolve_section_key(sections, "Budget Justification") \
+        == "budget_justification"
+    assert sp.resolve_section_key(sections, "Data Management Plan") is None
+
+
+def test_the_two_filler_sets_have_not_drifted():
+    """`_SECTION_FILLER` is duplicated in solicitation_requirements on purpose —
+    this module is data-only and importing that one would drag gemini_client in.
+    Duplication is fine; SILENT divergence is not, because the two sets decide
+    whether one part of a proposal lands on one section key or two."""
+    from services import solicitation_requirements as sr
+    assert sp._SECTION_FILLER == sr._SECTION_FILLER

@@ -36,7 +36,7 @@ def iso_utc(dt):
 import pypdf
 import docx
 
-from fastapi import FastAPI, HTTPException, Depends, status, File, Form, UploadFile, Request
+from fastapi import FastAPI, HTTPException, Depends, status, Body, File, Form, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -244,6 +244,19 @@ def init_db():
                 print("[OK] Successfully added 'solicitation_json' column!")
             except Exception as e:
                 print(f"[ERROR] Failed to add solicitation_json column: {e}")
+
+        # 5e-bis. Add submissions.draft_review_json if missing (the last saved
+        # Draft Review, written only when the PI presses Save).
+        try:
+            conn.execute(text("SELECT draft_review_json FROM submissions LIMIT 1"))
+        except (OperationalError, ProgrammingError):
+            print("[WARN] 'draft_review_json' column missing. Adding it now...")
+            try:
+                conn.execute(text("ALTER TABLE submissions ADD COLUMN draft_review_json MEDIUMTEXT NULL"))
+                conn.commit()
+                print("[OK] Successfully added 'draft_review_json' column!")
+            except Exception as e:
+                print(f"[ERROR] Failed to add draft_review_json column: {e}")
 
         # 5f. Create solicitation_sources if missing (the stored solicitation
         # TEXT, so a PI is never asked for the same document twice).
@@ -3699,6 +3712,7 @@ def _submission_to_dict(s, include_tasks: bool = True) -> dict:
         # Draft Review: whether this proposal has a solicitation to be reviewed
         # against. Drives the tool's badge and its attach-first empty state.
         "has_solicitation_requirements": bool(getattr(s, "solicitation_json", None)),
+        "draft_review_saved_at": _saved_review_at(s),
         "created_at": iso_utc(s.created_at),
         "updated_at": iso_utc(s.updated_at),
     }
@@ -4469,6 +4483,93 @@ def _require_profile_and_budget(sub):
         except (ValueError, TypeError):
             budget = None
     return profile, budget
+
+
+def _saved_review_at(sub) -> Optional[str]:
+    """When the PI last saved a review of this proposal, or None.
+
+    Only the TIMESTAMP rides on the submission list — the saved review itself is
+    tens of KB and `list_submissions` loads whole rows, so shipping it with every
+    proposal in the list would be the same mistake that kept the solicitation
+    TEXT off this table."""
+    raw = getattr(sub, "draft_review_json", None)
+    if not raw:
+        return None
+    try:
+        return (json.loads(raw) or {}).get("saved_at")
+    except (ValueError, TypeError):
+        return None
+
+
+@app.post("/api/me/submissions/{submission_id}/draft-review/save")
+async def save_draft_review(
+    submission_id: int,
+    payload: dict = Body(...),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Keep the LAST review, so the PI can reopen it instead of re-running.
+
+    Explicit action only. The review is stateless by design — the paste is an
+    unpublished manuscript — and this stores the RESULT, which carries evidence
+    quotes from that draft. The draft text itself is still never stored.
+    Overwrites: one saved review per proposal, the most recent one."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    result = (payload or {}).get("result")
+    if not isinstance(result, dict) or not result:
+        raise HTTPException(400, "No review to save.")
+    saved_at = datetime.utcnow().isoformat() + "Z"
+    sub.draft_review_json = json.dumps({
+        "version": 1,
+        "result": result,
+        "extraction": (payload or {}).get("extraction"),
+        "saved_at": saved_at,
+    })
+    db.commit()
+    return {"saved_at": saved_at}
+
+
+@app.get("/api/me/submissions/{submission_id}/draft-review/saved")
+async def get_saved_draft_review(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The saved review, or 404 when there is none."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    raw = getattr(sub, "draft_review_json", None)
+    if not raw:
+        raise HTTPException(404, "No saved review")
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        raise HTTPException(404, "No saved review")
+
+
+@app.delete("/api/me/submissions/{submission_id}/draft-review/saved")
+async def delete_saved_draft_review(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Discard it. The PI stored quotes from their own manuscript; they get to
+    take that back without deleting the proposal."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    sub.draft_review_json = None
+    db.commit()
+    return {"deleted": True}
 
 
 @app.post("/api/me/submissions/{submission_id}/draft-review")

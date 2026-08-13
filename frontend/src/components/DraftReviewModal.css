@@ -154,13 +154,6 @@ body.dark .eir-modal {
 
 .eir-file-input { display: none; }
 
-.eir-filenote {
-  font-size: 0.79rem;
-  color: var(--text-tertiary);
-  line-height: 1.55;
-  margin: 10px 0 0;
-}
-.eir-filenote em { font-style: normal; font-family: ui-monospace, Menlo, monospace; }
 
 /* ── chosen files ───────────────────────────────────────────────────────── */
 
@@ -448,17 +441,36 @@ body.dark .eir-modal {
   font-size: 0.79rem;
   border: 1px solid transparent;
 }
+/* DELIBERATELY NOT GREEN, and deliberately not a tick.
+   This pill means "a heading by this name was located in the paste" — nothing
+   more. It used to carry the same ✓ and the same --eir-ok palette as an
+   Addressed finding, so an 85-word Project Summary sat under a green check and
+   read as approved. Locating a section is not a judgement of it; the neutral
+   ink says "here is where I found it", which is all that was ever measured. */
 .eir-pill-found {
-  background: var(--eir-ok-bg);
-  color: var(--eir-ok);
-  border-color: var(--eir-ok);
+  background: transparent;
+  color: var(--text-main);
+  border-color: var(--border-color);
 }
 .eir-pill-missing {
   background: var(--eir-skip-bg);
   color: var(--text-tertiary);
   border-color: var(--border-color);
 }
-.eir-pill-count { opacity: 0.7; font-variant-numeric: tabular-nums; }
+/* The count is the point of this pill now, not a footnote to a tick. */
+.eir-pill-count {
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.eir-sectionmap-lede {
+  margin: 0 0 9px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 62ch;
+}
 
 .eir-sectionmap-note {
   margin-top: 9px;
@@ -472,6 +484,10 @@ body.dark .eir-modal {
 .eir-group { margin-bottom: 22px; }
 
 .eir-group-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -480,6 +496,17 @@ body.dark .eir-modal {
   margin: 0 0 4px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border-subtle);
+}
+/* A measurement, not a grade — so it stays quiet and never takes a status
+   colour. Lower-case and unspaced against the SHOUTING section name. */
+.eir-group-words {
+  flex: none;
+  font-weight: 600;
+  font-size: 0.76rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 .eir-group-sub {
   font-size: 0.82rem;
@@ -530,6 +557,108 @@ body.dark .eir-modal {
   vertical-align: middle;
 }
 .eir-tag-soft { background: var(--eir-skip-bg); color: var(--text-tertiary); }
+/* Not a failure and not decoration: it marks a row whose rule continues in a
+   document this review never read. Lower-case because it is a phrase ("defers
+   to the PAPPG"), not a one-word label like PROHIBITED. */
+.eir-tag-defer {
+  background: var(--eir-warn-bg, rgba(217, 119, 6, 0.12));
+  color: var(--eir-warn, #B45309);
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+/* Errors, so it uses the fail palette — but it is a fix-list, not a verdict on
+   the draft, and the lede says the score is unaffected. */
+.eir-mistakes {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--eir-fail);
+  background: var(--eir-fail-bg);
+}
+.eir-mistakes-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--eir-fail);
+}
+.eir-mistakes-lede {
+  margin: 4px 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.eir-mistake { padding: 8px 0; border-top: 1px solid var(--border-subtle); }
+.eir-mistake:first-of-type { border-top: none; padding-top: 2px; }
+.eir-mistake-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+.eir-mistake-detail {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+/* Sits directly under the score, because it states what the score excludes. */
+.eir-delegation {
+  margin: 12px 0 4px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--eir-warn-bg, rgba(217, 119, 6, 0.25));
+  background: var(--eir-warn-bg, rgba(217, 119, 6, 0.08));
+}
+.eir-delegation-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--eir-warn, #B45309);
+  margin-bottom: 5px;
+}
+.eir-delegation p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+/* One entry per rulebook. Listed rather than blended into a sentence: the
+   PAPPG governs how a proposal is WRITTEN and Build America Buy America governs
+   what an award may BUY, and a single sentence naming both had claimed the Act
+   sets "section structure, length, formatting". */
+.eir-delegation-list {
+  list-style: none;
+  margin: 9px 0;
+  padding: 0;
+}
+.eir-delegation-list li {
+  padding: 7px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.eir-delegation-list li:first-child { border-top: none; }
+.eir-delegation-name {
+  font-weight: 700;
+  color: var(--text-main);
+}
+a.eir-delegation-name {
+  color: var(--eir-warn);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a.eir-delegation-name svg { vertical-align: -1px; }
+.eir-delegation-short { color: var(--text-secondary); }
+.eir-delegation-count { display: block; margin-top: 2px; color: var(--eir-warn); }
+.eir-delegation-foot { margin-top: 8px; font-size: 0.79rem; line-height: 1.5;
+  color: var(--text-secondary); }
 
 .eir-chip {
   display: inline-flex;
@@ -730,3 +859,37 @@ body.dark .eir-modal {
 }
 .eir-read-report p { margin: 0; }
 .eir-read-report p + p { margin-top: 4px; }
+
+/* ── saved review ───────────────────────────────────────────────────────── */
+
+.eir-saved-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--bg-card-hover);
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+}
+.eir-saved-banner span { flex: 1; }
+.eir-saved-banner svg { flex-shrink: 0; opacity: 0.7; }
+
+.eir-results-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+/* Save is the primary action here, so it takes the accent and sits last. */
+.eir-results-actions .eir-save { margin-left: auto; }
+.eir-savemsg {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}

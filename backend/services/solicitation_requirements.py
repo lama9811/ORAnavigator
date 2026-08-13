@@ -23,6 +23,17 @@ Two measured failure modes, both silent:
    twice returns the same list; asking a second reader "what did the first
    reader miss?" is what finds the tail.
 
+3. AGREEMENT. The sweep converging — a round finds nothing new — means the two
+   readers AGREE, not that the document is exhausted. Measured on a real
+   federal solicitation:
+   both readers ran to convergence, no cap hit, and four requirements from the
+   human-verified list were still missing, including an outright PROHIBITION
+   ("voluntary committed cost sharing is prohibited") that the system prompt
+   names in so many words. Running more rounds does not find them — that was
+   measured too. A THIRD reader with a different TARGET does: see
+   _TARGETED_SYSTEM. Recall over the same document went 20/24 -> 23/24, and the
+   twenty-fourth is a matcher artifact rather than a miss.
+
 Every row must quote the solicitation verbatim (golden rule 2); rows whose quote
 cannot be found are dropped and COUNTED, never hidden. The model can widen the
 requirement list, but it can never invent an ask that is not in the document.
@@ -156,6 +167,167 @@ _SWEEP_SYSTEM = (
     "this text, <=300 characters. Unquotable rows are discarded."
 )
 
+# THE THIRD READER, and it exists because the sweep CONVERGING is not the same
+# thing as the document being exhausted.
+#
+# Measured on a 54,065-char federal solicitation (one chunk): the first pass plus the
+# generic sweep run to convergence — a round returns nothing new, no cap hit —
+# and FOUR requirements the human-verified list contains are still missing. Both
+# readers share a blind spot, so asking either of them again, or letting them run
+# more rounds, cannot find these; more rounds was measured and changed nothing
+# (3 rounds -> 43 rows, 12 rounds -> 41 rows, same four missing).
+#
+# What works is a different TARGET rather than a different job description: name
+# the categories the misses cluster in and hunt each one. Measured over the same
+# document: +5 rows in 4.5s with categories A-E, recovering the cost-sharing
+# PROHIBITION the prompt already asked for in so many words; adding category F
+# took recall from 20/24 to 23/24, and the twenty-fourth is a matcher artifact
+# (the Letter of Institutional Support IS extracted, quoting one sentence where
+# the curated row quotes two joined by an ellipsis).
+#
+# Category F is the one to keep if this is ever trimmed. The three requirements
+# it recovered came from the one sentence defining what a funded project must
+# ACCOMPLISH, and it sits mid-paragraph in the program-description prose — not
+# in the preparation instructions, where every reader looks.
+_TARGETED_SYSTEM = (
+    "You are the THIRD reader of a grant solicitation, auditing a requirement list "
+    "that two previous readers already agreed was complete. It is not complete. Your "
+    "job is to sweep specific CATEGORIES of requirement that generic readers "
+    "systematically miss, and to return only rows absent from the list you are given.\n\n"
+    "Work these categories one at a time, over the WHOLE text:\n"
+    "A. PROHIBITIONS and things the proposal must NOT do or include — 'is prohibited', "
+    "'is not allowed', 'may not', 'will be returned without review', 'do not include'. "
+    "A prohibition IS a requirement even when it concerns budget or cost sharing.\n"
+    "B. COMPOUND CONTENT ASKS. A sentence of the form 'X must describe how the project "
+    "will do A, B and C' states THREE requirements, one per clause. Return one row per "
+    "clause, each quoting the same sentence. Do this for every multi-clause ask.\n"
+    "C. What each NAMED PART of the proposal must contain, taken clause by clause.\n"
+    "D. Required letters, attachments and supplementary documents, including who must "
+    "sign them and what they must say.\n"
+    "E. Formatting, ordering and labelling rules the document itself must follow.\n"
+    "F. Asks stated OUTSIDE the preparation instructions — in the program description, "
+    "the background, or prose about what makes a proposal competitive. Sentences like "
+    "'the most competitive proposals will...', 'the project description should describe "
+    "how...', 'projects are expected to...' read as advice but are requirements, and "
+    "they are usually buried mid-paragraph after a long descriptive passage.\n\n"
+    "Match by MEANING against the list you are given: a rephrasing of a row already "
+    "there is NOT missing. 'source' must be a VERBATIM quote from the text, <=300 "
+    "characters; unquotable rows are discarded. An empty array is valid.\n\n"
+
+    "'section' — THE SAME RULE THE OTHER READERS FOLLOW, and category F makes it "
+    "easy to break. It is the part of the APPLICANT'S PROPOSAL the requirement "
+    "belongs to (project_summary, project_description, budget_justification, "
+    "letter_of_intent, ...). It is NEVER a heading of the SOLICITATION: "
+    "'Program Description', 'Budgetary Information', 'Eligibility Information', "
+    "'Award Administration Information', 'Reporting Requirements' and the like name "
+    "parts of the document you are reading, not parts of a proposal. WHERE an ask is "
+    "STATED has nothing to do with WHICH PART OF THE PROPOSAL must satisfy it — an "
+    "ask stated in the program description usually belongs to project_description, or "
+    "to no section at all. If it is about the proposal as a whole, or you cannot tell, "
+    "use null.\n"
+    "This is not cosmetic. A section that names no real part of a proposal is never "
+    "located in the applicant's draft, so the requirement is reported 'not assessed' "
+    "and drops out of their completeness score — the row is recovered and then never "
+    "checked, which is the failure this pass exists to prevent."
+)
+
+# ── READING A RULEBOOK, NOT A SOLICITATION ──────────────────────────────────
+#
+# When a solicitation points at a rulebook — "prepared in accordance with the
+# PAPPG" — that rulebook's rules govern the proposal just as much as the
+# solicitation's own. `services.delegated_rules.rulebooks_in()` identifies which
+# rulebook, DETERMINISTICALLY, from the names and URLs in the solicitation; this
+# prompt is what reads the rulebook once it has been fetched.
+#
+# IT IS A DIFFERENT PROMPT FROM `_SYSTEM` ON PURPOSE. A solicitation is written
+# for ONE competition and nearly everything in it constrains the proposal. A
+# rulebook is written for every proposal the agency will ever receive, and most
+# of it is not about the document an applicant writes:
+#
+#   * submission mechanics — accounts, portals, who clicks submit, certifications
+#   * post-award administration — reporting, payments, audits, terminations
+#   * the agency's own review process — panels, timelines, reconsideration
+#   * rules for proposal TYPES this applicant is not submitting
+#
+# Extracted wholesale, those swamp the real rules: a PI would be told their
+# Project Description is missing "register in SAM.gov". So this prompt keeps only
+# what constrains the CONTENT or FORM of the proposal document itself.
+_RULEBOOK_SYSTEM = (
+    "You extract, for a university research office, the rules a funding agency's "
+    "RULEBOOK places on the PROPOSAL DOCUMENT an applicant writes. You output DATA "
+    "ONLY from the text given to you.\n\n"
+
+    "THIS IS A RULEBOOK, NOT A SOLICITATION\n"
+    "It governs every proposal the agency receives, so most of it is NOT about the "
+    "document an applicant writes. Keep only rules that constrain what the proposal "
+    "must CONTAIN, how it must be STRUCTURED, or how it must be FORMATTED.\n\n"
+
+    "OUT OF SCOPE — do not return these, however imperative they sound:\n"
+    "1. Submission mechanics: registering an account, using a portal, who is "
+    "authorised to submit, certifications signed at submission, file naming and "
+    "upload steps, deadlines and time zones.\n"
+    "2. Post-award administration: reporting, payments, audits, prior approvals, "
+    "no-cost extensions, terminations, record retention.\n"
+    "3. The agency's own internal process: how panels are convened, review "
+    "timelines, reconsideration, how decisions are communicated.\n"
+    "4. Definitions, background, and eligibility of the ORGANISATION or the PERSON "
+    "— those are not things the written document can satisfy.\n\n"
+
+    "IN SCOPE — the rules a reviewer could check by reading the proposal:\n"
+    "5. What a named part of the proposal must contain, clause by clause. "
+    "'The Project Summary must contain an overview, a statement on intellectual "
+    "merit, and a statement on broader impacts' is THREE requirements.\n"
+    "6. Structure and labelling: which sections must exist, what they must be "
+    "called, whether a heading must appear.\n"
+    "7. Limits the document must respect: page counts, character counts, how many "
+    "of something may be listed.\n"
+    "8. Formatting of the document itself: font, type size, margins, line spacing, "
+    "page size. Return these — a later stage decides what can be verified from "
+    "extracted text — but never invent one.\n"
+    "9. Prohibitions: content that must NOT appear, and content that causes the "
+    "proposal to be returned without review.\n\n"
+
+    "CONDITIONAL RULES ARE REAL RULES\n"
+    "10. A rulebook is full of asks that apply only sometimes ('for renewal "
+    "proposals', 'if the project involves human subjects', 'collaborative proposals "
+    "from multiple organizations'). Return them, and set \"scored\": false so they "
+    "are shown as conditional rather than counted against a proposal they do not "
+    "apply to. Never drop one, and never treat one as universal.\n\n"
+
+    "QUOTING — ENFORCED IN CODE\n"
+    "11. 'source' MUST be a VERBATIM quote from the text given, copied character "
+    "for character, <=300 characters. Every row is checked against the document and "
+    "a row whose quote is not found there is DISCARDED, so an imperfect copy "
+    "destroys a real rule. Never paraphrase and never join distant sentences.\n\n"
+
+    "FIELDS\n"
+    "12. 'section' — the part of the APPLICANT'S PROPOSAL the rule belongs to, "
+    "snake_case (project_summary, project_description, budget_justification, "
+    "biosketch, data_management_plan, references_cited, ...). NEVER the rulebook's "
+    "own chapter or section headings — 'Chapter II', 'Proposal Preparation "
+    "Instructions', 'Award Administration' name parts of the document you are "
+    "reading, not parts of a proposal. Use null when the rule is about the proposal "
+    "as a whole or you cannot tell.\n"
+    "13. 'label' is a short imperative name (<=80 chars). 'why' is one sentence on "
+    "why it matters. 'keywords' are lowercase words a real draft would use.\n\n"
+
+    "COMPLETENESS\n"
+    "14. Read from the first line to the last. There is no maximum. If a passage "
+    "holds no rule about the proposal document, return an empty array rather than "
+    "manufacturing one."
+)
+
+_RULEBOOK_SWEEP_SYSTEM = (
+    _SWEEP_SYSTEM
+    + "\n\nSCOPE — this text is a RULEBOOK, not a solicitation, and the same limits "
+      "apply to anything you add: keep only rules constraining what the PROPOSAL "
+      "DOCUMENT must contain, how it is structured, or how it is formatted. Do NOT "
+      "return submission mechanics (accounts, portals, who submits, certifications, "
+      "uploads), post-award administration (reporting, payments, audits), or the "
+      "agency's own review process. A rule that applies only to certain proposal "
+      "types is real — return it with \"scored\": false."
+)
+
 _SCHEMA_HINT = (
     'Return JSON: {"requirements": [{"label": "<short imperative name, <=80 chars>", '
     '"section": "<snake_case section or null>", "source": "<verbatim quote>", '
@@ -201,6 +373,49 @@ def chunk_text(text: str, size: int = CHUNK_CHARS,
     return [text[i:i + size] for i in range(0, len(text), step)]
 
 
+# Headings of the SOLICITATION, in their canonical form (filler stripped,
+# singularised) — i.e. compare AFTER normalising, never against the raw string.
+#
+# `_SYSTEM` rule 9 already forbids these and the model mostly obeys, but a
+# minority leak on every run. A section naming no real part of a proposal can
+# never be located in a draft, so every requirement filed under it is reported
+# "Not located" and drops out of the score's denominator — unchecked, silently.
+# Resolving to None files the row at whole-document scope instead, where
+# draft_review assesses it against the Project Description span or the whole
+# paste. THAT is why a false positive here is tolerable and the status quo is
+# not: the wrong outcome is a WIDER search, not a lost requirement.
+#
+# Kept to headings that are unambiguously FOA structure. Deliberately ABSENT:
+# "introduction", "background", "results from prior support" — a PI's own
+# Project Description routinely opens with those.
+_DOCUMENT_HEADINGS = {
+    "program_description",
+    "award_information",
+    "award_administration_information",
+    "eligibility_information",
+    "budgetary_information",
+    "application_submission_information",
+    "preparation_submission_instruction",
+    "preparation_instruction",
+    "submission_instruction",
+    "application_review_information",
+    "review_information",
+    "agency_contact",
+    "reporting_requirement",
+    "additional_information",
+    "other_information",
+    "summary_program_requirement",
+    "program_requirement",
+}
+
+# A leading "VII." / "2." is the solicitation's own section NUMBER. It has to be
+# dropped as a TOKEN rather than by a numbering regex on the raw string: the
+# non-alphanumeric scrub below removes the period first, so "VII. Award
+# Administration Information" arrives as the word "vii" and reached the key as
+# `vii_award_administration_information`.
+_NUMBER_TOKEN = re.compile(r"^(?:\d+|[ivxlcdm]+)$")
+
+
 def canon_section(raw: Optional[str]) -> Optional[str]:
     """Canonical snake_case section key, or None for a whole-document row.
 
@@ -212,6 +427,10 @@ def canon_section(raw: Optional[str]) -> Optional[str]:
         return None
     s = re.sub(r"[^a-z0-9]+", " ", str(raw).strip().lower())
     words = [w for w in s.split() if w not in _SECTION_FILLER]
+    # Leading numbering only: a numeral INSIDE a name can be meaningful, and
+    # stripping from the front stops at the first real word.
+    while words and _NUMBER_TOKEN.match(words[0]):
+        words.pop(0)
     if not words:
         return None
     # Singularize EVERY token, not just the last: "letters of collaboration" and
@@ -221,7 +440,13 @@ def canon_section(raw: Optional[str]) -> Optional[str]:
     words = [w[:-1] if (len(w) > 3 and w.endswith("s")
                         and not w.endswith(("ss", "us", "is"))) else w
              for w in words]
-    return "_".join(words) or None
+    key = "_".join(words) or None
+    # Checked AFTER normalising, so one entry covers every way the model writes
+    # it ("Proposal Preparation and Submission Instructions", "Preparation
+    # Instruction", "V. Preparation Instructions").
+    if key in _DOCUMENT_HEADINGS:
+        return None
+    return key
 
 
 def make_id(row: dict) -> str:
@@ -284,13 +509,38 @@ def _ask(prompt: str, system: str = _SYSTEM, key: str = "requirements") -> list:
     return ai[key]
 
 
-def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 3,
-                         budget_s: float = DEFAULT_BUDGET_S) -> dict:
-    """Every requirement in `text`, each backed by a verbatim quote from it."""
+def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 8,
+                         budget_s: float = DEFAULT_BUDGET_S,
+                         targeted: bool = True,
+                         system: Optional[str] = None,
+                         sweep_system: Optional[str] = None) -> dict:
+    """Every requirement in `text`, each backed by a verbatim quote from it.
+
+    max_rounds was 3, which was the binding constraint for the wrong reason.
+    Disabling Gemini's thinking (2026-08-12) made a round ~3x cheaper, so the
+    counter started stopping the sweep while the wall-clock budget was ~80%
+    unspent — and a run that stops on a counter reports `hit_round_cap`, telling
+    the PI their list may be incomplete when nothing had actually run out.
+    Measured on a real solicitation: the sweep CONVERGES in 3-7 rounds and
+    27-35s of the 150s budget, so 8 lets convergence be the reason it stops
+    while `budget_s` stays the real bound.
+
+    `system` / `sweep_system` override the reader's job description. They exist
+    for RULEBOOKS — a document written for every proposal the agency will ever
+    receive, where most of the text is submission mechanics and post-award
+    administration rather than rules about the applicant's draft. Both must move
+    together: leaving the sweep on the solicitation prompt lets round two quietly
+    re-import everything round one was told to leave out.
+
+    targeted=False runs the first pass and the sweep only. It exists so a test
+    can isolate ONE reader: a fake that answers every call otherwise has its
+    rows counted once per reader, which turns an exact assertion about dropped
+    rows into an assertion about how many readers there are."""
     text = text or ""
     out: dict = {"requirements": [], "ai": False, "rounds": 0, "chunks": 0,
                  "chars": len(text), "dropped_unverified": 0,
-                 "hit_round_cap": False, "hit_time_cap": False, "elapsed_s": 0.0}
+                 "hit_round_cap": False, "hit_time_cap": False,
+                 "targeted_added": 0, "targeted_ran": False, "elapsed_s": 0.0}
     if not text.strip() or not use_ai:
         return out
 
@@ -332,6 +582,9 @@ def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 3,
                 "List ONLY requirements present in the text above that are missing "
                 f"from that list. Return an empty array if there are none.\n{_SCHEMA_HINT}")
 
+    def _known() -> str:
+        return "; ".join(sorted(r["label"] for r in by_id.values()))[:6000]
+
     def _run(prompts: list, system: str) -> int:
         """Fan the chunk prompts out concurrently and absorb what comes back.
 
@@ -346,7 +599,7 @@ def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 3,
 
     first = [f'SOLICITATION TEXT (part {i + 1} of {len(chunks)}):\n"""\n{c}\n"""\n\n{_SCHEMA_HINT}'
              for i, c in enumerate(chunks)]
-    _run(first, _SYSTEM)
+    _run(first, system or _SYSTEM)
 
     # SWEEP UNTIL DRY. Bounded twice — by rounds and by wall clock — and both
     # bounds are reported, because a silent stop reads as completeness.
@@ -355,15 +608,39 @@ def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 3,
             out["hit_time_cap"] = True
             break
         out["rounds"] = round_no
-        known = "; ".join(sorted(r["label"] for r in by_id.values()))[:6000]
+        known = _known()
         remaining = [c for c in chunks if time.monotonic() < deadline]
         if len(remaining) < len(chunks):
             out["hit_time_cap"] = True
-        if _run([_sweep_prompt(c, known) for c in remaining], _SWEEP_SYSTEM) == 0:
+        if _run([_sweep_prompt(c, known) for c in remaining],
+                sweep_system or _SWEEP_SYSTEM) == 0:
             break
     else:
         if max_rounds > 0:
             out["hit_round_cap"] = True
+
+    # THE TARGETED PASS. Runs AFTER the sweep, including after it converged —
+    # convergence means both readers agree, not that the document is exhausted,
+    # and the four requirements this recovers in measurement were all missed by a
+    # sweep that had reported nothing left to find. One call per chunk, so it is
+    # ~3-5s on a typical single-chunk solicitation.
+    if targeted and time.monotonic() < deadline:
+        reachable = [c for c in chunks if time.monotonic() < deadline]
+        if len(reachable) < len(chunks):
+            out["hit_time_cap"] = True
+        known = _known()
+        prompts = [f'SOLICITATION TEXT:\n"""\n{c}\n"""\n\n'
+                   f"ALREADY EXTRACTED (do NOT repeat these): {known}\n\n"
+                   f"Return ONLY requirements missing from that list.\n{_SCHEMA_HINT}"
+                   for c in reachable]
+        out["targeted_added"] = _run(prompts, _TARGETED_SYSTEM)
+        out["targeted_ran"] = bool(prompts)
+    elif targeted:
+        # Ran out of clock before the third reader could start. Reported, never
+        # silent: it is the difference between a list every reader went over and
+        # one that two of three did. `targeted=False` is a deliberate skip and
+        # must NOT be reported as a time cap.
+        out["hit_time_cap"] = True
 
     out["requirements"] = list(by_id.values())
     out["dropped_unverified"] = dropped
