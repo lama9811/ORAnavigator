@@ -348,3 +348,46 @@ def test_solicitation_metadata_comes_from_the_profile():
     assert meta["id"] == PROFILE["id"]
     assert meta["title"] == PROFILE["title"]
     assert meta["url"] == PROFILE["url"]
+
+
+# ---------------------------------------------------------------------------
+# Gemini thinking is CAPPED here, not disabled — and the cap is the measured
+# middle ground, not a round number someone liked.
+#
+# gemini-3.6-flash thinks by default. Turning it off entirely is the fastest
+# option and the wrong one for THIS caller: over paired runs the review went
+# 15.4s -> 8.0s but `assessed` fell 38.7 -> 35.3, with one run collapsing to 27.
+# The reviewer omits rows under no thinking, an omitted row becomes `unclear`,
+# and `unclear` drops out of the score's denominator — so speed there is bought
+# with coverage, quietly.
+#
+# A capped budget gets the latency without the loss. Measured over six runs at
+# 1024: mean 8.0s and assessed=37 EVERY time, against ~17s / 37 for the default.
+# Faster than thinking-on, and more deterministic than thinking-off.
+#
+# Contrast with services/solicitation_requirements.py, which disables thinking
+# outright: there it made recall BETTER (79% -> 83%/92%), because that module
+# spends a wall-clock budget it was wasting on thinking.
+# ---------------------------------------------------------------------------
+
+def test_the_review_caps_thinking_rather_than_disabling_it(monkeypatch):
+    seen = []
+
+    def spy(prompt, **kw):
+        seen.append(kw.get("thinking_budget"))
+        return {}
+
+    monkeypatch.setattr(draft_review.gemini_client, "generate_json", spy)
+    draft_review.locate_sections("Project Description\nsome text",
+                                 {"project_description": {"label": "Project Description"}})
+    draft_review._reviewer_notes({}, {"id": "x", "title": "T", "sections": {}})
+    draft_review._review_section(
+        "project_description", {"text": "some text"},
+        [{"id": "r1", "label": "L", "source": "q", "kind": "semantic", "scored": True}],
+        {"project_description": {"label": "Project Description"}}, "x")
+
+    assert seen, "no model calls were made — the spy never ran"
+    assert all(b == 1024 for b in seen), (
+        f"every draft-review call must cap thinking at 1024, got {seen}. "
+        "0 costs coverage (assessed 38.7 -> 35.3); the default costs ~9s."
+    )

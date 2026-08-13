@@ -72,6 +72,25 @@ MODEL_LOCATION = os.getenv("EIR_REVIEW_LOCATION", "global")
 # the binding constraint here.
 MAX_DRAFT_CHARS = 120_000
 
+# Gemini thinking is CAPPED here, not disabled, and the number is measured.
+# gemini-3.6-flash thinks by default and that costs ~9s a review. Turning it
+# OFF is faster still and is the wrong trade for this caller: over paired runs
+# the review went 15.4s -> 8.0s but `assessed` fell 38.7 -> 35.3, one run
+# collapsing to 27. The reviewer OMITS rows when it cannot think; an omitted row
+# becomes `unclear`, and `unclear` drops out of the score's denominator — so the
+# speed is paid for in coverage, silently, which is exactly the failure this
+# tool is built to avoid.
+#
+# 1024 buys the latency without the loss. Six runs: mean 8.0s and assessed=37
+# EVERY time, versus ~17s / 37 on the default — faster than thinking-on AND
+# more deterministic than thinking-off.
+#
+# NOT the same call as services/solicitation_requirements.py, which disables
+# thinking outright: there it made recall BETTER, because that module spends a
+# wall-clock budget it was wasting on thinking. Same model, opposite answer;
+# measure per caller rather than copying the setting.
+THINKING_BUDGET = 1024
+
 _SCORE_BANDS = ((85, "green"), (60, "amber"))
 
 
@@ -173,6 +192,7 @@ def locate_sections(text: str, sections: dict, *, use_ai: bool = True) -> tuple[
         )
         ai = gemini_client.generate_json(
             prompt, temperature=0.0, max_output_tokens=2048, timeout_s=60,
+            thinking_budget=THINKING_BUDGET,
             system_instruction=_LOCATE_SYSTEM, model=MODEL, location=MODEL_LOCATION,
         )
         if ai and isinstance(ai.get("sections"), dict):
@@ -316,6 +336,7 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
     )
     ai = gemini_client.generate_json(
         prompt, temperature=0.0, max_output_tokens=8192, timeout_s=90,
+        thinking_budget=THINKING_BUDGET,
         system_instruction=_review_system(solicitation_id),
         model=MODEL, location=MODEL_LOCATION,
     )
@@ -368,6 +389,7 @@ def _reviewer_notes(spans: dict, profile: dict) -> list[dict]:
     )
     ai = gemini_client.generate_json(
         prompt, temperature=0.3, max_output_tokens=2048, timeout_s=60,
+        thinking_budget=THINKING_BUDGET,
         system_instruction=_NOTES_SYSTEM, model=MODEL, location=MODEL_LOCATION,
     )
     if not ai or not isinstance(ai.get("reviewer_notes"), list):
