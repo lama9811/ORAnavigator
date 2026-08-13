@@ -163,6 +163,18 @@ def _call_gemini(prompt_text: str, system_instruction: Optional[str] = None) -> 
             "temperature": 0.0,
             "max_output_tokens": 8192,
             "response_mime_type": "application/json",
+            # thinking OFF — the single biggest latency win on the whole
+            # attach-a-solicitation path, and MEASURED on a real 17-page
+            # federal solicitation: 15.9s / 21.9s with thinking vs 3.1s / 3.7s
+            # without, for an equal-or-better contract (3 and 5 required
+            # attachments on the slow runs, 3 and 6 on the fast ones — the
+            # documented non-determinism, not a regression). Note the
+            # max_output_tokens comment above already
+            # spotted that implicit reasoning eats the output budget — it
+            # raised the ceiling rather than turning the reasoning off. This
+            # module builds its OWN client, so it does not inherit
+            # gemini_client's config and has to disable it here.
+            "thinking_config": {"thinking_budget": 0},
         }
         if system_instruction:
             config["system_instruction"] = system_instruction

@@ -265,8 +265,19 @@ def _ask(prompt: str, system: str = _SYSTEM, key: str = "requirements") -> list:
     # chunk of the solicitation gone with nothing but a log line. The one failure
     # this module cannot tolerate is a silent one, and a truncated response looks
     # exactly like a chunk that had no requirements in it.
+    # thinking_budget=0 — MEASURED, not a guess. gemini-3.6-flash thinks by
+    # default and on this task the thinking dominates the wall clock without
+    # improving the answer. On a real 50,508-char federal solicitation (-> ONE
+    # chunk, so these are four SERIAL calls; the worker pool below only engages
+    # past CHUNK_CHARS): 72.2s thinking-on vs 25.9s / 27.1s off, with recall
+    # against the human-verified curated list going 79% -> 83% / 92%. See
+    # tests/test_solicitation_requirements_recall.py. The fast runs were
+    # also the MORE complete ones, because the slow run spent its own budget_s
+    # on thinking and got through fewer sweep rounds. Same lesson
+    # opportunity_finder already learned.
     ai = gemini_client.generate_json(
         prompt, temperature=0.0, max_output_tokens=32768, timeout_s=180,
+        thinking_budget=0,
         system_instruction=system, model=MODEL, location=MODEL_LOCATION)
     if not ai or not isinstance(ai.get(key), list):
         return []

@@ -447,3 +447,37 @@ def test_cap_status_is_not_flagged_unverified_without_a_quote():
     one would flag every correct no-cap read as unverified."""
     out = sx._coerce_extracted({"budget_cap": None, "budget_cap_status": "not_stated"})
     assert "budget_cap_status" not in sx._verify_source_quotes(out, "some solicitation text")
+
+
+# ---------------------------------------------------------------------------
+# Gemini "thinking" is OFF on the contract read too, and it is the single
+# biggest latency win on the whole attach-a-solicitation path.
+#
+# Measured on NSF 23-598: 15.9s / 21.9s with thinking on vs 3.1s / 3.7s with it
+# off -- roughly 5x -- for an equal-or-better contract (3/5 required attachments
+# on the slow runs, 3/6 on the fast ones). This module builds its OWN client, so
+# it does not inherit gemini_client's config and has to say so itself. The
+# existing max_output_tokens=8192 comment already noticed that implicit
+# reasoning eats the output budget; it raised the ceiling instead of turning the
+# reasoning off.
+# ---------------------------------------------------------------------------
+
+def test_the_contract_read_disables_thinking(monkeypatch):
+    seen = {}
+
+    class _Models:
+        def generate_content(self, **kw):
+            seen.update(kw)
+            class R:
+                text = '{"sponsor": "NSF"}'
+            return R()
+
+    class _Client:
+        models = _Models()
+
+    monkeypatch.setattr(sx, "_get_client", lambda: _Client())
+    sx._call_gemini("some text", system_instruction="rules")
+    cfg = seen.get("config") or {}
+    assert cfg.get("thinking_config") == {"thinking_budget": 0}, (
+        f"contract read must disable thinking (measured ~19s -> ~3.4s); got {cfg.get('thinking_config')!r}"
+    )

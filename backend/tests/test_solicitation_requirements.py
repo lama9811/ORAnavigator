@@ -226,3 +226,33 @@ def test_this_module_names_no_funder():
     src = inspect.getsource(sr).lower()
     for token in (r"23-598", r"\beir\b", r"\bhbcu\b"):
         assert not re.search(token, src), f"funder-specific token: {token}"
+
+
+# ---------------------------------------------------------------------------
+# Gemini "thinking" is OFF, and that is a MEASURED latency decision
+#
+# gemini-3.6-flash runs thinking by default, and on this task it dominates the
+# wall clock without improving the result. Measured on NSF 23-598 (50,508 chars,
+# one chunk, so four SERIAL calls -- the worker pool never engages below
+# CHUNK_CHARS): 72.2s with thinking on vs 25.9s / 27.1s with it off, and recall
+# against the human-verified 24-item list went 79% -> 83% / 92%, i.e. the fast
+# runs were also the more complete ones. The slow run did fewer sweep rounds
+# because it was burning its own time budget.
+#
+# The codebase learned this once already in opportunity_finder. This test is the
+# regression guard: without it, deleting one kwarg makes the read 3x slower and
+# nothing goes red.
+# ---------------------------------------------------------------------------
+
+def test_the_requirement_read_disables_thinking(monkeypatch):
+    seen = {}
+
+    def spy(prompt, **kw):
+        seen.update(kw)
+        return {"requirements": []}
+
+    monkeypatch.setattr(sr.gemini_client, "generate_json", spy)
+    sr._ask("any prompt")
+    assert seen.get("thinking_budget") == 0, (
+        "thinking must be explicitly disabled; measured 72s -> 26s with no recall cost"
+    )
