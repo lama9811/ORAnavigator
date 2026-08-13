@@ -4244,7 +4244,8 @@ _MAX_SOLICITATION_PDF_BYTES = 25 * 1024 * 1024  # 25 MB
 
 @app.post("/api/me/submissions/from-solicitation")
 async def extract_solicitation(
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
+    source_id: Optional[str] = Form(None),
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -4261,9 +4262,34 @@ async def extract_solicitation(
     again when they opened Draft Review. Saved unbound; /confirm binds it.
 
     Reads via read_pdf() rather than extract_from_pdf_bytes() for one reason:
-    the one-shot form throws the text away, and the text is the point."""
+    the one-shot form throws the text away, and the text is the point.
+
+    `source_id` REUSES a document already stored for this user, taken in
+    preference to a file — the same precedence /api/me/solicitation-requirements
+    already applies, and for the same reason: one document should be read once
+    and leave one row. It is what the "you uploaded this recently" picker sends
+    when a PI comes back to an abandoned read, so they are never asked to find
+    the same file twice. Ownership is a filter inside the load, so another
+    user's id is indistinguishable from a missing one."""
     if not user:
         raise HTTPException(401, "Unauthorized")
+
+    from services import solicitation_extractor as _sx
+
+    if source_id:
+        stored = _proposals_service.load_solicitation_source_by_id(
+            db, source_id=source_id, user_id=user["user_id"])
+        if stored is None:
+            raise HTTPException(404, "That stored solicitation is no longer available.")
+        text = stored.get("text") or ""
+        extracted = _sx.extract_from_text(text) if text.strip() else None
+        if extracted is None:
+            raise HTTPException(422, "Couldn't read the stored solicitation.")
+        # Echo the SAME id — reusing a document must not store a second copy.
+        return {"extracted": extracted, "source_id": stored["id"]}
+
+    if file is None:
+        raise HTTPException(400, "Upload a PDF or choose a stored solicitation.")
     filename = (file.filename or "").lower()
     ctype = (file.content_type or "").lower()
     if not (filename.endswith(".pdf") or "pdf" in ctype):
@@ -4275,7 +4301,6 @@ async def extract_solicitation(
     if len(pdf_bytes) > _MAX_SOLICITATION_PDF_BYTES:
         raise HTTPException(413, "PDF is larger than 25 MB.")
 
-    from services import solicitation_extractor as _sx
     read = _sx.read_pdf(pdf_bytes)
     text = read.get("text") or ""
     # Stored BEFORE the model runs. A Gemini failure must not also cost the
@@ -4295,6 +4320,23 @@ async def extract_solicitation(
     # The client passes this back at confirm, which binds the stored document
     # to the new proposal.
     return {"extracted": extracted, "source_id": source_id}
+
+
+@app.get("/api/me/solicitation-sources/unbound")
+async def list_unbound_solicitation_sources(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Documents this user read but never attached to a proposal.
+
+    Feeds the "you uploaded this recently" picker. Metadata only — never the
+    text (~300KB a row, and nothing on the picker renders it). Purely an
+    affordance: if this call fails the UI simply does not show the picker and
+    uploading still works, so it must never be a gate."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    return {"sources": _proposals_service.list_unbound_solicitation_sources(
+        db, user["user_id"])}
 
 
 class SolicitationUrlRequest(BaseModel):

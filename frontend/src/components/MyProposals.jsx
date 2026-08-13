@@ -556,6 +556,9 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showCompliance, setShowCompliance] = useState(false);
   const [showEir, setShowEir] = useState(false);
   const [showSolicitation, setShowSolicitation] = useState(false);
+  // Set when Draft Review offers back an abandoned upload, so the modal
+  // opens straight onto that document instead of the file picker.
+  const [attachSourceId, setAttachSourceId] = useState(null);
 
   const next = nextStep(submission);
   const solicited = hasSolicitation(submission);
@@ -656,7 +659,15 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
         <DraftReviewModal
           submission={submission}
           onClose={() => setShowEir(false)}
-          onAttach={() => { setShowEir(false); setShowSolicitation(true); }}
+          onAttach={(sourceId) => {
+            // The panel may have found a document this PI uploaded and never
+            // attached. Hand its id to the one existing save path rather than
+            // binding here — a second way to attach a solicitation would drift
+            // from this one.
+            setAttachSourceId(sourceId ?? null);
+            setShowEir(false);
+            setShowSolicitation(true);
+          }}
           onRefresh={onRefresh}
         />
       )}
@@ -666,8 +677,9 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
       {showSolicitation && (
         <SolicitationUploadModal
           submissionId={submission.id}
-          onClose={() => setShowSolicitation(false)}
-          onCreated={() => { setShowSolicitation(false); onRefresh(); }}
+          initialSourceId={attachSourceId}
+          onClose={() => { setShowSolicitation(false); setAttachSourceId(null); }}
+          onCreated={() => { setShowSolicitation(false); setAttachSourceId(null); onRefresh(); }}
         />
       )}
 

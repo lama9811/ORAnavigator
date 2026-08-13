@@ -30,13 +30,14 @@
 //     their sustainability plan is missing when we merely failed to find the
 //     section would send them rewriting something they already wrote.
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle, Check, ExternalLink, FileText, HelpCircle, Info,
   MinusCircle, Quote, Trash2, Upload, X, XCircle,
 } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
+import { timeAgo } from "../lib/timeAgo";
 import "./DraftReviewModal.css";
 
 const API_BASE = getApiBase();
@@ -185,6 +186,21 @@ export default function DraftReviewModal({ submission, onClose, onAttach, onRefr
   // without asking for it. This is what storing the text buys.
   const canReread = Boolean(submission?.has_solicitation_source);
   const [rereading, setRereading] = useState(false);
+  // A document this PI read but never attached to anything. Without this the
+  // panel below told them "the document's text was never stored, so it has to
+  // be read once" while we were holding a copy — false, and it sent them off to
+  // find a file they had already handed over. Only fetched when this proposal
+  // has no document of its own; an empty list changes nothing.
+  const [orphan, setOrphan] = useState(null);
+  useEffect(() => {
+    if (canReread || hasSolicitation) return undefined;
+    let live = true;
+    fetch(`${API_BASE}/api/me/solicitation-sources/unbound`, { headers: authHeaders() })
+      .then((r) => (r.ok ? r.json() : { sources: [] }))
+      .then((d) => { if (live) setOrphan((d.sources || [])[0] || null); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [canReread, hasSolicitation]);
 
   async function reread() {
     setRereading(true);
@@ -266,6 +282,21 @@ export default function DraftReviewModal({ submission, onClose, onAttach, onRefr
                   on your draft.
                 </p>
               </>
+            ) : orphan ? (
+              <>
+                <h3>Use the solicitation you already uploaded?</h3>
+                <p>
+                  You read <b>{orphan.filename || orphan.url || "a solicitation"}</b>{" "}
+                  {timeAgo(orphan.created_at)} but never attached it to a proposal,
+                  so we still have it — {orphan.chars?.toLocaleString()} characters.
+                  No need to find the file again.
+                </p>
+                <p>
+                  Attach it here and every requirement in it, quoted, becomes a
+                  check on your draft. If it belongs to a different proposal,
+                  upload the right one instead.
+                </p>
+              </>
             ) : priorSolicitation ? (
               <>
                 <h3>This proposal needs its solicitation read in full</h3>
@@ -300,9 +331,18 @@ export default function DraftReviewModal({ submission, onClose, onAttach, onRefr
                   {rereading ? "Reading the solicitation…" : "Read its requirements"}
                 </button>
               ) : onAttach && (
-                <button className="eir-run" onClick={onAttach}>
-                  {priorSolicitation ? "Read the solicitation" : "Attach the solicitation"}
-                </button>
+                <>
+                  <button className="eir-run" onClick={() => onAttach(orphan?.id ?? null)}>
+                    {orphan ? "Use that document"
+                      : priorSolicitation ? "Read the solicitation"
+                      : "Attach the solicitation"}
+                  </button>
+                  {orphan && (
+                    <button className="eir-secondary" onClick={() => onAttach(null)}>
+                      Upload a different one
+                    </button>
+                  )}
+                </>
               )}
               <button className="eir-secondary" onClick={onClose}>Not now</button>
             </div>

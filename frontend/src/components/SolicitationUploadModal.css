@@ -617,3 +617,67 @@ body.dark .solicitation-quote {
   font-style: italic;
   line-height: 1.45;
 }
+
+/* ── "you uploaded this recently" ────────────────────────────────────────────
+   An abandoned read leaves the document stored but bound to nothing, and the
+   PI was then asked to upload the very file we were holding. Styled quieter
+   than the dropzone: it is an offer, not the primary path, and the PI confirms
+   which proposal a document belongs to because the data cannot say. */
+.solicitation-stored {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.solicitation-stored-head {
+  font-size: 0.82rem;
+  color: var(--text-secondary, #5f6c7b);
+  margin-bottom: 2px;
+}
+
+.solicitation-stored-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--surface-2, #f7f9fc);
+  border: 1px solid var(--border, #dde3ea);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.solicitation-stored-row:hover {
+  background: var(--surface-hover, #eef3f9);
+  border-color: var(--accent, #1f3a5f);
+}
+
+.solicitation-stored-icon { flex: none; color: var(--accent, #1f3a5f); }
+
+.solicitation-stored-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.solicitation-stored-meta b {
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.solicitation-stored-meta small {
+  font-size: 0.76rem;
+  color: var(--text-secondary, #5f6c7b);
+}
+
+.solicitation-stored-use {
+  flex: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent, #1f3a5f);
+}

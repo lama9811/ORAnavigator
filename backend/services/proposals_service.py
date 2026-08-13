@@ -832,6 +832,45 @@ def save_solicitation_source(db: Session, *, user_id: int, text: str,
     return row.id
 
 
+def list_unbound_solicitation_sources(db: Session, user_id: int,
+                                      limit: int = 5) -> list[dict]:
+    """This user's ABANDONED reads — documents stored but never attached.
+
+    The text is written when the document is READ and bound at save, so closing
+    the modal at the review step (or during the 60-150s requirement read) leaves
+    an orphan. Every later screen then asks the PI to upload the file we are
+    already holding. Observed in a dev database: three copies of one 50,508-char
+    solicitation, all unbound, while every proposal still reported needing its
+    solicitation read.
+
+    Three deliberate limits:
+      * bound rows are excluded — those are in USE, not abandoned, and offering
+        one invites moving a solicitation off the proposal that owns it;
+      * the same `_UNBOUND_SOURCE_TTL` window the reaper uses, because the reaper
+        only runs when a NEW source is written, so a stale orphan can outlive it
+        in the table. Offering a three-day-old read resurrects a session the PI
+        has forgotten;
+      * `text` is NEVER returned. It is ~300KB a row and nothing on the picker
+        renders it — the same reason it is not a column on Submission.
+
+    Nothing here binds anything: which document belongs to which proposal is not
+    knowable from the data, so the PI is offered it and confirms."""
+    from models import SolicitationSource
+    cutoff = _now().replace(tzinfo=None) - _UNBOUND_SOURCE_TTL
+    rows = (db.query(SolicitationSource)
+              .filter(SolicitationSource.user_id == user_id,
+                      SolicitationSource.submission_id.is_(None),
+                      SolicitationSource.created_at >= cutoff)
+              .order_by(SolicitationSource.created_at.desc(),
+                        SolicitationSource.id.desc())
+              .limit(max(1, limit))
+              .all())
+    return [{"id": r.id, "chars": r.chars, "source_kind": r.source_kind,
+             "filename": r.filename, "url": r.url,
+             "created_at": r.created_at.isoformat() if r.created_at else None}
+            for r in rows]
+
+
 def bind_solicitation_source(db: Session, *, source_id, user_id: int,
                              submission_id: int) -> bool:
     """Attach a stored document to a submission. Returns False if it does not

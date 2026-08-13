@@ -274,3 +274,134 @@ def test_attaching_with_neither_requirements_nor_a_document_is_still_refused(ctx
               json={"extracted": CONTRACT})
 
     assert r.status_code == 400
+
+
+# ── an ABANDONED read must be offered back, not thrown away ─────────────────
+#
+# The document is written unbound (the proposal may not exist yet) and bound at
+# save. A PI who closes the modal at the review step — or during the 60-150s
+# requirement read — leaves an orphan, and every later screen then asks them to
+# upload the very file we are already holding. Observed in a dev database: three
+# copies of one 50,508-char solicitation, all unbound, while every proposal still
+# said "this proposal needs its solicitation read in full".
+#
+# We do NOT auto-bind: nothing in the data says which document belongs to which
+# proposal. The PI is offered it and confirms.
+
+def _mk_source(Session, uid, **over):
+    from datetime import datetime, timedelta
+    s = Session()
+    try:
+        row = SolicitationSource(
+            user_id=over.pop("user_id", uid),
+            submission_id=over.pop("submission_id", None),
+            text=over.pop("text", PDF_TEXT), chars=len(PDF_TEXT),
+            source_kind="pdf", filename=over.pop("filename", "nsf24001.pdf"),
+            url=None, sha256="x" * 64,
+            created_at=over.pop("created_at", datetime.utcnow()),
+        )
+        s.add(row); s.commit(); s.refresh(row)
+        return row.id
+    finally:
+        s.close()
+
+
+def test_unbound_documents_are_offered_back(ctx):
+    c, Session, uid = ctx
+    sid = _mk_source(Session, uid, filename="abandoned.pdf")
+
+    r = c.get("/api/me/solicitation-sources/unbound")
+    assert r.status_code == 200, r.text
+    rows = r.json()["sources"]
+    assert [x["id"] for x in rows] == [sid]
+    assert rows[0]["filename"] == "abandoned.pdf"
+    assert rows[0]["chars"] == len(PDF_TEXT)
+
+
+def test_the_listing_never_ships_the_document_text(ctx):
+    """~300KB a row, and nothing on the picker renders it. Same reason the text
+    lives in its own table instead of a column on Submission."""
+    c, Session, uid = ctx
+    _mk_source(Session, uid)
+    rows = c.get("/api/me/solicitation-sources/unbound").json()["sources"]
+    assert rows and "text" not in rows[0], rows[0]
+
+
+def test_a_document_already_attached_to_a_proposal_is_not_offered(ctx):
+    """It is not abandoned — it is in use, and re-offering it invites a PI to
+    move one proposal's solicitation onto another."""
+    c, Session, uid = ctx
+    s = Session()
+    sub = Submission(user_id=uid, title="P", sponsor="NSF", status="active")
+    s.add(sub); s.commit(); sub_id = sub.id; s.close()
+    _mk_source(Session, uid, submission_id=sub_id)
+
+    assert c.get("/api/me/solicitation-sources/unbound").json()["sources"] == []
+
+
+def test_another_users_document_is_never_offered(ctx):
+    c, Session, uid = ctx
+    s = Session()
+    other = User(email="other@morgan.edu", password_hash=hash_password("password123"),
+                 role="user", name="Other")
+    s.add(other); s.commit(); other_id = other.id; s.close()
+    _mk_source(Session, uid, user_id=other_id)
+
+    assert c.get("/api/me/solicitation-sources/unbound").json()["sources"] == []
+
+
+def test_a_document_past_the_reap_window_is_not_offered(ctx):
+    """The reaper deletes unbound rows after a day, but only when a new one is
+    written — so a stale orphan can outlive its welcome in the table. Offering
+    it would resurrect a document from a session the PI has long forgotten."""
+    from datetime import datetime, timedelta
+    c, Session, uid = ctx
+    _mk_source(Session, uid, created_at=datetime.utcnow() - timedelta(days=3))
+
+    assert c.get("/api/me/solicitation-sources/unbound").json()["sources"] == []
+
+
+def test_newest_first(ctx):
+    from datetime import datetime, timedelta
+    c, Session, uid = ctx
+    old = _mk_source(Session, uid, created_at=datetime.utcnow() - timedelta(hours=5),
+                     filename="older.pdf")
+    new = _mk_source(Session, uid, filename="newer.pdf")
+    rows = c.get("/api/me/solicitation-sources/unbound").json()["sources"]
+    assert [x["id"] for x in rows] == [new, old]
+
+
+# ── reusing one skips the upload, not the extraction ────────────────────────
+
+def test_contract_read_accepts_a_stored_document_instead_of_a_file(ctx, monkeypatch):
+    c, Session, uid = ctx
+    from services import solicitation_extractor as sx
+    seen = {}
+
+    def _extract(t):
+        seen["text"] = t
+        return CONTRACT
+
+    monkeypatch.setattr(sx, "extract_from_text", _extract)
+    sid = _mk_source(Session, uid)
+
+    r = c.post("/api/me/submissions/from-solicitation", data={"source_id": str(sid)})
+
+    assert r.status_code == 200, r.text
+    assert seen["text"] == PDF_TEXT, "must extract from the STORED text"
+    assert r.json()["source_id"] == sid, "must echo the same row, not store a second copy"
+    assert len(_sources(Session)) == 1, "reusing a document must not duplicate it"
+
+
+def test_another_users_stored_document_cannot_be_reused(ctx, monkeypatch):
+    c, Session, uid = ctx
+    from services import solicitation_extractor as sx
+    monkeypatch.setattr(sx, "extract_from_text", lambda t: CONTRACT)
+    s = Session()
+    other = User(email="other2@morgan.edu", password_hash=hash_password("password123"),
+                 role="user", name="Other")
+    s.add(other); s.commit(); other_id = other.id; s.close()
+    sid = _mk_source(Session, uid, user_id=other_id)
+
+    r = c.post("/api/me/submissions/from-solicitation", data={"source_id": str(sid)})
+    assert r.status_code == 404, r.text

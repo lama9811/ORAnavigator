@@ -12,10 +12,11 @@
 // The two-step flow is the key safety property: the user always
 // reviews what the AI pulled out before it becomes a real proposal.
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Check, FileText, Link as LinkIcon, Quote, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
+import { timeAgo } from "../lib/timeAgo";
 import "./SolicitationUploadModal.css";
 
 const API_BASE = getApiBase();
@@ -29,7 +30,8 @@ const SPONSORS = ["NSF", "NIH", "DoD", "DoE", "NASA", "USDA", "EPA",
                   "Foundation", "State of Maryland", "Internal"];
 
 export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "",
-                                                  submissionId = null }) {
+                                                  submissionId = null,
+                                                  initialSourceId = null }) {
   // step: "pick" -> "extracting" -> "review" -> "creating"
   const [step, setStep] = useState("pick");
   const [error, setError] = useState("");
@@ -129,6 +131,52 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
       setReqState("failed");
     }
   };
+
+  // Reuse a document this PI already read but never attached. Same request as
+  // the upload path with source_id instead of a file, so everything downstream
+  // — the review step, the requirement read, the save — is unchanged. The point
+  // is not speed (the model call still runs); it is never making someone hunt
+  // for a file we are already holding.
+  const handleStoredSource = async (src) => {
+    setStep("extracting");
+    setError("");
+    try {
+      const form = new FormData();
+      form.append("source_id", String(src.id));
+      const res = await fetch(`${API_BASE}/api/me/submissions/from-solicitation`,
+                              { method: "POST", headers: authHeaders(), body: form });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `${res.status} ${res.statusText}`);
+      }
+      const data = await res.json();
+      setExtracted(data.extracted);
+      setSourceId(data.source_id || null);
+      setTitleOverride(data.extracted?.program_name || data.extracted?.program_id || "");
+      setStep("review");
+      readRequirements({ kind: src.url ? "url" : "pdf", url: src.url,
+                         filename: src.filename, sourceId: data.source_id || null });
+    } catch (e) {
+      // The reaper may have removed it between listing and picking. Falling back
+      // to the dropzone is the honest outcome — never a dead end.
+      setError(e.message || "That stored solicitation is no longer available.");
+      setStep("pick");
+    }
+  };
+
+  // Draft Review already offered this document and the PI said yes, so opening
+  // on the file picker would ask the same question twice. Runs once; a failure
+  // falls back to the picker like any other bad source_id.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (!initialSourceId || autoRan.current) return;
+    autoRan.current = true;
+    handleStoredSource({ id: initialSourceId });
+    // handleStoredSource is deliberately out of the deps: it is redefined every
+    // render, and the ref above already makes this run exactly once. Including
+    // it would re-fire the extraction on each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSourceId]);
 
   const handleUrl = async (rawUrl) => {
     const url = (rawUrl || "").trim();
@@ -255,6 +303,7 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
           <PickStep
             onFile={handleFile}
             onUrl={handleUrl}
+            onStored={handleStoredSource}
             fileInputRef={fileInputRef}
             initialUrl={initialUrl}
           />
@@ -286,9 +335,21 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
 // STEP 1 -- Pick a file
 // ============================================================
 
-function PickStep({ onFile, onUrl, fileInputRef, initialUrl = "" }) {
+function PickStep({ onFile, onUrl, onStored, fileInputRef, initialUrl = "" }) {
   const [dragOver, setDragOver] = useState(false);
   const [url, setUrl] = useState(initialUrl);
+  // Documents this PI read but never attached. Purely an affordance: if the
+  // fetch fails the block just does not render and uploading works as before,
+  // so it is never allowed to gate the flow.
+  const [stored, setStored] = useState([]);
+  useEffect(() => {
+    let live = true;
+    fetch(`${API_BASE}/api/me/solicitation-sources/unbound`, { headers: authHeaders() })
+      .then((r) => (r.ok ? r.json() : { sources: [] }))
+      .then((d) => { if (live) setStored(d.sources || []); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, []);
 
   return (
     <div className="solicitation-pick">
@@ -328,6 +389,38 @@ function PickStep({ onFile, onUrl, fileInputRef, initialUrl = "" }) {
         style={{ display: "none" }}
         onChange={(e) => onFile(e.target.files?.[0])}
       />
+
+      {stored.length > 0 && (
+        <>
+          <div className="solicitation-or">
+            <span>or</span>
+          </div>
+          <div className="solicitation-stored">
+            <div className="solicitation-stored-head">
+              {stored.length === 1
+                ? "You uploaded this recently but never attached it:"
+                : "You uploaded these recently but never attached them:"}
+            </div>
+            {stored.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className="solicitation-stored-row"
+                onClick={() => onStored(s)}
+              >
+                <FileText size={16} className="solicitation-stored-icon" />
+                <span className="solicitation-stored-meta">
+                  <b>{s.filename || s.url || "Solicitation"}</b>
+                  <small>
+                    {s.chars?.toLocaleString()} characters · {timeAgo(s.created_at)}
+                  </small>
+                </span>
+                <span className="solicitation-stored-use">Use it</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="solicitation-or">
         <span>or</span>
