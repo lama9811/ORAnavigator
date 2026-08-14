@@ -284,6 +284,52 @@ def test_the_image_cap_holds(monkeypatch):
         fc._docs_by_title.cache_clear()
 
 
+def test_an_unrelated_question_does_not_get_a_cited_lessons_screenshots(monkeypatch):
+    lesson = {
+        "doc_id": "lesson",
+        "title": _SHOT_LESSON,
+        "url": "https://training.example",
+        "images": [
+            {"url": "https://assets.example/requisition.png", "caption": "Requisition Entry"},
+            {"url": "https://assets.example/vendor.png", "caption": "Vendor Information"},
+        ],
+    }
+    monkeypatch.setattr(fc, "_all_docs_by_id", lambda: {"lesson": lesson})
+    fc._docs_by_title.cache_clear()
+    try:
+        out = fc.images_for_titles(
+            [_SHOT_LESSON],
+            query="When are effort certifications due?",
+        )
+        assert out == []
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
+def test_a_matching_question_gets_the_relevant_lesson_screenshots(monkeypatch):
+    lesson = {
+        "doc_id": "lesson",
+        "title": _SHOT_LESSON,
+        "url": "https://training.example",
+        "images": [
+            {"url": "https://assets.example/requisition.png", "caption": "Requisition Entry"},
+            {"url": "https://assets.example/banner.png", "caption": "Banner Links Homepage"},
+        ],
+    }
+    monkeypatch.setattr(fc, "_all_docs_by_id", lambda: {"lesson": lesson})
+    fc._docs_by_title.cache_clear()
+    try:
+        out = fc.images_for_titles(
+            [_SHOT_LESSON],
+            query="How do I enter a requisition in Banner?",
+        )
+        assert out
+        assert len(out) <= 4
+        assert all("assets.example/" in img["url"] for img in out)
+    finally:
+        fc._docs_by_title.cache_clear()
+
+
 def test_a_document_with_no_images_resolves_to_nothing(monkeypatch):
     monkeypatch.undo()
     fc._docs_by_title.cache_clear()
@@ -304,3 +350,21 @@ def test_screenshots_are_suppressed_on_non_kb_turns():
         "I can only help with Morgan State University Office of Research "
         "Administration questions.", r) == []
     assert va._images_for_result("what department am I in?", "You are in Physics.", r) == []
+
+
+def test_chat_uses_the_users_question_to_filter_screenshots(monkeypatch):
+    import vertex_agent as va
+
+    seen = {}
+
+    def fake_images(titles, limit=4, query=""):
+        seen["titles"] = titles
+        seen["query"] = query
+        return []
+
+    monkeypatch.setattr(fc, "images_for_titles", fake_images)
+    question = "How do I enter a requisition in Banner?"
+    r = {"citations": [{"title": _SHOT_LESSON, "url": "https://p"}]}
+
+    assert va._images_for_result(question, "Follow these steps.", r) == []
+    assert seen == {"titles": [_SHOT_LESSON], "query": question}
