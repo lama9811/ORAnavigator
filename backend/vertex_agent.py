@@ -1432,7 +1432,7 @@ def _images_for_result(message: str, text: str, result: dict) -> list:
     try:
         from services.forms_catalog import images_for_titles
 
-        return images_for_titles(_chunk_titles(result))
+        return images_for_titles(_chunk_titles(result), query=message)
     except Exception:
         return []
 

@@ -21,6 +21,7 @@ only has `category` + `subcategory`), so this module derives them:
 """
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -379,19 +380,71 @@ def attachments_for_titles(titles, limit: int = 3) -> list:
     return out
 
 
-def images_for_titles(titles, limit: int = 4) -> list:
+_IMAGE_MATCH_STOPWORDS = {
+    "about", "after", "also", "and", "are", "can", "does", "for", "from",
+    "have", "how", "into", "morgan", "office", "ora", "project", "research",
+    "should", "show", "sponsored", "state", "that", "the", "their", "this",
+    "through", "university", "what", "when", "where", "which", "with", "would",
+}
+
+
+def _image_match_tokens(value: str) -> set[str]:
+    """Small deterministic vocabulary for screenshot relevance checks.
+
+    This is deliberately conservative. Missing a screenshot is harmless; showing
+    a Banner screen under an unrelated answer makes the answer look ungrounded.
+    """
+    out = set()
+    for raw in re.findall(r"[a-z0-9]+", (value or "").lower()):
+        if len(raw) < 3 or raw in _IMAGE_MATCH_STOPWORDS:
+            continue
+        if raw.endswith("ies") and len(raw) > 5:
+            raw = raw[:-3] + "y"
+        elif raw.endswith("s") and not raw.endswith("ss") and len(raw) > 4:
+            raw = raw[:-1]
+        out.add(raw)
+    return out
+
+
+def images_for_titles(titles, limit: int = 4, query: str = "") -> list:
     """Screenshots belonging to the lessons behind these retrieved chunk titles.
 
     Same shape and the same call site as attachments_for_titles: the caller
     resolves once, from the documents the turn actually retrieved, and the model
     never sees a URL. Capped because a lesson can carry ten screenshots and an
     answer that dumps all of them is worse than one that shows the first few.
+
+    When `query` is supplied (the chat path always supplies it), a cited lesson
+    is not enough on its own. The lesson title must match at least two meaningful
+    query terms before its whole screenshot sequence is eligible. Otherwise we
+    return only individual images whose captions match the question. This keeps
+    a broadly retrieved eTraining lesson from contributing random screenshots.
+    The optional query preserves the catalog helper's non-chat callers.
     """
     by_title = _docs_by_title()
     out, seen = [], set()
+    query_tokens = _image_match_tokens(query)
     for title in titles or []:
         row = by_title.get(_norm_title(title))
-        for img in (row or {}).get("images") or []:
+        images = (row or {}).get("images") or []
+        if query_tokens:
+            title_tokens = _image_match_tokens((row or {}).get("title") or title)
+            whole_lesson_matches = len(query_tokens & title_tokens) >= 2
+            if whole_lesson_matches:
+                images = sorted(
+                    enumerate(images),
+                    key=lambda pair: (
+                        -len(query_tokens & _image_match_tokens(pair[1].get("caption") or "")),
+                        pair[0],
+                    ),
+                )
+                images = [img for _, img in images]
+            else:
+                images = [
+                    img for img in images
+                    if query_tokens & _image_match_tokens(img.get("caption") or "")
+                ]
+        for img in images:
             url = (img.get("url") or "").strip()
             if not url or url in seen:
                 continue
