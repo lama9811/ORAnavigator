@@ -82,7 +82,6 @@ hand — the same shape as compliance_sentinel's rules and budget_helper's rates
 import pytest
 
 from services import rulebook_baseline as rb
-from services import rulebook_checks as rc
 
 
 def test_the_project_summary_heading_rule_exists_and_quotes_nsf():
@@ -103,14 +102,12 @@ def test_every_row_carries_a_verbatim_quote_and_a_source_url():
             assert r["rulebook"] == name
 
 
-def test_every_deterministic_row_names_a_check_that_exists():
-    """A row whose check resolves to nothing is silently SKIPPED by
-    run_deterministic, so a typo here removes a rule with nothing going red."""
+def test_a_semantic_row_names_no_check():
+    """The deterministic rows' checks are verified in test_rulebook_checks.py,
+    once the module they name exists."""
     for rows in rb.RULES.values():
         for r in rows:
-            if r["kind"] == "deterministic":
-                assert r["check"] in rc.CHECKS, r["id"]
-            else:
+            if r["kind"] != "deterministic":
                 assert r.get("check") is None, r["id"]
 
 
@@ -448,7 +445,7 @@ def section_label(key: str) -> str:
 cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 \
   python3 -m pytest tests/test_rulebook_baseline.py -q
 ```
-Expected: FAIL still — `test_every_deterministic_row_names_a_check_that_exists` imports `services.rulebook_checks`, which Task 2 creates. Every other test passes. **This is the expected intermediate state**; do not stub `rulebook_checks` to make it green.
+Expected: **PASS, all of them.** Task 1 commits green — the cross-module assertion that every deterministic rule names a real check lives in Task 2's file, because it needs both modules to exist.
 
 - [ ] **Step 5: Commit**
 
@@ -715,6 +712,18 @@ def test_a_paste_estimate_is_excluded_from_the_score():
 def test_every_check_is_registered():
     assert set(rc.CHECKS) == {"rb_headings", "rb_no_urls", "rb_no_financials",
                               "rb_et_al", "rb_page_limit"}
+
+
+def test_every_deterministic_rule_names_a_check_that_exists():
+    """Lives HERE, not in test_rulebook_baseline.py, so Task 1 could commit
+    green — it needs both modules. A row whose check resolves to nothing is
+    silently SKIPPED by run_deterministic, so a typo removes a rule with
+    nothing going red. That is what this guards."""
+    from services import rulebook_baseline as rb
+    for rows in rb.RULES.values():
+        for r in rows:
+            if r["kind"] == "deterministic":
+                assert r["check"] in rc.CHECKS, r["id"]
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -1759,30 +1768,91 @@ Create `backend/tests/test_section_check_api.py`:
 """The per-section check endpoints.
 
 Route/auth level only — the rules themselves are tested in
-test_rulebook_checks.py. Follows the TestClient + dependency_overrides pattern
-of tests/test_proposals_api_e2e.py.
+test_rulebook_checks.py. Mirrors the single-`ctx`-fixture harness of
+tests/test_proposals_api_e2e.py: one in-memory SQLite engine per test, both
+get_db dependencies overridden, get_current_user stubbed. Read that file
+before changing anything here.
 """
-import pytest
+import os
+os.environ["TRUSTED_HOSTS"] = "testserver,localhost,127.0.0.1"
 
-pytest.importorskip("fastapi")
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from fastapi.testclient import TestClient
+
+import main
+import deps
+from db import Base
+from models import User, Submission
+from security import hash_password
 
 FIVE_LINE = ("We propose to study trustworthy cardiac AI using multimodal "
              "physiological sensing. The work will develop new models.")
 
 
-def test_the_section_list_is_offered(client):
-    r = client.get("/api/me/section-check/sections")
+@pytest.fixture
+def ctx():
+    """Yields (client, submission_id, other_users_submission_id, SessionMaker).
+
+    The submission has NO solicitation attached — which is the point: this
+    endpoint must work without one, unlike draft-review."""
+    engine = create_engine("sqlite://",
+                           connect_args={"check_same_thread": False},
+                           poolclass=StaticPool)
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    seed = TestingSession()
+    u = User(email="pi@morgan.edu", password_hash=hash_password("password123"),
+             role="user", name="Pat Investigator")
+    other = User(email="other@morgan.edu", password_hash=hash_password("x"),
+                 role="user", name="Someone Else")
+    seed.add_all([u, other])
+    seed.commit()
+    uid = u.id
+
+    sub = Submission(user_id=uid, title="REU Site: Cardiac AI",
+                     sponsor="National Science Foundation", status="active")
+    theirs = Submission(user_id=other.id, title="Someone else's",
+                        sponsor="NSF", status="active")
+    seed.add_all([sub, theirs])
+    seed.commit()
+    sub_id, theirs_id = sub.id, theirs.id
+    seed.close()
+
+    def _override_db():
+        db = TestingSession()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    main.app.dependency_overrides[main.get_db] = _override_db
+    main.app.dependency_overrides[deps.get_db] = _override_db
+    main.app.dependency_overrides[main.get_current_user] = lambda: {
+        "user_id": uid, "email": "pi@morgan.edu", "role": "user",
+    }
+    c = TestClient(main.app)
+    yield c, sub_id, theirs_id, TestingSession
+    main.app.dependency_overrides.clear()
+
+
+def test_the_section_list_is_offered(ctx):
+    c, _, _, _ = ctx
+    r = c.get("/api/me/section-check/sections")
     assert r.status_code == 200
     keys = [s["key"] for s in r.json()["sections"]]
     assert "project_summary" in keys
 
 
-def test_a_paste_is_checked_without_a_solicitation(client, submission_no_solicitation):
+def test_a_paste_is_checked_without_a_solicitation(ctx):
     """The rules are NSF's, so this must NOT 409 the way draft-review does."""
-    r = client.post(
-        f"/api/me/submissions/{submission_no_solicitation}/section-check",
-        json={"section": "project_summary", "text": FIVE_LINE,
-              "rulebook": "the PAPPG"})
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check",
+               json={"section": "project_summary", "text": FIVE_LINE,
+                     "rulebook": "the PAPPG"})
     assert r.status_code == 200
     body = r.json()["result"]
     assert body["score"] is None
@@ -1790,66 +1860,43 @@ def test_a_paste_is_checked_without_a_solicitation(client, submission_no_solicit
                for f in body["findings"])
 
 
-def test_another_users_submission_is_404(client, other_users_submission):
-    r = client.post(
-        f"/api/me/submissions/{other_users_submission}/section-check",
-        json={"section": "project_summary", "text": FIVE_LINE,
-              "rulebook": "the PAPPG"})
+def test_another_users_submission_is_404(ctx):
+    c, _, theirs_id, _ = ctx
+    r = c.post(f"/api/me/submissions/{theirs_id}/section-check",
+               json={"section": "project_summary", "text": FIVE_LINE,
+                     "rulebook": "the PAPPG"})
     assert r.status_code == 404
 
 
-def test_an_unknown_rulebook_is_400(client, submission_no_solicitation):
-    r = client.post(
-        f"/api/me/submissions/{submission_no_solicitation}/section-check",
-        json={"section": "project_summary", "text": FIVE_LINE,
-              "rulebook": "the Hitchhiker's Guide"})
+def test_an_unknown_rulebook_is_400(ctx):
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check",
+               json={"section": "project_summary", "text": FIVE_LINE,
+                     "rulebook": "the Hitchhiker's Guide"})
     assert r.status_code == 400
 
 
-def test_an_unknown_section_is_400(client, submission_no_solicitation):
-    r = client.post(
-        f"/api/me/submissions/{submission_no_solicitation}/section-check",
-        json={"section": "cover_letter", "text": FIVE_LINE,
-              "rulebook": "the PAPPG"})
+def test_an_unknown_section_is_400(ctx):
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check",
+               json={"section": "cover_letter", "text": FIVE_LINE,
+                     "rulebook": "the PAPPG"})
     assert r.status_code == 400
 
 
-def test_the_paste_is_never_persisted(client, submission_no_solicitation, db_session):
+def test_the_paste_is_never_persisted(ctx):
     """It is the PI's unpublished manuscript. Same rule as Draft Review."""
-    from models import Submission
-    client.post(
-        f"/api/me/submissions/{submission_no_solicitation}/section-check",
-        json={"section": "project_summary", "text": FIVE_LINE,
-              "rulebook": "the PAPPG"})
-    sub = db_session.query(Submission).get(submission_no_solicitation)
-    assert FIVE_LINE not in (sub.notes or "")
-    assert FIVE_LINE not in (sub.sections_json or "")
-    assert FIVE_LINE not in (sub.draft_review_json or "")
-```
-
-Add fixtures at the top of the file mirroring `tests/test_proposals_api_e2e.py` — read that file first and copy its `client` / `db_session` / auth-override construction verbatim, then add:
-
-```python
-@pytest.fixture
-def submission_no_solicitation(db_session, test_user):
-    from models import Submission
-    sub = Submission(user_id=test_user.id, title="REU Site: Cardiac AI",
-                     sponsor="National Science Foundation")
-    db_session.add(sub)
-    db_session.commit()
-    return sub.id
-
-
-@pytest.fixture
-def other_users_submission(db_session):
-    from models import User, Submission
-    other = User(email="other@morgan.edu", hashed_password="x")
-    db_session.add(other)
-    db_session.commit()
-    sub = Submission(user_id=other.id, title="Someone else's", sponsor="NSF")
-    db_session.add(sub)
-    db_session.commit()
-    return sub.id
+    c, sub_id, _, TestingSession = ctx
+    c.post(f"/api/me/submissions/{sub_id}/section-check",
+           json={"section": "project_summary", "text": FIVE_LINE,
+                 "rulebook": "the PAPPG"})
+    db = TestingSession()
+    sub = db.query(Submission).filter(Submission.id == sub_id).one()
+    blob = " ".join(str(getattr(sub, f, "") or "") for f in
+                    ("notes", "sections_json", "draft_review_json",
+                     "solicitation_json"))
+    db.close()
+    assert FIVE_LINE not in blob
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2166,7 +2213,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ## Verification before claiming done
 
-- [ ] `cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 python3 -m pytest -q --ignore=tests/test_agent_instruction.py` — green, and the count is **higher** than the 682 it started at
+- [ ] `cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 python3 -m pytest -q --ignore=tests/test_agent_instruction.py` — green, and the count is **higher** than the **1033 passed / 3 skipped** measured on this branch before Task 1 (CLAUDE.md's "682" is stale; ignore it)
 - [ ] `grep -ril "eir_solicitation\|23-598" backend/services/` — **empty**
 - [ ] `cd frontend && npm run build` — succeeds
 - [ ] The five-line Project Summary from the spec reports three missing headings, end to end in a browser
