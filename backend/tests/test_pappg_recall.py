@@ -37,13 +37,39 @@ reviewable instead of hiding it in a similarity threshold.
 
 WHAT THE MAPPING RECORDS, AND THE FINDING IT MADE
 --------------------------------------------------
-Two curated rules are NOT in the PAPPG's corresponding section at all. Verified
-directly: the Facilities slice contains no "postdoctoral", no "senior", no "no
-funds are being requested"; the References Cited slice never says "et al.".
+Two curated rules are not in the PAPPG SECTION they belong to. Verified: the
+Facilities slice contains no "postdoctoral", no "senior", no "no funds are being
+requested"; the References Cited slice never says "et al.".
 
-**Research.gov and the PAPPG are complementary, not redundant.** Neither source
-alone is the rulebook. That is worth knowing before anyone proposes replacing the
-curated table with an extraction.
+An earlier version of this docstring concluded from that "the PAPPG does not state
+these rules". THAT WAS WRONG, and reading the full extraction disproved it:
+
+  * The unfunded-personnel rule IS stated — in §II.D.2.f BUDGET: "Their name(s)
+    will remain on the Cover Sheet and the individual(s) role on the project
+    should be described in the Facilities, Equipment and Other Resources section
+    of the proposal." Also echoed in Project Description and Special Information.
+
+  * "et al." IS addressed — in §II.D.2.h SENIOR/KEY PERSONNEL, and it says the
+    OPPOSITE of Research.gov: authors "may, at their discretion, choose to list one
+    or more of the authors and then 'et al' in lieu of including the complete
+    listing". Research.gov tells you to avoid it in References Cited; the PAPPG
+    permits it in a biographical sketch. Both are true, of different sections.
+
+THE REAL FINDING, WHICH HAS A DESIGN CONSEQUENCE
+-------------------------------------------------
+The two sources organise the same rules DIFFERENTLY. Research.gov states a rule on
+the page where you need it (the Facilities upload page). The PAPPG states it where
+the situation arises (the Budget section, because that is where you discover you
+have an unsalaried person).
+
+So "the section is an input" — the insight this whole approach rests on — is right
+for EXTRACTION and wrong for PLACEMENT. A rule pulled from the Budget slice may
+need to be filed under Facilities for a PI to meet it at the right moment. That is
+a judgement for the human review step; it cannot be inferred from the slice.
+
+Nobody should replace the curated table with an extraction: Research.gov's
+placement is better for a PI, and its "avoid et al." instruction is not derivable
+from the PAPPG at all.
 
 OPT-IN, LIVE MODEL, NEVER IN CI. Set PAPPG_RECALL=1. ~90s for all four sections.
 """
@@ -74,16 +100,21 @@ _EXPECTED: dict = {
     },
     "references_cited": {
         "pappg_rc_scholarly": "accepted scholarly practice",
-        # NOT in the PAPPG's References Cited section — verified: the slice never
-        # says "et al.". It is a Research.gov Content Instruction only.
+        # Not in the PAPPG's References Cited section — the slice never says
+        # "et al.". The PAPPG does address it, under Senior/Key Personnel, and
+        # says the OPPOSITE (biosketch authors may use it). Research.gov's
+        # "avoid et al. here" is not derivable from the PAPPG.
         "pappg_rc_et_al": None,
     },
     "facilities_equipment_and_other_resources": {
         "pappg_fe_no_financials": "must not include any quantifiable financial information",
         "pappg_fe_narrative": "narrative in nature",
         "pappg_fe_coverage": "internal and external resources (both physical and personnel)",
-        # NOT in the PAPPG's Facilities section — verified: no "postdoctoral", no
-        # "senior", no "no funds are being requested". Research.gov only.
+        # Not in the PAPPG's Facilities section — no "postdoctoral", no "senior",
+        # no "no funds are being requested". The PAPPG states it in the BUDGET
+        # section instead ("their role ... should be described in the Facilities,
+        # Equipment and Other Resources section"), which is the placement finding
+        # in this module's docstring.
         "pappg_fe_unfunded": None,
     },
 }
@@ -163,11 +194,15 @@ def test_a_slice_is_one_read_not_a_chunked_sweep(ingest):
         assert not rr["hit_time_cap"], f"{key} hit the time cap"
 
 
-def test_the_two_sources_are_complementary(ingest):
-    """A finding worth protecting: two curated rules are NOT in the PAPPG section
-    they belong to. Neither source alone is the rulebook, so nobody should replace
-    the curated table with an extraction. If a future PAPPG edition adds them, this
-    goes red and the mapping above should be updated — deliberately."""
+def test_the_two_sources_place_rules_differently(ingest):
+    """A finding worth protecting: two curated rules are not in the PAPPG SECTION
+    they belong to — the PAPPG states them ELSEWHERE. Research.gov puts a rule on
+    the page where you need it; the PAPPG states it where the situation arises. So
+    a rule extracted from one slice may need filing under another, which is a
+    judgement for the human review step and cannot be inferred from the slice.
+
+    If a future edition moves them, this goes red and the mapping should be
+    updated — deliberately."""
     slices = ingest.load_slices()
     fac = _norm(slices["facilities_equipment_and_other_resources"]["text"])
     for absent in ("postdoctoral", "senior", "no funds are being requested"):
