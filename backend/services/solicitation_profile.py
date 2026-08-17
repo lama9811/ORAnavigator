@@ -215,10 +215,25 @@ def build_generic(contract: dict, requirements: list[dict], *, id: str, title: s
     edit the page limit and the check that enforces it moves with it.
 
     Sections are likewise derived, never persisted: a stored section list could
-    drift out of step with the requirements that name it."""
+    drift out of step with the requirements that name it.
+
+    A third source: when the solicitation CITES a rulebook we hold rules for
+    (the PAPPG today), that rulebook's rules are appended. Detection reads the
+    requirement rows' own quotes, never a sponsor string. Because this runs on
+    every profile load, adding a rule retroactively fixes every proposal already
+    in the database."""
     from services import generic_checks
+    from services import rulebook_baseline
     contract = contract or {}
-    rows = list(requirements or []) + generic_checks.contract_requirements(contract)
+    extracted = list(requirements or [])
+    # THREE row sources now. Baseline rows go LAST so a solicitation's own row
+    # for the same part of the proposal is the one a reader meets first — its
+    # quote is the sentence the PI must actually satisfy.
+    rows = (extracted
+            + generic_checks.contract_requirements(contract)
+            + rulebook_baseline.baseline_rows(
+                extracted, url=url or "",
+                page_limits=contract.get("page_limits")))
     return make_profile(
         id=id, title=title, url=url,
         sections=sections_from(rows,

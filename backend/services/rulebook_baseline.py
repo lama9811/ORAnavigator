@@ -275,3 +275,29 @@ def skeleton_for(rulebook: str, section: str) -> Optional[dict]:
 
 def section_label(key: str) -> str:
     return _SECTION_LABELS.get(key, key.replace("_", " ").title())
+
+
+# The only overlap between a baseline row and a contract-derived row is the page
+# limit — generic_checks.contract_requirements derives one row per entry in
+# contract["page_limits"], and the solicitation's number beats NSF's default.
+# NSF says so itself: "The system will enforce the page limit requirements
+# listed in the funding opportunity."
+_PAGE_CHECKS = {"rb_page_limit"}
+
+
+def baseline_rows(requirements: list[dict], *, url: str = "",
+                  page_limits: Optional[dict] = None) -> list[dict]:
+    """Rows to add to a profile whose solicitation cites a rulebook we hold.
+
+    Returns [] when nothing is cited — no rows added, no score moved, no finding
+    lost, which is the same fail-safe posture delegated_rules takes."""
+    from services.solicitation_profile import section_key
+
+    out: list[dict] = []
+    suppressed = {section_key(str(s)) for s in (page_limits or {})}
+    for book in rulebooks_cited_by(requirements, url=url):
+        for row in rules_for(book):
+            if row["check"] in _PAGE_CHECKS and row["section"] in suppressed:
+                continue
+            out.append(dict(row))
+    return out
