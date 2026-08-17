@@ -373,9 +373,27 @@ def baseline_rows(requirements: list[dict], *, url: str = "",
 #
 # `affects_our_rules` is the field to look at when NSF publishes a new
 # supplement: if it is True for any entry, the RULES table above needs review.
+#
+# APPLICABILITY IS NOT THE SAME TRIGGER AS THE BASE DOCUMENT, and conflating
+# them would mislead a PI. NSF states it verbatim, and the two differ:
+#
+#   PAPPG 24-1     "applies to all proposals SUBMITTED OR DUE on or after
+#                   May 20, 2024"
+#   Supplement 1   "applies to all financial assistance AWARDED on or after
+#                   Dec. 8, 2025"
+#   Supplement 2   "applies to all financial assistance AWARDED on or after
+#                   Jan. 22, 2026"
+#
+# So the base rulebook binds you at SUBMISSION, while both supplements bind the
+# AWARD. A proposal submitted today will be awarded later, so a PI should write
+# to the supplements even though they do not technically bind the submission --
+# but the app must not state that they govern the submission itself. `applies_to`
+# carries NSF's own sentence so the distinction survives.
 AMENDMENTS: list[dict] = [
     # ── PAPPG 24-1 Supplement 1 (NSF 26-200), effective 2025-12-08 ──────────
-    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+    {"doc": "PAPPG 24-1 Supplement 1", "doc_no": "NSF 26-200",
+     "applies_to": "Applies to all financial assistance awarded on or after Dec. 8, 2025.",
+     "effective": "2025-12-08",
      "amends": "IX.E.2.g(i)", "affects_our_rules": False,
      "title": "Equipment threshold raised to $10,000",
      "detail": "The capital-equipment threshold rises from $5,000 to $10,000, "
@@ -383,12 +401,16 @@ AMENDMENTS: list[dict] = [
                "real money: an item between $5,000 and $10,000 is now a supply, "
                "and DOES bear indirect costs. NSF's own budget form (Form 1030, "
                "line D) reads 'FOR EACH ITEM EXCEEDING $10,000.'"},
-    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+    {"doc": "PAPPG 24-1 Supplement 1", "doc_no": "NSF 26-200",
+     "applies_to": "Applies to all financial assistance awarded on or after Dec. 8, 2025.",
+     "effective": "2025-12-08",
      "amends": "II.F", "affects_our_rules": False,
      "title": "Higher caps for Planning, RAPID and EAGER proposals",
      "detail": "Planning $100,000 -> $200,000; RAPID $200,000 -> $300,000; "
                "EAGER $300,000 -> $400,000."},
-    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+    {"doc": "PAPPG 24-1 Supplement 1", "doc_no": "NSF 26-200",
+     "applies_to": "Applies to all financial assistance awarded on or after Dec. 8, 2025.",
+     "effective": "2025-12-08",
      "amends": "XII.C", "affects_our_rules": False,
      "title": "Research misconduct now names AI tools explicitly",
      "detail": "The definition expands to cover misconduct committed 'through "
@@ -397,35 +419,47 @@ AMENDMENTS: list[dict] = [
                "relevant to this product: it is why the model may explain a "
                "rule and show a structural example, but never drafts the PI's "
                "science."},
-    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+    {"doc": "PAPPG 24-1 Supplement 1", "doc_no": "NSF 26-200",
+     "applies_to": "Applies to all financial assistance awarded on or after Dec. 8, 2025.",
+     "effective": "2025-12-08",
      "amends": "I.E.3", "affects_our_rules": False,
      "title": "No awards to an IHE hosting a Confucius Institute",
      "detail": "Implements the CHIPS and Science Act restriction; a waiver from "
                "the NSF Director is the only exception."},
-    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-22",
+    {"doc": "PAPPG 24-1 Supplement 1", "doc_no": "NSF 26-200",
+     "applies_to": "Applies to all financial assistance awarded on or after Dec. 8, 2025.",
+     "effective": "2025-12-22",
      "amends": "II.D.2.f(xiii)", "affects_our_rules": False,
      "title": "No NSF funds for drones from covered foreign entities",
      "detail": "American Drone Security Act. Applies to procurement and "
                "operation after 2025-12-22."},
-    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+    {"doc": "PAPPG 24-1 Supplement 1", "doc_no": "NSF 26-200",
+     "applies_to": "Applies to all financial assistance awarded on or after Dec. 8, 2025.",
+     "effective": "2025-12-08",
      "amends": "VII.D.3.a", "affects_our_rules": False,
      "title": "Foreign financial disclosure threshold raised to $70,000",
      "detail": "Was $50,000."},
 
     # ── PAPPG 24-1 Supplement 2 (NSF 26-202), effective 2026-01-22 ──────────
-    {"doc": "PAPPG 24-1 Supplement 2", "effective": "2026-04-27",
+    {"doc": "PAPPG 24-1 Supplement 2", "doc_no": "NSF 26-202",
+     "applies_to": "Applies to all financial assistance awarded on or after Jan. 22, 2026.",
+     "effective": "2026-04-27",
      "amends": "II.D.2.i(ii)", "affects_our_rules": False,
      "title": "The Data Management and Sharing Plan is no longer a document",
      "detail": "From 2026-04-27 the DMSP must be created with the tool in "
                "Research.gov rather than uploaded as a PDF. Consequence for "
                "this app: DMSP rules must NOT be written as file rules "
                "(page limits, headings, upload format) — there is no file."},
-    {"doc": "PAPPG 24-1 Supplement 2", "effective": "2026-01-22",
+    {"doc": "PAPPG 24-1 Supplement 2", "doc_no": "NSF 26-202",
+     "applies_to": "Applies to all financial assistance awarded on or after Jan. 22, 2026.",
+     "effective": "2026-01-22",
      "amends": "XI.D.2.c", "affects_our_rules": False,
      "title": "The 12-month publication embargo is removed",
      "detail": "Author Accepted Manuscripts must be deposited in NSF's Public "
                "Access Repository at or before the time of publication."},
-    {"doc": "PAPPG 24-1 Supplement 2", "effective": "2026-01-22",
+    {"doc": "PAPPG 24-1 Supplement 2", "doc_no": "NSF 26-202",
+     "applies_to": "Applies to all financial assistance awarded on or after Jan. 22, 2026.",
+     "effective": "2026-01-22",
      "amends": "XI.D.4", "affects_our_rules": False,
      "title": "Data behind a funded publication must be shared at publication",
      "detail": "Exceptions are requested through the Data Management and "

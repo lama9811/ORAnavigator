@@ -151,8 +151,18 @@ def build_html() -> str:
     for a in rb.AMENDMENTS:
         by_doc.setdefault(a["doc"], []).append(a)
     for doc, items in by_doc.items():
+        no = items[0].get("doc_no") or ""
         parts.append(f"<h2 style='font-size:11.5pt;border-bottom:1px solid #e6eaf0;"
-                     f"margin-top:18px'>{html.escape(doc)}</h2>")
+                     f"margin-top:18px'>{html.escape(doc)}"
+                     + (f"<span class='cnt'>{html.escape(no)}</span>" if no else "")
+                     + "</h2>")
+        # NSF's OWN applicability sentence, verbatim. The base rulebook binds a
+        # proposal at SUBMISSION; both supplements bind the AWARD. Printing our
+        # own paraphrase here would blur a distinction NSF draws deliberately.
+        app = items[0].get("applies_to")
+        if app:
+            parts.append(f"<p class='why' style='margin:6px 0 10px'><em>"
+                         f"{html.escape(app)}</em></p>")
         for a in sorted(items, key=lambda x: x["effective"]):
             parts.append("<div class='rule'>")
             parts.append(f"<div class='hdr'><span class='lbl'>{html.escape(a['title'])}</span>"
