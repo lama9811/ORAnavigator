@@ -142,10 +142,23 @@ def test_the_sponsor_substring_bug_cannot_fire_here():
     assert rb.rulebooks_cited_by(reqs) == []
 
 
+def test_every_section_constant_is_what_section_key_actually_produces():
+    """The bug this caught: FACILITIES was written without the "and", so
+    section_key("Facilities, Equipment and Other Resources") produced a key the
+    constant did not equal. Nothing would have gone red — the four Facilities
+    rules would simply have been filed under a key no real draft can produce,
+    reported "Not located", and dropped out of the score's denominator,
+    silently unchecked. Assert against the LIVE function, never against a
+    string we typed twice."""
+    from services.solicitation_profile import section_key
+    for key, label in rb._SECTION_LABELS.items():
+        assert key == section_key(label), f"{key} != section_key({label!r})"
+
+
 def test_sections_offered_lists_the_four_covered_parts():
     keys = [s["key"] for s in rb.sections_offered("the PAPPG")]
     assert keys == ["project_summary", "project_description",
-                    "references_cited", "facilities_equipment_other_resources"]
+                    "references_cited", "facilities_equipment_and_other_resources"]
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -223,7 +236,7 @@ _PAPPG_URL = "https://www.nsf.gov/policies/pappg"
 PROJECT_SUMMARY = "project_summary"
 PROJECT_DESCRIPTION = "project_description"
 REFERENCES_CITED = "references_cited"
-FACILITIES = "facilities_equipment_other_resources"
+FACILITIES = "facilities_equipment_and_other_resources"
 
 _SECTION_LABELS = {
     PROJECT_SUMMARY: "Project Summary",
@@ -619,13 +632,13 @@ def test_ordinary_prose_is_clear():
 
 # ── financial information in Facilities ─────────────────────────────────────
 
-FE = {"section": "facilities_equipment_other_resources"}
+FE = {"section": "facilities_equipment_and_other_resources"}
 
 
 def test_a_dollar_figure_in_facilities_is_flagged():
     status, _, evidence = rc.rb_no_financials(
         _ctx("The cluster was purchased for $240,000 in 2024.",
-             key="facilities_equipment_other_resources"), _req(FE))
+             key="facilities_equipment_and_other_resources"), _req(FE))
     assert status == "flagged"
     assert "$240,000" in evidence
 
@@ -636,14 +649,14 @@ def test_the_word_funds_is_not_financial_information():
     rule it is being checked against."""
     status, _, _ = rc.rb_no_financials(
         _ctx("Dr. Smith contributes effort for whom no funds are being requested.",
-             key="facilities_equipment_other_resources"), _req(FE))
+             key="facilities_equipment_and_other_resources"), _req(FE))
     assert status == "clear"
 
 
 def test_a_year_is_not_a_dollar_figure():
     status, _, _ = rc.rb_no_financials(
         _ctx("The laboratory was renovated in 2019 and holds 12 benches.",
-             key="facilities_equipment_other_resources"), _req(FE))
+             key="facilities_equipment_and_other_resources"), _req(FE))
     assert status == "clear"
 
 
@@ -997,17 +1010,28 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `backend/services/draft_review.py:218-245` (`run_deterministic`), `:570-582` (`review_draft` signature)
-- Test: `backend/tests/test_rulebook_checks.py` (add)
+- Test: `backend/tests/test_rulebook_wiring.py` (**create** — these two tests are about `draft_review`'s check resolution and its `pages` plumbing, not about the check functions themselves, so they belong in their own file rather than appended to `test_rulebook_checks.py`)
 
 **Interfaces:**
 - Produces: `run_deterministic(text, spans, profile, *, title=None, budget=None, pages=None)`; `review_draft(..., pages: Optional[dict] = None)`; check resolution order becomes profile → `generic_checks.CHECKS` → `rulebook_checks.CHECKS`
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `backend/tests/test_rulebook_checks.py`:
+Create `backend/tests/test_rulebook_wiring.py`:
 
 ```python
-# ── wiring into the engine ──────────────────────────────────────────────────
+"""draft_review's plumbing for the rulebook baseline.
+
+Separate from test_rulebook_checks.py on purpose: these assert how the ENGINE
+resolves and feeds the checks, not what the checks decide.
+"""
+FIVE_LINE_SUMMARY = """Project Summary
+
+We propose to study trustworthy cardiac AI using multimodal physiological
+sensing. The work will develop new models and validate them on clinical data.
+We expect the results to be significant for the field.
+"""
+
 
 def test_run_deterministic_resolves_a_rulebook_check():
     """A row whose check resolves to nothing is SKIPPED, silently, with nothing
@@ -1048,7 +1072,7 @@ def test_run_deterministic_passes_pages_into_the_context():
 
 ```bash
 cd backend && JWT_SECRET=test-secret TRUSTED_HOSTS=testserver,localhost,127.0.0.1 \
-  python3 -m pytest tests/test_rulebook_checks.py -q -k "run_deterministic"
+  python3 -m pytest tests/test_rulebook_wiring.py -q
 ```
 Expected: FAIL — first test `assert len(out) == 1` gets `0` (check unresolved, row skipped); second gets `TypeError: run_deterministic() got an unexpected keyword argument 'pages'`.
 
@@ -1138,7 +1162,7 @@ Expected: PASS. `pages` defaults to `None` everywhere, so no existing behaviour 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/services/draft_review.py backend/tests/test_rulebook_checks.py
+git add backend/services/draft_review.py backend/tests/test_rulebook_wiring.py
 git commit -m "feat(draft-review): resolve rulebook checks, and carry a real page count
 
 Check resolution gains a third tier (profile -> generic_checks ->
@@ -1211,7 +1235,7 @@ def test_the_baseline_creates_the_sections_its_rows_need():
     section the solicitation never named must still get a section to be located
     in -- otherwise it reports 'Not located' and drops out of the score."""
     profile = sp.build_generic({}, [_PAPPG_ROW], id="NSF 23-598", title="T")
-    assert "facilities_equipment_other_resources" in profile["sections"]
+    assert "facilities_equipment_and_other_resources" in profile["sections"]
 
 
 def test_a_solicitation_stating_its_own_page_limit_suppresses_the_baseline_one():
