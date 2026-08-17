@@ -509,6 +509,13 @@ def _finding(req: dict, status: str, note: str, evidence: str, *, source: str) -
         "solicitation_says": req["source"],
         "why": req.get("why", ""),
         "source": source,   # check | ai | fallback | locate — for debugging/UI
+        # A baseline row (services/rulebook_baseline.py) carries the name of the
+        # rulebook it WAS drawn from — e.g. "the PAPPG" — never set by a model.
+        # apply_delegation()'s guard reads THIS key to recognise a baseline row;
+        # without propagating it here, every finding in the real pipeline would
+        # arrive with no `rulebook` key regardless of what the requirement row
+        # carried, and the guard would never fire. Ordinary rows carry None.
+        "rulebook": req.get("rulebook"),
         # Set by apply_delegation() below, never by a model.
         "delegated_to": None,
     }
@@ -567,6 +574,17 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
     reclassified or re-noted by the very engine it exists to route around —
     at worst demoted to `delegated` and deleted from the score's denominator,
     silently undoing the finding this feature was built to add.
+
+    THE GUARD DEPENDS ON `_finding()` PROPAGATING `rulebook` (fixed 2026-08-17
+    — it did not, originally, and the guard below silently never fired: every
+    finding is built through `_finding()`, which never copied `req["rulebook"]`
+    onto the dict it returned, so `f.get("rulebook")` was `None` for every row
+    including a real baseline one. `classify()` happened to independently
+    return `pointer_only=False` for all 14 current baseline labels — none
+    starts with a compliance verb — so nothing broke in production, but a
+    future rulebook row phrased that way would have been silently demoted with
+    the guard doing nothing. Confirm `_finding()` still sets
+    `"rulebook": req.get("rulebook")` before trusting this guard again.
     """
     for f in findings:
         if f.get("rulebook"):

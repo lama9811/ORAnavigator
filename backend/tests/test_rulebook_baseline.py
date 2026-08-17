@@ -316,3 +316,37 @@ def test_a_profile_row_already_in_the_baseline_is_not_duplicated():
                                       use_ai=False)
     ids = [f["id"] for f in out["findings"]]
     assert ids.count("pappg_ps_headings") == 1
+
+
+def test_a_baseline_finding_carries_its_rulebook_through_the_real_pipeline():
+    """Regression for a bug a hand-built-dict test could not catch. Every
+    finding on the real pipeline is built through draft_review._finding() --
+    run_deterministic, _review_section and _semantic_fallback all go through
+    it -- and it used to construct the finding dict key-by-key without ever
+    copying req["rulebook"]. So a REAL baseline row reached apply_delegation's
+    `if f.get("rulebook"): continue` guard with no `rulebook` key at all, and
+    the guard silently never fired for any finding the app actually produces --
+    baseline or not. Nothing broke in production only because classify()
+    independently returns pointer_only=False for all 14 current baseline
+    labels (none starts with a compliance verb like "Comply with..."); a
+    future rulebook row phrased that way would have been demoted to
+    `delegated` -- deleted from the score's denominator -- with the guard
+    doing nothing to stop it.
+
+    This goes through sp.build_generic() -> run_deterministic(), the actual
+    construction path, rather than a dict built by hand."""
+    profile = sp.build_generic({}, [_PAPPG_ROW], id="NSF 23-598", title="T")
+    spans = {"project_summary": {"text": FIVE_LINE, "marker": "Project Summary",
+                                 "start": 0}}
+    findings = draft_review.run_deterministic(FIVE_LINE, spans, profile)
+    row = next(f for f in findings if f["id"] == "pappg_ps_headings")
+
+    # The propagation itself: a real finding must carry the rulebook its
+    # requirement row carried, not None.
+    assert row["rulebook"] == "the PAPPG"
+
+    # And the guard must actually protect it: apply_delegation must not touch
+    # a real baseline finding's status, whatever that status is.
+    before = row["status"]
+    out = draft_review.apply_delegation([dict(row)])
+    assert out[0]["status"] == before

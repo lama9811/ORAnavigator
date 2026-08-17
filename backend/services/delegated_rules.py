@@ -234,10 +234,24 @@ def summarize(findings: list, *, covered: Optional[list[str]] = None) -> list[di
     when `delegated_to` is unset, and `classify` never suppresses a rulebook
     genuinely named in the label — so the fallback and the real classification
     agree by construction.
+
+    A BASELINE row (carries `rulebook`, set by `draft_review._finding` from
+    `rulebook_baseline`) is skipped outright, same as `apply_delegation`'s own
+    guard and for the identical reason: it IS the rulebook's rule, checked, not
+    a pointer INTO the rulebook. Without this, the `cited_rulebook(label)`
+    fallback above would misfire on it — a baseline row whose LABEL happens to
+    name its own rulebook (e.g. a future row phrased "Comply with the NIH
+    Grants Policy Statement's page limit") would get folded into the "not
+    checked" summary for a rule we just checked. No current baseline label
+    triggers this (verified: none of the 14 PAPPG row labels name "PAPPG"), but
+    the fallback exists precisely so a label CAN carry the name, so the guard
+    has to be unconditional rather than relying on today's wording.
     """
     covered_sections = list(covered or [])
     rows: dict = {}
     for f in findings or []:
+        if f.get("rulebook"):
+            continue
         name = f.get("delegated_to") or cited_rulebook(f.get("label", ""))
         if not name:
             continue

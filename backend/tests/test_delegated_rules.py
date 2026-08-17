@@ -311,3 +311,22 @@ def test_a_baseline_row_is_never_demoted_by_delegation():
     }]
     out = draft_review.apply_delegation(findings)
     assert out[0]["status"] == "not_found"
+
+
+def test_a_baseline_row_never_lands_in_the_not_checked_summary():
+    """summarize()'s own cited_rulebook(label) fallback (added above, for a
+    caller that never ran apply_delegation) is exactly the mechanism that could
+    misfire on a baseline row: apply_delegation's guard leaves `delegated_to`
+    unset for a baseline row, so summarize() falls back to reading the
+    rulebook's name out of the LABEL -- and if a baseline row's label happens
+    to name its own rulebook (no current PAPPG row does; a future rulebook's
+    might), it would be folded into the "not checked" summary for a rule we
+    just checked and scored. summarize() must skip any row carrying `rulebook`
+    outright, same guard as apply_delegation, regardless of what its label
+    says."""
+    findings = [{
+        "id": "future_row", "label": "Comply with the PAPPG's page limit",
+        "status": "addressed", "scored": True, "rulebook": "the PAPPG",
+        "solicitation_says": "Some rule this baseline already checked.",
+    }]
+    assert dr.summarize(findings) == []
