@@ -58,6 +58,7 @@ from services import delegated_rules
 from services import draft_scope
 from services import gemini_client
 from services import mechanical_checks
+from services import rulebook_baseline
 from services import solicitation_profile as sp
 # The shared whitespace-collapsing membership test (golden rule 2). Deliberately
 # imported rather than re-implemented so every grounded feature uses ONE
@@ -558,8 +559,18 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
     to all the requirements outlined in the PAPPG" IS checkable, WAS checked and
     came back not_found; demoting it would delete a true finding about the
     draft to make room for a caveat.
+
+    A BASELINE row (`rulebook_baseline`) is neither shape above — it IS the
+    rulebook's rule, quoted, not a pointer INTO the rulebook. Its own quote
+    names the PAPPG ("Your file must include three separate section headers"),
+    so without this guard it would classify as a pointer or a rider and get
+    reclassified or re-noted by the very engine it exists to route around —
+    at worst demoted to `delegated` and deleted from the score's denominator,
+    silently undoing the finding this feature was built to add.
     """
     for f in findings:
+        if f.get("rulebook"):
+            continue
         target, pointer_only = delegated_rules.classify(
             f.get("label", ""), f.get("solicitation_says", ""))
         f["delegated_to"] = target
@@ -684,8 +695,15 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         # two together would make a number that is already over-read mean less.
         "mistakes": mechanical_checks.find_mistakes(text, budget=budget),
         # One row per rulebook this solicitation points into, with a plain
-        # description and how many of its requirements went unchecked.
-        "delegated": delegated_rules.summarize(findings),
+        # description and how many of its requirements went unchecked. Also
+        # names the sections whose rules the baseline supplied and we DID
+        # check, so the caveat shrinks as coverage grows instead of forever
+        # saying "not checked here" about a section that now is.
+        "delegated": delegated_rules.summarize(
+            findings,
+            covered=[rulebook_baseline.section_label(s) for s in sorted({
+                r["section"] for r in profile.get("requirements", [])
+                if r.get("rulebook") and r.get("section")})]),
         "eligibility_notes": profile.get("eligibility_notes") or [],
         "message": None if ai_used else (
             "The AI reviewer is unavailable, so only the rule-based checks ran and the "

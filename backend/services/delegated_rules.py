@@ -211,7 +211,7 @@ def url_for(name: str) -> str:
     return ""
 
 
-def summarize(findings: list) -> list[dict]:
+def summarize(findings: list, *, covered: Optional[list[str]] = None) -> list[dict]:
     """One row per rulebook this solicitation defers to, for the UI.
 
     Built here rather than in the frontend so the names, the glosses and the
@@ -219,16 +219,33 @@ def summarize(findings: list) -> list[dict]:
     whose ENTIRE ask was "follow that document" — those are the ones excluded
     from the score; the rest were checked and merely carry rules that continue
     elsewhere, which is a different and much weaker warning.
+
+    `covered` names the sections whose rules we now hold and DID check, so the
+    notice can shrink as coverage grows. Telling a PI "the PAPPG is not checked
+    here" when four of its sections now are is the same dishonesty as the badge
+    that read "attached" for a proposal carrying rules only. Defaults to none
+    covered, so every existing caller behaves exactly as before.
+
+    `delegated_to` is normally set by `apply_delegation` before a finding ever
+    reaches here — but falls back to `cited_rulebook(label)` when it is absent,
+    so a caller that only has the raw label (as a stored `delegated` row read
+    back without going through classification again) is still grouped
+    correctly. This never disagrees with `apply_delegation`: it only fires
+    when `delegated_to` is unset, and `classify` never suppresses a rulebook
+    genuinely named in the label — so the fallback and the real classification
+    agree by construction.
     """
+    covered_sections = list(covered or [])
     rows: dict = {}
     for f in findings or []:
-        name = f.get("delegated_to")
+        name = f.get("delegated_to") or cited_rulebook(f.get("label", ""))
         if not name:
             continue
         row = rows.setdefault(name, {"name": name, "description": describe(name),
                                      "short": short_for(name),
                                      "url": url_for(name),
-                                     "total": 0, "unchecked": 0})
+                                     "total": 0, "unchecked": 0,
+                                     "covered_sections": covered_sections})
         row["total"] += 1
         if f.get("status") == "delegated":
             row["unchecked"] += 1
