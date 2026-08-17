@@ -712,6 +712,85 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     }
 
 
+def review_section(text: str, *, section: str, rulebook: str,
+                   profile: Optional[dict] = None,
+                   pages: Optional[int] = None,
+                   budget: Optional[dict] = None,
+                   use_ai: bool = True) -> dict:
+    """Check ONE section against its rulebook's rules, while the PI writes it.
+
+    The same primitives as review_draft, with the requirement universe filtered
+    to one section — NOT a parallel engine. The reason is the one CLAUDE.md
+    gives for routing Draft Review's "Use that document" through the single
+    existing attach path: a second path drifts, and two engines that disagree
+    about the same section is exactly the confusion this tool exists to remove.
+
+    NO SOLICITATION REQUIRED, and no score returned. Draft Review's 409 exists
+    so a completeness percentage is never computed against zero requirements;
+    this returns no percentage, so that guard has nothing to protect. When a
+    `profile` IS supplied its own rows for this section are checked too.
+
+    `pages` is this section's REAL page count from an uploaded PDF — one file is
+    one section here, so unlike the whole-package path the count is exact.
+    """
+    label = rulebook_baseline.section_label(section)
+    text = (text or "").strip()
+    base = {
+        "section": section, "label": label, "rulebook": rulebook,
+        "skeleton": rulebook_baseline.skeleton_for(rulebook, section),
+        "findings": [], "mistakes": [], "score": None, "ai": False,
+        "word_count": len(text.split()),
+    }
+    if not text:
+        return {**base, "message": f"Paste your {label} to have it checked."}
+
+    rows = rulebook_baseline.rules_for(rulebook, section)
+    if profile:
+        rows = rows + [r for r in sp.requirements_for(profile, section)
+                       if r["id"] not in {b["id"] for b in rows}]
+    if not rows:
+        return {**base, "message": (
+            f"No rules are on file for {label}. Nothing was checked.")}
+
+    # The whole paste IS the section, so the span is known without the locate
+    # stage — that is the one thing this entry point genuinely skips.
+    spans = {section: {"text": text, "marker": label, "start": 0}}
+    mini = {"requirements": rows, "checks": _checks_from_profile(profile),
+            "sections": {section: {"label": label, "aliases": [label]}}}
+
+    findings = run_deterministic(text, spans, mini, budget=budget,
+                                 pages={section: pages} if pages else None)
+
+    semantic = [r for r in rows if r["kind"] == "semantic"]
+    if semantic and use_ai:
+        # _review_section's last parameter is `solicitation_id`, which reaches
+        # the model only through _review_system's prompt text ("requirements from
+        # <id>"). Passing the RULEBOOK name is correct here and reads correctly:
+        # these rules do come from the PAPPG, not from a solicitation.
+        findings.extend(_review_section(section, spans[section], semantic,
+                                        mini["sections"], rulebook))
+
+    findings = apply_draft_scope(findings)
+    order = {r["id"]: i for i, r in enumerate(rows)}
+    findings.sort(key=lambda f: order.get(f["id"], 999))
+
+    return {
+        **base,
+        "findings": findings,
+        "ai": any(f["source"] == "ai" for f in findings),
+        "mistakes": mechanical_checks.find_mistakes(text, budget=budget),
+        # score stays None. A percentage here would read as "your Project
+        # Summary is 60% done", which is not a thing this can measure — the
+        # rules are NSF's floor, not a completeness universe.
+        "message": None,
+    }
+
+
+def _checks_from_profile(profile: Optional[dict]) -> dict:
+    """The profile's own check callables, or none."""
+    return (profile or {}).get("checks") or {}
+
+
 def _solicitation_meta(profile: dict) -> dict:
     return {
         "id": profile.get("id"),

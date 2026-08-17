@@ -173,3 +173,146 @@ def test_a_stored_profile_gains_the_rows_on_load_with_no_re_extraction():
 
     profile = ps.load_solicitation_profile(_Sub())
     assert any(r["id"] == "pappg_ps_headings" for r in profile["requirements"])
+
+
+# ── the per-section entry point ─────────────────────────────────────────────
+
+from services import draft_review
+
+FIVE_LINE = """We propose to study trustworthy cardiac AI using multimodal
+physiological sensing. The work will develop new models and validate them on
+clinical data. We expect the results to be significant.
+"""
+
+
+def test_a_section_check_needs_no_solicitation():
+    """The rules are NSF's, not the solicitation's. Draft Review's 409 exists so
+    a percentage is never computed against zero requirements; this returns no
+    percentage, so the guard has nothing to protect."""
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    assert out["score"] is None
+    assert any(f["id"] == "pappg_ps_headings" and f["status"] == "not_found"
+               for f in out["findings"])
+
+
+def test_a_section_check_returns_only_that_sections_rules():
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    assert {f["id"] for f in out["findings"]} <= {
+        r["id"] for r in rb.rules_for("the PAPPG", "project_summary")}
+
+
+def test_a_section_check_carries_the_skeleton():
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    assert "Intellectual Merit" in out["skeleton"]["body"]
+    assert "not a real proposal" in out["skeleton"]["note"]
+
+
+def test_a_real_page_count_reaches_the_page_rule():
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", pages=3, use_ai=False)
+    row = next(f for f in out["findings"] if f["id"] == "pappg_ps_one_page")
+    assert row["status"] == "flagged"
+
+
+def test_a_paste_gets_an_estimate_not_a_verdict():
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    row = next(f for f in out["findings"] if f["id"] == "pappg_ps_one_page")
+    assert row["status"] == "not_checked"
+
+
+def test_mechanical_mistakes_run_on_the_section():
+    out = draft_review.review_section(
+        "Overview\nWe will study TBD in year one.\n", section="project_summary",
+        rulebook="the PAPPG", use_ai=False)
+    assert any("TBD" in (m.get("evidence") or "") for m in out["mistakes"])
+
+
+def test_empty_text_returns_a_message_not_a_review():
+    out = draft_review.review_section("", section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    assert out["findings"] == []
+    assert out["message"]
+
+
+def test_an_unknown_section_returns_no_findings():
+    out = draft_review.review_section(FIVE_LINE, section="not_a_section",
+                                      rulebook="the PAPPG", use_ai=False)
+    assert out["findings"] == []
+
+
+def test_the_section_check_agrees_with_the_whole_package_review():
+    """One engine, two entry points. If these ever disagree for the same text,
+    a second engine has grown."""
+    profile = sp.build_generic({}, [_PAPPG_ROW], id="NSF 23-598", title="T")
+    spans = {"project_summary": {"text": FIVE_LINE, "marker": "Project Summary",
+                                 "start": 0}}
+    whole = draft_review.run_deterministic(FIVE_LINE, spans, profile)
+    whole_ps = {f["id"]: f["status"] for f in whole
+                if f["id"] == "pappg_ps_headings"}
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    section_ps = {f["id"]: f["status"] for f in out["findings"]
+                  if f["id"] == "pappg_ps_headings"}
+    assert whole_ps == section_ps
+
+
+def test_a_supplied_profiles_own_semantic_row_reaches_the_section_check():
+    """Verifies the profile's own semantic requirement for this section actually
+    reaches _review_section rather than being silently dropped when a rulebook
+    is also supplied -- a filtered universe that drops the solicitation's own
+    row would be worse than not accepting a profile at all.
+
+    use_ai=True here, not False: a semantic row is only assessed at all when
+    the semantic stage runs (see review_section's `if semantic and use_ai`
+    gate), and the AI layer is disabled process-wide by conftest's autouse
+    fixture (get_client() -> None), so this exercises the real fallback path
+    -- _semantic_fallback -- with no network call, not a mocked shortcut."""
+    profile = sp.build_generic({}, [_PAPPG_ROW], id="NSF 23-598", title="T")
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", profile=profile,
+                                      use_ai=True)
+    ids = {f["id"] for f in out["findings"]}
+    assert _PAPPG_ROW["id"] in ids
+    assert "pappg_ps_headings" in ids
+    assert out["score"] is None
+
+
+def test_a_profiles_own_check_callable_reaches_run_deterministic():
+    """The mini profile review_section assembles must carry the caller's own
+    check callables through to run_deterministic, not just its requirement
+    rows -- a deterministic row whose check lives only in the profile's
+    `checks` dict (not generic_checks or rulebook_checks) must still run."""
+    def _always_flagged(ctx, req):
+        return "flagged", "the custom check ran", "evidence"
+
+    custom_row = {
+        "id": "custom1", "label": "A custom solicitation rule",
+        "section": "project_summary", "kind": "deterministic", "scored": True,
+        "check": "custom_check_xyz", "source": "A custom solicitation rule.",
+        "why": "", "keywords": [],
+    }
+    profile = sp.make_profile(id="X", title="T", sections={},
+                              requirements=[custom_row],
+                              checks={"custom_check_xyz": _always_flagged})
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", profile=profile,
+                                      use_ai=False)
+    row = next(f for f in out["findings"] if f["id"] == "custom1")
+    assert row["status"] == "flagged"
+    assert out["score"] is None
+
+
+def test_a_profile_row_already_in_the_baseline_is_not_duplicated():
+    """profile rows are deduped against the baseline by id, so a solicitation
+    that happens to reuse a baseline id does not produce two findings for it."""
+    dup_row = {**_PAPPG_ROW, "id": "pappg_ps_headings"}
+    profile = sp.build_generic({}, [dup_row], id="NSF 23-598", title="T")
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", profile=profile,
+                                      use_ai=False)
+    ids = [f["id"] for f in out["findings"]]
+    assert ids.count("pappg_ps_headings") == 1
