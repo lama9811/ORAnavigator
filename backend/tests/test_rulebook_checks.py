@@ -131,13 +131,13 @@ def test_ordinary_prose_is_clear():
 
 # ── financial information in Facilities ─────────────────────────────────────
 
-FE = {"section": "facilities_equipment_other_resources"}
+FE = {"section": "facilities_equipment_and_other_resources"}
 
 
 def test_a_dollar_figure_in_facilities_is_flagged():
     status, _, evidence = rc.rb_no_financials(
         _ctx("The cluster was purchased for $240,000 in 2024.",
-             key="facilities_equipment_other_resources"), _req(FE))
+             key="facilities_equipment_and_other_resources"), _req(FE))
     assert status == "flagged"
     assert "$240,000" in evidence
 
@@ -148,14 +148,14 @@ def test_the_word_funds_is_not_financial_information():
     rule it is being checked against."""
     status, _, _ = rc.rb_no_financials(
         _ctx("Dr. Smith contributes effort for whom no funds are being requested.",
-             key="facilities_equipment_other_resources"), _req(FE))
+             key="facilities_equipment_and_other_resources"), _req(FE))
     assert status == "clear"
 
 
 def test_a_year_is_not_a_dollar_figure():
     status, _, _ = rc.rb_no_financials(
         _ctx("The laboratory was renovated in 2019 and holds 12 benches.",
-             key="facilities_equipment_other_resources"), _req(FE))
+             key="facilities_equipment_and_other_resources"), _req(FE))
     assert status == "clear"
 
 

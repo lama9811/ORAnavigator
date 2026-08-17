@@ -67,26 +67,28 @@ def rb_headings(ctx: dict, req: dict) -> tuple:
     if not wanted:
         return "not_checked", "No headings were specified for this rule.", ""
 
+    # Markdown bold survives a paste from Word or a Markdown editor and is a
+    # heading by every human standard; strip it before the line test rather
+    # than widening the shared regex, which the locate stage also depends on.
+    # Computed once — it does not depend on which heading is being tested.
+    probe = re.sub(r"^[ \t]*(\*\*|__)|(\*\*|__)[ \t]*$", "",
+                   text, flags=re.MULTILINE)
+
     found, missing = [], []
     for h in wanted:
-        # Markdown bold survives a paste from Word or a Markdown editor and is a
-        # heading by every human standard; strip it before the line test rather
-        # than widening the shared regex, which the locate stage also depends on.
-        probe = re.sub(r"^[ \t]*(\*\*|__)|(\*\*|__)[ \t]*$", "",
-                       text, flags=re.MULTILINE)
         (found if heading_regex(h).search(probe) else missing).append(h)
 
     if not missing:
         return "addressed", (
             "Found " + ", ".join(f"“{h}”" for h in found) +
             ", each on its own line."
-        ), found[0]
+        ), ", ".join(found)
     if found:
         return "partial", (
             "Found " + ", ".join(f"“{h}”" for h in found) + ". Missing " +
             ", ".join(f"“{h}”" for h in missing) +
             ". Each must be on a line of its own, with no other text on that line."
-        ), found[0]
+        ), ", ".join(found)
     return "not_found", (
         "None of " + ", ".join(f"“{h}”" for h in wanted) +
         " appears as a heading. Each must be on a line of its own, with no other "
@@ -115,7 +117,7 @@ def rb_no_urls(ctx: dict, req: dict) -> tuple:
     more = f" and {len(hits) - 3} more" if len(hits) > 3 else ""
     return "flagged", (
         f"Found {len(hits)} hyperlink{'s' if len(hits) != 1 else ''}: {shown}{more}. "
-        "NSF reviewers are not permitted to follow links, so anything behind one "
+        "Reviewers are not permitted to follow links, so anything behind one "
         "goes unread — put what matters in the text itself."
     ), shown
 
@@ -140,7 +142,7 @@ def rb_no_financials(ctx: dict, req: dict) -> tuple:
     shown = ", ".join(h.strip() for h in hits[:3])
     return "flagged", (
         f"Found {len(hits)} dollar figure{'s' if len(hits) != 1 else ''}: {shown}. "
-        "NSF asks that this section carry no quantifiable financial information — "
+        "Quantifiable financial information does not belong in this section — "
         "describe the resource, and put its cost in the budget."
     ), shown
 
@@ -160,8 +162,8 @@ def rb_et_al(ctx: dict, req: dict) -> tuple:
     if not hits:
         return "clear", "No use of 'et al.' found.", ""
     return "flagged", (
-        f"'et al.' appears {len(hits)} time{'s' if len(hits) != 1 else ''}. NSF "
-        "asks for full author lists except for large consortia papers, so this is "
+        f"'et al.' appears {len(hits)} time{'s' if len(hits) != 1 else ''}. Full "
+        "author lists are expected except for large consortia papers, so this is "
         "advisory — it is not counted against your completeness score."
     ), "et al."
 
@@ -188,8 +190,8 @@ def rb_page_limit(ctx: dict, req: dict) -> tuple:
         if real <= limit:
             return "clear", f"{real} page{'s' if real != 1 else ''}, within the {limit}-page limit.", ""
         return "flagged", (
-            f"{real} pages, over the {limit}-page limit. NSF returns an "
-            "over-length section without review."
+            f"{real} pages, over the {limit}-page limit. An over-length section "
+            "is returned without review."
         ), ""
 
     words = len(text.split())
