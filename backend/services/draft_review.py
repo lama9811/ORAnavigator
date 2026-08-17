@@ -217,27 +217,35 @@ def locate_sections(text: str, sections: dict, *, use_ai: bool = True) -> tuple[
 
 def run_deterministic(text: str, spans: dict, profile: dict, *,
                       title: Optional[str] = None,
-                      budget: Optional[dict] = None) -> list[dict]:
+                      budget: Optional[dict] = None,
+                      pages: Optional[dict] = None) -> list[dict]:
     """Every code-decided requirement. No model involved, so these findings are
     identical whether or not Gemini is reachable (golden rule 1).
 
-    A row names its check by string. The profile may carry its own callables in
-    `checks` (a hand-written solicitation module); anything it does not define
-    falls through to the shared library in services/generic_checks.py. A row
-    whose check resolves to nothing is SKIPPED rather than guessed at — a
-    fabricated verdict on a rule we cannot evaluate is worse than silence."""
+    A row names its check by string, resolved in three tiers: the profile's own
+    callables, then the shared library in services/generic_checks.py, then the
+    rulebook baseline's in services/rulebook_checks.py. A row whose check
+    resolves to nothing is SKIPPED rather than guessed at — a fabricated verdict
+    on a rule we cannot evaluate is worse than silence.
+
+    `pages` maps a section key to its REAL page count, and is populated only by
+    the section-check upload path where one file is one section. Absent it, a
+    page rule reports an estimate and refuses to call it a pass or a fail."""
     rows = [r for r in profile.get("requirements", []) if r["kind"] == "deterministic"]
     if not rows:
         return []
-    # Imported here, and only once a row actually needs it: services/generic_checks
-    # is a separate module and this keeps the engine importable without it.
+    # Imported here, and only once a row actually needs it: both are separate
+    # modules and this keeps the engine importable without them.
     from services import generic_checks
+    from services import rulebook_checks
     ctx = {"text": text or "", "spans": spans or {}, "title": title,
-           "budget": budget, "profile": profile}
+           "budget": budget, "profile": profile, "pages": pages or {}}
     out = []
     for req in rows:
-        fn = profile.get("checks", {}).get(req.get("check", "")) \
-            or generic_checks.CHECKS.get(req.get("check", ""))
+        name = req.get("check", "")
+        fn = (profile.get("checks", {}).get(name)
+              or generic_checks.CHECKS.get(name)
+              or rulebook_checks.CHECKS.get(name))
         if fn is None:
             continue
         status, detail, evidence = fn(ctx, req)
@@ -568,7 +576,8 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
 
 
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
-                 budget: Optional[dict] = None, use_ai: bool = True) -> dict:
+                 budget: Optional[dict] = None, use_ai: bool = True,
+                 pages: Optional[dict] = None) -> dict:
     """Review a pasted proposal against the solicitation `profile` describes.
 
     draft_text — the whole proposal, one blob.
@@ -577,6 +586,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     title      — the tracked proposal's title, for checks that read it.
     budget     — a compute_budget() result, if the PI has saved one.
     use_ai     — False forces the deterministic path (used by tests).
+    pages      — section key -> REAL page count, from an upload. Absent it,
+                 page rules report an estimate and never a verdict.
     """
     sections = profile.get("sections") or {}
     requirements = profile.get("requirements") or []
@@ -594,7 +605,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
 
     spans, ai_located = locate_sections(text, sections, use_ai=use_ai)
 
-    findings = run_deterministic(text, spans, profile, title=title, budget=budget)
+    findings = run_deterministic(text, spans, profile, title=title, budget=budget,
+                                 pages=pages)
 
     # Every remaining model call is independent once the spans are known, so they
     # run CONCURRENTLY. Measured on a real draft: 39s sequential -> ~15s. Five
