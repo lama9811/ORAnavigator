@@ -780,13 +780,23 @@ def review_section(text: str, *, section: str, rulebook: str,
                                  pages={section: pages} if pages else None)
 
     semantic = [r for r in rows if r["kind"] == "semantic"]
-    if semantic and use_ai:
-        # _review_section's last parameter is `solicitation_id`, which reaches
-        # the model only through _review_system's prompt text ("requirements from
-        # <id>"). Passing the RULEBOOK name is correct here and reads correctly:
-        # these rules do come from the PAPPG, not from a solicitation.
-        findings.extend(_review_section(section, spans[section], semantic,
-                                        mini["sections"], rulebook))
+    skipped_semantic = False
+    if semantic:
+        if use_ai:
+            # _review_section's last parameter is `solicitation_id`, which reaches
+            # the model only through _review_system's prompt text ("requirements
+            # from <id>"). Passing the RULEBOOK name is correct here and reads
+            # correctly: these rules do come from the PAPPG, not a solicitation.
+            findings.extend(_review_section(section, spans[section], semantic,
+                                            mini["sections"], rulebook))
+        else:
+            # use_ai=False must not make semantic rules VANISH. Run the same
+            # fallback review_draft uses on an AI outage, so a caller sees
+            # `unclear` rows with their explanatory note instead of nothing —
+            # the difference between "no semantic rules exist for this section"
+            # and "semantic rules were not assessed" must stay visible.
+            findings.extend(_semantic_fallback(semantic, spans[section]["text"]))
+            skipped_semantic = True
 
     findings = apply_draft_scope(findings)
     order = {r["id"]: i for i, r in enumerate(rows)}
@@ -800,7 +810,11 @@ def review_section(text: str, *, section: str, rulebook: str,
         # score stays None. A percentage here would read as "your Project
         # Summary is 60% done", which is not a thing this can measure — the
         # rules are NSF's floor, not a completeness universe.
-        "message": None,
+        "message": (
+            "The AI reviewer was not run for this check, so the requirements "
+            "needing judgment are marked unclear below rather than assessed — "
+            "only the rule-based checks are complete."
+        ) if skipped_semantic else None,
     }
 
 

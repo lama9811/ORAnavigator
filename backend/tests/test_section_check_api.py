@@ -9,6 +9,8 @@ before changing anything here.
 import os
 os.environ["TRUSTED_HOSTS"] = "testserver,localhost,127.0.0.1"
 
+import json
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -127,6 +129,68 @@ def test_the_paste_is_never_persisted(ctx):
     sub = db.query(Submission).filter(Submission.id == sub_id).one()
     blob = " ".join(str(getattr(sub, f, "") or "") for f in
                     ("notes", "sections_json", "draft_review_json",
-                     "solicitation_json"))
+                     "solicitation_json", "budget_json", "compliance_json"))
     db.close()
     assert FIVE_LINE not in blob
+
+
+# ── the upload endpoint (POST .../section-check/upload) ────────────────────
+
+_CORRUPT_PDF = b"%PDF-1.4 not really a pdf"
+
+
+def test_upload_another_users_submission_is_404(ctx):
+    c, _, theirs_id, _ = ctx
+    r = c.post(f"/api/me/submissions/{theirs_id}/section-check/upload",
+               data={"section": "project_summary", "rulebook": "the PAPPG"},
+               files={"file": ("x.pdf", _CORRUPT_PDF, "application/pdf")})
+    assert r.status_code == 404
+
+
+def test_upload_corrupt_file_returns_a_structured_error_not_an_empty_review(ctx):
+    """A file that can't be read must come back with `result: None` and a
+    real `error`, not a review that goes on to claim the section is empty —
+    that would tell the PI their Project Summary has no headings when the
+    truth is we never read a word of it."""
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
+               data={"section": "project_summary", "rulebook": "the PAPPG"},
+               files={"file": ("x.pdf", _CORRUPT_PDF, "application/pdf")})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["result"] is None
+    assert body["error"]
+    assert isinstance(body["extraction"], dict)
+    assert "text" not in body["extraction"]
+
+
+def test_upload_never_echoes_the_extracted_text_back(ctx):
+    """Even on a SUCCESSFUL read the extracted text must not ride back in the
+    response — same rule as the paste endpoint: it's the PI's unpublished
+    manuscript."""
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
+               data={"section": "project_summary", "rulebook": "the PAPPG"},
+               files={"file": ("x.txt", FIVE_LINE.encode(), "text/plain")})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["result"] is not None
+    assert "text" not in body["extraction"]
+    assert FIVE_LINE not in json.dumps(body)
+
+
+def test_upload_unknown_section_is_400(ctx):
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
+               data={"section": "cover_letter", "rulebook": "the PAPPG"},
+               files={"file": ("x.pdf", _CORRUPT_PDF, "application/pdf")})
+    assert r.status_code == 400
+
+
+def test_upload_unknown_rulebook_is_400(ctx):
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
+               data={"section": "project_summary",
+                     "rulebook": "the Hitchhiker's Guide"},
+               files={"file": ("x.pdf", _CORRUPT_PDF, "application/pdf")})
+    assert r.status_code == 400

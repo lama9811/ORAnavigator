@@ -350,3 +350,41 @@ def test_a_baseline_finding_carries_its_rulebook_through_the_real_pipeline():
     before = row["status"]
     out = draft_review.apply_delegation([dict(row)])
     assert out[0]["status"] == before
+
+
+def test_use_ai_false_does_not_silently_drop_semantic_rules():
+    """Before this fix, `if semantic and use_ai:` meant a section WITH semantic
+    rules (project_summary has three: pappg_ps_overview/merit/impacts) produced
+    NO findings at all for them when use_ai=False, and `message` stayed None —
+    a caller could not tell "this section has no semantic rules" from
+    "semantic rules were not assessed". They must now appear as `unclear`
+    fallback rows (the same shape review_draft produces on an AI outage), and
+    the message must say coverage was reduced."""
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    ids = {f["id"] for f in out["findings"]}
+    for semantic_id in ("pappg_ps_overview", "pappg_ps_merit", "pappg_ps_impacts"):
+        assert semantic_id in ids, f"{semantic_id} missing from findings"
+        row = next(f for f in out["findings"] if f["id"] == semantic_id)
+        assert row["status"] == "unclear"
+        assert row["source"] == "fallback"
+    assert out["message"], "message must explain coverage was reduced"
+
+
+def test_use_ai_false_leaves_message_none_when_there_are_no_semantic_rules():
+    """The other half of the same distinction: a section with ONLY
+    deterministic rules must still report message=None on use_ai=False —
+    nothing was skipped, so there is nothing to say."""
+    profile = sp.make_profile(id="X", title="T", sections={}, requirements=[
+        {"id": "custom_det", "label": "A custom deterministic rule",
+         "section": "project_summary", "kind": "deterministic", "scored": True,
+         "check": "custom_check_xyz", "source": "A custom rule.",
+         "why": "", "keywords": []},
+    ], checks={"custom_check_xyz": lambda ctx, req: ("flagged", "ran", "ev")})
+    # rulebook="" -> rulebook_baseline.rules_for returns [] (unknown rulebook),
+    # so the profile's one deterministic row is the whole universe.
+    out = draft_review.review_section(FIVE_LINE, section="project_summary",
+                                      rulebook="", profile=profile, use_ai=False)
+    assert out["findings"], "expected the profile's own deterministic row"
+    assert all(f["kind"] == "deterministic" for f in out["findings"])
+    assert out["message"] is None

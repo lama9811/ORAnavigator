@@ -413,7 +413,7 @@ function SkeletonPanel({ skeleton }) {
 // quote, and a "why" disclosure holding the funder's own sentence. No section
 // grouping here — the whole list IS one section, so a group header would
 // repeat what the modal's own picker already says.
-function FindingRow({ f }) {
+function FindingRow({ f, rulebook }) {
   const [open, setOpen] = useState(false);
   const meta = STATUS_META[f.status] || STATUS_META.unclear;
   return (
@@ -447,7 +447,7 @@ function FindingRow({ f }) {
           {f.solicitation_says && (
             <blockquote className="scm-why-source">
               &ldquo;{f.solicitation_says}&rdquo;
-              <cite>the PAPPG</cite>
+              <cite>{rulebook || "the PAPPG"}</cite>
             </blockquote>
           )}
         </div>
@@ -535,7 +535,7 @@ function ResultsView({ result, extraction, onBack }) {
             )}
           </h3>
           {findings.map((f) => (
-            <FindingRow key={f.id} f={f} />
+            <FindingRow key={f.id} f={f} rulebook={result.rulebook} />
           ))}
         </section>
       ) : (
