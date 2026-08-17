@@ -4458,6 +4458,12 @@ class EirReviewRequest(BaseModel):
     draft_text: str = ""
 
 
+class SectionCheckRequest(BaseModel):
+    section: str
+    text: str = ""
+    rulebook: str = "the PAPPG"
+
+
 _NO_SOLICITATION_DETAIL = (
     "Attach this proposal's solicitation first — the review is run against its "
     "requirements."
@@ -4680,6 +4686,114 @@ async def draft_review_upload(
             "files": [{k: v for k, v in f.items() if k != "text"} for f in extracted],
             "words": len(draft_text.split()),
         },
+    }
+
+
+@app.get("/api/me/section-check/sections")
+async def section_check_sections(rulebook: str = "the PAPPG"):
+    """Which sections a PI can check one at a time, in Research.gov's order.
+
+    Auth-free: it is a static list of section names, and the picker needs it
+    before the modal has anything to check."""
+    from services import rulebook_baseline as _rb
+    return {"rulebook": rulebook, "sections": _rb.sections_offered(rulebook)}
+
+
+def _section_check_inputs(payload_section: str, rulebook: str):
+    """Validate the pair, or 400 naming what is wrong."""
+    from services import rulebook_baseline as _rb
+    if not _rb.rules_for(rulebook):
+        raise HTTPException(400, f"No rules are on file for {rulebook}.")
+    if not _rb.rules_for(rulebook, payload_section):
+        raise HTTPException(
+            400, f"{rulebook} has no rules on file for that section.")
+
+
+@app.post("/api/me/submissions/{submission_id}/section-check")
+async def section_check_endpoint(
+    submission_id: int,
+    payload: SectionCheckRequest,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Check ONE section against its rulebook, while the PI is still writing it.
+
+    Stateless — the paste is NOT persisted. It is the PI's unpublished
+    manuscript, the same rule Draft Review follows.
+
+    Deliberately does NOT 409 without a solicitation, unlike draft-review: these
+    rules are NSF's, not the solicitation's, and no completeness percentage is
+    returned, so the guard that 409 exists to enforce has nothing to protect
+    here. When a solicitation IS attached its own rows for this section are
+    checked alongside."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(
+        db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    _section_check_inputs(payload.section, payload.rulebook)
+
+    from services import draft_review as _dr
+    profile = _proposals_service.load_solicitation_profile(sub)
+    budget = None
+    raw_b = getattr(sub, "budget_json", None)
+    if raw_b:
+        try:
+            from services.budget_helper import compute_budget
+            budget = compute_budget(json.loads(raw_b))
+        except (ValueError, TypeError):
+            budget = None
+
+    result = _dr.review_section(payload.text, section=payload.section,
+                                rulebook=payload.rulebook, profile=profile,
+                                budget=budget)
+    return {"submission_id": submission_id, "result": result}
+
+
+@app.post("/api/me/submissions/{submission_id}/section-check/upload")
+async def section_check_upload(
+    submission_id: int,
+    section: str = Form(...),
+    rulebook: str = Form("the PAPPG"),
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The same check from an uploaded PDF.
+
+    ONE file, because one file IS one section here — which is what makes the
+    page count exact rather than a word-count estimate. That is the only thing
+    this path can do that a paste cannot, and it is the whole reason it exists."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(
+        db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    _section_check_inputs(section, rulebook)
+
+    data = await file.read()
+    if len(data) > _DRAFT_MAX_FILE_BYTES:
+        raise HTTPException(
+            400, f"That file is larger than {_DRAFT_MAX_FILE_BYTES // (1024 * 1024)} MB.")
+
+    from services import document_text as _dt
+    from services import draft_review as _dr
+    read = _dt.extract_upload(file.filename or "file", data)
+    if not (read.get("text") or "").strip():
+        return {"submission_id": submission_id, "result": None,
+                "extraction": {k: v for k, v in read.items() if k != "text"},
+                "error": read.get("error") or "Couldn't read any text from that file."}
+
+    profile = _proposals_service.load_solicitation_profile(sub)
+    result = _dr.review_section(read["text"], section=section, rulebook=rulebook,
+                                profile=profile, pages=read.get("pages") or None)
+    return {
+        "submission_id": submission_id,
+        "result": result,
+        # The extracted TEXT is deliberately not echoed back.
+        "extraction": {k: v for k, v in read.items() if k != "text"},
     }
 
 
