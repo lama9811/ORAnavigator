@@ -388,3 +388,29 @@ def test_use_ai_false_leaves_message_none_when_there_are_no_semantic_rules():
     assert out["findings"], "expected the profile's own deterministic row"
     assert all(f["kind"] == "deterministic" for f in out["findings"])
     assert out["message"] is None
+
+
+# ── golden rule 2 inside the module that claims it holds by construction ────
+
+def test_no_row_quotes_a_sentence_that_does_not_state_its_rule():
+    """The module docstring says every row's `source` is NSF's verbatim sentence,
+    "so golden rule 2 holds by construction". Three Project Summary rows broke
+    that: `pappg_ps_overview`, `_merit` and `_impacts` all quoted "Your file must
+    include three separate section headers: Overview, Intellectual Merit, and
+    Broader Impacts" — a sentence about HEADINGS, which says nothing about
+    objectives, methods, or whether what sits under a heading is substantive.
+
+    That is the exact failure `generic_checks._quote_if_it_names` was written
+    for: a quote that does not support its row looks like evidence while being
+    none. The honest form is a stated DERIVATION, never an invented NSF
+    sentence.
+    """
+    from services import rulebook_baseline as rb
+    headings_quote = next(r["source"] for r in rb.rules_for("the PAPPG")
+                          if r["id"] == "pappg_ps_headings")
+    for row_id in ("pappg_ps_overview", "pappg_ps_merit", "pappg_ps_impacts"):
+        row = next(r for r in rb.rules_for("the PAPPG") if r["id"] == row_id)
+        assert row["source"] != headings_quote, (
+            f"{row_id} reuses the headings quote, which does not state its rule")
+        assert row["source"].lower().startswith("derived from"), (
+            f"{row_id} must say it is derived rather than pose as NSF's sentence")

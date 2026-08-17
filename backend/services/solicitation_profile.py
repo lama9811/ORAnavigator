@@ -163,13 +163,34 @@ def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
 
         if key in sections:
             return
-        sections[key] = {"label": lbl, "aliases": aliases_for(lbl)}
+        # The DERIVED label is kept as an extra alias alongside the authored
+        # one. A row may name the section properly ("Facilities, Equipment and
+        # Other Resources") while a PI types it without NSF's commas, and both
+        # spellings have to locate. Aliases only ever widen the net, and
+        # heading_regex still demands a whole line, so this cannot match prose.
+        alias_list = aliases_for(lbl)
+        for extra in aliases_for(_section_label(key)):
+            if extra not in alias_list:
+                alias_list.append(extra)
+        sections[key] = {"label": lbl, "aliases": alias_list}
         if sig:
             by_signature[sig] = key
 
+    # An AUTHORED label wins over the title-cased key, wherever on the row list
+    # it appears. Collected first because `add` is first-writer-wins by key: the
+    # solicitation's own rows come before the rulebook baseline's, so a baseline
+    # row carrying the real NSF heading would otherwise arrive too late to be
+    # used.
+    authored: dict = {}
+    for req in requirements or []:
+        if req.get("section") and req.get("section_label"):
+            authored.setdefault(section_key(str(req["section"])),
+                                str(req["section_label"]))
+
     for req in requirements or []:
         if req.get("section"):
-            add(str(req["section"]))
+            add(str(req["section"]),
+                label=authored.get(section_key(str(req["section"]))))
     for name in (page_limits or {}):
         add(str(name))
     for name in (attachments or []):

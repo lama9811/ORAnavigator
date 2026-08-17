@@ -656,6 +656,15 @@ a.eir-delegation-name {
 }
 a.eir-delegation-name svg { vertical-align: -1px; }
 .eir-delegation-short { color: var(--text-secondary); }
+/* What of this rulebook WAS checked. Its own line, per rulebook — one line
+   covering several would claim coverage of a document nothing read. */
+.eir-delegation-covered {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
 .eir-delegation-count { display: block; margin-top: 2px; color: var(--eir-warn); }
 .eir-delegation-foot { margin-top: 8px; font-size: 0.79rem; line-height: 1.5;
   color: var(--text-secondary); }

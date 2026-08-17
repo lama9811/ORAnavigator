@@ -262,9 +262,48 @@ def test_the_notice_names_the_sections_the_baseline_now_checks():
     findings = [{"id": "r1", "label": "Adhere to PAPPG guidelines",
                  "status": "delegated",
                  "source_text": "Adhere to PAPPG guidelines."}]
-    rows = dr.summarize(findings, covered=["Project Summary", "Project Description"])
+    rows = dr.summarize(findings, covered={
+        "the PAPPG": ["Project Summary", "Project Description"]})
     assert rows and rows[0]["name"] == "the PAPPG"
     assert rows[0]["covered_sections"] == ["Project Summary", "Project Description"]
+
+
+def test_coverage_is_per_rulebook_not_stamped_on_every_row():
+    """We hold the PAPPG's rules. We hold NOTHING of the Build America, Buy
+    America Act — and a solicitation citing both would have claimed we check
+    BABA's Project Summary rules, because the same list was stamped onto every
+    rulebook row. A caveat that names the wrong document is worse than no
+    caveat: it tells the PI a part of their proposal is covered when nothing
+    read the law that governs it."""
+    findings = [
+        {"id": "r1", "label": "Adhere to PAPPG guidelines", "status": "delegated",
+         "source_text": "Adhere to PAPPG guidelines."},
+        {"id": "r2", "label": "Comply with the Build America, Buy America Act",
+         "status": "delegated",
+         "source_text": "Comply with the Build America, Buy America Act."},
+    ]
+    rows = {r["name"]: r for r in dr.summarize(findings, covered={
+        "the PAPPG": ["Project Summary", "Project Description"]})}
+    assert rows["the PAPPG"]["covered_sections"] == [
+        "Project Summary", "Project Description"]
+    assert rows["the Build America, Buy America Act"]["covered_sections"] == []
+
+
+def test_the_covered_map_is_built_from_the_rows_own_rulebook():
+    """rulebook_baseline names the sections; the mapping must come from each
+    row's OWN `rulebook`, so a second rulebook's rows can never be filed under
+    the first."""
+    from services import rulebook_baseline
+    covered = rulebook_baseline.covered_sections([
+        {"rulebook": "the PAPPG", "section": "project_description"},
+        {"rulebook": "the PAPPG", "section": "project_summary"},
+        {"rulebook": "the NIH Grants Policy Statement", "section": "references_cited"},
+        {"rulebook": None, "section": "project_summary"},        # solicitation row
+        {"rulebook": "the PAPPG", "section": None},              # whole-document
+    ])
+    # Research.gov's order, not the alphabet — the order a PI meets them.
+    assert covered["the PAPPG"] == ["Project Summary", "Project Description"]
+    assert covered["the NIH Grants Policy Statement"] == ["References Cited"]
 
 
 def test_with_nothing_covered_the_notice_is_unchanged():

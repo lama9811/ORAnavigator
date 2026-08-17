@@ -413,7 +413,14 @@ function SkeletonPanel({ skeleton }) {
 // quote, and a "why" disclosure holding the funder's own sentence. No section
 // grouping here — the whole list IS one section, so a group header would
 // repeat what the modal's own picker already says.
-function FindingRow({ f, rulebook }) {
+//
+// ATTRIBUTION IS PER ROW, NEVER PER MODAL. `review_section` merges the
+// solicitation's OWN rows for this section in beside the baseline's, and their
+// `solicitation_says` is the solicitation's sentence — so stamping the modal's
+// rulebook under every quote credited the PAPPG with words NSF never wrote
+// there. Baseline rows carry `rulebook`; solicitation rows carry null, and get
+// no attribution rather than a wrong one.
+function FindingRow({ f }) {
   const [open, setOpen] = useState(false);
   const meta = STATUS_META[f.status] || STATUS_META.unclear;
   return (
@@ -447,7 +454,7 @@ function FindingRow({ f, rulebook }) {
           {f.solicitation_says && (
             <blockquote className="scm-why-source">
               &ldquo;{f.solicitation_says}&rdquo;
-              <cite>{rulebook || "the PAPPG"}</cite>
+              {f.rulebook && <cite>{f.rulebook}</cite>}
             </blockquote>
           )}
         </div>
@@ -535,7 +542,7 @@ function ResultsView({ result, extraction, onBack }) {
             )}
           </h3>
           {findings.map((f) => (
-            <FindingRow key={f.id} f={f} rulebook={result.rulebook} />
+            <FindingRow key={f.id} f={f} />
           ))}
         </section>
       ) : (

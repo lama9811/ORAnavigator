@@ -42,9 +42,16 @@ saying "follow the PAPPG" is what earns it the PAPPG's rules. That also avoids
 the bug compliance_sentinel was bitten by, where a bare substring test read
 `nsf` out of "Maryland Technology Tra-nsf-er Fund".
 
-Every row's `source` is NSF's VERBATIM sentence, so golden rule 2 holds by
-construction — unlike generic_checks, which must fall back to a derived line
-when the shared contract quote does not name the row.
+A row's `source` is NSF's VERBATIM sentence WHERE NSF STATES THE RULE, and an
+explicitly DERIVED line where it does not. The docstring used to claim golden
+rule 2 held here "by construction", and three rows disproved it: the Overview,
+Intellectual Merit and Broader Impacts content rows all quoted the sentence
+about section HEADERS, which says nothing about objectives, methods, or whether
+anything substantive sits under a heading. Same failure generic_checks had to
+unship (`_quote_if_it_names`) — a quote that does not support its row looks like
+evidence while being none. Curating by hand is exactly what makes that possible,
+so the rule is: quote NSF where NSF says it, say "Derived from…" where it does
+not, and never invent an NSF sentence to fill the gap.
 """
 
 from __future__ import annotations
@@ -79,6 +86,14 @@ def _row(id, section, label, source, why, *, kind="semantic", check=None,
          rulebook="the PAPPG", url=_PAPPG_URL, keywords=None) -> dict:
     row = {
         "id": id, "section": section, "label": label,
+        # The section's REAL name, carried on the row so
+        # solicitation_profile.sections_from does not have to guess it back out
+        # of the key. Title-casing "facilities_equipment_and_other_resources"
+        # gives "Facilities Equipment And Other Resources", and NSF's own
+        # heading — the one the PI types — has COMMAS in it, so every alias
+        # missed and all four Facilities rules told the PI to give the section a
+        # clear heading they had already written.
+        "section_label": _SECTION_LABELS.get(section, ""),
         "kind": kind, "scored": scored,
         "check": check, "check_args": check_args or {},
         "source": source, "why": why, "keywords": keywords or [],
@@ -104,20 +119,31 @@ _PAPPG_RULES: list[dict] = [
          kind="deterministic", check="rb_headings",
          check_args={"section": PROJECT_SUMMARY,
                      "headings": ["Overview", "Intellectual Merit", "Broader Impacts"]}),
+    # A DERIVED line, not a quote — and that distinction is golden rule 2, not
+    # pedantry. All three of these used to carry the headings sentence above,
+    # which is about HEADINGS: it says nothing about objectives, methods, or
+    # whether anything substantive sits under a heading. A quote that does not
+    # support its row looks like evidence while being none, and this repo has
+    # already had to unship exactly that (generic_checks._quote_if_it_names,
+    # found by a user under "Why is this required?"). The honest alternative is
+    # to state the derivation; inventing an NSF sentence would be worse still.
     _row("pappg_ps_overview", PROJECT_SUMMARY,
          "The Overview describes the objectives and the methods",
-         "Your file must include three separate section headers: Overview, "
-         "Intellectual Merit, and Broader Impacts.",
+         "Derived from NSF's requirement that the Project Summary carry a "
+         "separate Overview section header — this row checks that something "
+         "substantive sits under it. NSF's own wording is in the PAPPG.",
          "A heading with nothing substantive under it reads to a reviewer as no answer at all."),
     _row("pappg_ps_merit", PROJECT_SUMMARY,
          "The Intellectual Merit statement addresses intellectual merit",
-         "Your file must include three separate section headers: Overview, "
-         "Intellectual Merit, and Broader Impacts.",
+         "Derived from NSF's requirement that the Project Summary carry a "
+         "separate Intellectual Merit section header — this row checks that "
+         "something substantive sits under it. NSF's own wording is in the PAPPG.",
          "This is one of NSF's two review criteria; a reviewer looks for it here first."),
     _row("pappg_ps_impacts", PROJECT_SUMMARY,
          "The Broader Impacts statement addresses broader impacts",
-         "Your file must include three separate section headers: Overview, "
-         "Intellectual Merit, and Broader Impacts.",
+         "Derived from NSF's requirement that the Project Summary carry a "
+         "separate Broader Impacts section header — this row checks that "
+         "something substantive sits under it. NSF's own wording is in the PAPPG.",
          "This is NSF's second review criterion and the one most often left thin."),
     _row("pappg_ps_one_page", PROJECT_SUMMARY,
          "Project Summary fits on one page",
@@ -275,6 +301,31 @@ def skeleton_for(rulebook: str, section: str) -> Optional[dict]:
 
 def section_label(key: str) -> str:
     return _SECTION_LABELS.get(key, key.replace("_", " ").title())
+
+
+def covered_sections(requirements: Optional[list[dict]]) -> dict[str, list[str]]:
+    """{rulebook name: the sections of it whose rules this profile carries}.
+
+    KEYED PER RULEBOOK, and that is load-bearing. The delegation notice used to
+    receive one flat list and stamp it on every rulebook it named, so a
+    solicitation citing both the PAPPG and the Build America, Buy America Act
+    told the PI we had checked BABA's Project Summary rules. We hold none of
+    that Act. A row's OWN `rulebook` is the only thing that can say which
+    document a section's rules came from.
+
+    Ordered as Research.gov lists the sections — the order a PI meets them —
+    rather than alphabetically."""
+    order = {k: i for i, k in enumerate(_SECTION_ORDER)}
+    found: dict[str, set] = {}
+    for row in requirements or []:
+        book, section = (row or {}).get("rulebook"), (row or {}).get("section")
+        if book and section:
+            found.setdefault(str(book), set()).add(str(section))
+    return {
+        book: [section_label(s)
+               for s in sorted(keys, key=lambda s: (order.get(s, len(order)), s))]
+        for book, keys in found.items()
+    }
 
 
 # The only overlap between a baseline row and a contract-derived row is the page

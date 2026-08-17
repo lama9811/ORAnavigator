@@ -47,8 +47,8 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// Status vocabulary mirrors services/eir_review.py exactly. `neutral: true`
-// marks the two "we did not assess this" states so they can never be styled or
+// Status vocabulary mirrors services/draft_review.py exactly. `neutral: true`
+// marks the "we did not assess this" states so they can never be styled or
 // counted as failures.
 const STATUS_META = {
   addressed:        { label: "Addressed",    Icon: Check,         cls: "eir-ok" },
@@ -796,11 +796,18 @@ function DelegationNotice({ books }) {
   // once for Build America Buy America — which is the same say-it-twice problem
   // that crowded this panel before.
   const unchecked = books.reduce((n, b) => n + (b.unchecked || 0), 0);
+  // `covered_sections` is PER RULEBOOK (services/delegated_rules.summarize).
+  // The backend has named the parts it now checks since the baseline shipped
+  // and nothing here read it, so this panel went on saying "this review has not
+  // read them" beside fourteen checked PAPPG findings.
+  const anyCovered = books.some((b) => b.covered_sections?.length);
   return (
     <div className="eir-delegation">
       <div className="eir-delegation-head">
-        <ExternalLink size={13} /> Your solicitation says to follow these. This
-        review has not read them.
+        <ExternalLink size={13} />{" "}
+        {anyCovered
+          ? "Your solicitation says to follow these. This review checked part of them."
+          : "Your solicitation says to follow these. This review has not read them."}
       </div>
       <ul className="eir-delegation-list">
         {books.map((b) => (
@@ -814,6 +821,16 @@ function DelegationNotice({ books }) {
               <span className="eir-delegation-name">{b.name}</span>
             )}
             {b.short && <span className="eir-delegation-short">, {b.short}</span>}
+            {/* Named per rulebook, never once for all of them: we hold the
+                PAPPG's rules for four sections and NOTHING of the Build
+                America, Buy America Act, and one line covering both would claim
+                coverage of a law nothing read. */}
+            {b.covered_sections?.length > 0 && (
+              <span className="eir-delegation-covered">
+                Checked here against {b.name}: {b.covered_sections.join(", ")}.
+                The rest of {b.name} was not read.
+              </span>
+            )}
           </li>
         ))}
       </ul>
@@ -831,7 +848,9 @@ function DelegationNotice({ books }) {
             was nothing to check your draft against.{" "}
           </>
         )}
-        Read {books.length === 1 ? "it" : "them"} yourself before you submit.
+        {anyCovered
+          ? `Read ${books.length === 1 ? "it" : "them"} yourself for anything not listed above.`
+          : `Read ${books.length === 1 ? "it" : "them"} yourself before you submit.`}
       </p>
     </div>
   );
@@ -864,10 +883,19 @@ function reviewToMarkdown(result, submission) {
     }
   }
   if (result.delegated?.length) {
+    // Same honesty as the on-screen notice: when part of a rulebook WAS
+    // checked, this heading must not claim none of it was.
+    const anyCovered = result.delegated.some((b) => b.covered_sections?.length);
     L.push("");
-    L.push("## Rules this review did not read");
+    L.push(anyCovered
+      ? "## Rules from outside your solicitation"
+      : "## Rules this review did not read");
     for (const b of result.delegated) {
       L.push(`- **${b.name}**${b.short ? `, ${b.short}` : ""}${b.url ? ` — ${b.url}` : ""}`);
+      if (b.covered_sections?.length) {
+        L.push(`  - Checked here against ${b.name}: ${b.covered_sections.join(", ")}. ` +
+               `The rest of ${b.name} was not read.`);
+      }
     }
   }
   const labels = sectionLabels(result);

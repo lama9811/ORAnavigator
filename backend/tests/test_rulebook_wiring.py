@@ -44,3 +44,74 @@ def test_run_deterministic_passes_pages_into_the_context():
                                          pages={"project_summary": 3})
     assert out[0]["status"] == "flagged"
     assert "3 pages" in out[0]["note"]
+
+
+# ── one section is not the whole package ────────────────────────────────────
+
+def _profile_with_a_pointer_row():
+    """A profile whose Project Summary row is a POINTER at the PAPPG.
+
+    That is the shape `delegated_rules` exists for: the whole ask is "follow
+    that document", so nothing about it was verified and it must not sit in the
+    score's denominator."""
+    from services import solicitation_profile as sp
+    return sp.build_generic({}, [{
+        "id": "sol_ps_pointer", "section": "project_summary",
+        "label": "Adhere to PAPPG guidelines for the Project Summary",
+        "kind": "semantic", "scored": True,
+        "source": ("Prepare the Project Summary in accordance with the PAPPG."),
+        "why": "", "keywords": [],
+    }], id="NSF 99-999", title="A generic NSF solicitation")
+
+
+CITED_SUMMARY = """Overview
+We will study coastal sensing, and prior work (Alvarez 2019) frames the problem.
+
+Intellectual Merit
+The approach extends earlier results (Chen et al., 2021) to a second cohort.
+
+Broader Impacts
+Undergraduates will be trained, building on our pilot (Diallo 2022).
+"""
+
+
+def test_a_single_section_check_does_not_demand_the_reference_list():
+    """`_missing_references` is a whole-document rule. Run over ONE section it
+    told every well-cited draft to "upload it too" — in a modal that takes one
+    file for one section and says the rest of the proposal is not needed."""
+    from services import draft_review
+    out = draft_review.review_section(CITED_SUMMARY, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    assert [m["kind"] for m in out["mistakes"]] == []
+
+
+def test_both_entry_points_agree_that_a_pointer_row_is_delegated():
+    """review_section's own docstring says it exists so two engines cannot
+    disagree about the same section — and it was skipping `apply_delegation`,
+    so the identical requirement came back `delegated` in Draft Review and
+    `not_found` (counted against the draft) in the section check."""
+    from services import draft_review
+    profile = _profile_with_a_pointer_row()
+
+    section = draft_review.review_section(
+        CITED_SUMMARY, section="project_summary", rulebook="the PAPPG",
+        profile=profile, use_ai=False)
+    row = next(f for f in section["findings"] if f["id"] == "sol_ps_pointer")
+    assert row["status"] == "delegated"
+    assert row["delegated_to"] == "the PAPPG"
+
+    whole = draft_review.review_draft(
+        "Project Summary\n" + CITED_SUMMARY, profile=profile, use_ai=False)
+    same = next(f for f in whole["findings"] if f["id"] == "sol_ps_pointer")
+    assert same["status"] == row["status"]
+    assert same["delegated_to"] == row["delegated_to"]
+
+
+def test_a_baseline_row_is_not_demoted_by_the_section_checks_delegation():
+    """apply_delegation's `rulebook` guard has to hold on this path too: a
+    baseline row IS the PAPPG's rule, checked, not a pointer into it."""
+    from services import draft_review
+    out = draft_review.review_section(CITED_SUMMARY, section="project_summary",
+                                      rulebook="the PAPPG", use_ai=False)
+    headings = next(f for f in out["findings"] if f["id"] == "pappg_ps_headings")
+    assert headings["status"] == "addressed"

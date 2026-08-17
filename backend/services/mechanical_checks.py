@@ -213,17 +213,45 @@ def _missing_references(text: str) -> list[dict]:
         _snippet(text, m.start(), m.end()))]
 
 
-def find_mistakes(text: str, *, budget: Optional[dict] = None) -> list[dict]:
+def find_mistakes(text: str, *, budget: Optional[dict] = None,
+                  whole_document: bool = True) -> list[dict]:
     """Mechanical errors in `text`, each quoting the words it found.
 
     Deterministic and model-free (golden rule 1). Deliberately NOT scored: a
     leftover "TBD" is not incompleteness against the solicitation.
+
+    `whole_document=False` when `text` is ONE section of a proposal rather than
+    the package, and it suppresses the rules whose evidence can only live
+    elsewhere. `missing_references` is the whole of that set today: References
+    Cited is a separate section by NSF's own structure, so any well-cited
+    Project Description tripped it, and its advice — "if it is a separate file,
+    upload it too" — is impossible to follow in a modal that takes ONE file for
+    ONE section and says the rest of the proposal is not needed. Unfollowable
+    advice on every well-cited section is exactly the cry-wolf failure this
+    module's docstring warns about.
+
+    The others are deliberately KEPT, and each for a reason:
+      * `placeholders` / `duplicate_paragraphs` — a leftover "TBD" and a
+        paragraph pasted twice are errors in any span of text.
+      * `broken_references` — already fails safe on its own guard: with no
+        captions ANYWHERE it reports nothing, which is what a Project Summary or
+        a References Cited section will do. Where a section does carry captions,
+        a dangling reference inside it is findable and fixable inside it.
+      * `number_conflicts` — compares against the budget the PI SAVED on the
+        proposal, not against something elsewhere in the paste, so the evidence
+        is present whichever entry point is running.
+
+    A PARAMETER, not a filter over the output by label: the caller knows what it
+    handed in, and matching on strings would break silently the moment a row is
+    reworded.
     """
     text = text or ""
     if not text.strip():
         return []
-    return (_placeholders(text)
+    rows = (_placeholders(text)
             + _broken_references(text)
             + _duplicate_paragraphs(text)
-            + _number_conflicts(text, budget)
-            + _missing_references(text))
+            + _number_conflicts(text, budget))
+    if whole_document:
+        rows += _missing_references(text)
+    return rows

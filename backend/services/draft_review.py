@@ -135,23 +135,73 @@ def _find_offset(text: str, marker: str) -> Optional[int]:
     return m.start() if m else None
 
 
+# A labelled SUB-section: a heading that legitimately sits INSIDE another
+# section rather than beside it. {child_key: parent_key}.
+#
+# WHY THIS TABLE EXISTS — following our own advice used to break the check.
+# The spans TILE, so every accepted marker cuts the section before it. NSF wants
+# a "Broader Impacts" heading in the Project Summary AND a separately labelled
+# one in the Project Description, and `_find_offset` resolves a marker to its
+# FIRST occurrence in the whole document. On a package that did exactly what
+# this tool asks, the summary's own third heading became a top-level boundary,
+# truncated the Project Summary before it, and `pappg_ps_headings` reported
+# "Missing Broader Impacts" about a summary that has it. The mirror is just as
+# real: with no such heading in the summary, the boundary lands inside the
+# Project Description and cuts its span off immediately before its own header,
+# so `pappg_pd_impacts_header` reports not_found on a compliant one.
+#
+# A sub-section therefore never acts as a boundary, and it is resolved INSIDE
+# its parent's span — so an identical heading earlier in the document cannot
+# claim it. `_project_description_span` already encodes this same parent/child
+# relationship for the opposite reason (folding the text back in); this is the
+# locate half of it.
+_SUBSECTIONS = {"broader_impacts": "project_description"}
+
+
 def _spans_from_markers(text: str, markers: dict, sections: dict) -> dict:
     """{section_key: first_line} -> {section_key: {"text","start","end","marker"}}.
 
-    Each located section runs from its own marker to the next marker in document
-    order, so the spans tile the paste without overlapping."""
-    found = []
+    Top-level sections TILE: each runs from its own marker to the next in
+    document order, so they cover the paste without overlapping. A SUB-section
+    (see _SUBSECTIONS) is deliberately outside that tiling — it never truncates
+    anything, and where its parent was located it is resolved within the
+    parent's span so a same-named heading elsewhere cannot claim it."""
+    offsets = {}
     for key, marker in markers.items():
         if key not in sections:
             continue                      # model invented a section name — ignore
-        off = _find_offset(text, str(marker or ""))
+        m = str(marker or "")
+        off = _find_offset(text, m)
         if off is None:
             continue                      # marker not verifiable -> not located
-        found.append((off, key, str(marker)))
-    found.sort()
+        offsets[key] = (off, m)
+
+    # A child is held out of the tiling whenever its parent is a section THIS
+    # solicitation names — even if the parent turns out not to be located, since
+    # the point is that it must not cut a sibling either way.
+    subs = {k: v for k, v in offsets.items() if _SUBSECTIONS.get(k) in sections}
+    found = sorted((off, k, m) for k, (off, m) in offsets.items() if k not in subs)
+
     spans = {}
     for i, (start, key, marker) in enumerate(found):
         end = found[i + 1][0] if i + 1 < len(found) else len(text)
+        spans[key] = {"text": text[start:end].strip(), "start": start,
+                      "end": end, "marker": marker}
+
+    for key, (off, marker) in subs.items():
+        parent = spans.get(_SUBSECTIONS[key])
+        if parent is not None:
+            rel = _find_offset(text[parent["start"]:parent["end"]], marker)
+            if rel is None:
+                # The heading exists, but not inside the parent — so it belongs
+                # to some other section (a Project Summary's own Broader Impacts
+                # line). Reporting it as this sub-section would point every one
+                # of its requirements at the wrong text; unlocated is honest.
+                continue
+            start, end = parent["start"] + rel, parent["end"]
+        else:
+            start = off
+            end = next((s for s, _, _ in found if s > start), len(text))
         spans[key] = {"text": text[start:end].strip(), "start": start,
                       "end": end, "marker": marker}
     return spans
@@ -492,6 +542,14 @@ def _project_description_span(spans: dict, sections: dict) -> Optional[dict]:
         return None
     if bi is None:
         return pd
+    # Since _SUBSECTIONS made Broader Impacts a NESTED span, its text is already
+    # part of the Project Description's — concatenating would repeat it, and a
+    # paragraph appearing twice is a mistake `mechanical_checks` reports. The
+    # concatenation below still matters for the case that is not nested: a
+    # Broader Impacts heading located when the Project Description was not, or a
+    # solicitation whose Broader Impacts really is a sibling section.
+    if pd["start"] <= bi["start"] < pd["end"]:
+        return pd
     return {**pd, "text": pd["text"] + "\n\n" + bi["text"]}
 
 
@@ -716,12 +774,13 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         # description and how many of its requirements went unchecked. Also
         # names the sections whose rules the baseline supplied and we DID
         # check, so the caveat shrinks as coverage grows instead of forever
-        # saying "not checked here" about a section that now is.
+        # saying "not checked here" about a section that now is — PER RULEBOOK,
+        # because one flat list stamped on every row claimed we check the Build
+        # America, Buy America Act's Project Summary rules.
         "delegated": delegated_rules.summarize(
             findings,
-            covered=[rulebook_baseline.section_label(s) for s in sorted({
-                r["section"] for r in profile.get("requirements", [])
-                if r.get("rulebook") and r.get("section")})]),
+            covered=rulebook_baseline.covered_sections(
+                profile.get("requirements", []))),
         "eligibility_notes": profile.get("eligibility_notes") or [],
         "message": None if ai_used else (
             "The AI reviewer is unavailable, so only the rule-based checks ran and the "
@@ -798,6 +857,13 @@ def review_section(text: str, *, section: str, rulebook: str,
             findings.extend(_semantic_fallback(semantic, spans[section]["text"]))
             skipped_semantic = True
 
+    # THE SAME TWO PASSES AS review_draft, IN THE SAME ORDER. This entry point
+    # exists so a PI cannot be told two different things about one section, and
+    # skipping delegation broke exactly that: a solicitation row whose whole ask
+    # is "follow the PAPPG" came back `delegated` in Draft Review and
+    # `not_found` — counted against the draft — here. Baseline rows carry
+    # `rulebook` and apply_delegation's guard leaves them alone.
+    findings = apply_delegation(findings)
     findings = apply_draft_scope(findings)
     order = {r["id"]: i for i, r in enumerate(rows)}
     findings.sort(key=lambda f: order.get(f["id"], 999))
@@ -806,7 +872,13 @@ def review_section(text: str, *, section: str, rulebook: str,
         **base,
         "findings": findings,
         "ai": any(f["source"] == "ai" for f in findings),
-        "mistakes": mechanical_checks.find_mistakes(text, budget=budget),
+        # ONE SECTION, so the whole-document rules are off. Every well-cited
+        # Project Description used to come back with "Works are cited but no
+        # reference list was found ... If it is a separate file, upload it too",
+        # in a modal that accepts one file for one section and says the rest of
+        # the proposal is not needed — advice the PI cannot act on.
+        "mistakes": mechanical_checks.find_mistakes(text, budget=budget,
+                                                    whole_document=False),
         # score stays None. A percentage here would read as "your Project
         # Summary is 60% done", which is not a thing this can measure — the
         # rules are NSF's floor, not a completeness universe.

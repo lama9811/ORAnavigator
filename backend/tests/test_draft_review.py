@@ -77,11 +77,23 @@ def test_heading_fallback_locates_sections_without_ai():
                           "broader_impacts", "budget_justification"}
 
 
-def test_located_spans_do_not_overlap_and_follow_document_order():
+def test_top_level_spans_do_not_overlap_and_follow_document_order():
+    """The TOP-LEVEL sections still tile. A SUB-section deliberately does not —
+    see the next test and draft_review._SUBSECTIONS: making the Project
+    Description's Broader Impacts heading a boundary is what truncated a
+    compliant Project Summary before its own third heading."""
     spans, _ = draft_review.locate_sections(DRAFT, SECTIONS, use_ai=False)
-    ordered = sorted(spans.values(), key=lambda s: s["start"])
-    for a, b in zip(ordered, ordered[1:]):
+    top = sorted((s for k, s in spans.items() if k not in draft_review._SUBSECTIONS),
+                 key=lambda s: s["start"])
+    assert len(top) >= 3
+    for a, b in zip(top, top[1:]):
         assert a["end"] <= b["start"]
+
+
+def test_a_subsection_span_sits_inside_its_parent():
+    spans, _ = draft_review.locate_sections(DRAFT, SECTIONS, use_ai=False)
+    bi, pd = spans["broader_impacts"], spans["project_description"]
+    assert pd["start"] <= bi["start"] < bi["end"] <= pd["end"]
 
 
 def test_a_mention_in_a_paragraph_is_not_a_heading():
