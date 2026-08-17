@@ -80,9 +80,9 @@ def _is_quote(row: dict) -> bool:
 def build_html() -> str:
     parts = [
         "<!doctype html><meta charset='utf-8'>",
-        "<title>NSF rules ORA Navigator checks</title>",
+        "<title>NSF rules and amendments — ORA Navigator</title>",
         f"<style>{CSS}</style>",
-        "<h1>NSF rules ORA Navigator checks</h1>",
+        "<h1>NSF rules &amp; amendments</h1>",
         f"<p class='sub'>Generated from the live rule table on {date.today():%d %B %Y} "
         "&mdash; <code>backend/services/rulebook_baseline.py</code></p>",
         "<div class='lede'><strong>These are NSF's rules, not ours.</strong> Each one is "
@@ -125,6 +125,56 @@ def build_html() -> str:
                 if r.get("why"):
                     parts.append(f"<p class='why'>{html.escape(r['why'])}</p>")
                 parts.append("</div>")
+
+    # ── amendments ─────────────────────────────────────────────────────────
+    # Rendered in their OWN part, clearly separated from the rules, because
+    # nothing here is enforced. Presenting an amendment beside a rule the app
+    # checks would imply the app checks it.
+    stale = rb.amendments_affecting_rules()
+    parts.append("<h2 style='page-break-before:always'>Changes since PAPPG 24-1"
+                 f"<span class='cnt'>{len(rb.AMENDMENTS)} amendments</span></h2>")
+    parts.append(
+        "<div class='lede'><strong>None of these are checked by the app.</strong> NSF patches "
+        "the PAPPG between editions with supplements, each naming the exact section it amends. "
+        "They are recorded here so a reader knows which document a rule comes from, and what has "
+        "moved since the base version was published. Anyone reading only PAPPG 24-1 is reading "
+        "rules that are partly out of date.</div>")
+    parts.append(
+        "<div class='note'><strong>Do the 14 rules above need review?</strong> "
+        + ("<strong>No.</strong> No amendment touches the Project Summary, Project Description, "
+           "References Cited, Facilities sections or the formatting requirements, so the rules "
+           "above are current." if not stale else
+           f"<strong>Yes &mdash; {len(stale)} amendment(s) affect a rule we enforce.</strong>")
+        + "</div>")
+
+    by_doc: dict = {}
+    for a in rb.AMENDMENTS:
+        by_doc.setdefault(a["doc"], []).append(a)
+    for doc, items in by_doc.items():
+        parts.append(f"<h2 style='font-size:11.5pt;border-bottom:1px solid #e6eaf0;"
+                     f"margin-top:18px'>{html.escape(doc)}</h2>")
+        for a in sorted(items, key=lambda x: x["effective"]):
+            parts.append("<div class='rule'>")
+            parts.append(f"<div class='hdr'><span class='lbl'>{html.escape(a['title'])}</span>"
+                         f"<span class='tag adv'>from {html.escape(a['effective'])}</span></div>")
+            parts.append(f"<p class='derived'>{html.escape(a['detail'])}</p>")
+            parts.append(f"<p class='why'>Amends PAPPG section {html.escape(a['amends'])}</p>")
+            parts.append("</div>")
+
+    parts.append("<h2>Read the source yourself</h2>")
+    parts.append(
+        "<div class='lede'>Everything above is public and free &mdash; no login. "
+        "The Research.gov Content Instructions the rules come from are NOT public; they sit "
+        "behind an NSF sign-in on each document's upload page.</div>")
+    for label, url in [
+        ("PAPPG 24-1, the whole rulebook (PDF)", "https://nsf-gov-resources.nsf.gov/files/nsf24_1.pdf"),
+        ("Chapter II &mdash; Proposal Preparation (the one that matters)",
+         "https://www.nsf.gov/policies/pappg/24-1/ch-2-proposal-preparation"),
+        ("Supplement 1", "https://nsf.gov/policies/document/pappg24-1-supplement-1"),
+        ("Supplement 2", "https://nsf.gov/policies/document/pappg24-1-supplement-2"),
+    ]:
+        parts.append(f"<div class='rule'><div class='hdr'><span class='lbl'>{label}</span></div>"
+                     f"<p class='why'>{html.escape(url)}</p></div>")
 
     covered = ", ".join(rb.section_label(s["key"]) for s in rb.sections_offered("the PAPPG"))
     parts.append(

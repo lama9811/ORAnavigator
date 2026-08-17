@@ -352,3 +352,89 @@ def baseline_rows(requirements: list[dict], *, url: str = "",
                 continue
             out.append(dict(row))
     return out
+
+
+# ── AMENDMENTS: what has changed in the rulebook since the base version ─────
+#
+# DATA, NOT RULES. Nothing in this list is enforced, and it must never be merged
+# into RULES — the engine would try to check an amendment as if it were a
+# requirement of a proposal. It exists so the app can say WHICH document a rule
+# comes from, and so a reader can see what moved after the base version was
+# published.
+#
+# WHY THIS MATTERS: NSF reissues the PAPPG about once a year and patches it in
+# between with supplements. Anyone reading only the base document is reading
+# rules that are partly out of date, and the supplements name the exact section
+# they amend — so they are a list to transcribe, not a document to extract from.
+#
+# `effective` is an ISO date and is load-bearing: an amendment that has not yet
+# taken effect is not yet the rule, and one that HAS may retire a rule we still
+# hold. Keeping the date lets a rule be superseded rather than silently deleted.
+#
+# `affects_our_rules` is the field to look at when NSF publishes a new
+# supplement: if it is True for any entry, the RULES table above needs review.
+AMENDMENTS: list[dict] = [
+    # ── PAPPG 24-1 Supplement 1 (NSF 26-200), effective 2025-12-08 ──────────
+    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+     "amends": "IX.E.2.g(i)", "affects_our_rules": False,
+     "title": "Equipment threshold raised to $10,000",
+     "detail": "The capital-equipment threshold rises from $5,000 to $10,000, "
+               "per 2 CFR 200.313. Equipment is exempt from F&A, so this moves "
+               "real money: an item between $5,000 and $10,000 is now a supply, "
+               "and DOES bear indirect costs. NSF's own budget form (Form 1030, "
+               "line D) reads 'FOR EACH ITEM EXCEEDING $10,000.'"},
+    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+     "amends": "II.F", "affects_our_rules": False,
+     "title": "Higher caps for Planning, RAPID and EAGER proposals",
+     "detail": "Planning $100,000 -> $200,000; RAPID $200,000 -> $300,000; "
+               "EAGER $300,000 -> $400,000."},
+    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+     "amends": "XII.C", "affects_our_rules": False,
+     "title": "Research misconduct now names AI tools explicitly",
+     "detail": "The definition expands to cover misconduct committed 'through "
+               "the use or assistance of other persons, entities, or tools, "
+               "including artificial intelligence (AI)-based tools.' Directly "
+               "relevant to this product: it is why the model may explain a "
+               "rule and show a structural example, but never drafts the PI's "
+               "science."},
+    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+     "amends": "I.E.3", "affects_our_rules": False,
+     "title": "No awards to an IHE hosting a Confucius Institute",
+     "detail": "Implements the CHIPS and Science Act restriction; a waiver from "
+               "the NSF Director is the only exception."},
+    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-22",
+     "amends": "II.D.2.f(xiii)", "affects_our_rules": False,
+     "title": "No NSF funds for drones from covered foreign entities",
+     "detail": "American Drone Security Act. Applies to procurement and "
+               "operation after 2025-12-22."},
+    {"doc": "PAPPG 24-1 Supplement 1", "effective": "2025-12-08",
+     "amends": "VII.D.3.a", "affects_our_rules": False,
+     "title": "Foreign financial disclosure threshold raised to $70,000",
+     "detail": "Was $50,000."},
+
+    # ── PAPPG 24-1 Supplement 2 (NSF 26-202), effective 2026-01-22 ──────────
+    {"doc": "PAPPG 24-1 Supplement 2", "effective": "2026-04-27",
+     "amends": "II.D.2.i(ii)", "affects_our_rules": False,
+     "title": "The Data Management and Sharing Plan is no longer a document",
+     "detail": "From 2026-04-27 the DMSP must be created with the tool in "
+               "Research.gov rather than uploaded as a PDF. Consequence for "
+               "this app: DMSP rules must NOT be written as file rules "
+               "(page limits, headings, upload format) — there is no file."},
+    {"doc": "PAPPG 24-1 Supplement 2", "effective": "2026-01-22",
+     "amends": "XI.D.2.c", "affects_our_rules": False,
+     "title": "The 12-month publication embargo is removed",
+     "detail": "Author Accepted Manuscripts must be deposited in NSF's Public "
+               "Access Repository at or before the time of publication."},
+    {"doc": "PAPPG 24-1 Supplement 2", "effective": "2026-01-22",
+     "amends": "XI.D.4", "affects_our_rules": False,
+     "title": "Data behind a funded publication must be shared at publication",
+     "detail": "Exceptions are requested through the Data Management and "
+               "Sharing Plan; changes after award need Program Officer approval."},
+]
+
+
+def amendments_affecting_rules() -> list[dict]:
+    """Amendments flagged as touching a rule we enforce.
+
+    Non-empty means the RULES table above is out of date and needs review."""
+    return [a for a in AMENDMENTS if a.get("affects_our_rules")]
