@@ -70,4 +70,17 @@ def test_the_sponsor_substring_bug_cannot_fire_here():
 def test_sections_offered_lists_the_four_covered_parts():
     keys = [s["key"] for s in rb.sections_offered("the PAPPG")]
     assert keys == ["project_summary", "project_description",
-                    "references_cited", "facilities_equipment_other_resources"]
+                    "references_cited", "facilities_equipment_and_other_resources"]
+
+
+def test_every_section_constant_is_what_section_key_actually_produces():
+    """The bug this caught: FACILITIES was written without the "and", so
+    section_key("Facilities, Equipment and Other Resources") produced a key the
+    constant did not equal. Nothing would have gone red — the four Facilities
+    rules would simply have been filed under a key no real draft can produce,
+    reported "Not located", and dropped out of the score's denominator,
+    silently unchecked. Assert against the LIVE function, never against a
+    string we typed twice."""
+    from services.solicitation_profile import section_key
+    for key, label in rb._SECTION_LABELS.items():
+        assert key == section_key(label), f"{key} != section_key({label!r})"

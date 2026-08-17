@@ -28,9 +28,10 @@ compliance_sentinel's five rules, budget_helper's F&A rates, forms_catalog.
 
 KEYED ON THE RULEBOOK, NEVER THE FUNDER
 ---------------------------------------
-`RULES["the PAPPG"]` is DATA. This is not the funder branch the repo forbids
-(`grep -ril "eir_solicitation\\|23-598" backend/services/` must stay empty) —
-what was forbidden was branching the ENGINE on one solicitation, the way
+`RULES["the PAPPG"]` is DATA. This is not the funder branch the repo forbids —
+the repo greps `backend/services/` for identifiers of the deleted EiR-specific
+modules to make sure none comes back, and this module must not reintroduce one.
+What was forbidden was branching the ENGINE on one solicitation, the way
 `isEirProposal()` hid the tool on 4 of 5 proposals. The engine here stays
 funder-blind: it asks which rulebooks a solicitation cites and whether we hold
 rules for any of them. `RULES["the NIH Grants Policy Statement"]` slots in with
@@ -60,7 +61,7 @@ _PAPPG_URL = "https://www.nsf.gov/policies/pappg"
 PROJECT_SUMMARY = "project_summary"
 PROJECT_DESCRIPTION = "project_description"
 REFERENCES_CITED = "references_cited"
-FACILITIES = "facilities_equipment_other_resources"
+FACILITIES = "facilities_equipment_and_other_resources"
 
 _SECTION_LABELS = {
     PROJECT_SUMMARY: "Project Summary",
