@@ -1,0 +1,115 @@
+<!doctype html><meta charset='utf-8'>
+<title>NSF rules ORA Navigator checks</title>
+<style>
+@page { size: Letter; margin: 0.75in 0.7in; }
+* { box-sizing: border-box; }
+body { font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+       color: #1f2a37; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+h1 { font-size: 22pt; margin: 0 0 4px; color: #0f2747; letter-spacing: -.3px; }
+.sub { color: #5b6777; font-size: 10pt; margin: 0 0 18px; }
+h2 { font-size: 13pt; margin: 26px 0 2px; color: #0f2747;
+     border-bottom: 2px solid #c9d6ea; padding-bottom: 4px; page-break-after: avoid; }
+h2 .cnt { float: right; font-size: 9pt; color: #96a0b0; font-weight: 400; }
+.lede { background: #f3f6fb; border-left: 3px solid #c9d6ea; padding: 10px 14px;
+        margin: 0 0 18px; font-size: 10pt; }
+.note { background: #fff7ec; border-left: 3px solid #f7941e; padding: 10px 14px;
+        margin: 16px 0; font-size: 9.5pt; color: #5c3d05; }
+.rule { padding: 9px 0 9px 0; border-bottom: 1px solid #e6eaf0; page-break-inside: avoid; }
+.rule:last-child { border-bottom: none; }
+.hdr { display: flex; gap: 8px; align-items: baseline; }
+.lbl { font-weight: 600; color: #16324f; flex: 1; }
+.tag { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .5px;
+       padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+.code { background: #e7f0e9; color: #24603a; }
+.ai   { background: #eceaf6; color: #453a75; }
+.adv  { background: #fff7ec; color: #9a5b00; }
+blockquote { margin: 6px 0 0; padding: 6px 0 6px 12px; border-left: 3px solid #d9dee6;
+             color: #3d4b5c; font-size: 9.5pt; font-style: italic; }
+blockquote cite { display: block; font-style: normal; font-size: 8.5pt;
+                  color: #96a0b0; margin-top: 3px; }
+.derived { color: #5b6777; font-size: 9.5pt; margin: 6px 0 0; }
+.why { color: #5b6777; font-size: 9pt; margin: 4px 0 0; }
+footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #d9dee6;
+         color: #96a0b0; font-size: 8.5pt; }
+</style>
+<h1>NSF rules ORA Navigator checks</h1>
+<p class='sub'>Generated from the live rule table on 17 August 2026 &mdash; <code>backend/services/rulebook_baseline.py</code></p>
+<div class='lede'><strong>These are NSF's rules, not ours.</strong> Each one is taken from the Content Instructions NSF publishes on the Research.gov page where that document is uploaded &mdash; the PAPPG already distilled by NSF into the handful of rules each section is actually checked against. Every rule below shows NSF's own sentence so it can be verified against the source.</div>
+<div class='note'><strong>How to read the tags.</strong> <span class='tag code'>code</span> means the app decides it with no AI involved &mdash; the check is a yes/no fact about the text. <span class='tag ai'>reviewer</span> means a model judges it and must quote your draft to support what it says. <span class='tag adv'>advisory</span> means the rule is conditional in NSF's own wording, so it is reported but never counted against you.</div>
+<h2>the PAPPG<span class='cnt'>14 rules</span></h2>
+<h2 style='font-size:11.5pt;border-bottom:1px solid #e6eaf0;margin-top:18px'>Project Summary</h2>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Overview, Intellectual Merit and Broader Impacts each on their own line</span><span class='tag code'>code</span></div>
+<blockquote>&ldquo;Your file must include three separate section headers: Overview, Intellectual Merit, and Broader Impacts. To be valid, a heading must be on its own line with no other text on that line.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>NSF returns a Project Summary without these three headings without review.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>The Overview describes the objectives and the methods</span><span class='tag ai'>reviewer</span></div>
+<p class='derived'>Derived from NSF&#x27;s requirement that the Project Summary carry a separate Overview section header — this row checks that something substantive sits under it. NSF&#x27;s own wording is in the PAPPG.</p>
+<p class='why'>A heading with nothing substantive under it reads to a reviewer as no answer at all.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>The Intellectual Merit statement addresses intellectual merit</span><span class='tag ai'>reviewer</span></div>
+<p class='derived'>Derived from NSF&#x27;s requirement that the Project Summary carry a separate Intellectual Merit section header — this row checks that something substantive sits under it. NSF&#x27;s own wording is in the PAPPG.</p>
+<p class='why'>This is one of NSF&#x27;s two review criteria; a reviewer looks for it here first.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>The Broader Impacts statement addresses broader impacts</span><span class='tag ai'>reviewer</span></div>
+<p class='derived'>Derived from NSF&#x27;s requirement that the Project Summary carry a separate Broader Impacts section header — this row checks that something substantive sits under it. NSF&#x27;s own wording is in the PAPPG.</p>
+<p class='why'>This is NSF&#x27;s second review criterion and the one most often left thin.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Project Summary fits on one page</span><span class='tag code'>code</span></div>
+<blockquote>&ldquo;File cannot exceed one page.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>An over-length Project Summary is returned without review.</p>
+</div>
+<h2 style='font-size:11.5pt;border-bottom:1px solid #e6eaf0;margin-top:18px'>Project Description</h2>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>A separate Broader Impacts header on its own line</span><span class='tag code'>code</span></div>
+<blockquote>&ldquo;Your file must include a separate section header for Broader Impacts. To be valid, a heading must be on its own line with no other text on that line.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>NSF requires Broader Impacts to be separately labeled, not woven into the narrative.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>No hyperlinks in the Project Description</span><span class='tag code'>code</span></div>
+<blockquote>&ldquo;Hyperlinks (URLs) must not be used in the Project Description.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>A reviewer is not permitted to follow them, so anything behind one is unread.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Project Description within its page limit</span><span class='tag code'>code</span></div>
+<blockquote>&ldquo;Refer to your funding opportunity for page limit guidance. The system will enforce the page limit requirements listed in the funding opportunity. If the funding opportunity does not provide a specific limit, the 15-page limit stated in the PAPPG should be followed.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>Most funders return an over-length section without review.</p>
+</div>
+<h2 style='font-size:11.5pt;border-bottom:1px solid #e6eaf0;margin-top:18px'>References Cited</h2>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Citations follow accepted scholarly practice</span><span class='tag ai'>reviewer</span></div>
+<blockquote>&ldquo;Follow accepted scholarly practices in providing citations for source materials.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>An incomplete reference list reads as carelessness to a reviewer in your field.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Avoid &#x27;et al.&#x27; in the reference list</span><span class='tag code'>code</span> <span class='tag adv'>advisory</span></div>
+<blockquote>&ldquo;References should avoid the use of et al. (except for large consortia papers).&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>NSF asks for full author lists so reviewers can see who is involved.</p>
+</div>
+<h2 style='font-size:11.5pt;border-bottom:1px solid #e6eaf0;margin-top:18px'>Facilities, Equipment and Other Resources</h2>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>No dollar figures in Facilities, Equipment and Other Resources</span><span class='tag code'>code</span></div>
+<blockquote>&ldquo;The section must not include any quantifiable financial information.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>Cost information belongs in the budget; NSF treats it as an error here.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Written as a narrative</span><span class='tag ai'>reviewer</span></div>
+<blockquote>&ldquo;This section should be narrative in nature and include internal and external resources (both physical and personnel).&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>A bare equipment list does not tell a reviewer the project is feasible.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Covers internal and external resources, physical and personnel</span><span class='tag ai'>reviewer</span></div>
+<blockquote>&ldquo;This section should be narrative in nature and include internal and external resources (both physical and personnel).&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>Reviewers assess feasibility from this section; omissions read as gaps.</p>
+</div>
+<div class='rule'>
+<div class='hdr'><span class='lbl'>Names senior/key personnel and postdocs drawing no funds</span><span class='tag ai'>reviewer</span></div>
+<blockquote>&ldquo;This section should include any senior/key personnel or postdoctoral scholars for whom no funds are being requested in the budget.&rdquo;<cite>NSF &mdash; https://www.nsf.gov/policies/pappg</cite></blockquote>
+<p class='why'>It is the only place an unfunded contributor is visible to a reviewer.</p>
+</div>
+<div class='note'><strong>What this does NOT cover.</strong> Only these sections are checked against the PAPPG: Project Summary, Project Description, References Cited, Facilities, Equipment and Other Resources. The PAPPG governs much more &mdash; biographical sketches, current and pending support, the budget justification, data management plans. Those are reported as <em>not checked here</em> rather than passed. Rules that belong to your specific solicitation are read from that document separately and checked alongside these.</div>
+<footer>ORA Navigator &mdash; Morgan State University Office of Research Administration. Generated from code; if a rule changes in the app it changes here on the next build.</footer>
