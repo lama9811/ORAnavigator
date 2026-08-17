@@ -115,3 +115,105 @@ def test_a_baseline_row_is_not_demoted_by_the_section_checks_delegation():
                                       rulebook="the PAPPG", use_ai=False)
     headings = next(f for f in out["findings"] if f["id"] == "pappg_ps_headings")
     assert headings["status"] == "addressed"
+
+
+# ── the section prompt must not silently drop rules ─────────────────────────
+
+def _fake_reviewer(record):
+    """A stand-in reviewer that answers every id it is asked about, and records how
+    many that was. Deterministic — no model, so this runs in CI."""
+    import re
+
+    def _call(prompt, **kw):
+        ids = re.findall(r"'id': '([^']+)'", prompt)
+        record.append(len(ids))
+        return {"findings": [{"id": i, "status": "addressed", "note": "ok",
+                              "evidence": "the draft says so"} for i in ids]}
+    return _call
+
+
+def _reqs(n):
+    return [{"id": f"r{i}", "label": f"Requirement {i}", "section": "project_summary",
+             "kind": "semantic", "scored": True, "source": f"The proposal must do {i}.",
+             "why": "", "keywords": []} for i in range(n)]
+
+
+_SECTIONS = {"project_summary": {"label": "Project Summary",
+                                 "aliases": ["project summary"]}}
+
+
+def test_a_dense_section_is_reviewed_in_batches_not_one_giant_prompt():
+    """THE FAILURE THIS PREVENTS. Every requirement for a section goes into ONE
+    prompt capped at max_output_tokens=8192. When the reviewer cannot finish it
+    OMITS rows; an omitted row becomes `unclear`; `unclear` is absent from _CREDIT,
+    so it silently leaves the score's denominator and the PI is told nothing.
+
+    Four sections of curated rules never came close to that ceiling. The PAPPG's
+    Project Description alone extracts 22 rules and Budget is denser still, which
+    is what makes this reachable rather than theoretical.
+    """
+    from unittest import mock
+    from services import draft_review
+
+    sizes = []
+    span = {"text": "Project Summary\n" + ("the draft says so. " * 200),
+            "marker": "Project Summary", "start": 0}
+    with mock.patch.object(draft_review.gemini_client, "generate_json",
+                           side_effect=_fake_reviewer(sizes)):
+        out = draft_review._review_section("project_summary", span, _reqs(40),
+                                           _SECTIONS, "NSF 23-598")
+
+    assert len(out) == 40, f"{40 - len(out)} requirements vanished"
+    assert not [f for f in out if f["status"] == "unclear"], \
+        "a requirement came back unclear — dropped, not assessed"
+    assert sizes, "the model was never called"
+    assert max(sizes) <= draft_review.REVIEW_BATCH, \
+        f"one prompt carried {max(sizes)} rules; the cap is {draft_review.REVIEW_BATCH}"
+    assert len(sizes) > 1, "40 rules should not have fitted in one batch"
+
+
+def test_a_small_section_is_still_one_call():
+    """Batching must not turn today's 3-rule section into three round-trips."""
+    from unittest import mock
+    from services import draft_review
+
+    sizes = []
+    span = {"text": "Project Summary\nthe draft says so.", "marker": "PS", "start": 0}
+    with mock.patch.object(draft_review.gemini_client, "generate_json",
+                           side_effect=_fake_reviewer(sizes)):
+        out = draft_review._review_section("project_summary", span, _reqs(3),
+                                           _SECTIONS, "X")
+
+    assert len(out) == 3
+    assert len(sizes) == 1, f"3 rules took {len(sizes)} calls"
+
+
+def test_one_failed_batch_does_not_lose_the_others():
+    """A batch whose model call fails falls back to `unclear` for ITS rows only.
+    Losing 40 assessments because one call timed out would be worse than the
+    problem batching solves."""
+    from unittest import mock
+    from services import draft_review
+    import re
+
+    calls = {"n": 0}
+
+    def flaky(prompt, **kw):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return None                     # first batch fails
+        ids = re.findall(r"'id': '([^']+)'", prompt)
+        return {"findings": [{"id": i, "status": "addressed", "note": "ok",
+                              "evidence": "the draft says so"} for i in ids]}
+
+    span = {"text": "Project Summary\n" + ("the draft says so. " * 200),
+            "marker": "PS", "start": 0}
+    with mock.patch.object(draft_review.gemini_client, "generate_json",
+                           side_effect=flaky):
+        out = draft_review._review_section("project_summary", span, _reqs(40),
+                                           _SECTIONS, "X")
+
+    assert len(out) == 40
+    addressed = [f for f in out if f["status"] == "addressed"]
+    assert addressed, "the surviving batches lost their findings too"
+    assert len(addressed) < 40, "the failing batch should not have been assessed"

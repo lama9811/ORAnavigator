@@ -141,6 +141,29 @@ def read_section(key: str, *, slices: Optional[dict] = None,
             continue
         rows.append(to_baseline_row(r, sl))
 
+    # YIELD SANITY. A model call whose JSON fails to parse loses EVERY row in that
+    # response and reports only a log line -- CLAUDE.md records the same failure
+    # from the 8192-token bug ("the parse failed, and every requirement in that
+    # response was lost"). It happened here on the first full run: Cover Sheet,
+    # 6,804 chars, came back with 2 rows after `JSON parse failed: Extra data`,
+    # while every other section yielded 1.8-6.2 rows per 1,000 chars. Nothing went
+    # red, and a thin section reads exactly like a section with few rules.
+    #
+    # Measured on the RAW extraction, before draft_scope. Filtering out
+    # form-filling rules is correct behaviour, not a failed read: the Cover Sheet
+    # is a Research.gov FORM rather than a document a PI writes, so most of its
+    # rules are legitimately dropped. Scoring the kept rows instead flagged it as
+    # broken on a run that had worked fine — a guard that cries wolf on a
+    # form-shaped section would be turned off, and then it would not catch the
+    # parse failure it exists for.
+    #
+    # Reported, never raised: Table of Contents is 121 chars and correctly yields
+    # nothing, because Research.gov generates it. The caller decides; the run must
+    # simply not stay quiet.
+    raw_n = len(out.get("requirements") or [])
+    per_1k = (1000.0 * raw_n / sl["char_count"]) if sl["char_count"] else 0.0
+    suspicious = sl["char_count"] >= 3000 and per_1k < 0.75
+
     return {
         "section_key": key,
         "nsf_label": sl["nsf_label"],
@@ -148,6 +171,9 @@ def read_section(key: str, *, slices: Optional[dict] = None,
         "chars": sl["char_count"],
         "rows": rows,
         "dropped_out_of_scope": dropped_scope,
+        "raw_rows": raw_n,
+        "raw_rows_per_1k_chars": round(per_1k, 2),
+        "suspicious_yield": suspicious,
         # Carried through verbatim: a run that stopped early must say so rather
         # than let a short list read as a complete one.
         "read_report": {k: out.get(k) for k in

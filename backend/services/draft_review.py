@@ -95,6 +95,14 @@ MAX_DRAFT_CHARS = 120_000
 # measure per caller rather than copying the setting.
 THINKING_BUDGET = 1024
 
+# Most requirements sent to the reviewer in ONE call. The response is capped at
+# max_output_tokens=8192, and when the model cannot fit every row it OMITS some
+# rather than truncating visibly — an omitted row becomes `unclear`, and `unclear`
+# is absent from _CREDIT, so it leaves the score's denominator with nothing on
+# screen to say so. 15 keeps a batch comfortably inside the ceiling while leaving
+# a 3-rule section a single round-trip.
+REVIEW_BATCH = 15
+
 _SCORE_BANDS = ((85, "green"), (60, "amber"))
 
 
@@ -374,7 +382,22 @@ def _section_label(sections: dict, key: str) -> str:
 
 def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
                     sections: dict, solicitation_id: str) -> list[dict]:
-    """Coverage for one section's requirements, grounded and verified."""
+    """Coverage for one section's requirements, grounded and verified.
+
+    BATCHED, and the batching is load-bearing. Every requirement for a section used
+    to go into ONE prompt capped at max_output_tokens=8192. When the reviewer cannot
+    finish, it OMITS rows; an omitted row becomes `unclear`; `unclear` is absent
+    from _CREDIT, so it silently leaves the score's denominator and the PI is told
+    nothing. See the module docstring — that is the failure this tool exists to
+    prevent, and it was reachable from inside the tool itself.
+
+    Four sections of hand-curated rules never came close to the ceiling. Reading
+    the PAPPG changes that: its Project Description alone yields 22 rules and the
+    Budget section is denser still.
+
+    A batch whose model call fails falls back to `unclear` for ITS rows only —
+    losing every assessment because one call timed out would be worse than the
+    problem this solves."""
     if not reqs:
         return []
     label = _section_label(sections, section_key)
@@ -385,6 +408,20 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
                          "clear heading and re-run.", "", source="locate")
                 for r in reqs]
 
+    section_text = span["text"]
+    if len(reqs) > REVIEW_BATCH:
+        out: list[dict] = []
+        for i in range(0, len(reqs), REVIEW_BATCH):
+            out.extend(_review_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
+                                     sections, solicitation_id))
+        return out
+    return _review_batch(section_key, span, reqs, sections, solicitation_id)
+
+
+def _review_batch(section_key: str, span: dict, reqs: list[dict],
+                  sections: dict, solicitation_id: str) -> list[dict]:
+    """One model call, for at most REVIEW_BATCH requirements."""
+    label = _section_label(sections, section_key)
     section_text = span["text"]
     listing = [{"id": r["id"], "requirement": r["label"],
                 "solicitation_says": r["source"]} for r in reqs]
