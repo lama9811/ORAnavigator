@@ -2223,6 +2223,8 @@ Record, in the house style — the failure first, then the fix, then what would 
 - **scores moved** on existing NSF proposals; saved reviews keep their stored numbers
 - the false-positive guards and that each has a test
 - the skeleton is not a sample proposal, and why (`sample_proposals` is link-only, we never rehost)
+- **`build_generic` had NO test caller at all before this work.** Found during review: the whole suite passed unchanged when the injection landed, and that was guaranteed regardless of whether the injection worked, ran backwards, or threw — nothing exercised the function. The 8 tests in `test_rulebook_baseline.py` are the first ever to call it. Record this so nobody reads a future green suite as evidence that this path is correct; only those tests are.
+- **CLAUDE.md's grep gate is wrong as written and must be corrected here.** It claims `grep -ril "eir_solicitation\|23-598" backend/services/` must come back empty. It already matched **5 files before this branch started**, and all 9 matches are docstrings citing NSF 23-598 as measured evidence — not one is a conditional. Replace it with a gate that tests the actual intent: no `isEir` / `eir_solicitation` / `eir_review` / `eir_checks` identifier anywhere, and no funder-name conditional in the review engine (`draft_review`, `solicitation_profile`, `generic_checks`, `rulebook_baseline`, `rulebook_checks`, `delegated_rules`, `draft_scope`). Note explicitly that `proposal_templates.py:203`'s `if key == "NSF"` is CORRECT and out of scope — that module's job is per-sponsor checklist templates, and a repo-wide reading of the rule would condemn it for doing it.
 
 - [ ] **Step 3: Commit**
 
