@@ -6,12 +6,13 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, Download, ExternalLink, FileText, HelpCircle, Lightbulb, ListChecks, MoreHorizontal, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calculator, Calendar, CalendarPlus, Check, CheckCircle, Circle, Download, ExternalLink, FileSearch, FileText, HelpCircle, Lightbulb, ListChecks, MoreHorizontal, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import SolicitationUploadModal from "./SolicitationUploadModal";
 import BudgetHelperModal from "./BudgetHelperModal";
 import ComplianceSentinelModal from "./ComplianceSentinelModal";
 import DraftReviewModal from "./DraftReviewModal";
+import SectionCheckModal from "./SectionCheckModal";
 import "./MyProposals.css";
 
 const API_BASE = getApiBase();
@@ -64,6 +65,14 @@ function nextStep(submission) {
   // Draft Review needs a solicitation to judge against, so attaching one comes
   // first when it is missing.
   if (!submission.has_solicitation_requirements) return "solicitation";
+  // The writing step nextStep() lost when the Drafting Coach was removed —
+  // CLAUDE.md records the gap: "no tool now helps a PI write, only ones that
+  // check what they wrote." Check a Section needs no solicitation at all and
+  // works from the first sentence typed, so it's recommended before the
+  // PI has anything worth running a whole-package Draft Review against.
+  // Once a review is saved there is something to review again, so the
+  // recommendation reverts to Draft Review, same as before this step existed.
+  if (!submission.draft_review_saved_at) return "sectioncheck";
   return "review";
 }
 
@@ -84,6 +93,11 @@ const STEP_INFO = {
     title: "Attach the funder's solicitation",
     why: "Every requirement the funder states becomes a check on your draft — and it sets your budget cap and page limits at the same time.",
     action: "Attach solicitation", open: "solicitation",
+  },
+  sectioncheck: {
+    title: "Check a section while you write it",
+    why: "Paste or upload just one section — even a first draft — and see whether it's missing anything NSF's own rules require. No finished package needed.",
+    action: "Check a section", open: "sectioncheck",
   },
   review: {
     title: "Check your draft against the solicitation",
@@ -555,6 +569,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
   const [showBudget, setShowBudget] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
   const [showEir, setShowEir] = useState(false);
+  const [showSectionCheck, setShowSectionCheck] = useState(false);
   const [showSolicitation, setShowSolicitation] = useState(false);
   // Set when Draft Review offers back an abandoned upload, so the modal
   // opens straight onto that document instead of the file picker.
@@ -567,6 +582,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
     else if (key === "compliance") setShowCompliance(true);
     else if (key === "solicitation") setShowSolicitation(true);
     else if (key === "eir") setShowEir(true);
+    else if (key === "sectioncheck") setShowSectionCheck(true);
   };
 
   return (
@@ -602,6 +618,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
               primary={next === "budget"}
               onClick={() => setShowBudget(true)}
               title="Build a sponsor-compliant budget (direct costs, F&A, total) and draft the justification."
+            />
+            <ToolButton
+              icon={FileSearch}
+              label="Check a section"
+              primary={next === "sectioncheck"}
+              onClick={() => setShowSectionCheck(true)}
+              title="Check one section — even a first draft — against NSF's own rules while you're still writing it. No solicitation needed."
             />
           </LifecycleStage>
 
@@ -652,6 +675,13 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           submission={submission}
           onClose={() => setShowCompliance(false)}
           onSaved={onRefresh}
+        />
+      )}
+
+      {showSectionCheck && (
+        <SectionCheckModal
+          submission={submission}
+          onClose={() => setShowSectionCheck(false)}
         />
       )}
 

@@ -1,0 +1,18 @@
+Data Management and Sharing Plan
+
+The project produces three data types: polymer characterization data (NMR, GPC, DSC), impedance spectra across the 0-35 PSU range, and time-series field records from two Chesapeake Bay deployment stations. Characterization and impedance data are stored in the university's institutional repository in open formats (CSV, JCAMP-DX) with instrument metadata. Field time series are released quarterly through the Maryland Department of the Environment's public data portal and mirrored in the institutional repository. All data are released under CC BY 4.0 no later than publication or eighteen months after collection, whichever comes first. Long-term preservation is provided by the university library with a ten-year retention commitment. No human subjects data are collected and no access restrictions apply.
+
+Mentoring Plan for Postdoctoral Researchers and Graduate Students
+
+The project supports two graduate research assistants and, in Years 2 and 3, one postdoctoral associate. Each mentee develops an individual development plan within the first sixty days, reviewed twice yearly with the PI. Training covers experimental design, instrument operation, responsible conduct of research, scientific writing, and conference presentation, with at least one national meeting presentation per mentee per year. The postdoctoral associate additionally receives structured preparation for independent careers, including proposal writing, teaching practice through one guest lecture per semester, and lab management. The full experimental protocol for the nine-member polymer library and the complete Year 2 deployment schedule are described here in detail as an extension of the Project Description.
+
+Letter of Collaboration
+
+Dear NSF Program Officer,
+
+I confirm that the Maryland Department of the Environment intends to collaborate on this project by providing berth space, power, and monthly reference CTD casts at the Fort McHenry and Bay Bridge monitoring platforms.
+
+Dr. Researcher is an outstanding scientist and this is by far the most promising sensor work I have encountered in twenty years in this field. I strongly endorse this proposal and urge the panel to fund it, as the intellectual merit is exceptional and the broader impacts for the state of Maryland would be transformative.
+
+Sincerely,
+J. Okafor, Monitoring Division Director

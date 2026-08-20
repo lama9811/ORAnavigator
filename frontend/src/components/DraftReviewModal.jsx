@@ -33,8 +33,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AlertTriangle, Check, ExternalLink, FileText, HelpCircle, Info,
-  MinusCircle, Quote, Trash2, Upload, X, XCircle,
+  AlertTriangle, Check, ChevronDown, ChevronRight, ExternalLink, FileText,
+  HelpCircle, Info, Lightbulb, MinusCircle, Quote, Trash2, Upload, X, XCircle,
 } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import { timeAgo } from "../lib/timeAgo";
@@ -47,11 +47,15 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// Status vocabulary mirrors services/eir_review.py exactly. `neutral: true`
-// marks the two "we did not assess this" states so they can never be styled or
+// Status vocabulary mirrors services/draft_review.py exactly. `neutral: true`
+// marks the "we did not assess this" states so they can never be styled or
 // counted as failures.
 const STATUS_META = {
-  addressed:        { label: "Addressed",    Icon: Check,         cls: "eir-ok" },
+  // "Addressed" read to an author as "this is good". It only ever meant "the
+  // rule is satisfied" — most of these rules are about PRESENCE — and a 76-word
+  // Project Summary carrying six of them was reported as fine. Same rename and
+  // the same reason as "Not checked" -> "Not ours to check".
+  addressed:        { label: "Meets the rule", Icon: Check,       cls: "eir-ok" },
   partial:          { label: "Partial",      Icon: AlertTriangle, cls: "eir-warn" },
   not_found:        { label: "Not found",    Icon: XCircle,       cls: "eir-fail" },
   clear:            { label: "Clear",        Icon: Check,         cls: "eir-ok" },
@@ -654,6 +658,23 @@ function ScorePanel({ score, solicitationId }) {
         <div className="eir-score-bar">
           <div className="eir-score-fill" style={{ width: `${score.percent}%` }} />
         </div>
+        {/* WHICH AUTHORITY the draft is failing. A proposal is judged against
+            NSF's standing rulebook and this solicitation's own asks at once,
+            and they are not interchangeable: missing every solicitation rule
+            while meeting every PAPPG rule gives the same combined number as
+            the reverse, and only the first gets returned without review.
+            Rendered only when there is more than one source to name. */}
+        {Object.keys(score.by_source || {}).length > 1 && (
+          <div className="eir-score-split">
+            {Object.entries(score.by_source).map(([name, s]) => (
+              <div className="eir-score-src" key={name}>
+                <span className="eir-score-src-name">{name}</span>
+                <span className="eir-score-src-num">{s.percent}%</span>
+                <span className="eir-score-src-of">{s.earned} of {s.assessed}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -720,6 +741,15 @@ function FindingRow({ f, solicitationId }) {
       </div>
 
       {f.note && <div className="eir-finding-note">{f.note}</div>}
+
+      {/* On EVERY row, including the ones that pass. A passing row used to show
+          praise, which tells an author nothing and makes "Meets the rule" read
+          as "you are done here". */}
+      {f.suggestion && (
+        <div className="eir-suggestion">
+          <Lightbulb size={12} /> <span>{f.suggestion}</span>
+        </div>
+      )}
 
       {f.evidence && (
         <div className="eir-evidence">
@@ -796,11 +826,18 @@ function DelegationNotice({ books }) {
   // once for Build America Buy America — which is the same say-it-twice problem
   // that crowded this panel before.
   const unchecked = books.reduce((n, b) => n + (b.unchecked || 0), 0);
+  // `covered_sections` is PER RULEBOOK (services/delegated_rules.summarize).
+  // The backend has named the parts it now checks since the baseline shipped
+  // and nothing here read it, so this panel went on saying "this review has not
+  // read them" beside fourteen checked PAPPG findings.
+  const anyCovered = books.some((b) => b.covered_sections?.length);
   return (
     <div className="eir-delegation">
       <div className="eir-delegation-head">
-        <ExternalLink size={13} /> Your solicitation says to follow these. This
-        review has not read them.
+        <ExternalLink size={13} />{" "}
+        {anyCovered
+          ? "Your solicitation says to follow these. This review checked part of them."
+          : "Your solicitation says to follow these. This review has not read them."}
       </div>
       <ul className="eir-delegation-list">
         {books.map((b) => (
@@ -814,6 +851,16 @@ function DelegationNotice({ books }) {
               <span className="eir-delegation-name">{b.name}</span>
             )}
             {b.short && <span className="eir-delegation-short">, {b.short}</span>}
+            {/* Named per rulebook, never once for all of them: we hold the
+                PAPPG's rules for four sections and NOTHING of the Build
+                America, Buy America Act, and one line covering both would claim
+                coverage of a law nothing read. */}
+            {b.covered_sections?.length > 0 && (
+              <span className="eir-delegation-covered">
+                Checked here against {b.name}: {b.covered_sections.join(", ")}.
+                The rest of {b.name} was not read.
+              </span>
+            )}
           </li>
         ))}
       </ul>
@@ -831,7 +878,9 @@ function DelegationNotice({ books }) {
             was nothing to check your draft against.{" "}
           </>
         )}
-        Read {books.length === 1 ? "it" : "them"} yourself before you submit.
+        {anyCovered
+          ? `Read ${books.length === 1 ? "it" : "them"} yourself for anything not listed above.`
+          : `Read ${books.length === 1 ? "it" : "them"} yourself before you submit.`}
       </p>
     </div>
   );
@@ -864,10 +913,19 @@ function reviewToMarkdown(result, submission) {
     }
   }
   if (result.delegated?.length) {
+    // Same honesty as the on-screen notice: when part of a rulebook WAS
+    // checked, this heading must not claim none of it was.
+    const anyCovered = result.delegated.some((b) => b.covered_sections?.length);
     L.push("");
-    L.push("## Rules this review did not read");
+    L.push(anyCovered
+      ? "## Rules from outside your solicitation"
+      : "## Rules this review did not read");
     for (const b of result.delegated) {
       L.push(`- **${b.name}**${b.short ? `, ${b.short}` : ""}${b.url ? ` — ${b.url}` : ""}`);
+      if (b.covered_sections?.length) {
+        L.push(`  - Checked here against ${b.name}: ${b.covered_sections.join(", ")}. ` +
+               `The rest of ${b.name} was not read.`);
+      }
     }
   }
   const labels = sectionLabels(result);
@@ -902,6 +960,85 @@ function reviewToMarkdown(result, submission) {
   return L.join("\n");
 }
 
+/* ── one section, collapsible ────────────────────────────────────────────────
+ *
+ * WHY THIS IS NOT COSMETIC. Until 2026-08-17 this list rendered every finding
+ * always-open, which was fine at 44 findings from four sections of curated
+ * rules. Reading the PAPPG takes a real review to 209 findings across fourteen
+ * sections, and CLAUDE.md already records what that does: "shipping either
+ * extraction would take a review from 44 findings to ~640 and bury the four
+ * rows that matter". The fix-list is the thing a PI acts on, and a wall of
+ * satisfied rules pushes it off the screen.
+ *
+ * OPEN BY DEFAULT IFF THE SECTION HAS SOMETHING TO FIX. Not "first N open", not
+ * "all closed" — the sections carrying a `not_found` or a `flagged` are exactly
+ * the ones the PI has work in, so those stay open and everything else folds. A
+ * section that is entirely addressed, entirely not-checked, or that could not be
+ * located is real information and stays reachable in one click; it is just not
+ * what you are here for.
+ *
+ * The count summary is on the CLOSED header for the same reason the section map
+ * shows word counts: a fold that hides how much it hides is worse than no fold.
+ */
+function FindingGroup({ label, words, items, solicitationId, forced }) {
+  const counts = items.reduce((acc, f) => {
+    // A row the engine did not score is a CONDITIONAL ask — "if you request
+    // consultants, detail them". It is not work the PI has to do, and counting
+    // it as such is how a clean Budget Justification got a 14-item fix list of
+    // which 10 were rules that did not apply to it. It still shows, in its
+    // section, with its status; it just does not open the section or claim a
+    // slot in "Fix these first".
+    const advisory = f.scored === false;
+    const bucket =
+      (f.status === "not_found" || f.status === "flagged") && !advisory ? "fix"
+      : f.status === "not_found" || f.status === "flagged" ? "maybe"
+      : f.status === "partial" ? "partial"
+      : f.status === "addressed" || f.status === "clear" ? "ok"
+      : "skipped";
+    acc[bucket] = (acc[bucket] || 0) + 1;
+    return acc;
+  }, {});
+  const [open, setOpen] = useState((counts.fix || 0) > 0);
+  // `forced` lets Expand all / Collapse all override, without losing the
+  // per-section state the PI has set since.
+  useEffect(() => { if (forced !== null) setOpen(forced); }, [forced]);
+
+  const summary = [
+    counts.fix ? `${counts.fix} to fix` : null,
+    counts.partial ? `${counts.partial} partial` : null,
+    counts.maybe ? `${counts.maybe} if applicable` : null,
+    counts.ok ? `${counts.ok} addressed` : null,
+    counts.skipped ? `${counts.skipped} not checked` : null,
+  ].filter(Boolean).join(" · ");
+
+  return (
+    <section className={`eir-group${open ? "" : " eir-group-closed"}`}>
+      <h3 className="eir-group-title">
+        <button
+          type="button"
+          className="eir-group-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          <span className="eir-group-name">{label}</span>
+          {words != null && (
+            <span className="eir-group-words">
+              {words.toLocaleString()} {words === 1 ? "word" : "words"}
+            </span>
+          )}
+          <span className="eir-group-summary">{summary}</span>
+        </button>
+      </h3>
+      {open && items.map((f) => (
+        <FindingRow key={f.id} f={f} solicitationId={solicitationId} />
+      ))}
+    </section>
+  );
+}
+
+
+
 function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt }) {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -929,6 +1066,10 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
     }
   }
 
+  // null = every section decides for itself (open iff it has something to fix);
+  // true/false = the PI hit Expand all / Collapse all. Reset to null is
+  // deliberate: after an override the per-section state is theirs to set.
+  const [forced, setForced] = useState(null);
   const findings = result.findings || [];
   // Whatever solicitation this proposal actually came from. Read defensively:
   // the engine takes a profile now, and a profile with no id is a valid one.
@@ -963,8 +1104,13 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
     g.items.push(f);
   }
 
+  // SCORED rows only. A conditional ask the engine left unscored ("if you
+  // request consultants, detail them") is not something to fix first — it may
+  // not apply at all. Measured on a live Budget Justification: 14 rows came back
+  // not_found and 10 of them were conditionals the draft was never subject to,
+  // so the fix-list was 71% noise until this filter existed.
   const actionable = findings.filter(
-    (f) => f.status === "not_found" || f.status === "flagged"
+    (f) => (f.status === "not_found" || f.status === "flagged") && f.scored !== false
   );
 
   return (
@@ -995,7 +1141,15 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
           </div>
           <ul>
             {actionable.map((f) => (
-              <li key={f.id}>{f.label}</li>
+              <li key={f.id}>
+                {f.label}
+                {/* WHAT to do, not just which rule failed. A list of rule names
+                    tells the author where the problem is and nothing about how
+                    to fix it. */}
+                {f.suggestion && (
+                  <span className="eir-priority-do">{f.suggestion}</span>
+                )}
+              </li>
             ))}
           </ul>
         </div>
@@ -1006,33 +1160,30 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
         missing={result.sections_missing || []}
       />
 
-      {groups.map((g) => {
-        // The banner above states the caveat globally; this puts it on the
-        // section the PI is actually reading. The case it exists for: a
-        // Project Summary whose only stated rule is "include the LOI number in
-        // addition to all the requirements outlined in the PAPPG" — every row
-        // here can be green while the rules that would fail it were never read.
-        // How much text this section actually holds, next to its findings. The
-        // section map has it too, but that is a panel you scroll past — this is
-        // where you are when you read "Addressed", and it is the difference
-        // between a section that exists and one that says something.
-        const words = wordCounts[g.key];
-        return (
-          <section key={g.key} className="eir-group">
-            <h3 className="eir-group-title">
-              {g.label}
-              {words != null && (
-                <span className="eir-group-words">
-                  {words.toLocaleString()} {words === 1 ? "word" : "words"}
-                </span>
-              )}
-            </h3>
-            {g.items.map((f) => (
-              <FindingRow key={f.id} f={f} solicitationId={solId} />
-            ))}
-          </section>
-        );
-      })}
+      {groups.length > 1 && (
+        <div className="eir-group-controls">
+          <span className="eir-group-controls-count">
+            {findings.length.toLocaleString()} checks across {groups.length} sections
+          </span>
+          <button type="button" onClick={() => setForced(true)}>Expand all</button>
+          <button type="button" onClick={() => setForced(false)}>Collapse all</button>
+        </div>
+      )}
+
+      {groups.map((g) => (
+        // How much text this section holds, next to its findings. The section
+        // map has it too, but that is a panel you scroll past — this is where
+        // you are when you read "Addressed", and it is the difference between a
+        // section that exists and one that says something.
+        <FindingGroup
+          key={g.key}
+          label={g.label}
+          words={wordCounts[g.key]}
+          items={g.items}
+          solicitationId={solId}
+          forced={forced}
+        />
+      ))}
 
       {result.reviewer_notes?.length > 0 && (
         <section className="eir-group">

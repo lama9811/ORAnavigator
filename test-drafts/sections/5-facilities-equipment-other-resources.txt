@@ -1,0 +1,11 @@
+Facilities, Equipment and Other Resources
+
+Laboratory. The Department of Chemistry at Morgan State University provides the PI with 900 square feet of wet laboratory space in the Calloway Hall annex, configured for controlled radical polymerization with a dedicated Schlenk line, two fume hoods, and an argon glovebox maintained below 1 ppm oxygen. The space is assigned to the PI for the full period of performance.
+
+Equipment. The department's shared instrumentation includes a 400 MHz NMR spectrometer, a differential scanning calorimeter, and a gel permeation chromatograph with multi-angle light scattering, all available to the PI through the core facility scheduling system. A new Gamry potentiostat costing $18,400 will be purchased under this award and housed in the PI's laboratory.
+
+Computing. The university's high performance computing cluster provides 240 cores and is available to the project at no cost through an existing institutional allocation.
+
+Other resources. The Maryland Department of the Environment provides access to two Chesapeake Bay monitoring platforms at Fort McHenry and Bay Bridge, including berth space, power, and monthly reference CTD casts by their field staff. This access is provided at no cost to the project.
+
+Personnel. Dr. R. Whitfield, Associate Professor of Civil Engineering, will contribute approximately 5% effort to the field deployment campaign and requests no funds from this award. Dr. K. Boateng, a postdoctoral associate supported by a separate departmental fellowship, will contribute to impedance data analysis and likewise draws no funds from this project.

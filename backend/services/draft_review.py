@@ -58,7 +58,10 @@ from services import delegated_rules
 from services import draft_scope
 from services import gemini_client
 from services import mechanical_checks
+from services import rulebook_baseline
+from services import section_guidance
 from services import solicitation_profile as sp
+from services import proofread
 # The shared whitespace-collapsing membership test (golden rule 2). Deliberately
 # imported rather than re-implemented so every grounded feature uses ONE
 # definition. Lived in section_coach._quote_in until the Drafting Coach was
@@ -93,6 +96,14 @@ MAX_DRAFT_CHARS = 120_000
 # wall-clock budget it was wasting on thinking. Same model, opposite answer;
 # measure per caller rather than copying the setting.
 THINKING_BUDGET = 1024
+
+# Most requirements sent to the reviewer in ONE call. The response is capped at
+# max_output_tokens=8192, and when the model cannot fit every row it OMITS some
+# rather than truncating visibly — an omitted row becomes `unclear`, and `unclear`
+# is absent from _CREDIT, so it leaves the score's denominator with nothing on
+# screen to say so. 15 keeps a batch comfortably inside the ceiling while leaving
+# a 3-rule section a single round-trip.
+REVIEW_BATCH = 15
 
 _SCORE_BANDS = ((85, "green"), (60, "amber"))
 
@@ -134,23 +145,73 @@ def _find_offset(text: str, marker: str) -> Optional[int]:
     return m.start() if m else None
 
 
+# A labelled SUB-section: a heading that legitimately sits INSIDE another
+# section rather than beside it. {child_key: parent_key}.
+#
+# WHY THIS TABLE EXISTS — following our own advice used to break the check.
+# The spans TILE, so every accepted marker cuts the section before it. NSF wants
+# a "Broader Impacts" heading in the Project Summary AND a separately labelled
+# one in the Project Description, and `_find_offset` resolves a marker to its
+# FIRST occurrence in the whole document. On a package that did exactly what
+# this tool asks, the summary's own third heading became a top-level boundary,
+# truncated the Project Summary before it, and `pappg_ps_headings` reported
+# "Missing Broader Impacts" about a summary that has it. The mirror is just as
+# real: with no such heading in the summary, the boundary lands inside the
+# Project Description and cuts its span off immediately before its own header,
+# so `pappg_pd_impacts_header` reports not_found on a compliant one.
+#
+# A sub-section therefore never acts as a boundary, and it is resolved INSIDE
+# its parent's span — so an identical heading earlier in the document cannot
+# claim it. `_project_description_span` already encodes this same parent/child
+# relationship for the opposite reason (folding the text back in); this is the
+# locate half of it.
+_SUBSECTIONS = {"broader_impacts": "project_description"}
+
+
 def _spans_from_markers(text: str, markers: dict, sections: dict) -> dict:
     """{section_key: first_line} -> {section_key: {"text","start","end","marker"}}.
 
-    Each located section runs from its own marker to the next marker in document
-    order, so the spans tile the paste without overlapping."""
-    found = []
+    Top-level sections TILE: each runs from its own marker to the next in
+    document order, so they cover the paste without overlapping. A SUB-section
+    (see _SUBSECTIONS) is deliberately outside that tiling — it never truncates
+    anything, and where its parent was located it is resolved within the
+    parent's span so a same-named heading elsewhere cannot claim it."""
+    offsets = {}
     for key, marker in markers.items():
         if key not in sections:
             continue                      # model invented a section name — ignore
-        off = _find_offset(text, str(marker or ""))
+        m = str(marker or "")
+        off = _find_offset(text, m)
         if off is None:
             continue                      # marker not verifiable -> not located
-        found.append((off, key, str(marker)))
-    found.sort()
+        offsets[key] = (off, m)
+
+    # A child is held out of the tiling whenever its parent is a section THIS
+    # solicitation names — even if the parent turns out not to be located, since
+    # the point is that it must not cut a sibling either way.
+    subs = {k: v for k, v in offsets.items() if _SUBSECTIONS.get(k) in sections}
+    found = sorted((off, k, m) for k, (off, m) in offsets.items() if k not in subs)
+
     spans = {}
     for i, (start, key, marker) in enumerate(found):
         end = found[i + 1][0] if i + 1 < len(found) else len(text)
+        spans[key] = {"text": text[start:end].strip(), "start": start,
+                      "end": end, "marker": marker}
+
+    for key, (off, marker) in subs.items():
+        parent = spans.get(_SUBSECTIONS[key])
+        if parent is not None:
+            rel = _find_offset(text[parent["start"]:parent["end"]], marker)
+            if rel is None:
+                # The heading exists, but not inside the parent — so it belongs
+                # to some other section (a Project Summary's own Broader Impacts
+                # line). Reporting it as this sub-section would point every one
+                # of its requirements at the wrong text; unlocated is honest.
+                continue
+            start, end = parent["start"] + rel, parent["end"]
+        else:
+            start = off
+            end = next((s for s, _, _ in found if s > start), len(text))
         spans[key] = {"text": text[start:end].strip(), "start": start,
                       "end": end, "marker": marker}
     return spans
@@ -217,27 +278,35 @@ def locate_sections(text: str, sections: dict, *, use_ai: bool = True) -> tuple[
 
 def run_deterministic(text: str, spans: dict, profile: dict, *,
                       title: Optional[str] = None,
-                      budget: Optional[dict] = None) -> list[dict]:
+                      budget: Optional[dict] = None,
+                      pages: Optional[dict] = None) -> list[dict]:
     """Every code-decided requirement. No model involved, so these findings are
     identical whether or not Gemini is reachable (golden rule 1).
 
-    A row names its check by string. The profile may carry its own callables in
-    `checks` (a hand-written solicitation module); anything it does not define
-    falls through to the shared library in services/generic_checks.py. A row
-    whose check resolves to nothing is SKIPPED rather than guessed at — a
-    fabricated verdict on a rule we cannot evaluate is worse than silence."""
+    A row names its check by string, resolved in three tiers: the profile's own
+    callables, then the shared library in services/generic_checks.py, then the
+    rulebook baseline's in services/rulebook_checks.py. A row whose check
+    resolves to nothing is SKIPPED rather than guessed at — a fabricated verdict
+    on a rule we cannot evaluate is worse than silence.
+
+    `pages` maps a section key to its REAL page count, and is populated only by
+    the section-check upload path where one file is one section. Absent it, a
+    page rule reports an estimate and refuses to call it a pass or a fail."""
     rows = [r for r in profile.get("requirements", []) if r["kind"] == "deterministic"]
     if not rows:
         return []
-    # Imported here, and only once a row actually needs it: services/generic_checks
-    # is a separate module and this keeps the engine importable without it.
+    # Imported here, and only once a row actually needs it: both are separate
+    # modules and this keeps the engine importable without them.
     from services import generic_checks
+    from services import rulebook_checks
     ctx = {"text": text or "", "spans": spans or {}, "title": title,
-           "budget": budget, "profile": profile}
+           "budget": budget, "profile": profile, "pages": pages or {}}
     out = []
     for req in rows:
-        fn = profile.get("checks", {}).get(req.get("check", "")) \
-            or generic_checks.CHECKS.get(req.get("check", ""))
+        name = req.get("check", "")
+        fn = (profile.get("checks", {}).get(name)
+              or generic_checks.CHECKS.get(name)
+              or rulebook_checks.CHECKS.get(name))
         if fn is None:
             continue
         status, detail, evidence = fn(ctx, req)
@@ -315,7 +384,22 @@ def _section_label(sections: dict, key: str) -> str:
 
 def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
                     sections: dict, solicitation_id: str) -> list[dict]:
-    """Coverage for one section's requirements, grounded and verified."""
+    """Coverage for one section's requirements, grounded and verified.
+
+    BATCHED, and the batching is load-bearing. Every requirement for a section used
+    to go into ONE prompt capped at max_output_tokens=8192. When the reviewer cannot
+    finish, it OMITS rows; an omitted row becomes `unclear`; `unclear` is absent
+    from _CREDIT, so it silently leaves the score's denominator and the PI is told
+    nothing. See the module docstring — that is the failure this tool exists to
+    prevent, and it was reachable from inside the tool itself.
+
+    Four sections of hand-curated rules never came close to the ceiling. Reading
+    the PAPPG changes that: its Project Description alone yields 22 rules and the
+    Budget section is denser still.
+
+    A batch whose model call fails falls back to `unclear` for ITS rows only —
+    losing every assessment because one call timed out would be worse than the
+    problem this solves."""
     if not reqs:
         return []
     label = _section_label(sections, section_key)
@@ -327,15 +411,52 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
                 for r in reqs]
 
     section_text = span["text"]
+    if len(reqs) > REVIEW_BATCH:
+        out: list[dict] = []
+        for i in range(0, len(reqs), REVIEW_BATCH):
+            out.extend(_review_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
+                                     sections, solicitation_id))
+        return out
+    return _review_batch(section_key, span, reqs, sections, solicitation_id)
+
+
+def _review_batch(section_key: str, span: dict, reqs: list[dict],
+                  sections: dict, solicitation_id: str) -> list[dict]:
+    """One model call, for at most REVIEW_BATCH requirements."""
+    label = _section_label(sections, section_key)
+    section_text = span["text"]
+    # `prohibition` is not decoration. ABSENCE MEANS PASS for these rows and FAIL
+    # for every other row, and the reviewer had only the second vocabulary — so a
+    # Budget Justification that never mentions alcohol was told to fix "Do not
+    # request NSF funds for alcoholic beverages". Nine of twenty-three items in
+    # one live fix-list were rules the draft already obeyed. The engine already
+    # had `clear`/`flagged` (both in _CREDIT, both used by the deterministic
+    # rows); they were simply unreachable from a model-judged row.
     listing = [{"id": r["id"], "requirement": r["label"],
-                "solicitation_says": r["source"]} for r in reqs]
+                "solicitation_says": r["source"],
+                "prohibition": bool(r.get("flag_if_present"))} for r in reqs]
     prompt = (
         f"SECTION: {label} of a proposal to solicitation {solicitation_id}.\n"
         f"REQUIREMENTS (return a row for EVERY id):\n{listing}\n\n"
         "DRAFT TEXT:\n\"\"\"\n" + section_text[:MAX_DRAFT_CHARS] + "\n\"\"\"\n\n"
         'Return JSON: {"findings": [{"id": "<requirement id>", '
         '"status": "addressed|partial|not_found", "note": "<1-2 sentences, actionable>", '
-        '"evidence": "<verbatim quote from DRAFT TEXT, or empty>"}]}'
+        '"evidence": "<verbatim quote from DRAFT TEXT, or empty>", '
+        '"suggestion": "<ONE concrete thing that would strengthen this row>"}]}\n\n'
+        'A requirement marked "prohibition": true is a rule about what the draft '
+        'must NOT do. For those rows ONLY, use "clear" when the draft does not do '
+        'the forbidden thing, and "flagged" when it does — never '
+        '"addressed"/"partial"/"not_found". A draft that simply never mentions the '
+        'forbidden thing is "clear": that is compliance, not an omission. Give '
+        '"evidence" for "flagged" only — quote the offending text verbatim; "clear" '
+        'takes no quote, because there is nothing to point at.\n\n'
+        '"suggestion" is REQUIRED on EVERY row, including rows you mark "addressed" '
+        'or "clear". These requirements are about PRESENCE, so "addressed" means the '
+        'rule is satisfied — it does not mean the section is strong, and an author '
+        'reading "addressed" with no suggestion concludes there is nothing left to '
+        'do. Name the single most useful thing to add or sharpen, in one sentence, '
+        'specific to THIS text. Do not praise the draft, do not restate the status, '
+        'and do not write the sentence for the author.'
     )
     ai = gemini_client.generate_json(
         prompt, temperature=0.0, max_output_tokens=8192, timeout_s=90,
@@ -357,18 +478,42 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
                                 "The reviewer did not return a result for this requirement. "
                                 "Check it by hand.", "", source="ai"))
             continue
+        prohibition = bool(req.get("flag_if_present"))
         status = str(raw.get("status", "")).strip().lower()
-        if status not in ("addressed", "partial", "not_found"):
-            status = "not_found"
         evidence = str(raw.get("evidence", "") or "").strip()
         note = str(raw.get("note", "") or "").strip()
-        # GOLDEN RULE 2: a positive claim without a verifiable quote is dropped.
-        if status in ("addressed", "partial") and not _quote_in(section_text, evidence):
-            status, evidence = "not_found", ""
-            note = (note + " ").strip() + (
-                " (A supporting quote could not be verified in your text, so this is reported "
-                "as not found.)")
-        out.append(_finding(req, status, note, evidence, source="ai"))
+        suggestion = str(raw.get("suggestion", "") or "").strip()
+
+        if prohibition:
+            # A prohibition has exactly two outcomes. Anything else the model
+            # returns falls back to `clear`, NOT to `flagged`: the draft is
+            # presumed to comply until something in it can be quoted to the
+            # contrary, which is the same burden of proof `addressed` carries in
+            # the other direction.
+            if status not in ("clear", "flagged"):
+                status = "flagged" if status in ("not_found",) and evidence else "clear"
+            # GOLDEN RULE 2, in the direction that matters here: "flagged" is a
+            # POSITIVE claim about the draft — you did the forbidden thing — so
+            # it needs a verifiable quote exactly as "addressed" does. An
+            # unquotable flag sends a PI hunting for text that is not there.
+            # "clear" is an ABSENCE claim and cannot be quoted, so it is exempt,
+            # the same exemption budget_cap_status gets from _VERIFIABLE_FIELDS.
+            if status == "flagged" and not _quote_in(section_text, evidence):
+                status, evidence = "clear", ""
+                note = (note + " ").strip() + (
+                    " (The reviewer could not point to the offending text in your draft, "
+                    "so this is reported as respected.)")
+        else:
+            if status not in ("addressed", "partial", "not_found"):
+                status = "not_found"
+            # GOLDEN RULE 2: a positive claim without a verifiable quote is dropped.
+            if status in ("addressed", "partial") and not _quote_in(section_text, evidence):
+                status, evidence = "not_found", ""
+                note = (note + " ").strip() + (
+                    " (A supporting quote could not be verified in your text, so this is reported "
+                    "as not found.)")
+        out.append(_finding(req, status, note, evidence, source="ai",
+                            suggestion=suggestion))
     return out
 
 
@@ -422,11 +567,21 @@ _CREDIT = {
 }
 
 
-def score(findings: list[dict], *, solicitation_id: str = "") -> Optional[dict]:
+def score(findings: list[dict], *, solicitation_id: str = "",
+          scope: str = "the solicitation") -> Optional[dict]:
     """Completeness against `solicitation_id`, computed in code (golden rule 1).
 
     Deliberately NOT a funding prediction and deliberately not model-assigned.
-    Returns None when nothing scoreable was assessed."""
+    Returns None when nothing scoreable was assessed.
+
+    `by_source` splits the same arithmetic by the authority each rule came from,
+    because a section is judged against TWO at once — NSF's standing rulebook and
+    this program's own asks — and one number cannot say which half is failing. A
+    draft meeting every PAPPG rule and missing every solicitation rule reads the
+    same 50% as one that did the reverse, and the second is far likelier to come
+    back without review. Same rows, same credit, same denominator rules: this
+    partitions the score, it does not recompute it.
+    """
     scored = [f for f in findings if f.get("scored") and f["status"] in _CREDIT]
     if not scored:
         return None
@@ -438,18 +593,42 @@ def score(findings: list[dict], *, solicitation_id: str = "") -> Optional[dict]:
     counts: dict = {}
     for f in findings:
         counts[f["status"]] = counts.get(f["status"], 0) + 1
+    by_source: dict = {}
+    for f in scored:
+        src = f.get("rulebook") or solicitation_id or "this solicitation"
+        b = by_source.setdefault(src, {"percent": 0, "assessed": 0, "earned": 0.0})
+        b["assessed"] += 1
+        b["earned"] += _CREDIT[f["status"]]
+    for b in by_source.values():
+        b["percent"] = int(math.floor(100.0 * b["earned"] / b["assessed"] + 0.5))
+        b["earned"] = round(b["earned"], 1)
     return {
         "percent": pct,
         "band": band,
         "assessed": len(scored),
         "earned": round(earned, 1),
         "counts": counts,
+        "by_source": by_source,
         # Shown verbatim next to the number so it cannot be read as a funding odds.
+        # The id qualifies the COUNT, so it may only appear when every counted
+        # rule really did come from that document. With a rulebook also
+        # contributing rows it would read "the 7 NSF 23-598 requirements" over a
+        # set that is six sevenths NSF's standing policy — attributing rules to a
+        # solicitation that never stated them. `by_source` carries the breakdown;
+        # this sentence stays true instead of trying to carry it too.
         "basis": (f"{pct}% of the {len(scored)} "
-                  + (f"{solicitation_id} " if solicitation_id else "")
+                  + (f"{solicitation_id} "
+                     if solicitation_id and len(by_source) == 1 else "")
                   + "requirements this reviewer could assess are addressed in your draft. "
-                  "This measures completeness against the solicitation, not the likelihood "
-                  "of an award."),
+                  # THE PRESENCE CAVEAT, and it travels with the number into both
+                  # modals because it is the guardrail, not decoration. A PI asked
+                  # "why would you rate it 100" of a 152-word Project Summary that
+                  # met all seven of its rules — every one a presence check. The
+                  # arithmetic was right; the screen read as a grade. Saying it
+                  # here means neither modal can render the number without it.
+                  "These rules check that something is present, not how strong "
+                  f"it is. This measures completeness against {scope}, not the "
+                  "quality of the writing or the likelihood of an award."),
     }
 
 
@@ -483,10 +662,19 @@ def _project_description_span(spans: dict, sections: dict) -> Optional[dict]:
         return None
     if bi is None:
         return pd
+    # Since _SUBSECTIONS made Broader Impacts a NESTED span, its text is already
+    # part of the Project Description's — concatenating would repeat it, and a
+    # paragraph appearing twice is a mistake `mechanical_checks` reports. The
+    # concatenation below still matters for the case that is not nested: a
+    # Broader Impacts heading located when the Project Description was not, or a
+    # solicitation whose Broader Impacts really is a sibling section.
+    if pd["start"] <= bi["start"] < pd["end"]:
+        return pd
     return {**pd, "text": pd["text"] + "\n\n" + bi["text"]}
 
 
-def _finding(req: dict, status: str, note: str, evidence: str, *, source: str) -> dict:
+def _finding(req: dict, status: str, note: str, evidence: str, *, source: str,
+             suggestion: str = "") -> dict:
     return {
         "id": req["id"],
         "label": req["label"],
@@ -496,10 +684,25 @@ def _finding(req: dict, status: str, note: str, evidence: str, *, source: str) -
         "prohibition": bool(req.get("flag_if_present")),
         "status": status,
         "note": note,
+        # ONE concrete thing that would strengthen this row — carried on EVERY
+        # row, including the ones that pass. A PI pasted a 76-word Project
+        # Summary, was told six of eight rules were "Addressed", and every
+        # passing row's note was praise ("The draft clearly states the
+        # overarching objective"), which tells an author nothing and makes
+        # "Addressed" read as "you are done here". Empty when the model omits it:
+        # a fabricated suggestion is advice about a draft nobody read.
+        "suggestion": suggestion,
         "evidence": evidence,
         "solicitation_says": req["source"],
         "why": req.get("why", ""),
         "source": source,   # check | ai | fallback | locate — for debugging/UI
+        # A baseline row (services/rulebook_baseline.py) carries the name of the
+        # rulebook it WAS drawn from — e.g. "the PAPPG" — never set by a model.
+        # apply_delegation()'s guard reads THIS key to recognise a baseline row;
+        # without propagating it here, every finding in the real pipeline would
+        # arrive with no `rulebook` key regardless of what the requirement row
+        # carried, and the guard would never fire. Ordinary rows carry None.
+        "rulebook": req.get("rulebook"),
         # Set by apply_delegation() below, never by a model.
         "delegated_to": None,
     }
@@ -550,8 +753,29 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
     to all the requirements outlined in the PAPPG" IS checkable, WAS checked and
     came back not_found; demoting it would delete a true finding about the
     draft to make room for a caveat.
+
+    A BASELINE row (`rulebook_baseline`) is neither shape above — it IS the
+    rulebook's rule, quoted, not a pointer INTO the rulebook. Its own quote
+    names the PAPPG ("Your file must include three separate section headers"),
+    so without this guard it would classify as a pointer or a rider and get
+    reclassified or re-noted by the very engine it exists to route around —
+    at worst demoted to `delegated` and deleted from the score's denominator,
+    silently undoing the finding this feature was built to add.
+
+    THE GUARD DEPENDS ON `_finding()` PROPAGATING `rulebook` (fixed 2026-08-17
+    — it did not, originally, and the guard below silently never fired: every
+    finding is built through `_finding()`, which never copied `req["rulebook"]`
+    onto the dict it returned, so `f.get("rulebook")` was `None` for every row
+    including a real baseline one. `classify()` happened to independently
+    return `pointer_only=False` for all 14 current baseline labels — none
+    starts with a compliance verb — so nothing broke in production, but a
+    future rulebook row phrased that way would have been silently demoted with
+    the guard doing nothing. Confirm `_finding()` still sets
+    `"rulebook": req.get("rulebook")` before trusting this guard again.
     """
     for f in findings:
+        if f.get("rulebook"):
+            continue
         target, pointer_only = delegated_rules.classify(
             f.get("label", ""), f.get("solicitation_says", ""))
         f["delegated_to"] = target
@@ -568,7 +792,8 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
 
 
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
-                 budget: Optional[dict] = None, use_ai: bool = True) -> dict:
+                 budget: Optional[dict] = None, use_ai: bool = True,
+                 pages: Optional[dict] = None) -> dict:
     """Review a pasted proposal against the solicitation `profile` describes.
 
     draft_text — the whole proposal, one blob.
@@ -577,6 +802,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     title      — the tracked proposal's title, for checks that read it.
     budget     — a compute_budget() result, if the PI has saved one.
     use_ai     — False forces the deterministic path (used by tests).
+    pages      — section key -> REAL page count, from an upload. Absent it,
+                 page rules report an estimate and never a verdict.
     """
     sections = profile.get("sections") or {}
     requirements = profile.get("requirements") or []
@@ -594,7 +821,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
 
     spans, ai_located = locate_sections(text, sections, use_ai=use_ai)
 
-    findings = run_deterministic(text, spans, profile, title=title, budget=budget)
+    findings = run_deterministic(text, spans, profile, title=title, budget=budget,
+                                 pages=pages)
 
     # Every remaining model call is independent once the spans are known, so they
     # run CONCURRENTLY. Measured on a real draft: 39s sequential -> ~15s. Five
@@ -672,14 +900,199 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         # two together would make a number that is already over-read mean less.
         "mistakes": mechanical_checks.find_mistakes(text, budget=budget),
         # One row per rulebook this solicitation points into, with a plain
-        # description and how many of its requirements went unchecked.
-        "delegated": delegated_rules.summarize(findings),
+        # description and how many of its requirements went unchecked. Also
+        # names the sections whose rules the baseline supplied and we DID
+        # check, so the caveat shrinks as coverage grows instead of forever
+        # saying "not checked here" about a section that now is — PER RULEBOOK,
+        # because one flat list stamped on every row claimed we check the Build
+        # America, Buy America Act's Project Summary rules.
+        "delegated": delegated_rules.summarize(
+            findings,
+            covered=rulebook_baseline.covered_sections(
+                profile.get("requirements", []))),
         "eligibility_notes": profile.get("eligibility_notes") or [],
         "message": None if ai_used else (
             "The AI reviewer is unavailable, so only the rule-based checks ran and the "
             "completeness score is withheld. Everything below is still accurate."
         ),
     }
+
+
+def review_section(text: str, *, section: str, rulebook: str,
+                   profile: Optional[dict] = None,
+                   pages: Optional[int] = None,
+                   budget: Optional[dict] = None,
+                   use_ai: bool = True) -> dict:
+    """Check ONE section against its rulebook's rules, while the PI writes it.
+
+    The same primitives as review_draft, with the requirement universe filtered
+    to one section — NOT a parallel engine. The reason is the one CLAUDE.md
+    gives for routing Draft Review's "Use that document" through the single
+    existing attach path: a second path drifts, and two engines that disagree
+    about the same section is exactly the confusion this tool exists to remove.
+
+    NO SOLICITATION REQUIRED, and no score returned. Draft Review's 409 exists
+    so a completeness percentage is never computed against zero requirements;
+    this returns no percentage, so that guard has nothing to protect. When a
+    `profile` IS supplied its own rows for this section are checked too.
+
+    `pages` is this section's REAL page count from an uploaded PDF — one file is
+    one section here, so unlike the whole-package path the count is exact.
+    """
+    label = rulebook_baseline.section_label(section)
+    text = (text or "").strip()
+    base = {
+        "section": section, "label": label, "rulebook": rulebook,
+        "skeleton": rulebook_baseline.skeleton_for(rulebook, section),
+        "findings": [], "mistakes": [], "score": None, "ai": False,
+        "word_count": len(text.split()),
+    }
+    if not text:
+        return {**base, "message": f"Paste your {label} to have it checked."}
+
+    rows = rulebook_baseline.rules_for(rulebook, section)
+    if profile:
+        # The picker sends a RULEBOOK key; a profile is keyed in the
+        # solicitation's OWN vocabulary, and `sections_from` keeps whichever
+        # name was already in use when it merges two spellings of one section.
+        # `requirements_for` is an exact-key match, so asking it for the
+        # rulebook's key drops every solicitation row filed under the key that
+        # won the merge — silently, since the rulebook's own rows still fill
+        # the page. `_refile_rows` already closed this for Draft Review, which
+        # reads the whole profile; this is the same repair on the entry point
+        # that keys off the picker instead.
+        sections = profile.get("sections") or {}
+        key = section if section in sections else (
+            sp.resolve_section_key(sections, label) or section)
+        rows = rows + [r for r in sp.requirements_for(profile, key)
+                       if r["id"] not in {b["id"] for b in rows}]
+    if not rows:
+        return {**base, "message": (
+            f"No rules are on file for {label}. Nothing was checked.")}
+
+    # The whole paste IS the section, so the span is known without the locate
+    # stage — that is the one thing this entry point genuinely skips.
+    spans = {section: {"text": text, "marker": label, "start": 0}}
+    mini = {"requirements": rows, "checks": _checks_from_profile(profile),
+            "sections": {section: {"label": label, "aliases": [label]}}}
+
+    findings = run_deterministic(text, spans, mini, budget=budget,
+                                 pages={section: pages} if pages else None)
+
+    semantic = [r for r in rows if r["kind"] == "semantic"]
+    skipped_semantic = False
+    if semantic:
+        if use_ai:
+            # _review_section's last parameter is `solicitation_id`, which reaches
+            # the model only through _review_system's prompt text ("requirements
+            # from <id>"). Passing the RULEBOOK name is correct here and reads
+            # correctly: these rules do come from the PAPPG, not a solicitation.
+            findings.extend(_review_section(section, spans[section], semantic,
+                                            mini["sections"], rulebook))
+        else:
+            # use_ai=False must not make semantic rules VANISH. Run the same
+            # fallback review_draft uses on an AI outage, so a caller sees
+            # `unclear` rows with their explanatory note instead of nothing —
+            # the difference between "no semantic rules exist for this section"
+            # and "semantic rules were not assessed" must stay visible.
+            findings.extend(_semantic_fallback(semantic, spans[section]["text"]))
+            skipped_semantic = True
+
+    # THE SAME TWO PASSES AS review_draft, IN THE SAME ORDER. This entry point
+    # exists so a PI cannot be told two different things about one section, and
+    # skipping delegation broke exactly that: a solicitation row whose whole ask
+    # is "follow the PAPPG" came back `delegated` in Draft Review and
+    # `not_found` — counted against the draft — here. Baseline rows carry
+    # `rulebook` and apply_delegation's guard leaves them alone.
+    findings = apply_delegation(findings)
+    findings = apply_draft_scope(findings)
+    order = {r["id"]: i for i, r in enumerate(rows)}
+    findings.sort(key=lambda f: order.get(f["id"], 999))
+
+    return {
+        **base,
+        "findings": findings,
+        "ai": any(f["source"] == "ai" for f in findings),
+        # WHAT TO DO NEXT, and how much of the page this uses. Both computed in
+        # code (services/section_guidance.py), and that is deliberate: the report
+        # that prompted them was a 76-word Project Summary told six of eight
+        # rules were "Addressed", where two runs of the same paste disagreed
+        # about how many passed. A model asked "is this thin?" would be
+        # inconsistent on exactly the question the author already distrusts. A
+        # word count and an ordering are arithmetic.
+        "guidance": {
+            "length": section_guidance.length_guidance(
+                base["word_count"], _section_page_limit(rows, section)),
+            "priorities": section_guidance.priorities(findings),
+        },
+        # ONE SECTION, so the whole-document rules are off. Every well-cited
+        # Project Description used to come back with "Works are cited but no
+        # reference list was found ... If it is a separate file, upload it too",
+        # in a modal that accepts one file for one section and says the rest of
+        # the proposal is not needed — advice the PI cannot act on.
+        "mistakes": mechanical_checks.find_mistakes(text, budget=budget,
+                                                    whole_document=False),
+        # PROOFREADING, under its OWN key. `mistakes` is model-free by contract
+        # and the modal calls those rows "found by a rule, not a judgement" —
+        # model output in that list would make the caption false. These are
+        # advisory, they quote the draft (golden rule 2, verified in code), and
+        # they are ABSENT from the score: a comma splice is not incompleteness
+        # against a solicitation. Deliberately not run by `review_draft`: a whole
+        # package is many thousands of words, and a proofread of all of it is a
+        # different feature with a different cost, not this one scaled up.
+        "wording": proofread.proofread(text, use_ai=use_ai),
+        # THE SCORE IS A RULES-MET SHARE, NEVER "how done this section is".
+        # This used to return None, on the reasoning that a percentage would
+        # read as "your Project Summary is 60% written" — which the rules cannot
+        # measure, since they are NSF's floor and not a completeness universe.
+        # That concern is real and is answered by what the number is computed
+        # over rather than by withholding it: the denominator is the rules that
+        # were actually CHECKED, so `not_checked`, `could_not_locate` and
+        # `unclear` leave it entirely and an unscored conditional never enters.
+        # `basis` says so in words, and `by_source` says which authority each
+        # half came from. Same `score()` and same `_CREDIT` as Draft Review —
+        # one scorer, two entry points, so the two can never disagree about the
+        # same section.
+        "score": score(findings,
+                       solicitation_id=(profile or {}).get("id", ""),
+                       scope=f"{rulebook}'s rules for this section"
+                             + (f" and {(profile or {}).get('id')}'s own"
+                                if profile and (profile or {}).get("id") else "")),
+        "message": (
+            "The AI reviewer was not run for this check, so the requirements "
+            "needing judgment are marked unclear below rather than assessed — "
+            "only the rule-based checks are complete."
+        ) if skipped_semantic else None,
+    }
+
+
+def _section_page_limit(rows: list[dict], section: str) -> Optional[float]:
+    """This section's stated page limit, read off the rule that enforces it.
+
+    Read from the RULES rather than passed in, so the allowance and the check
+    that enforces it can never disagree — the same reason the profile rebuilds
+    its deterministic rows from `contract` instead of storing two copies. None
+    when no rule states one, and `length_guidance` then says nothing at all:
+    most sections have no limit, and deriving an allowance for them would
+    fabricate the very rule this is careful not to state.
+    """
+    for r in rows:
+        if r.get("check") in _PAGE_CHECK_NAMES:
+            args = r.get("check_args") or {}
+            if args.get("section") in (section, None) and args.get("limit"):
+                try:
+                    return float(args["limit"])
+                except (TypeError, ValueError):
+                    return None
+    return None
+
+
+_PAGE_CHECK_NAMES = {"rb_page_limit", "page_limit"}
+
+
+def _checks_from_profile(profile: Optional[dict]) -> dict:
+    """The profile's own check callables, or none."""
+    return (profile or {}).get("checks") or {}
 
 
 def _solicitation_meta(profile: dict) -> dict:

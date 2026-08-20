@@ -211,7 +211,7 @@ def url_for(name: str) -> str:
     return ""
 
 
-def summarize(findings: list) -> list[dict]:
+def summarize(findings: list, *, covered: Optional[dict] = None) -> list[dict]:
     """One row per rulebook this solicitation defers to, for the UI.
 
     Built here rather than in the frontend so the names, the glosses and the
@@ -219,16 +219,53 @@ def summarize(findings: list) -> list[dict]:
     whose ENTIRE ask was "follow that document" — those are the ones excluded
     from the score; the rest were checked and merely carry rules that continue
     elsewhere, which is a different and much weaker warning.
+
+    `covered` maps a RULEBOOK NAME to the sections whose rules we now hold and
+    DID check, so the notice can shrink as coverage grows. Telling a PI "the
+    PAPPG is not checked here" when four of its sections now are is the same
+    dishonesty as the badge that read "attached" for a proposal carrying rules
+    only. Defaults to none covered, so every existing caller behaves as before.
+
+    IT IS A MAP, NOT A LIST, AND THAT IS THE WHOLE POINT. One list stamped onto
+    every row told a solicitation citing both the PAPPG and the Build America,
+    Buy America Act that we had checked BABA's Project Summary rules. We hold
+    nothing of that Act at all. A caveat naming the wrong document is worse than
+    no caveat — it reports coverage of a rulebook nothing read.
+
+    `delegated_to` is normally set by `apply_delegation` before a finding ever
+    reaches here — but falls back to `cited_rulebook(label)` when it is absent,
+    so a caller that only has the raw label (as a stored `delegated` row read
+    back without going through classification again) is still grouped
+    correctly. This never disagrees with `apply_delegation`: it only fires
+    when `delegated_to` is unset, and `classify` never suppresses a rulebook
+    genuinely named in the label — so the fallback and the real classification
+    agree by construction.
+
+    A BASELINE row (carries `rulebook`, set by `draft_review._finding` from
+    `rulebook_baseline`) is skipped outright, same as `apply_delegation`'s own
+    guard and for the identical reason: it IS the rulebook's rule, checked, not
+    a pointer INTO the rulebook. Without this, the `cited_rulebook(label)`
+    fallback above would misfire on it — a baseline row whose LABEL happens to
+    name its own rulebook (e.g. a future row phrased "Comply with the NIH
+    Grants Policy Statement's page limit") would get folded into the "not
+    checked" summary for a rule we just checked. No current baseline label
+    triggers this (verified: none of the 14 PAPPG row labels name "PAPPG"), but
+    the fallback exists precisely so a label CAN carry the name, so the guard
+    has to be unconditional rather than relying on today's wording.
     """
+    covered = dict(covered or {})
     rows: dict = {}
     for f in findings or []:
-        name = f.get("delegated_to")
+        if f.get("rulebook"):
+            continue
+        name = f.get("delegated_to") or cited_rulebook(f.get("label", ""))
         if not name:
             continue
         row = rows.setdefault(name, {"name": name, "description": describe(name),
                                      "short": short_for(name),
                                      "url": url_for(name),
-                                     "total": 0, "unchecked": 0})
+                                     "total": 0, "unchecked": 0,
+                                     "covered_sections": list(covered.get(name) or [])})
         row["total"] += 1
         if f.get("status") == "delegated":
             row["unchecked"] += 1

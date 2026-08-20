@@ -86,6 +86,44 @@ def section_signature(name: str) -> frozenset:
     return frozenset(_singular(w) for w in words if w not in _SECTION_FILLER)
 
 
+# Names that denote ONE part of a proposal while sharing no equal word-set, so
+# `section_signature` cannot see they are the same thing.
+#
+# A NAMED EQUIVALENCE, deliberately, rather than a looser matcher. Loosening
+# equality to containment is what would fold "Project Description Supplementary
+# Documents" into "Project Description" and silently lose a real section — the
+# hole set-equality exists to close, and there is a test that keeps it closed.
+# Every entry here is a judgement someone made on purpose and can be read back.
+#
+# The first entry was found by auditing a live proposal. One funder's rulebook
+# calls an upload slot "Special Information and Supplementary Documentation"
+# while a solicitation drawing on that same rulebook writes "Supplementary
+# Documents"; the two never merged, so that solicitation's rules about letters
+# of support sat in a section the section picker does not offer.
+#
+# NOTE the tension, since a test in this module's suite guards it: these are
+# section NAMES, not a funder branch. Nothing here asks who the sponsor is and
+# the entry fires for any document using either phrasing. If this table ever
+# grows entries that only make sense for one sponsor, it belongs in
+# `rulebook_baseline` (which is keyed on the rulebook) rather than here — this
+# module is deliberately dependency-free and must stay that way.
+_EQUIVALENT_SECTIONS = (
+    (frozenset({"supplementary", "document"}),
+     frozenset({"special", "information", "supplementary", "documentation"})),
+)
+
+
+def _equivalent_signatures(sig: frozenset) -> list[frozenset]:
+    """`sig` plus any signature declared to mean the same section."""
+    out = [sig]
+    for a, b in _EQUIVALENT_SECTIONS:
+        if sig == a:
+            out.append(b)
+        elif sig == b:
+            out.append(a)
+    return out
+
+
 def resolve_section_key(sections: dict, name: str) -> Optional[str]:
     """Which section in `sections` does `name` refer to, or None.
 
@@ -101,10 +139,15 @@ def resolve_section_key(sections: dict, name: str) -> Optional[str]:
     sig = section_signature(name)
     if not sig:
         return None
+    wanted = _equivalent_signatures(sig)
     for k, meta in sections.items():
-        if section_signature(meta.get("label") or k) == sig:
+        if section_signature(meta.get("label") or k) in wanted:
             return k
-        if any(section_signature(a) == sig for a in (meta.get("aliases") or [])):
+        if any(section_signature(a) in wanted for a in (meta.get("aliases") or [])):
+            return k
+        # The KEY itself, for a universe whose entry carries neither a label
+        # matching the equivalence nor an alias for it.
+        if section_signature(k) in wanted:
             return k
     return None
 
@@ -145,7 +188,19 @@ def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
         lbl = label or _section_label(key)
         sig = section_signature(lbl) or section_signature(key)
 
-        existing = by_signature.get(sig) if sig else None
+        # A DECLARED equivalence counts as the same signature here, exactly as
+        # it does in `resolve_section_key`. Both layers are needed and neither
+        # substitutes for the other: measured on a live proposal, the universe
+        # split "Supplementary Documents" from "Special Information and
+        # Supplementary Documentation", and because BOTH keys then existed the
+        # lookup took its exact-key hit and never consulted the equivalence at
+        # all -- so rules under the first stayed unreachable from the picker.
+        existing = None
+        if sig:
+            for candidate in _equivalent_signatures(sig):
+                existing = by_signature.get(candidate)
+                if existing is not None:
+                    break
         if existing is not None and existing != key:
             # Same section, different words for it. Keep the key already in use
             # (requirement rows point at it) and WIDEN the aliases, so a PI who
@@ -163,13 +218,34 @@ def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
 
         if key in sections:
             return
-        sections[key] = {"label": lbl, "aliases": aliases_for(lbl)}
+        # The DERIVED label is kept as an extra alias alongside the authored
+        # one. A row may name the section properly ("Facilities, Equipment and
+        # Other Resources") while a PI types it without NSF's commas, and both
+        # spellings have to locate. Aliases only ever widen the net, and
+        # heading_regex still demands a whole line, so this cannot match prose.
+        alias_list = aliases_for(lbl)
+        for extra in aliases_for(_section_label(key)):
+            if extra not in alias_list:
+                alias_list.append(extra)
+        sections[key] = {"label": lbl, "aliases": alias_list}
         if sig:
             by_signature[sig] = key
 
+    # An AUTHORED label wins over the title-cased key, wherever on the row list
+    # it appears. Collected first because `add` is first-writer-wins by key: the
+    # solicitation's own rows come before the rulebook baseline's, so a baseline
+    # row carrying the real NSF heading would otherwise arrive too late to be
+    # used.
+    authored: dict = {}
+    for req in requirements or []:
+        if req.get("section") and req.get("section_label"):
+            authored.setdefault(section_key(str(req["section"])),
+                                str(req["section_label"]))
+
     for req in requirements or []:
         if req.get("section"):
-            add(str(req["section"]))
+            add(str(req["section"]),
+                label=authored.get(section_key(str(req["section"]))))
     for name in (page_limits or {}):
         add(str(name))
     for name in (attachments or []):
@@ -203,6 +279,45 @@ def scored_requirements(profile: dict) -> list[dict]:
     return [r for r in profile.get("requirements", []) if r.get("scored")]
 
 
+def _refile_rows(rows: list[dict], sections: dict) -> list[dict]:
+    """Point every row at the section key that SURVIVED the merge.
+
+    `sections_from` already collapses two names for one part of a proposal —
+    `Budget and Budget Justification` and `Budget Justification` are one section,
+    which is what stopped a Budget Justification sitting in a draft being
+    reported missing. But it merges the section UNIVERSE and keeps whichever key
+    was already in use, and rows pointing at the key that lost were left behind.
+
+    That is not hypothetical. The three row sources spell a section name with
+    three different functions: a solicitation's own rows arrive canonicalised by
+    `solicitation_requirements.canon_section` (which strips "and", giving
+    `budget_justification`), contract rows arrive verbatim, and rulebook rows use
+    `section_key` (which does not, giving `budget_and_budget_justification`).
+    Measured on a real proposal: the universe merged to the first and 45 PAPPG
+    rules kept pointing at the second, so every one reported "Not located" and
+    dropped out of the score's denominator — recovered and then never checked,
+    which is worse than never having them because the row looks handled.
+
+    ONLY ever moves a row ONTO a section that exists. `resolve_section_key`
+    returns None for a name the universe does not know, and an unknown section is
+    LEFT ALONE rather than blanked: silently re-filing a row we cannot place is
+    the over-reach `canon_section`'s document-heading deny-list was deliberately
+    kept narrow to avoid.
+    """
+    if not sections:
+        return rows
+    out = []
+    for row in rows:
+        key = row.get("section")
+        if key and key not in sections:
+            resolved = resolve_section_key(sections, key)
+            if resolved:
+                row = dict(row)
+                row["section"] = resolved
+        out.append(row)
+    return out
+
+
 def build_generic(contract: dict, requirements: list[dict], *, id: str, title: str,
                   url: Optional[str] = None,
                   merit_criteria: Optional[list] = None,
@@ -215,15 +330,33 @@ def build_generic(contract: dict, requirements: list[dict], *, id: str, title: s
     edit the page limit and the check that enforces it moves with it.
 
     Sections are likewise derived, never persisted: a stored section list could
-    drift out of step with the requirements that name it."""
+    drift out of step with the requirements that name it.
+
+    A third source: when the solicitation CITES a rulebook we hold rules for
+    (the PAPPG today), that rulebook's rules are appended. Detection reads the
+    requirement rows' own quotes, never a sponsor string. Because this runs on
+    every profile load, adding a rule retroactively fixes every proposal already
+    in the database."""
     from services import generic_checks
+    from services import rulebook_baseline
     contract = contract or {}
-    rows = list(requirements or []) + generic_checks.contract_requirements(contract)
+    extracted = list(requirements or [])
+    # THREE row sources now. Baseline rows go LAST so a solicitation's own row
+    # for the same part of the proposal is the one a reader meets first — its
+    # quote is the sentence the PI must actually satisfy.
+    rows = (extracted
+            + generic_checks.contract_requirements(contract)
+            + rulebook_baseline.baseline_rows(
+                extracted, url=url or "",
+                page_limits=contract.get("page_limits")))
+
+    sections = sections_from(rows,
+                             page_limits=contract.get("page_limits"),
+                             attachments=contract.get("required_attachments"))
+    rows = _refile_rows(rows, sections)
     return make_profile(
         id=id, title=title, url=url,
-        sections=sections_from(rows,
-                               page_limits=contract.get("page_limits"),
-                               attachments=contract.get("required_attachments")),
+        sections=sections,
         requirements=rows,
         checks=generic_checks.CHECKS,
         merit_criteria=merit_criteria,

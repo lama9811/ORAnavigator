@@ -251,3 +251,121 @@ def test_a_rulebook_named_in_prose_with_no_link_is_found():
 
 def test_an_empty_document_points_nowhere():
     assert dr.rulebooks_in("") == []
+
+
+# ── what the baseline now covers ────────────────────────────────────────────
+
+def test_the_notice_names_the_sections_the_baseline_now_checks():
+    """The caveat must shrink as coverage grows. Telling a PI 'the PAPPG is not
+    checked here' when four of its sections now ARE is the same dishonesty as
+    the badge that read 'attached' for a proposal with rules only."""
+    findings = [{"id": "r1", "label": "Adhere to PAPPG guidelines",
+                 "status": "delegated",
+                 "source_text": "Adhere to PAPPG guidelines."}]
+    rows = dr.summarize(findings, covered={
+        "the PAPPG": ["Project Summary", "Project Description"]})
+    assert rows and rows[0]["name"] == "the PAPPG"
+    assert rows[0]["covered_sections"] == ["Project Summary", "Project Description"]
+
+
+def test_coverage_is_per_rulebook_not_stamped_on_every_row():
+    """We hold the PAPPG's rules. We hold NOTHING of the Build America, Buy
+    America Act — and a solicitation citing both would have claimed we check
+    BABA's Project Summary rules, because the same list was stamped onto every
+    rulebook row. A caveat that names the wrong document is worse than no
+    caveat: it tells the PI a part of their proposal is covered when nothing
+    read the law that governs it."""
+    findings = [
+        {"id": "r1", "label": "Adhere to PAPPG guidelines", "status": "delegated",
+         "source_text": "Adhere to PAPPG guidelines."},
+        {"id": "r2", "label": "Comply with the Build America, Buy America Act",
+         "status": "delegated",
+         "source_text": "Comply with the Build America, Buy America Act."},
+    ]
+    rows = {r["name"]: r for r in dr.summarize(findings, covered={
+        "the PAPPG": ["Project Summary", "Project Description"]})}
+    assert rows["the PAPPG"]["covered_sections"] == [
+        "Project Summary", "Project Description"]
+    assert rows["the Build America, Buy America Act"]["covered_sections"] == []
+
+
+def test_the_covered_map_is_built_from_the_rows_own_rulebook():
+    """rulebook_baseline names the sections; the mapping must come from each
+    row's OWN `rulebook`, so a second rulebook's rows can never be filed under
+    the first."""
+    from services import rulebook_baseline
+    covered = rulebook_baseline.covered_sections([
+        {"rulebook": "the PAPPG", "section": "project_description"},
+        {"rulebook": "the PAPPG", "section": "project_summary"},
+        {"rulebook": "the NIH Grants Policy Statement", "section": "references_cited"},
+        {"rulebook": None, "section": "project_summary"},        # solicitation row
+        {"rulebook": "the PAPPG", "section": None},              # whole-document
+    ])
+    # Research.gov's order, not the alphabet — the order a PI meets them.
+    assert covered["the PAPPG"] == ["Project Summary", "Project Description"]
+    assert covered["the NIH Grants Policy Statement"] == ["References Cited"]
+
+
+def test_with_nothing_covered_the_notice_is_unchanged():
+    findings = [{"id": "r1", "label": "Adhere to PAPPG guidelines",
+                 "status": "delegated",
+                 "source_text": "Adhere to PAPPG guidelines."}]
+    rows = dr.summarize(findings)
+    assert rows[0]["covered_sections"] == []
+
+
+def test_a_pointer_only_row_stays_delegated_even_when_covered():
+    """We hold four sections' rules, not the whole PAPPG. 'Adhere to PAPPG
+    guidelines' is still an ask we cannot assess in full."""
+    from services import draft_review
+    findings = [{"id": "r1", "label": "Adhere to PAPPG guidelines",
+                 "status": "not_found", "note": "", "scored": True,
+                 "source_text": "Adhere to PAPPG guidelines."}]
+    out = draft_review.apply_delegation(findings)
+    assert out[0]["status"] == "delegated"
+
+
+def test_a_baseline_row_is_never_demoted_by_delegation():
+    """A baseline row's own quote names the PAPPG. If apply_delegation treated
+    it as pointer-only it would delete the very finding this feature adds.
+
+    The label is deliberately phrased with a compliance verb ("Comply with...")
+    so that, absent the `rulebook` guard, `classify()` would read it as
+    POINTER-ONLY (pointer_only is decided purely off the LABEL's leading verb
+    — see `_POINTER_ONLY_LABEL`) and demote it to `delegated`. None of the 14
+    real baseline row labels happen to start that way today, so a fixture
+    copying one of them verbatim would pass whether or not the guard exists —
+    this phrasing is what actually exercises the risk the guard defends
+    against, for any baseline row a future rulebook might add."""
+    from services import draft_review
+    findings = [{
+        "id": "pappg_ps_headings",
+        "label": "Comply with the PAPPG's three-heading requirement for the "
+                  "Project Summary",
+        "status": "not_found",
+        "note": "None of those appears as a heading.", "scored": True,
+        "source": "check", "rulebook": "the PAPPG",
+        "solicitation_says": "Your file must include three separate section "
+            "headers: Overview, Intellectual Merit, and Broader Impacts.",
+    }]
+    out = draft_review.apply_delegation(findings)
+    assert out[0]["status"] == "not_found"
+
+
+def test_a_baseline_row_never_lands_in_the_not_checked_summary():
+    """summarize()'s own cited_rulebook(label) fallback (added above, for a
+    caller that never ran apply_delegation) is exactly the mechanism that could
+    misfire on a baseline row: apply_delegation's guard leaves `delegated_to`
+    unset for a baseline row, so summarize() falls back to reading the
+    rulebook's name out of the LABEL -- and if a baseline row's label happens
+    to name its own rulebook (no current PAPPG row does; a future rulebook's
+    might), it would be folded into the "not checked" summary for a rule we
+    just checked and scored. summarize() must skip any row carrying `rulebook`
+    outright, same guard as apply_delegation, regardless of what its label
+    says."""
+    findings = [{
+        "id": "future_row", "label": "Comply with the PAPPG's page limit",
+        "status": "addressed", "scored": True, "rulebook": "the PAPPG",
+        "solicitation_says": "Some rule this baseline already checked.",
+    }]
+    assert dr.summarize(findings) == []

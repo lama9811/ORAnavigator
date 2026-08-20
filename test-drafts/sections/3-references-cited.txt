@@ -1,0 +1,13 @@
+References Cited
+
+Chen, L., Okafor, S., and Whitfield, R. (2021). Ion partitioning in sulfobetaine hydrogel networks. Macromolecules, 54(11), 5120-5133.
+
+Nguyen, M. et al. (2022). Antifouling performance of zwitterionic coatings in estuarine deployment. Journal of Membrane Science, 645, 120211.
+
+Researcher, A., and Nguyen, M. (2022). Charge spacing controls salinity response in zwitterionic networks. Macromolecules, 55(10), 4410-4419.
+
+Patel, R. (2020). Donnan exclusion revisited. Journal of Physical Chemistry B.
+
+Whitfield, R., Chen, L., Okafor, S., Adeyemi, T., and Boateng, K. (2023). Long-term drift in conductivity sensors deployed in the Chesapeake Bay. Environmental Science and Technology, 57(4), 1880-1891. Available at https://doi.org/10.1021/acs.est.2c07711
+
+This body of work is uniformly excellent and demonstrates that our approach is the only viable one; reviewers should note in particular that Patel's 2020 treatment is now considered definitive in the field, and we expand on it substantially in Section 3 of the Project Description where our full experimental protocol for the nine-member polymer library is described in complete detail.

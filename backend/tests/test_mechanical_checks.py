@@ -170,3 +170,46 @@ def test_a_SHOUTED_placeholder_still_counts():
 
 def test_lowercase_xxx_in_prose_is_not_a_placeholder():
     assert "placeholder" not in _kinds("The file is stored at path/xxx/data.")
+
+
+# ── one section is not the whole package ────────────────────────────────────
+
+CITED_SECTION = """Broader Impacts
+
+Prior studies (Alvarez 2019) established the baseline for this population, and
+subsequent work (Chen et al., 2021) extended it to a second cohort. Our own
+pilot (Diallo 2022) confirmed the effect at scale.
+"""
+
+
+def test_a_whole_document_rule_is_suppressed_when_only_one_section_is_checked():
+    """The section check hands ONE section to find_mistakes. `missing_references`
+    is a whole-document rule — References Cited is a separate section by NSF's
+    own structure — so every well-cited Project Description came back with
+    "Works are cited but no reference list was found ... If it is a separate
+    file, upload it too." The modal takes ONE file for ONE section and tells the
+    PI they do not need the rest of the proposal. The advice is impossible to
+    follow, which is the definition of noise."""
+    assert "missing_references" in _kinds(CITED_SECTION)
+    section_only = mc.find_mistakes(CITED_SECTION, whole_document=False)
+    assert [m["kind"] for m in section_only] == []
+
+
+def test_section_safe_rules_still_run_on_a_single_section():
+    """Suppressing the whole-document rule must not gut the rest: a placeholder
+    is a placeholder in any span of text, and so is a paragraph pasted twice."""
+    para = ("The project will recruit four undergraduate students each year "
+            "through the university bridge program, and each will complete a "
+            "summer research placement with a faculty mentor in the department.")
+    text = f"Overview\nTBD.\n\n{para}\n\n{para}\n"
+    kinds = {m["kind"] for m in mc.find_mistakes(text, whole_document=False)}
+    assert kinds == {"placeholder", "duplicate_paragraph"}
+
+
+def test_a_budget_conflict_is_still_reported_for_one_section():
+    """Not a whole-document rule: it compares against the budget the PI SAVED on
+    the proposal, which is available whichever entry point is running, and the
+    advice ("one of them is out of date") is followable inside one file."""
+    out = mc.find_mistakes("The project totals $250,000 over three years.",
+                           budget={"total_cost": 310000}, whole_document=False)
+    assert [m["kind"] for m in out] == ["number_conflict"]
