@@ -1,0 +1,17 @@
+Objectives and Significance
+This project develops adaptive zwitterionic polymer networks that hold salinity calibration for twelve months in estuarine deployment. Current commercial conductivity sensors drift beyond tolerance within six weeks of biofouling, which forces monthly servicing across the Chesapeake Bay monitoring network. Our objective is a sensing material whose response is governed by bulk ion partitioning rather than surface condition, so that fouling degrades signal amplitude without shifting calibration.
+
+Relationship to the Present State of Knowledge
+Donnan exclusion theory describes ion partitioning in charged hydrogels well at low fixed-charge density, but fails above roughly 0.8 M fixed charge, where our preliminary data show a factor-of-three deviation in partition coefficient. No published structure-response relationship links zwitterion charge spacing to salinity sensitivity. The PI's prior work established the synthetic route; this proposal establishes the physical model. Further background is available at https://www.morgan.edu/chemistry/polymer-lab and in the references cited.
+
+General Plan of Work
+Year 1 synthesizes a nine-member library varying charge spacing from 2 to 10 angstroms and characterizes conductance across 0-35 PSU by impedance spectroscopy. Year 2 deploys six prototypes at two Chesapeake Bay stations with monthly reference CTD casts. Year 3 refines the model and delivers an open calibration dataset. Milestones, decision points, and the fallback route through zwitterionic copolymer blends are given in the timeline.
+
+Results from Prior NSF Support
+Dr. A. Researcher, NSF Award 1945678, "Ion Transport in Charged Hydrogel Networks," $312,000, 09/2019-08/2023.
+Intellectual Merit: Established the controlled radical polymerization route to sulfobetaine networks and measured partition coefficients across four charge densities.
+Broader Impacts: Trained seven undergraduates, four of whom entered graduate programs in materials science.
+Publications: Researcher, A.; Nguyen, M. Macromolecules 2022, 55, 4410-4419. Researcher, A. J. Polym. Sci. 2021, 59, 220-231.
+
+Broader Impacts
+The project trains four undergraduates and two graduate students per year at Morgan State University, an HBCU, in materials characterization and field instrumentation. Calibration data will be delivered to the Maryland Department of the Environment for use in the state's water quality model, and a two-week summer module will be delivered to Baltimore City high school students through the university's existing STEM bridge program.

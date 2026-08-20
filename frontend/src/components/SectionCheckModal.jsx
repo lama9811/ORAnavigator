@@ -16,10 +16,14 @@
 // modal reuses its finding-row approach and status vocabulary and must not
 // contradict it on screen:
 //
-//   * `result.score` is ALWAYS null. These are NSF's floor for one section, not
-//     a completeness universe — a percentage here would read as "your Project
-//     Summary is 60% done", which nothing in this tool measures. No score
-//     panel exists in this file at all.
+//   * `result.score` IS rendered (since 2026-08-20, by request) and is a
+//     RULES-MET SHARE, never "how done this section is". The old concern still
+//     holds and is answered by the denominator rather than by hiding the
+//     number: only rules actually CHECKED are counted, so `not_checked`,
+//     `could_not_locate` and `unclear` are absent and an advisory conditional
+//     never enters. `score.by_source` splits it by authority — NSF's rulebook
+//     and this solicitation are different obligations and one number cannot say
+//     which half is failing.
 //   * `not_checked` (the page-count ESTIMATE from pasted text) renders neutral,
 //     same as `could_not_locate` in Draft Review — never a pass, never a fail.
 //   * The skeleton's "not a real proposal" caveat is written ONCE by the
@@ -36,9 +40,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AlertTriangle, Check, ChevronDown, ChevronUp, FileText, HelpCircle, Info,
-  MinusCircle, Quote, Upload, X, XCircle,
-} from "lucide-react";
+  AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, FileText,
+  HelpCircle, Info, Lightbulb, ListChecks, MinusCircle, Quote, Upload, X, XCircle, SpellCheck} from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
 import "./SectionCheckModal.css";
 
@@ -69,7 +72,12 @@ const FALLBACK_SECTIONS = [
 // same colors, same `neutral` flag — because a PI reading both tools in one
 // session must not learn two visual languages for "we did not assess this".
 const STATUS_META = {
-  addressed:        { label: "Addressed",    Icon: Check,         cls: "scm-ok" },
+  // "Addressed" read to an author as "this is good". It only ever meant "the
+  // rule is satisfied" — these rules are about PRESENCE — and a 76-word Project
+  // Summary carrying six of them was reported as fine. Same rename and the same
+  // reason as "Not checked" -> "Not ours to check": the word was doing damage
+  // the status never intended.
+  addressed:        { label: "Meets the rule", Icon: Check,       cls: "scm-ok" },
   partial:          { label: "Partial",      Icon: AlertTriangle, cls: "scm-warn" },
   not_found:        { label: "Not found",    Icon: XCircle,       cls: "scm-fail" },
   clear:            { label: "Clear",        Icon: Check,         cls: "scm-ok" },
@@ -420,6 +428,107 @@ function SkeletonPanel({ skeleton }) {
 // rulebook under every quote credited the PAPPG with words NSF never wrote
 // there. Baseline rows carry `rulebook`; solicitation rows carry null, and get
 // no attribution rather than a wrong one.
+/* ── findings grouped by what the PI has to DO about them ───────────────────
+ *
+ * Draft Review groups by SECTION because it spans a whole package. This modal
+ * checks ONE section, so a section grouping would be a single heading over a
+ * flat list — which is exactly what this was, and it was fine at five rules.
+ * The PAPPG's Budget and Budget Justification section alone carries 51, and a
+ * flat always-open list of 51 buries the handful that need work.
+ *
+ * So the grouping here is by STATUS, ordered by what it asks of the reader, and
+ * only the two groups that ask for something are open. "Not checked here" is
+ * last and closed: those rules are real and worth knowing, and not one of them
+ * is a thing the PI can act on in this session.
+ */
+const BUCKETS = [
+  // SCORED not_found/flagged only. A conditional ask the engine left unscored
+  // ("if you request consultants, detail them") is not work — it may not apply.
+  // Measured live on a clean Budget Justification: 14 rows came back not_found
+  // and 10 were conditionals that draft was never subject to.
+  { key: "fix", label: "Needs work", match: ["not_found", "flagged"],
+    scoredOnly: true, openByDefault: true },
+  { key: "partial", label: "Partly there", match: ["partial"],
+    openByDefault: true },
+  { key: "maybe", label: "If this applies to you", match: ["not_found", "flagged"],
+    advisoryOnly: true, openByDefault: false },
+  { key: "ok", label: "Addressed", match: ["addressed", "clear"],
+    openByDefault: false },
+  // could_not_locate is NOT "missing" and never says so — see the engine. It
+  // sits here with not_checked because both mean the same thing to a reader:
+  // nobody looked, and re-running will not change that by itself.
+  { key: "skipped", label: "Not checked here",
+    match: ["not_checked", "could_not_locate", "not_in_draft", "unclear",
+            "delegated"],
+    openByDefault: false },
+];
+
+/* ── how much of the page this uses, and what to do first ────────────────────
+ *
+ * Both computed in code (services/section_guidance.py). The report that prompted
+ * them: a 76-word Project Summary told six of eight rules were "Addressed",
+ * where two runs of the same paste disagreed about how many passed. A model
+ * asked "is this thin?" would be inconsistent on exactly the question the
+ * author already distrusts — so a word count and an ordering are arithmetic.
+ *
+ * The length line is a MEASUREMENT, never a verdict. The PAPPG sets a maximum
+ * for a section and never a minimum, so "your summary is too short" would
+ * invent the rule; "you are using 14% of your page" is a fact the author can
+ * act on and argue with.
+ */
+function GuidancePanel({ guidance }) {
+  // The length MEASUREMENT moved into the score panel, where the number it
+  // qualifies actually is. Rendering it here too would put one fact in two
+  // places -- the failure this repo already had to unship when the delegation
+  // caveat appeared four times and buried the reviewer's real feedback.
+  // It stays here in ONE case: over the limit, which is a real violation and
+  // belongs next to the to-do list rather than beside a score it does not enter.
+  const length = guidance?.length;
+  const over = length && length.pct > 100 ? length : null;
+  const priorities = guidance?.priorities || [];
+  if (!over && !priorities.length) return null;
+  return (
+    <div className="scm-guidance">
+      {over && <p className="scm-length is-over">{over.message}</p>}
+      {priorities.length > 0 && (
+        <>
+          <div className="scm-guidance-title">
+            <ListChecks size={13} /> Do this first
+          </div>
+          <ol className="scm-guidance-list">
+            {priorities.map((p) => (
+              <li key={p.id}>
+                <span className="scm-guidance-rule">{p.label}</span>
+                {p.advisory && <span className="scm-tag scm-tag-soft">if it applies</span>}
+                <span className="scm-guidance-text">{p.text}</span>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+function StatusGroup({ label, items, openByDefault }) {
+  const [open, setOpen] = useState(openByDefault);
+  return (
+    <section className={`scm-group${open ? "" : " scm-group-closed"}`}>
+      <h3 className="scm-group-title">
+        <button type="button" className="scm-group-toggle"
+                aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          {open ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+          <span className="scm-group-name">{label}</span>
+          <span className="scm-group-count">{items.length}</span>
+        </button>
+      </h3>
+      {open && items.map((f) => <FindingRow key={f.id} f={f} />)}
+    </section>
+  );
+}
+
+
 function FindingRow({ f }) {
   const [open, setOpen] = useState(false);
   const meta = STATUS_META[f.status] || STATUS_META.unclear;
@@ -438,6 +547,16 @@ function FindingRow({ f }) {
       </div>
 
       {f.note && <div className="scm-finding-note">{f.note}</div>}
+
+      {/* Carried on EVERY row, including the ones that pass — that is the whole
+          point. A passing row used to show praise ("The draft clearly states the
+          overarching objective"), which tells an author nothing and makes
+          "Meets the rule" read as "you are done here". */}
+      {f.suggestion && (
+        <div className="scm-suggestion">
+          <Lightbulb size={12} /> <span>{f.suggestion}</span>
+        </div>
+      )}
 
       {f.evidence && (
         <div className="scm-evidence">
@@ -514,6 +633,103 @@ function ExtractionLine({ extraction }) {
   );
 }
 
+// THE SCORE for one section — the share of checkable rules this text meets.
+//
+// Two things it must keep saying out loud, because both were live mistakes in
+// this repo before: the caption states what the denominator IS (rules checked,
+// not rules that exist), and the split names each authority separately. A PI
+// who meets every PAPPG rule and misses every solicitation rule sees the same
+// combined number as one who did the reverse — and only the second is likely to
+// come back from NSF without review.
+function SectionScorePanel({ score, length }) {
+  if (!score) return null;
+  const sources = Object.entries(score.by_source || {});
+  return (
+    <div className={`scm-score scm-score-${score.band}`}>
+      <div className="scm-score-head">
+        <div className="scm-score-count">
+          <span className="scm-score-earned">{score.earned}</span>
+          <span className="scm-score-of"> of {score.assessed}</span>
+        </div>
+        <div className="scm-score-body">
+          <div className="scm-score-title">
+            rules met <span className="scm-score-pct">({score.percent}%)</span>
+          </div>
+          <div className="scm-score-basis">{score.basis}</div>
+        </div>
+      </div>
+
+      {/* THE LENGTH SITS IN THIS BOX, not in a grey line further down. A PI
+          seeing a large "100%" beside a faint "uses 28% of the page" reads the
+          first and not the second — which is exactly the report that prompted
+          this. Same weight, same border, one glance. It is a MEASUREMENT: NSF
+          sets a maximum and never a minimum, so this never says "too short". */}
+      {(length || sources.length > 1) && (
+        <div className="scm-score-split">
+          {length && (
+            <div className="scm-score-src">
+              <span className="scm-score-src-name">length</span>
+              <span className="scm-score-src-num">{length.words} words</span>
+              <span className="scm-score-src-of">
+                {length.pct}% of your {length.page_limit === 1
+                  ? "one page" : `${length.page_limit} pages`}
+              </span>
+            </div>
+          )}
+          {sources.length > 1 && sources.map(([name, s]) => (
+            <div className="scm-score-src" key={name}>
+              <span className="scm-score-src-name">{name}</span>
+              <span className="scm-score-src-num">{s.earned} of {s.assessed}</span>
+              <span className="scm-score-src-of">{s.percent}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// PROOFREADING — model-found language errors, kept visibly APART from the
+// deterministic list above it.
+//
+// `mistakes` is captioned "found by a rule, not a judgement" and that has to
+// stay true, so these live under their own key and say plainly where they came
+// from. They are errors, not style: the prompt forbids tone, readability and
+// rewrites, which is the line between this and the Drafting Coach that was
+// deleted by product decision. They change no number.
+function WordingPanel({ wording }) {
+  if (!wording?.length) return null;
+  return (
+    <div className="scm-wording">
+      <div className="scm-wording-head">
+        <SpellCheck size={14} />
+        {wording.length === 1
+          ? "1 wording issue"
+          : `${wording.length} wording issues`}
+      </div>
+      <p className="scm-wording-lede">
+        Spelling, grammar and punctuation, read by AI and quoted from your text.
+        Check each one yourself &mdash; this is a second reader, not a rule, and
+        it is not part of any score.
+      </p>
+      {wording.map((w, i) => (
+        <div key={`${w.kind || "w"}:${i}`} className="scm-wording-row">
+          <div className="scm-wording-label">
+            {w.label}
+            <span className="scm-tag scm-tag-soft">AI</span>
+          </div>
+          <div className="scm-wording-detail">{w.detail}</div>
+          {w.evidence && (
+            <div className="scm-evidence">
+              <Quote size={12} /> <span>{w.evidence}</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ResultsView({ result, extraction, onBack }) {
   const findings = result.findings || [];
   const mistakes = result.mistakes || [];
@@ -530,9 +746,18 @@ function ResultsView({ result, extraction, onBack }) {
 
       <SkeletonPanel skeleton={result.skeleton} />
 
+      {/* Score BELOW the skeleton and ABOVE the to-do list: a number is what
+          the eye lands on first, and it must not be the first thing a PI sees
+          before the structural guidance that tells them what the section is
+          for. It sits above the findings so the count it summarises follows. */}
+      <SectionScorePanel score={result.score}
+                         length={result.guidance?.length} />
+
+      <GuidancePanel guidance={result.guidance} />
+
       {findings.length > 0 ? (
-        <section className="scm-group">
-          <h3 className="scm-group-title">
+        <>
+          <h3 className="scm-group-title scm-section-head">
             {result.label || "This section"}
             {result.word_count != null && (
               <span className="scm-group-words">
@@ -541,23 +766,36 @@ function ResultsView({ result, extraction, onBack }) {
               </span>
             )}
           </h3>
-          {findings.map((f) => (
-            <FindingRow key={f.id} f={f} />
-          ))}
-        </section>
+          {BUCKETS.map((b) => {
+            const items = findings.filter(
+              (f) => b.match.includes(f.status)
+                && (!b.scoredOnly || f.scored !== false)
+                && (!b.advisoryOnly || f.scored === false));
+            if (!items.length) return null;
+            return (
+              <StatusGroup key={b.key} label={b.label} items={items}
+                           openByDefault={b.openByDefault} />
+            );
+          })}
+        </>
       ) : (
         !result.message && (
           <p className="scm-empty">No rules are on file for this section yet.</p>
         )
       )}
 
+
+
       <MistakesPanel mistakes={mistakes} />
+
+      <WordingPanel wording={result.wording} />
 
       <p className="scm-disclaimer">
         Checked against {result.rulebook || "the PAPPG"}&rsquo;s rules for{" "}
-        {result.label || "this section"}. There is no score here &mdash;
-        these are NSF&rsquo;s floor for one section, not a measure of how
-        complete or fundable your proposal is.
+        {result.label || "this section"}. The score counts only the rules that
+        could be checked against your text &mdash; it is not a measure of how
+        well written this section is, or of how likely the proposal is to be
+        funded.
       </p>
 
       <div className="scm-results-actions">

@@ -508,6 +508,70 @@ body.dark .eir-modal {
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
+/* ── collapsible section groups ──────────────────────────────────────────────
+   The header IS the control. It stays a heading for a screen reader (the
+   <button> lives inside the <h3>) and carries aria-expanded, so a folded
+   section is announced as folded rather than simply absent. */
+.eir-group-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.eir-group-toggle:hover .eir-group-name { color: var(--text-primary); }
+.eir-group-toggle svg {
+  flex: none;
+  align-self: center;
+  color: var(--text-tertiary);
+}
+.eir-group-name { flex: 1 1 auto; }
+/* What the fold is hiding. A fold that does not say how much it hides is worse
+   than no fold — the PI cannot tell a fully-addressed section from an empty one. */
+.eir-group-summary {
+  flex: none;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.eir-group-closed .eir-group-title { border-bottom-color: transparent; }
+.eir-group-closed { margin-bottom: 6px; }
+
+.eir-group-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+.eir-group-controls-count {
+  flex: 1 1 auto;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.eir-group-controls button {
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-subtle, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.eir-group-controls button:hover { color: var(--text-primary); }
+
 .eir-group-sub {
   font-size: 0.82rem;
   color: var(--text-secondary);
@@ -902,3 +966,52 @@ a.eir-delegation-name svg { vertical-align: -1px; }
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
+
+
+/* ── the per-row suggestion ──────────────────────────────────────────────────
+   On EVERY row, including the ones that pass — see STATUS_META.addressed.
+   Distinct from the note (which explains the verdict) and the evidence quote
+   (the author's own text), so three different things never read as one block. */
+.eir-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--bg-subtle, rgba(127, 127, 127, 0.05));
+  border-left: 2px solid var(--border-subtle);
+  border-radius: 0 6px 6px 0;
+}
+.eir-suggestion svg { flex: none; margin-top: 3px; color: var(--text-tertiary); }
+
+/* What to DO about a fix-list entry. The rule name says where the problem is
+   and nothing about how to fix it. */
+.eir-priority-do {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* The score's per-authority split. Mirrors .scm-score-split. */
+.eir-score-split {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+.eir-score-src { display: flex; align-items: baseline; gap: 8px; font-size: 0.84rem; }
+.eir-score-src-name { color: var(--text-secondary); }
+.eir-score-src-num {
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+.eir-score-src-of { color: var(--text-tertiary); font-size: 0.78rem; }

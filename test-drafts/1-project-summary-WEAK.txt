@@ -1,0 +1,1 @@
+This project will develop adaptive zwitterionic polymer networks for coastal salinity sensing. We will synthesize the materials, characterize them, and deploy prototypes in the Chesapeake Bay. The work will train students at Morgan State University. More information is at https://example.edu/lab. Results will be published in peer-reviewed journals.

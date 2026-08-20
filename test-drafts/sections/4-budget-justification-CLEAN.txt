@@ -1,0 +1,17 @@
+Budget Justification
+
+The organization defines a project year as a twelve-month period beginning on the award start date, not the academic year.
+
+Senior personnel. The PI, Dr. A. Researcher, requests two summer months per year at an annual institutional base salary of $95,000, for $15,833 per year. The Co-PI, Dr. M. Nguyen, requests one summer month per year at an annual base salary of $88,000, for $7,333 per year. Both allocations support synthesis oversight, model development, and supervision of the field deployment campaign described in the Project Description.
+
+Other personnel. No postdoctoral associates or other professional personnel are requested. Two graduate research assistants are requested at $32,000 per year each, supporting polymer synthesis and impedance characterization. Four undergraduate researchers are requested at 10 hours per week for 30 weeks at $17.00 per hour, for $5,100 each. No secretarial or clerical personnel are requested.
+
+Equipment. A Gamry Interface 1010E potentiostat is requested at $18,400 in Year 1. Impedance spectroscopy across the 0-35 PSU range is the central measurement of Aim 2, and the department's existing instrument is committed to another award for the full project period.
+
+Travel. Domestic travel of $2,400 per year supports two people attending one national meeting to present results, plus $1,200 per year for the PI to attend the annual NSF grantee meeting in Washington, DC. Field travel of $1,800 per year covers eleven round trips to the two Chesapeake Bay deployment stations at the federal mileage rate.
+
+Materials and supplies. $9,200 per year covers zwitterionic monomers, initiators, dialysis membranes, reference electrodes, and sensor housings. Estimates are based on current vendor quotations retained on file.
+
+Other direct costs. $1,400 per year covers the institutional core facility rate for NMR time at $45 per hour, billed at the same rate charged to all internal users.
+
+Indirect costs. Facilities and administrative costs are calculated at Morgan State University's negotiated on-campus organized research rate of 54% of modified total direct costs, excluding equipment and the portion of each subaward beyond the first $25,000. No subawards are proposed.

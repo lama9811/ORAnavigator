@@ -213,6 +213,177 @@ def _missing_references(text: str) -> list[dict]:
         _snippet(text, m.start(), m.end()))]
 
 
+# ── LANGUAGE SLIPS ──────────────────────────────────────────────────────────
+#
+# NO DICTIONARY, DELIBERATELY, and it is the single most important decision in
+# this block. A spellchecker is the obvious tool and the wrong one: a proposal's
+# correct vocabulary — zwitterionic, Donnan, estuarine, potentiostat, MTDC, PSU,
+# every gene and reagent and instrument name — is exactly what a dictionary does
+# not contain. A checker that yells at correct science is ignored by the second
+# page, and then the real errors ship too. That is not hypothetical here: this
+# module already shipped `\bTO\s?DO\b` case-insensitive and flagged "would allow
+# us TO DO much more work" in a real draft.
+#
+# So only slips that are decidable from the characters alone, and each with its
+# own guard and its own test. What that buys is a low catch rate with a near-zero
+# false-positive rate, which is the right trade for a tool nobody is obliged to
+# read. What it CANNOT catch, and no amount of tuning here will: a one-off typo
+# that is not a known misspelling ("Chesepeake", "zwiterionic"), and grammar
+# ("The objectives is"). Both need a dictionary or a parser. Say so rather than
+# implying the section was proofread.
+
+# Doubled words that are ordinary English. "had had" is a past perfect, "that
+# that" a legitimate relative clause. Without this the checker fires on correct
+# prose, which is the whole failure mode above.
+_LEGIT_DOUBLES = {"had", "that", "is", "no", "so", "very", "sic", "long", "ha"}
+_DOUBLED_RE = re.compile(r"\b([A-Za-z]{2,})(\s+)(\1)\b", re.IGNORECASE)
+
+# Never valid in ANY variety of English. British/American pairs are deliberately
+# ABSENT (organise/organize, acknowledgement/acknowledgment) — flagging a valid
+# spelling is the failure this block exists to avoid.
+_MISSPELLINGS = {
+    "seperate": "separate", "seperated": "separated", "seperately": "separately",
+    "recieve": "receive", "recieved": "received", "occured": "occurred",
+    "occuring": "occurring", "definately": "definitely", "alot": "a lot",
+    "thier": "their", "becuase": "because", "enviroment": "environment",
+    "goverment": "government", "developement": "development",
+    "independant": "independent", "occurence": "occurrence",
+    "refered": "referred", "sucessful": "successful", "succesful": "successful",
+    "neccessary": "necessary", "necessery": "necessary",
+    "accomodate": "accommodate", "existance": "existence",
+    "maintainance": "maintenance", "responsibilty": "responsibility",
+    "univeristy": "university", "departement": "department",
+    "prefered": "preferred", "reccommend": "recommend", "recomend": "recommend",
+    "publically": "publicly", "consistant": "consistent",
+    "significatly": "significantly", "collaboratoin": "collaboration",
+    "reserach": "research", "resutls": "results", "teh": "the",
+}
+_MISSPELLING_RE = re.compile(
+    r"\b(" + "|".join(sorted(_MISSPELLINGS)) + r")\b", re.IGNORECASE)
+
+# Two-word slips where both words are real, so no single-token rule can see them.
+_CONFUSED_PHRASES = {
+    "rather then": "rather than",
+    "as oppose to": "as opposed to",
+    "in regards to": "in regard to",
+    "could of": "could have",
+    "would of": "would have",
+    "should of": "should have",
+}
+_CONFUSED_RE = re.compile(
+    r"\b(" + "|".join(k.replace(" ", r"\s+") for k in _CONFUSED_PHRASES) + r")\b",
+    re.IGNORECASE)
+
+# A period between two words with no space. TWO lowercase letters are required
+# before it, which is what excludes the forms that legitimately have none:
+# initials ("A.B."), "U.S.", "e.g."/"i.e." (single letter before each period),
+# decimals and section numbers (digits, not letters), and "Fig. 3"/"55, 4410"
+# (the character after is not an upper-case letter).
+_NO_SPACE_AFTER_RE = re.compile(r"(?<=[a-z]{2})\.(?=[A-Z][a-z])")
+# A space before closing punctuation. Tabs and spaces only -- \s would match a
+# newline and fire on a line that legitimately begins with a period.
+_SPACE_BEFORE_RE = re.compile(r"[ \t]+([,;:])|[ \t]+(\.)(?=[ \t]|$)")
+# Anything inside one of these is a URL or DOI, where dots abut letters by design.
+_URLISH = ("http", "www.", "doi.org", "@")
+
+_LIST_MARKER_RE = re.compile(r"^\s*(?:[-*\u2022\u00b7]|\(?\d+[.)]|[a-z][.)])\s+")
+# A bibliography line ends on a page range or a volume number, not a period.
+_REFERENCE_TAIL_RE = re.compile(r"[\d\u2013-]+\s*$")
+_SENTENCE_ENDERS = '.!?:;\u2026"\')]}'
+# Below this a paragraph is a heading, a label or a table cell, not prose.
+_MIN_PROSE_WORDS = 8
+# How much of a paragraph's end to quote when its period is missing.
+_TAIL_CHARS = 110
+
+
+def _doubled_words(text: str) -> list[dict]:
+    rows = []
+    for m in _DOUBLED_RE.finditer(text):
+        if m.group(1).lower() in _LEGIT_DOUBLES:
+            continue
+        if "\n" in m.group(2):          # across a line break it is a layout artifact
+            continue
+        rows.append(_row(
+            "doubled_word", "A word is repeated",
+            f'"{m.group(1)}" appears twice in a row. Delete one.',
+            _snippet(text, m.start(), m.end())))
+    return rows
+
+
+def _misspellings(text: str) -> list[dict]:
+    rows = []
+    for m in _MISSPELLING_RE.finditer(text):
+        word = m.group(1)
+        fix = _MISSPELLINGS[word.lower()]
+        # Match the author's capitalisation. "Univeristy" -> 'Did you mean
+        # "university"?' reads as a second mistake in a tool about spelling.
+        if word[:1].isupper():
+            fix = fix[:1].upper() + fix[1:]
+        rows.append(_row(
+            "misspelling", "Misspelled word",
+            f'"{word}" is not a word. Did you mean "{fix}"?',
+            _snippet(text, m.start(), m.end())))
+    for m in _CONFUSED_RE.finditer(text):
+        phrase = " ".join(m.group(1).split()).lower()
+        rows.append(_row(
+            "misspelling", "Wrong word",
+            f'"{m.group(1)}" should be "{_CONFUSED_PHRASES[phrase]}".',
+            _snippet(text, m.start(), m.end())))
+    return rows
+
+
+def _spacing(text: str) -> list[dict]:
+    rows = []
+    for m in _NO_SPACE_AFTER_RE.finditer(text):
+        window = text[max(0, m.start() - 40):m.end() + 40]
+        if any(u in window for u in _URLISH):
+            continue
+        rows.append(_row(
+            "spacing", "Missing space after a period",
+            "Two sentences are run together with no space between them.",
+            _snippet(text, m.start(), m.end())))
+    for m in _SPACE_BEFORE_RE.finditer(text):
+        mark = m.group(1) or m.group(2)
+        rows.append(_row(
+            "spacing", "Space before punctuation",
+            f'There is a space before the "{mark}". Close it up.',
+            _snippet(text, m.start(), m.end())))
+    return rows
+
+
+def _unfinished_sentences(text: str) -> list[dict]:
+    """A prose paragraph that stops without terminal punctuation.
+
+    Four guards, and every one of them is a real shape in a real proposal:
+    headings ("Overview") carry no period by NSF's own rule, list items are
+    written without one, bibliography entries end on a page range, and anything
+    short is a label rather than a sentence."""
+    rows = []
+    for para in re.split(r"\n\s*\n", text):
+        stripped = para.strip()
+        if not stripped:
+            continue
+        lines = [ln for ln in stripped.splitlines() if ln.strip()]
+        last_line = lines[-1].strip()
+        if _LIST_MARKER_RE.match(last_line):
+            continue
+        if len(stripped.split()) < _MIN_PROSE_WORDS:
+            continue
+        if stripped[-1] in _SENTENCE_ENDERS:
+            continue
+        if _REFERENCE_TAIL_RE.search(stripped):
+            continue
+        # Quote the TAIL, not the paragraph. The missing period is at the end,
+        # and every other rule here quotes a short snippet — a 445-character
+        # block is the paragraph again, not evidence someone can act on.
+        tail = " ".join(last_line.split())[-_TAIL_CHARS:]
+        rows.append(_row(
+            "unfinished_sentence", "Sentence has no ending punctuation",
+            "This paragraph stops without a period. Check it is complete.",
+            ("\u2026" + tail) if len(last_line) > _TAIL_CHARS else tail))
+    return rows
+
+
 def find_mistakes(text: str, *, budget: Optional[dict] = None,
                   whole_document: bool = True) -> list[dict]:
     """Mechanical errors in `text`, each quoting the words it found.
@@ -251,7 +422,13 @@ def find_mistakes(text: str, *, budget: Optional[dict] = None,
     rows = (_placeholders(text)
             + _broken_references(text)
             + _duplicate_paragraphs(text)
-            + _number_conflicts(text, budget))
+            + _number_conflicts(text, budget)
+            # Language slips are errors in ANY span of text, so unlike
+            # `missing_references` they are not gated on whole_document.
+            + _doubled_words(text)
+            + _misspellings(text)
+            + _spacing(text)
+            + _unfinished_sentences(text))
     if whole_document:
         rows += _missing_references(text)
     return rows

@@ -1,0 +1,27 @@
+Biographical Sketch
+
+Name: Dr. A. Researcher
+Date of birth: March 14, 1981
+Home address: 1420 Cedar Lane, Baltimore, MD 21218
+Organization and location: Morgan State University, Baltimore, Maryland
+
+Professional Preparation
+Morgan State University, Baltimore, MD, Chemistry, B.S., 2003
+University of Michigan, Ann Arbor, MI, Polymer Science, Ph.D., 2009
+Northwestern University, Evanston, IL, Materials Chemistry, Postdoctoral, 2009-2011
+
+Appointments and Positions
+2019-present, Associate Professor, Department of Chemistry, Morgan State University, Baltimore, MD
+2013-2019, Assistant Professor, Department of Chemistry, Morgan State University, Baltimore, MD
+2011-2013, Research Scientist, Dow Chemical Company, Midland, MI
+
+Products
+1. Researcher, A.; Nguyen, M. Charge spacing controls salinity response in zwitterionic networks. Macromolecules 2022, 55, 4410-4419.
+2. Researcher, A. Ion transport in sulfobetaine hydrogels. J. Polym. Sci. 2021, 59, 220-231.
+3. Researcher, A.; Whitfield, R. Antifouling hydrogel coatings for estuarine sensors. ACS Appl. Mater. Interfaces 2020, 12, 33110-33119.
+4. Researcher, A. Controlled radical polymerization of zwitterionic monomers. Polym. Chem. 2018, 9, 4402-4411.
+5. Researcher, A.; Chen, L. Donnan behavior at high fixed-charge density. Macromolecules 2017, 50, 7712-7720.
+
+Current and Pending Support
+NSF Award 1945678, Ion Transport in Charged Hydrogel Networks, $312,000, 09/2019-08/2023, 1.0 summer month per year, completed. No budgetary or effort overlap with the present proposal.
+NIH R21 pending, Antifouling Surfaces for Implantable Sensors, $275,000 requested, 1.0 summer month per year if awarded. Scientific scope is distinct; the present proposal concerns environmental salinity sensing and the R21 concerns biological media. Should both be awarded the PI will reduce R21 effort to 0.5 months to avoid effort overlap.

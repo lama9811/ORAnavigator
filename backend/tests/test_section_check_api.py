@@ -90,7 +90,9 @@ def test_a_paste_is_checked_without_a_solicitation(ctx):
                      "rulebook": "the PAPPG"})
     assert r.status_code == 200
     body = r.json()["result"]
-    assert body["score"] is None
+    # scored since 2026-08-20; with no solicitation the split names the PAPPG only
+    assert body["score"] is not None
+    assert list(body["score"]["by_source"]) == ["the PAPPG"]
     assert any(f["id"] == "pappg_ps_headings" and f["status"] == "not_found"
                for f in body["findings"])
 

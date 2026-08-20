@@ -412,6 +412,39 @@ body.dark .scm-modal {
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border-subtle);
 }
+/* ── collapsible status groups ───────────────────────────────────────────── */
+.scm-section-head { border-bottom: 0; margin-bottom: 2px; }
+.scm-group-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+.scm-group-toggle svg { flex: none; align-self: center; color: var(--text-tertiary); }
+.scm-group-name { flex: 1 1 auto; }
+.scm-group-toggle:hover .scm-group-name { color: var(--text-primary); }
+/* How many rows the fold hides. Without it a closed "Needs work" and a closed
+   empty group look identical. */
+.scm-group-count {
+  flex: none;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.scm-group-closed { margin-bottom: 6px; }
+.scm-group-closed .scm-group-title { border-bottom-color: transparent; }
+
 .scm-group-words {
   flex: none;
   font-weight: 600;
@@ -626,4 +659,191 @@ body.dark .scm-modal {
   .scm-finding-head { flex-direction: column; gap: 5px; }
   .scm-input-footer { flex-wrap: wrap; }
   .scm-run { width: 100%; margin-left: 0; }
+}
+
+
+/* ── guidance: length against the allowance, and the plan ────────────────────
+   A measurement and a to-do list, both computed in code. Styled quiet and
+   NEUTRAL — never a status colour — because neither is a verdict on the draft.
+   The one exception is over-length, which really is against a stated rule. */
+.scm-guidance {
+  margin: 14px 0 18px;
+  padding: 14px 16px;
+  background: var(--bg-subtle, rgba(127, 127, 127, 0.06));
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+.scm-length {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.scm-length.is-over { color: var(--text-primary); font-weight: 600; }
+
+.scm-guidance-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+}
+.scm-guidance:first-child .scm-guidance-title,
+.scm-length + .scm-guidance-title { margin-top: 14px; }
+
+.scm-guidance-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.scm-guidance-list li {
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+/* The rule the suggestion belongs to, so the author can find the row it came
+   from. Quiet: the SUGGESTION is the thing to read. */
+.scm-guidance-rule {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.scm-guidance-text { display: block; margin-top: 2px; }
+
+/* ── the per-row suggestion ──────────────────────────────────────────────────
+   On EVERY row, including the ones that pass. Distinct from the note (which
+   explains the verdict) and from the evidence quote (which is the author's own
+   text), so three different things never read as one block. */
+.scm-suggestion {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  background: var(--bg-subtle, rgba(127, 127, 127, 0.05));
+  border-left: 2px solid var(--border-subtle);
+  border-radius: 0 6px 6px 0;
+}
+.scm-suggestion svg { flex: none; margin-top: 3px; color: var(--text-tertiary); }
+
+/* ── SCORE ─────────────────────────────────────────────────────────────────
+   Mirrors .eir-score in DraftReviewModal.css deliberately: the two modals show
+   the same kind of number computed by the same code, and styling them
+   differently would imply they measure different things. */
+.scm-score {
+  border: 1px solid var(--border-color);
+  border-left-width: 4px;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  background: var(--bg-card-hover);
+}
+.scm-score-green { border-left-color: var(--scm-ok); }
+.scm-score-amber { border-left-color: var(--scm-warn); }
+.scm-score-red   { border-left-color: var(--scm-fail); }
+
+.scm-score-head { display: flex; gap: 18px; align-items: center; }
+
+/* THE FRACTION IS THE HEADLINE, the percentage is a footnote to it. A bare
+   "100%" in 2.5rem reads as a grade no matter what the caption says; "7 of 7"
+   reads as a count, which is what it is. */
+.scm-score-count {
+  line-height: 1;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.scm-score-earned { font-size: 2.1rem; font-weight: 700; }
+.scm-score-of { font-size: 1.05rem; font-weight: 600; color: var(--text-secondary); }
+.scm-score-pct { font-size: 0.85rem; font-weight: 600; color: var(--text-tertiary); }
+
+.scm-score-body { flex: 1; min-width: 0; }
+.scm-score-title { font-weight: 600; font-size: 0.95rem; color: var(--text-main); }
+.scm-score-title .scm-score-pct { margin-left: 2px; }
+
+/* The caption is the guardrail against reading this as a quality grade or as
+   funding odds. Never hide it, never shrink it below legibility. */
+.scm-score-basis {
+  color: var(--text-secondary);
+  font-size: 0.81rem;
+  line-height: 1.5;
+  margin: 4px 0 8px;
+}
+
+/* The split. Rendered only when there IS more than one authority — a single
+   row reading "the PAPPG 100%" beside an identical headline number is noise. */
+.scm-score-split {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+}
+.scm-score-src { display: flex; align-items: baseline; gap: 8px; font-size: 0.84rem; }
+.scm-score-src-name { color: var(--text-secondary); }
+.scm-score-src-num {
+  font-weight: 700;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+}
+.scm-score-src-of { color: var(--text-tertiary); font-size: 0.78rem; }
+
+@media (max-width: 640px) {
+  .scm-score-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+
+/* ── PROOFREADING ──────────────────────────────────────────────────────────
+   Visibly distinct from .scm-mistakes: that list is deterministic and this one
+   is a model's reading. Same shape so it does not read as more important, a
+   different accent so it does not read as the same kind of claim. */
+.scm-wording {
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--scm-skip);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: var(--scm-skip-bg);
+}
+.scm-wording-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+.scm-wording-lede {
+  color: var(--text-secondary);
+  font-size: 0.79rem;
+  line-height: 1.5;
+  margin: 5px 0 12px;
+}
+.scm-wording-row { margin-bottom: 12px; }
+.scm-wording-row:last-child { margin-bottom: 0; }
+.scm-wording-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+.scm-wording-detail {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-top: 2px;
 }

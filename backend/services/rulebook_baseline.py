@@ -56,6 +56,8 @@ not, and never invent an NSF sentence to fill the gap.
 
 from __future__ import annotations
 
+import json as _json
+import os as _os
 from typing import Optional
 
 from services import delegated_rules
@@ -69,16 +71,40 @@ PROJECT_SUMMARY = "project_summary"
 PROJECT_DESCRIPTION = "project_description"
 REFERENCES_CITED = "references_cited"
 FACILITIES = "facilities_equipment_and_other_resources"
+# Added 2026-08-17 with the reviewed PAPPG table. Research.gov's four upload
+# pages were never the whole proposal — these are the other parts §II.D.2 is
+# organised by, and each maps 1:1 onto its own Research.gov upload page.
+COVER_SHEET = "cover_sheet"
+TABLE_OF_CONTENTS = "table_of_contents"
+BUDGET = "budget_and_budget_justification"
+SENIOR_KEY = "senior_key_personnel_documents"
+SPECIAL_INFO = "special_information_and_supplementary_documentation"
+FORMAT = "format_of_the_proposal"
 
+# The section's REAL name, with its punctuation. NEVER title-case a key to get
+# one: `facilities_equipment_and_other_resources` title-cased loses the commas
+# NSF's own heading has, and that exact mismatch silently disabled four rules.
 _SECTION_LABELS = {
+    COVER_SHEET: "Cover Sheet",
     PROJECT_SUMMARY: "Project Summary",
+    TABLE_OF_CONTENTS: "Table of Contents",
     PROJECT_DESCRIPTION: "Project Description",
     REFERENCES_CITED: "References Cited",
+    BUDGET: "Budget and Budget Justification",
     FACILITIES: "Facilities, Equipment and Other Resources",
+    SENIOR_KEY: "Senior/Key Personnel Documents",
+    SPECIAL_INFO: "Special Information and Supplementary Documentation",
+    FORMAT: "Format of the Proposal",
 }
 
 # Order is the order Research.gov lists them, which is the order a PI meets them.
-_SECTION_ORDER = [PROJECT_SUMMARY, PROJECT_DESCRIPTION, REFERENCES_CITED, FACILITIES]
+# §II.D.2's own order, which is the order Research.gov's upload pages follow and
+# therefore the order a PI meets them. Format of the Proposal is last because it
+# is not an upload — it governs all of them.
+_SECTION_ORDER = [
+    COVER_SHEET, PROJECT_SUMMARY, TABLE_OF_CONTENTS, PROJECT_DESCRIPTION,
+    REFERENCES_CITED, BUDGET, FACILITIES, SENIOR_KEY, SPECIAL_INFO, FORMAT,
+]
 
 
 def _row(id, section, label, source, why, *, kind="semantic", check=None,
@@ -216,7 +242,57 @@ _PAPPG_RULES: list[dict] = [
          "It is the only place an unfunded contributor is visible to a reviewer."),
 ]
 
-RULES: dict[str, list[dict]] = {"the PAPPG": _PAPPG_RULES}
+# ── the reviewed PAPPG table ────────────────────────────────────────────────
+#
+# The 14 rows above are CURATED, from Research.gov's per-section Content
+# Instructions, and they carry every deterministic check. The rows below are
+# EXTRACTED from the PAPPG itself (kb_pappg/slicer.py -> pappg_ingest) and then
+# REVIEWED row by row (kb_pappg/build_rules.py), which is where each one's
+# `review` key comes from. Keeping the two visibly apart is the point: one is a
+# hand-written table with code behind it, the other is model output a human
+# passed. Loading rather than pasting keeps a 474-line module readable and makes
+# the review a diff instead of 1,600 lines of literals — the same shape as
+# forms_catalog reading kb_structured/.
+#
+# A MISSING FILE IS NOT AN EMPTY RULEBOOK, and the difference matters. Returning
+# [] would leave every NSF proposal quietly reviewed against the curated 14 with
+# nothing on screen to say the rest went missing — the silent degradation this
+# module exists to stop. It raises.
+
+_REVIEWED_PATH = _os.path.join(
+    _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+    "kb_structured", "_pappg_24_1_rules.json")
+
+
+def _load_reviewed() -> tuple[list[dict], dict]:
+    with open(_REVIEWED_PATH, encoding="utf-8") as fh:
+        payload = _json.load(fh)
+    rows = payload.get("rules") or []
+    if not rows:
+        raise ValueError(f"{_REVIEWED_PATH} holds no rules")
+    return rows, payload.get("source_upgrades") or {}
+
+
+_REVIEWED_ROWS, _SOURCE_UPGRADES = _load_reviewed()
+
+
+def _apply_source_upgrades(curated: list[dict], upgrades: dict) -> None:
+    """Give a curated row NSF's own sentence where the PAPPG states it.
+
+    Three rows carried "Derived from ... NSF's own wording is in the PAPPG",
+    written that way deliberately because inventing an NSF sentence would be
+    worse than admitting the gap. The PAPPG slice closes the gap. Nothing else
+    is rewritten: Research.gov's wording is NSF's wording, correctly attributed,
+    and churning it would move the only yardstick test_pappg_recall.py has."""
+    by_id = {r["id"]: r for r in curated}
+    for rid, source in upgrades.items():
+        if rid in by_id:
+            by_id[rid]["source"] = source
+
+
+_apply_source_upgrades(_PAPPG_RULES, _SOURCE_UPGRADES)
+
+RULES: dict[str, list[dict]] = {"the PAPPG": _PAPPG_RULES + _REVIEWED_ROWS}
 
 
 # ── structural skeletons ────────────────────────────────────────────────────
@@ -289,8 +365,21 @@ def rulebooks_cited_by(requirements: list[dict], url: str = "") -> list[str]:
 
 
 def sections_offered(rulebook: str) -> list[dict]:
-    """The sections a PI can check one at a time, in Research.gov's own order."""
-    have = {r["section"] for r in rules_for(rulebook)}
+    """The sections a PI can check one at a time, in Research.gov's own order.
+
+    Only sections holding at least one rule that pasted text can actually be
+    judged against. Cover Sheet and Format of the Proposal hold nine rules each
+    and every one is a property of the uploaded PDF or of a Research.gov form
+    field, so offering them would hand the PI nine rows of "not checked here"
+    and nothing else — a dead end dressed up as a tool.
+
+    They keep their rules. In a full Draft Review those rows are worth stating,
+    because a PI who has never met NSF's font and margin rules should meet them
+    once. This filters the PICKER, not the rulebook — the same distinction
+    `checklist_filter` draws when it keeps 7 of 24 requirements as tick-boxes
+    while the stored profile keeps all 24."""
+    have = {r["section"] for r in rules_for(rulebook)
+            if r.get("check") != "rb_not_in_text"}
     return [{"key": k, "label": _SECTION_LABELS[k]}
             for k in _SECTION_ORDER if k in have]
 

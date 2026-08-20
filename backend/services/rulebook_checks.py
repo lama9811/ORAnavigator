@@ -201,6 +201,38 @@ def rb_page_limit(ctx: dict, req: dict) -> tuple:
         f"against a {limit}-page limit. Page count depends on your formatting, so "
         "this is not a pass or a fail. Upload the PDF to have it checked properly."
     ), ""
+# ── rules a paste cannot carry ──────────────────────────────────────────────
+
+def rb_not_in_text(ctx: dict, req: dict) -> tuple:
+    """A rule about something that is not a property of the text. Never a verdict.
+
+    A one-inch margin, a 10-point font, a Research.gov cover-sheet field and a
+    certification SciENcv inserts are all real NSF rules, and not one of them is
+    visible in what a PI pastes. Judged against pasted text every one of them
+    comes back `not_found` — against a fully COMPLIANT draft. That is
+    presence-rendered-as-verdict, which this repo has now unshipped three times:
+    the section map's green ticks, `could_not_locate` read as `not_found`, and
+    the scraper treating an unreadable page as a deleted one.
+
+    So the row keeps its place and its quote — the PI still learns the rule
+    exists, which is the whole point of holding a rulebook — and reports
+    `not_checked`, which is absent from `draft_review._CREDIT` and therefore
+    leaves the score's denominator.
+
+    `handled_by` is REQUIRED and is not decoration. "Not checked here" with no
+    address reads as our omission, the same way "Not checked" did before it
+    became "Not ours to check"; a PI who cannot be told where to look is worse
+    off than one who was never shown the rule. A test asserts every such row
+    names a real tool.
+    """
+    by = (req.get("check_args") or {}).get("handled_by") or ""
+    what = (req.get("check_args") or {}).get("section") or "this"
+    detail = (
+        "This is not something the text of a draft can show, so it was not "
+        f"checked here. It is decided by {by}." if by else
+        "This is not something the text of a draft can show, so it was not checked here."
+    )
+    return "not_checked", detail, ""
 
 
 CHECKS = {
@@ -209,4 +241,5 @@ CHECKS = {
     "rb_no_financials": rb_no_financials,
     "rb_et_al": rb_et_al,
     "rb_page_limit": rb_page_limit,
+    "rb_not_in_text": rb_not_in_text,
 }

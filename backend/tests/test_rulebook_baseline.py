@@ -67,10 +67,27 @@ def test_the_sponsor_substring_bug_cannot_fire_here():
     assert rb.rulebooks_cited_by(reqs) == []
 
 
-def test_sections_offered_lists_the_four_covered_parts():
+def test_sections_offered_lists_the_covered_parts_in_the_pappg_s_own_order():
+    """Was four sections, from Research.gov's four Content Instructions pages.
+    Reading the PAPPG itself (2026-08-17) added the other parts SS II.D.2 is
+    organised by. The ORDER is the assertion that matters: SS II.D.2's own, which
+    is the order Research.gov's upload pages follow and therefore the order a PI
+    meets them. Format of the Proposal is last because it is not an upload —
+    it governs all of them."""
     keys = [s["key"] for s in rb.sections_offered("the PAPPG")]
     assert keys == ["project_summary", "project_description",
-                    "references_cited", "facilities_equipment_and_other_resources"]
+                    "references_cited", "budget_and_budget_justification",
+                    "facilities_equipment_and_other_resources",
+                    "senior_key_personnel_documents",
+                    "special_information_and_supplementary_documentation"]
+    # Three sections hold rules and are deliberately NOT offered:
+    #   table_of_contents  -- Research.gov GENERATES it; the slice yields no rules
+    #   cover_sheet        -- nine Research.gov form fields
+    #   format_of_the_proposal -- nine properties of the uploaded PDF
+    # The last two would hand a PI nine rows of "not checked here" and nothing
+    # else. They keep their rules for a full Draft Review; see sections_offered.
+    for absent in ("table_of_contents", "cover_sheet", "format_of_the_proposal"):
+        assert absent not in keys
 
 
 def test_every_section_constant_is_what_section_key_actually_produces():
@@ -186,12 +203,19 @@ clinical data. We expect the results to be significant.
 
 
 def test_a_section_check_needs_no_solicitation():
-    """The rules are NSF's, not the solicitation's. Draft Review's 409 exists so
-    a percentage is never computed against zero requirements; this returns no
-    percentage, so the guard has nothing to protect."""
+    """The rules are NSF's, not the solicitation's, so this must not 409 the way
+    draft-review does.
+
+    It DOES score now (2026-08-20, by request). Draft Review's 409 exists so a
+    percentage is never computed against zero requirements — here the rulebook
+    guarantees the denominator is never zero, which is what makes scoring safe
+    without a solicitation. `by_source` must then name the PAPPG alone: a score
+    citing a solicitation that was never supplied would be a fabricated
+    authority."""
     out = draft_review.review_section(FIVE_LINE, section="project_summary",
                                       rulebook="the PAPPG", use_ai=False)
-    assert out["score"] is None
+    assert out["score"] is not None
+    assert list(out["score"]["by_source"]) == ["the PAPPG"], out["score"]["by_source"]
     assert any(f["id"] == "pappg_ps_headings" and f["status"] == "not_found"
                for f in out["findings"])
 
@@ -278,7 +302,7 @@ def test_a_supplied_profiles_own_semantic_row_reaches_the_section_check():
     ids = {f["id"] for f in out["findings"]}
     assert _PAPPG_ROW["id"] in ids
     assert "pappg_ps_headings" in ids
-    assert out["score"] is None
+    assert out["score"] is not None
 
 
 def test_a_profiles_own_check_callable_reaches_run_deterministic():
@@ -303,7 +327,8 @@ def test_a_profiles_own_check_callable_reaches_run_deterministic():
                                       use_ai=False)
     row = next(f for f in out["findings"] if f["id"] == "custom1")
     assert row["status"] == "flagged"
-    assert out["score"] is None
+    # the profile's row and the rulebook's row are scored under their own names
+    assert set(out["score"]["by_source"]) == {"X", "the PAPPG"}, out["score"]["by_source"]
 
 
 def test_a_profile_row_already_in_the_baseline_is_not_duplicated():
@@ -404,13 +429,32 @@ def test_no_row_quotes_a_sentence_that_does_not_state_its_rule():
     for: a quote that does not support its row looks like evidence while being
     none. The honest form is a stated DERIVATION, never an invented NSF
     sentence.
+
+    RESOLVED 2026-08-17, and the resolution is the better one this test always
+    wanted. The derived lines said "NSF's own wording is in the PAPPG" — and
+    reading the PAPPG produced it, so all three now carry NSF's actual sentence.
+    The assertion therefore moves UP rather than away: a derived line is no
+    longer good enough for these three, and the quote must be verbatim in the
+    PAPPG's own Project Summary section. What is still forbidden is unchanged —
+    reusing the headings sentence for a row about content.
     """
+    import json
+    import os
+
     from services import rulebook_baseline as rb
+    from services.text_match import quote_in
+
+    kb = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "kb_structured")
+    with open(os.path.join(kb, "_pappg_24_1_sections.json"), encoding="utf-8") as fh:
+        slice_text = next(s["text"] for s in json.load(fh)["sections"]
+                          if s["section_key"] == "project_summary")
+
     headings_quote = next(r["source"] for r in rb.rules_for("the PAPPG")
                           if r["id"] == "pappg_ps_headings")
     for row_id in ("pappg_ps_overview", "pappg_ps_merit", "pappg_ps_impacts"):
         row = next(r for r in rb.rules_for("the PAPPG") if r["id"] == row_id)
         assert row["source"] != headings_quote, (
             f"{row_id} reuses the headings quote, which does not state its rule")
-        assert row["source"].lower().startswith("derived from"), (
-            f"{row_id} must say it is derived rather than pose as NSF's sentence")
+        assert quote_in(slice_text, row["source"], drop_list_noise=True), (
+            f"{row_id} must quote the PAPPG's Project Summary section verbatim; "
+            "a derived line was the stopgap before the PAPPG was read")

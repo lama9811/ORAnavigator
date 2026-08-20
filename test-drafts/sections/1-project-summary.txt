@@ -1,0 +1,8 @@
+Overview
+This abstract summarizes our proposed work on adaptive zwitterionic polymer networks for continuous salinity sensing in estuarine waters. The objectives are to synthesize antifouling zwitterionic hydrogels, characterize their conductance response across 0-35 PSU, and validate deployed prototypes in the Chesapeake Bay over twelve months. Methods combine controlled radical polymerization, impedance spectroscopy, and field calibration against reference CTD instruments.
+
+Intellectual Merit
+The work advances fundamental understanding of ion partitioning in zwitterionic networks, a regime where existing Donnan models fail. It will produce the first quantitative structure-response relationship linking charge density to salinity sensitivity, enabling rational design of low-drift sensors rather than empirical selection of materials.
+
+Broader Impacts
+Students will be involved in the research.

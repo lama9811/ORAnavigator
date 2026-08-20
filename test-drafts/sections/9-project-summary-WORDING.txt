@@ -1,0 +1,8 @@
+Overview
+This project (LOI #2345678) develops adaptive zwitterionic polymer networks for continuous salinity sensing in estuarine waters. The objectives are to synthesize antifouling zwitterionic hydrogels, characterize their conductance response across 0-35 PSU, and validate deployed prototypes in the Chesapeake Bay over twelve months. The methods combine controlled radical polymerization, impedance spectroscopy, and field calibration against reference CTD instruments.
+
+Intellectual Merit
+The work advances fundamental understanding of ion partitioning in zwitterionic networks, a regime where existing Donnan models fail. It will produce the first quantitative structure-response relationship linking charge density to salinity sensitivity, enabling rational design of low-drift sensors rather than empirical selection.
+
+Broader Impacts
+The project trains fourr undergraduates, and two graduate students per year at Morgan State University, an HBCU, in materials characterization and field instrumentation. Sensor data will be shared with the Maryland Department of the Environment, and a summer module will be delivered to Baltimore City high school students...
