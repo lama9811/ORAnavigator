@@ -270,6 +270,125 @@ def make_profile(*, id: str, title: str, url: Optional[str] = None,
     }
 
 
+def sections_offered_for(profile: Optional[dict], rulebook: str) -> list[dict]:
+    """The sections THIS proposal can have checked one at a time.
+
+    `rulebook_baseline.sections_offered` answers the same question for the
+    rulebook alone, and that was the whole picker until 2026-08-26 — so every
+    proposal was offered its rulebook's sections whatever its own solicitation
+    asked for. Measured on a live federal proposal: of that solicitation's 53
+    rules only 24 were reachable, and the largest unreachable group was a whole
+    deliverable — its Letter of Intent, 8 scored rules, the FIRST thing that
+    program requires and so the one a PI is most likely to be writing when they
+    reach for this tool.
+
+    BOTH LISTS ARE NEEDED AND NEITHER CONTAINS THE OTHER. Offering only what the
+    solicitation names would have dropped 48 rulebook rules on that same
+    proposal, covering three sections its solicitation never mentions —
+    including the 34 that catch a date of birth in a biographical sketch. A
+    solicitation is silent about those precisely BECAUSE the standing rulebook
+    covers them and the funder enforces it either way. That is the normal shape
+    of a solicitation, so the baseline has to survive the silence.
+
+    THE RULEBOOK'S KEY WINS WHEN BOTH NAME A SECTION, and that is not cosmetic:
+    `review_section` looks its rulebook rows up by exact key
+    (`rules_for(rulebook, section)`) and only resolves the PROFILE's rows
+    through `resolve_section_key`. Emitting the solicitation's spelling
+    (`budget_justification`) for a shared section would silently return zero
+    rulebook rows — the 45-rule version of the orphaning bug this module's
+    `_refile_rows` already exists to prevent.
+
+    A solicitation-only section must hold at least one SCORED row to be offered,
+    the same test `sections_offered` applies to Cover Sheet: a section whose
+    every row is conditional gives the PI a page of "if this applies to you",
+    which is a dead end dressed as a tool. Those rows still appear in a full
+    Draft Review, which is where an advisory row belongs.
+
+    Returns the rulebook's own list unchanged when there is no profile.
+    """
+    from services import rulebook_baseline
+
+    base = rulebook_baseline.sections_offered(rulebook)
+    if not profile:
+        return [dict(s) for s in base]
+
+    sections = profile.get("sections") or {}
+    rows = [r for r in (profile.get("requirements") or []) if not r.get("rulebook")]
+
+    total, scored = {}, {}
+    for r in rows:
+        key = r.get("section")
+        if not key:
+            continue
+        total[key] = total.get(key, 0) + 1
+        if r.get("scored"):
+            scored[key] = scored.get(key, 0) + 1
+
+    # Every spelling of a rulebook section, so a profile key can be recognised
+    # as naming one. Built from the label, the key and the named equivalences,
+    # because the three row sources spell one section with three functions.
+    #
+    # NAMING comes from EVERY section the rulebook knows, not just the offered
+    # ones, while INCLUSION below comes from `base`. The two must not be the
+    # same set: a section the rulebook holds only extended rules for (Budget
+    # carries 45 and no basics) is not offered on the rulebook's own account,
+    # but when the solicitation fills it the entry must still be keyed the
+    # rulebook's way. Keying it the solicitation's way instead would make the
+    # picker's key depend on which tier happened to be empty — the same moving
+    # target that has orphaned rows three times in this codebase already.
+    known = {}
+    for row in rulebook_baseline.rules_for(rulebook):
+        known.setdefault(row["section"],
+                         rulebook_baseline.section_label(row["section"]))
+
+    to_base = {}
+    for key, label in known.items():
+        for name in (label, key):
+            sig = section_signature(name)
+            if not sig:
+                continue
+            for equiv in _equivalent_signatures(sig):
+                to_base.setdefault(equiv, key)
+
+    labels = dict(known)
+    labels.update({s["key"]: s["label"] for s in base})
+    out, seen = [], set()
+
+    def _emit(key: str, label: str, sol_key: Optional[str]) -> None:
+        if key in seen:
+            return
+        seen.add(key)
+        out.append({
+            "key": key,
+            "label": label,
+            "solicitation_rules": total.get(sol_key, 0) if sol_key else 0,
+            # BASIC rows only — the count has to be what the review will
+            # actually check, or the picker promises rules the screen never
+            # shows.
+            "rulebook_rules": len(
+                rulebook_baseline.rules_for(rulebook, key, tier="basic")),
+        })
+
+    # 1. What this solicitation names, in its own order — it leads the picker,
+    #    and where a program requires a letter of intent that is genuinely the
+    #    first thing its PI writes.
+    for key, meta in sections.items():
+        if not total.get(key):
+            continue
+        sig = section_signature(meta.get("label") or key) or section_signature(key)
+        rb_key = to_base.get(sig) if sig else None
+        if rb_key:
+            _emit(rb_key, labels[rb_key], key)
+        elif scored.get(key):
+            _emit(key, meta.get("label") or _section_label(key), key)
+
+    # 2. The rulebook's own sections this solicitation is silent about.
+    for s in base:
+        _emit(s["key"], s["label"], resolve_section_key(sections, s["label"]))
+
+    return out
+
+
 def requirements_for(profile: dict, section: Optional[str]) -> list[dict]:
     """Rows belonging to `section`; None -> the whole-document rows."""
     return [r for r in profile.get("requirements", []) if r.get("section") == section]

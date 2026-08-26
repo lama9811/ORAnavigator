@@ -45,6 +45,7 @@ import os
 from typing import Optional
 
 from services import gemini_client
+from services import text_match as _tm
 from services.text_match import quote_in
 
 # Same model and region as both review paths. `gemini_client.DEFAULT_MODEL` is
@@ -112,6 +113,105 @@ _LABELS = {
 MAX_CHARS = 20_000
 
 
+
+# ── WHERE, computed in code ────────────────────────────────────────────────
+# A quote is evidence; it is not a location. A PI handed "Remove the spurious
+# comma after 'and'" over a six-word fragment still has to hunt 523 words for
+# it. The model is asked about ENGLISH, which it is authoritative on; where a
+# string sits in a document is arithmetic, and asking a model for it would
+# invite a confidently wrong line number.
+#
+# FAILS TO ABSENT, NEVER TO WRONG. A quote that cannot be placed gets no
+# location. Sending an author to line 12 for something on line 40 is worse than
+# sending them nowhere, because they will act on it.
+def _normalized_with_lines(text: str) -> tuple[str, list[int]]:
+    """Whitespace-collapsed lowercase text, plus the source line of each char.
+
+    Mirrors `text_match.normalize` exactly — a locator looser or tighter than
+    the gate that admitted the quote would place rows the gate rejected, or
+    fail to place rows it accepted.
+    """
+    chars: list[str] = []
+    lines: list[int] = []
+    lineno, prev_space = 1, True
+    for ch in text or "":
+        if ch.isspace():
+            if not prev_space and chars:
+                chars.append(" ")
+                lines.append(lineno)
+                prev_space = True
+            if ch == "\n":
+                lineno += 1
+        else:
+            chars.append(ch.lower())
+            lines.append(lineno)
+            prev_space = False
+    return "".join(chars), lines
+
+
+def _dash_variants(chars: list[str], lines: list[int]) -> list[tuple[str, list[int]]]:
+    """The same two readings `text_match._readings` produces, WITH line maps.
+
+    Reading the text two ways is only half of locating a quote in it: joining
+    `histor- ically` shortens the string, so an index found in that reading no
+    longer points at the same character of the original. Both variants are
+    therefore built alongside their own index->line arrays, in one pass, so a
+    hit maps straight back to a real line.
+    """
+    joined_c: list[str] = []
+    joined_l: list[int] = []
+    kept_c: list[str] = []
+    kept_l: list[int] = []
+    i, n = 0, len(chars)
+    while i < n:
+        ch = chars[i]
+        breaks = (ch in _tm._DASHES and 0 < i and i + 2 < n
+                  and chars[i - 1].isalnum() and chars[i + 1] == " "
+                  and chars[i + 2].isalnum())
+        if breaks:
+            kept_c.append(ch)
+            kept_l.append(lines[i])
+            i += 2          # drop the dash (joined) / the space (both)
+            continue
+        joined_c.append(ch)
+        joined_l.append(lines[i])
+        kept_c.append(ch)
+        kept_l.append(lines[i])
+        i += 1
+    return [("".join(joined_c), joined_l), ("".join(kept_c), kept_l)]
+
+
+def locate_quote(text: str, quote: str) -> Optional[dict]:
+    """{"line", "context"} for `quote` inside `text`, or None if unplaceable.
+
+    Reports the line the quote STARTS on: a quote written across a wrap is one
+    the reader reads as a single phrase, and the first line is what they jump
+    to.
+
+    The dash readings are tried the same way `text_match.quote_in` tries them,
+    because a locator that gave up wherever a typesetter split a word would
+    miss exactly the drafts copied out of a PDF -- which is most of them.
+    """
+    q = _tm.normalize(quote)
+    if not q or not (text or "").strip():
+        return None
+    hay, lines = _normalized_with_lines(text)
+    for reading, line_map in [(hay, lines)] + _dash_variants(list(hay), lines):
+        for qr in _tm._readings(q):
+            idx = reading.find(qr)
+            if idx < 0:
+                # Anchor on the opening words, which survive any reading.
+                head = " ".join(qr.split()[:4])
+                idx = reading.find(head) if len(head) > 8 else -1
+            if 0 <= idx < len(line_map):
+                line = line_map[idx]
+                source = (text or "").splitlines()
+                return {"line": line,
+                        "context": (source[line - 1].strip()
+                                    if line - 1 < len(source) else "")}
+    return None
+
+
 def proofread(text: str, *, use_ai: bool = True) -> list[dict]:
     """Mechanical language errors in `text`, each quoting the draft.
 
@@ -158,6 +258,10 @@ def proofread(text: str, *, use_ai: bool = True) -> list[dict]:
             "label": _LABELS.get(kind, "Wording"),
             "detail": detail,
             "evidence": quote,
+            # Deterministic, and ABSENT rather than wrong when the quote cannot
+            # be placed. Never a gate: a row that passed the quote check must
+            # not be dropped because the locator was less tolerant.
+            "where": locate_quote(text, quote),
             # Marks the row as a model opinion wherever it is rendered, so it can
             # never be shown alongside deterministic rows without saying so.
             "source": "ai",

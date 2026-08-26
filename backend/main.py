@@ -4699,14 +4699,68 @@ async def section_check_sections(rulebook: str = "the PAPPG"):
     return {"rulebook": rulebook, "sections": _rb.sections_offered(rulebook)}
 
 
-def _section_check_inputs(payload_section: str, rulebook: str):
-    """Validate the pair, or 400 naming what is wrong."""
+@app.get("/api/me/submissions/{submission_id}/section-check/sections")
+async def section_check_sections_for_submission(
+    submission_id: int,
+    rulebook: str = "the PAPPG",
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """The sections THIS proposal can have checked, one at a time.
+
+    The auth-free route above answers for the rulebook and cannot do better --
+    it never sees a submission. So every proposal was offered the PAPPG's seven
+    sections whatever its own solicitation asked for, and the solicitation's own
+    deliverables were unreachable: measured on a live NSF 23-598 proposal, 8
+    scored Letter of Intent rules a PI had no way to check.
+
+    Both lists are returned, because neither contains the other -- offering only
+    what the solicitation names would drop the 48 PAPPG rules on References
+    Cited, Facilities and Senior/Key Personnel, which NSF enforces whether or
+    not a given solicitation restates them. Each entry carries its own
+    `solicitation_rules` / `rulebook_rules` counts so the picker can group
+    without recomputing the split.
+
+    Auth'd and ownership-checked, unlike the auth-free route, because it reads
+    that proposal's solicitation."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(
+        db, submission_id=submission_id, user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    from services import solicitation_profile as _sp
+    profile = _proposals_service.load_solicitation_profile(sub)
+    return {"rulebook": rulebook,
+            "sections": _sp.sections_offered_for(profile, rulebook)}
+
+
+def _section_check_inputs(payload_section: str, rulebook: str,
+                          profile: Optional[dict] = None):
+    """Validate the pair, or 400 naming what is wrong.
+
+    THE PROFILE IS PART OF THE ANSWER, not a refinement of it. This asked the
+    rulebook alone until 2026-08-26, so a section only the SOLICITATION names --
+    NSF 23-598's Letter of Intent, 8 scored rules and the first thing that
+    program requires -- was refused here even once the picker offered it. That
+    made this the second of the two places enforcing rulebook-only.
+
+    Still a real gate: a section neither source knows is still 400, so widening
+    it did not open it."""
     from services import rulebook_baseline as _rb
+    from services import solicitation_profile as _sp
     if not _rb.rules_for(rulebook):
         raise HTTPException(400, f"No rules are on file for {rulebook}.")
-    if not _rb.rules_for(rulebook, payload_section):
-        raise HTTPException(
-            400, f"{rulebook} has no rules on file for that section.")
+    if _rb.rules_for(rulebook, payload_section):
+        return
+    if profile:
+        key = _sp.resolve_section_key(profile.get("sections") or {},
+                                      payload_section)
+        if key and _sp.requirements_for(profile, key):
+            return
+    raise HTTPException(
+        400, f"Neither {rulebook} nor this solicitation has rules on file "
+             f"for that section.")
 
 
 @app.post("/api/me/submissions/{submission_id}/section-check")
@@ -4732,10 +4786,12 @@ async def section_check_endpoint(
         db, submission_id=submission_id, user_id=user["user_id"])
     if sub is None:
         raise HTTPException(404, "Submission not found")
-    _section_check_inputs(payload.section, payload.rulebook)
+    # The profile is loaded BEFORE the gate because the gate now consults it —
+    # a section only this solicitation names must not be refused.
+    profile = _proposals_service.load_solicitation_profile(sub)
+    _section_check_inputs(payload.section, payload.rulebook, profile)
 
     from services import draft_review as _dr
-    profile = _proposals_service.load_solicitation_profile(sub)
     budget = None
     raw_b = getattr(sub, "budget_json", None)
     if raw_b:
@@ -4771,7 +4827,10 @@ async def section_check_upload(
         db, submission_id=submission_id, user_id=user["user_id"])
     if sub is None:
         raise HTTPException(404, "Submission not found")
-    _section_check_inputs(section, rulebook)
+    # Same ordering as the paste path above, and for the same reason: the gate
+    # consults the solicitation, so the profile has to exist before it runs.
+    profile = _proposals_service.load_solicitation_profile(sub)
+    _section_check_inputs(section, rulebook, profile)
 
     data = await file.read()
     if len(data) > _DRAFT_MAX_FILE_BYTES:
@@ -4786,7 +4845,6 @@ async def section_check_upload(
                 "extraction": {k: v for k, v in read.items() if k != "text"},
                 "error": read.get("error") or "Couldn't read any text from that file."}
 
-    profile = _proposals_service.load_solicitation_profile(sub)
     result = _dr.review_section(read["text"], section=section, rulebook=rulebook,
                                 profile=profile, pages=read.get("pages") or None)
     return {

@@ -76,10 +76,21 @@ def test_sections_offered_lists_the_covered_parts_in_the_pappg_s_own_order():
     it governs all of them."""
     keys = [s["key"] for s in rb.sections_offered("the PAPPG")]
     assert keys == ["project_summary", "project_description",
-                    "references_cited", "budget_and_budget_justification",
-                    "facilities_equipment_and_other_resources",
-                    "senior_key_personnel_documents",
-                    "special_information_and_supplementary_documentation"]
+                    "references_cited",
+                    "facilities_equipment_and_other_resources"]
+    # BACK TO FOUR, and not by undoing the PAPPG ingest. Check a Section takes
+    # the rulebook's BASIC rows -- the 14 read off Research.gov's own Content
+    # Instructions -- plus the solicitation's, a product decision of
+    # 2026-08-26 taken after the extended rows outnumbered a live proposal's
+    # own solicitation 138 to 33. These four are exactly the sections those 14
+    # cover, which is why the list matches the pre-ingest one. Every extended
+    # rule is still live in a full Draft Review, and a section they alone cover
+    # is offered again as soon as a solicitation gives it rules -- see
+    # solicitation_profile.sections_offered_for.
+    for extended_only in ("budget_and_budget_justification",
+                          "senior_key_personnel_documents",
+                          "special_information_and_supplementary_documentation"):
+        assert extended_only not in keys
     # Three sections hold rules and are deliberately NOT offered:
     #   table_of_contents  -- Research.gov GENERATES it; the slice yields no rules
     #   cover_sheet        -- nine Research.gov form fields

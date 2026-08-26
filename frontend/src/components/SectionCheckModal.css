@@ -754,6 +754,47 @@ body.dark .scm-modal {
 .scm-score-amber { border-left-color: var(--scm-warn); }
 .scm-score-red   { border-left-color: var(--scm-fail); }
 
+/* VERDICT LEVELS. The stripe follows the verdict, not the rules percentage —
+   a section meeting every rule with fifteen typos in it must not be green.
+   `clean` is the only one that gets the ok colour, and it requires both halves
+   to be clear. */
+.scm-score-clean      { border-left-color: var(--scm-ok); }
+.scm-score-minor      { border-left-color: var(--scm-warn); }
+.scm-score-needs_work { border-left-color: var(--scm-fail); }
+.scm-score-unknown    { border-left-color: var(--text-tertiary); }
+
+.scm-verdict-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+.scm-score-clean      .scm-verdict-label { color: var(--scm-ok); }
+.scm-score-minor      .scm-verdict-label { color: var(--scm-warn); }
+.scm-score-needs_work .scm-verdict-label { color: var(--scm-fail); }
+
+/* The issues block sits at the SAME weight as the rules count — same figure
+   size, same layout — because a PI who reads a large number and a faint line
+   reads only the first, which is the report that prompted all of this. */
+.scm-score-issues {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle, rgba(128, 128, 128, 0.22));
+}
+
+.scm-verdict-summary {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
 .scm-score-head { display: flex; gap: 18px; align-items: center; }
 
 /* THE FRACTION IS THE HEADLINE, the percentage is a footnote to it. A bare
@@ -846,4 +887,21 @@ body.dark .scm-modal {
   font-size: 0.82rem;
   line-height: 1.5;
   margin-top: 2px;
+}
+
+/* Location of a wording issue. Quiet — it is a navigation aid, not a finding. */
+.scm-wording-where {
+  margin-left: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  letter-spacing: 0.03em;
+}
+.scm-wording-context {
+  margin-top: 6px;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  border-left: 2px solid var(--border-subtle, rgba(128, 128, 128, 0.22));
 }

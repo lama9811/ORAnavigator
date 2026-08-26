@@ -1121,6 +1121,21 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
         </div>
       )}
 
+      {/* ABOVE the score, deliberately. The score is a percentage of the
+          requirements this reviewer could assess, and if part of the package
+          was never read then part of it could never be assessed — so a PI has
+          to meet that fact before the number, not after it. Absent whenever
+          the package fitted, which is the normal case. */}
+      {result.truncated && (
+        <div className="eir-banner eir-banner-warn">
+          <AlertTriangle size={14} /> Your package is{" "}
+          {result.truncated.chars.toLocaleString()} characters and only the
+          first {result.truncated.read.toLocaleString()} were read. Sections
+          near the end were not checked, and the score below is calculated
+          without them &mdash; split the package and re-run to cover it all.
+        </div>
+      )}
+
       <MistakesPanel mistakes={result.mistakes} />
 
       <ScorePanel score={result.score} solicitationId={solId} />

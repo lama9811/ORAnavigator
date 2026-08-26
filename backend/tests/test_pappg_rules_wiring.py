@@ -284,14 +284,27 @@ def test_the_picker_never_offers_a_section_where_nothing_can_be_checked():
             f"{dead} is offered, but every one of its rules reports not_checked"
 
 
-def test_the_picker_still_offers_every_section_with_a_checkable_rule():
+def test_the_picker_offers_every_section_with_a_checkable_BASIC_rule():
+    """Check a Section reviews the rulebook's BASIC rows plus the solicitation
+    (product decision 2026-08-26), so its rulebook-only picker offers exactly
+    the sections holding a checkable basic rule.
+
+    The four absent here -- budget, senior/key personnel, special information,
+    and the three already excluded -- keep every one of their extended rules
+    for a full Draft Review, and reappear in THIS picker the moment a
+    solicitation gives them rules of its own. See
+    test_section_check_basics_only.py.
+    """
     offered = {s["key"] for s in rb.sections_offered(PAPPG)}
     for live in ("project_summary", "project_description", "references_cited",
-                 "facilities_equipment_and_other_resources",
-                 "budget_and_budget_justification",
-                 "senior_key_personnel_documents",
-                 "special_information_and_supplementary_documentation"):
-        assert live in offered, f"{live} has checkable rules but is not offered"
+                 "facilities_equipment_and_other_resources"):
+        assert live in offered, f"{live} has checkable basic rules but is not offered"
+    for extended_only in ("budget_and_budget_justification",
+                          "senior_key_personnel_documents",
+                          "special_information_and_supplementary_documentation"):
+        assert extended_only not in offered, (
+            f"{extended_only} holds no basic rules, so offering it on the "
+            f"rulebook's own account would hand the PI an empty section")
 
 
 # ── prohibitions ────────────────────────────────────────────────────────────
@@ -642,7 +655,13 @@ def _coverage(profile, rulebook=PAPPG):
 
     universe = profile.get("sections") or {}
     pickable = set()
-    for s in rb.sections_offered(rulebook):
+    # THE PICKER THIS PROPOSAL ACTUALLY GETS. `rb.sections_offered` answers for
+    # the rulebook alone and has not been the shipped picker since 2026-08-26 —
+    # a section the rulebook holds no BASIC rules for is still offered when the
+    # solicitation fills it. Measuring reachability against the wrong picker
+    # would report a reachable row as Draft-Review-only, which is the same
+    # class of wrong answer this whole test exists to catch.
+    for s in sp.sections_offered_for(profile, rulebook):
         key = s["key"] if s["key"] in universe else (
             sp.resolve_section_key(universe, s["label"]) or s["key"])
         pickable.add(key)

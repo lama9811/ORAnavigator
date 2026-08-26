@@ -346,6 +346,14 @@ body.dark .eir-modal {
   margin-bottom: 16px;
 }
 .eir-banner svg { flex-shrink: 0; margin-top: 2px; }
+/* An unread tail is not the same class of thing as "the AI reviewer is
+   offline": part of the package was never checked and the score is computed
+   without it. The fail palette, so it does not read as an aside. */
+.eir-banner-warn {
+  background: var(--eir-fail-bg);
+  border-color: var(--eir-fail);
+}
+.eir-banner-warn svg { color: var(--eir-fail); }
 
 /* ── score ──────────────────────────────────────────────────────────────── */
 

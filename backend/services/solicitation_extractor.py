@@ -25,6 +25,10 @@ import re
 from io import BytesIO
 from typing import Optional
 
+# ONE definition, imported rather than repeated: the upload path and the
+# solicitation path must never read the same PDF differently.
+from services.document_text import PDF_X_TOLERANCE_RATIO as _PDF_X_TOLERANCE_RATIO
+
 # Lazy import: pdfplumber adds startup cost; we only need it on demand.
 _pdfplumber = None
 _genai = None
@@ -508,7 +512,11 @@ def read_pdf(pdf_bytes: bytes) -> dict:
     try:
         with pdfp.open(BytesIO(pdf_bytes)) as pdf:
             for page in pdf.pages:
-                t = page.extract_text() or ""
+                # Font-scaled word segmentation — see document_text.
+                # PDF_X_TOLERANCE_RATIO. The default fixed 3pt tolerance
+                # welds TeX-set words together.
+                t = page.extract_text(
+                    x_tolerance_ratio=_PDF_X_TOLERANCE_RATIO) or ""
                 if t.strip():
                     pages_text.append(t)
                 else:
