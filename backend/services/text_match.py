@@ -3,6 +3,13 @@
 Every AI claim in this codebase must quote its source, and the quote is checked
 in CODE before the claim is shown. This is that check, in one place.
 
+A SECOND ARTIFACT, ADDED 2026-08-26: a word broken across a line by a
+typesetter's hyphen. A PI pasted a Project Summary out of a typeset PDF with
+twelve such breaks; the reviewer judged all three content rules `addressed`,
+and two of the three were dropped here because their quotes spanned a break.
+The PI was told a section was "Not found" under a note saying it was covered.
+See `_readings` for why the text is read two ways rather than normalised one.
+
 WHY THE WHITESPACE COLLAPSE IS LOAD-BEARING
 -------------------------------------------
 A pasted or PDF-extracted draft is hard-wrapped, so it contains
@@ -41,6 +48,48 @@ def normalize(s: str, *, drop_list_noise: bool = False) -> str:
     return " ".join(s.split())
 
 
+# A DASH ending a line: a word the typesetter split, or a real compound that
+# happened to land on the break. Matched AFTER the whitespace collapse, so the
+# newline has already become a single space.
+#
+# ALL THREE DASHES, and that is not defensiveness. The first version of this
+# matched hyphen-minus alone and recovered two of the three rules that had been
+# wrongly dropped on a real draft; the third stayed broken because that
+# paragraph breaks on `decomposition–` with an EN DASH. A fix covering one of
+# the characters a typesetter actually uses is a fix that looks like it worked.
+#
+# `\w` on BOTH sides is the safety property: a dash used as punctuation between
+# spaces ("2019 - 2024") has whitespace before it, so nothing fires and ranges
+# are never glued together.
+_SOFT_HYPHEN_RE = re.compile(r"(\w)[-\u2010\u2011\u2012\u2013\u2014]\s+(\w)")
+_DASHES = "-\u2010\u2011\u2012\u2013\u2014"
+
+
+def _readings(s: str) -> list[str]:
+    """Every defensible reading of `s` where a hyphen ends a line.
+
+    A hyphen at a line end is genuinely AMBIGUOUS and nothing in the text says
+    which it is: `un- dergraduate` is one word split by the typesetter, while
+    `bosonic- fermionic` is a real compound that landed on the break. Joining
+    always would break the second; keeping the hyphen always leaves the first
+    broken. So both readings are produced and a quote matching EITHER verifies.
+
+    This cannot manufacture a false positive: both readings are derived from the
+    text itself, so a quote matching one is a quote that appears in the text
+    under a defensible reading of it. A quote matching neither is still
+    rejected, and only a HYPHEN licenses joining — two words split by a plain
+    line break stay two words, or any adjacent pair could be run together.
+    """
+    if not any(d + " " in s for d in _DASHES):
+        return [s]
+    # The KEPT reading restores the dash the text actually used (\g<0> would
+    # bring the space back), so a real compound keeps the author's own
+    # character rather than being normalised to a hyphen.
+    kept = _SOFT_HYPHEN_RE.sub(
+        lambda m: m.group(1) + m.group(0)[len(m.group(1))] + m.group(2), s)
+    return [_SOFT_HYPHEN_RE.sub(r"\1\2", s), kept]
+
+
 def quote_in(text: str, quote: str, *, drop_list_noise: bool = False) -> bool:
     """True if `quote` appears in `text`, ignoring whitespace/line-wrap and case.
 
@@ -55,4 +104,5 @@ def quote_in(text: str, quote: str, *, drop_list_noise: bool = False) -> bool:
     q = normalize(quote, drop_list_noise=drop_list_noise)
     if not q:
         return False
-    return q in normalize(text, drop_list_noise=drop_list_noise)
+    haystacks = _readings(normalize(text, drop_list_noise=drop_list_noise))
+    return any(qr in hay for qr in _readings(q) for hay in haystacks)
