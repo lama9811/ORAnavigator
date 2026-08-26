@@ -36,6 +36,14 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KB = os.path.join(REPO, "backend", "kb_structured")
 LESSONS_JSON = os.path.join(KB, "_etraining_lessons.json")
 LESSON_DOCS = os.path.join(KB, "trainings", "e_training", "*.json")
+
+# THE SERVED COPY, and the one this script did not touch until 2026-08-26.
+# forms_catalog.images_for_titles() -- the whole chat-answer screenshot path --
+# reads the manifest and nothing else, so repairing the two JSON copies above
+# fixed every file except the one a PI actually sees. Measured that day: 73 of
+# 262 manifest URLs still dead, across the same 25 lessons whose per-doc files
+# had been correctly repaired a fortnight earlier.
+MANIFEST = os.path.join(KB, "_all_documents.jsonl")
 PREFIX = "https://storage.googleapis.com/"
 
 
@@ -107,6 +115,60 @@ def collect(obj, out):
             collect(v, out)
 
 
+def repair_manifest(dry_run: bool, before: list, after: list) -> int:
+    """Rewrite images[].url in the JSONL manifest, IN PLACE and by string.
+
+    Two properties this needs that the json.load/json.dump path above does not,
+    both because the manifest is a different kind of file:
+
+    It is JSONL, one document per line, and CLAUDE.md records that a whole-file
+    manifest rewrite is how 54 rows from another generator were silently lost.
+    So this never rebuilds the file from parsed objects -- it copies every line
+    through untouched and substitutes only the URL strings it has proven need
+    substituting. A row with no repair is byte-identical afterwards, which is
+    also what keeps the diff readable enough to review.
+
+    The substitution carries the surrounding quotes (`"<url>"`) so it cannot
+    match a URL that merely has another as a prefix, and a mirrored URL contains
+    no character JSON escapes, so a literal replace on the raw line is exact.
+    """
+    if not os.path.exists(MANIFEST):
+        print(f"  SKIP {os.path.basename(MANIFEST)}: not found")
+        return 0
+
+    with open(MANIFEST, encoding="utf-8") as f:
+        lines = f.readlines()
+
+    changed, out = 0, []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            out.append(line)
+            continue
+        try:
+            doc = json.loads(stripped)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        urls = [im.get("url") for im in (doc.get("images") or [])
+                if isinstance(im, dict) and isinstance(im.get("url"), str)]
+        collect(doc, before)
+        for url in urls:
+            new = repaired(url)
+            if new != url:
+                line = line.replace(f'"{url}"', f'"{new}"')
+                changed += 1
+        out.append(line)
+        collect(json.loads(line.strip()), after)
+
+    if changed:
+        print(f"  {changed:3d} fixed  {os.path.relpath(MANIFEST, REPO)}")
+        if not dry_run:
+            with open(MANIFEST, "w", encoding="utf-8") as f:
+                f.writelines(out)
+    return changed
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
@@ -133,7 +195,9 @@ def main() -> int:
                 with open(path, "w") as f:
                     json.dump(data, f, indent=1)
 
-    print(f"\nfiles scanned: {len(targets)}   urls rewritten: {total_changed}")
+    total_changed += repair_manifest(args.dry_run, before, after)
+
+    print(f"\nfiles scanned: {len(targets) + 1}   urls rewritten: {total_changed}")
 
     if args.verify:
         uniq_before = sorted(set(before))
