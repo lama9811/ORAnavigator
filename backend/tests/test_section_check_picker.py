@@ -186,3 +186,57 @@ def test_a_solicitation_only_section_can_actually_be_reviewed():
     ids = {f["id"] for f in result["findings"]}
     assert {"sol_loi_title", "sol_loi_pi"} <= ids, (
         f"the solicitation's own LOI rules were not checked: {sorted(ids)}")
+
+
+# ── ONE FLAT LIST, in the order a proposal is written ──────────────────────
+#
+# The picker grouped its sections under three headings naming where each
+# section's rules came from. Every section is checked against BOTH sources, so
+# the headings described provenance, not behaviour -- and a PI read them as
+# "these are checked differently". Their words: "IF IT CHECKS BOTH THEN DON'T
+# GROUP IT."
+#
+# Removing the headings makes the ORDER carry the whole message, and the order
+# the groups were hiding was arbitrary once flattened: solicitation-named
+# sections came first, so Budget led the list and Project Summary sat fifth.
+
+def _budget_first_profile():
+    """A profile whose FIRST extracted row is a Budget rule.
+
+    The live proposal is shaped this way, and it is what exposed the ordering:
+    sections were emitted in the order the solicitation happened to mention
+    them, so Budget led the picker and Project Summary sat fifth. The earlier
+    fixture hid it by mentioning the Letter of Intent first.
+    """
+    rows = [
+        _row("sol_bud", "budget_justification", "Cap equipment at 30 percent",
+             section_label="Budget and Budget Justification"),
+        _row("sol_loi", "letter_intent", "Include the required title format",
+             section_label="Letter of Intent"),
+        _row("sol_ps", "project_summary", "Include the LOI number"),
+    ]
+    return sp.build_generic({}, rows, id="NSF 23-598", title="t")
+
+
+def test_budget_does_not_jump_the_queue_just_because_it_was_mentioned_first():
+    offered = _keys(sp.sections_offered_for(_budget_first_profile(), PAPPG))
+    assert offered.index("project_summary") < offered.index(
+        "budget_and_budget_justification"), offered
+
+
+def test_the_rulebook_sections_keep_the_order_a_proposal_is_written_in():
+    """Research.gov's own order, which is the order a PI meets these parts."""
+    offered = _keys(sp.sections_offered_for(_nsf_like_profile(), PAPPG))
+    known = [k for k in offered if k in
+             {s["key"] for s in rb.sections_offered(PAPPG)}]
+    assert known == [s["key"] for s in rb.sections_offered(PAPPG)
+                     if s["key"] in known], known
+
+
+def test_a_section_only_the_solicitation_names_comes_first():
+    """The Letter of Intent is not in the rulebook's order because the rulebook
+    has never heard of it -- and for this program it is genuinely the first
+    thing a PI writes, so the front is where it belongs rather than the tail."""
+    offered = _keys(sp.sections_offered_for(_nsf_like_profile(), PAPPG))
+    assert offered[0] == "letter_intent", offered
+    assert offered.index("letter_intent") < offered.index("project_summary")

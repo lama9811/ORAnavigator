@@ -950,6 +950,34 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
     return findings
 
 
+def _basics_and_solicitation(profile: dict) -> dict:
+    """`profile` with the rulebook's EXTENDED rows removed, sections and all.
+
+    The sections go with them: an extended row can be the only thing that put a
+    section in the universe, and leaving an empty one behind would report a PI's
+    package as missing a part nothing was going to check anyway.
+
+    A shallow copy, never a mutation — the caller's profile is the stored one
+    and other tools still read every row from it.
+    """
+    all_rows = profile.get("requirements") or []
+    rows = [r for r in all_rows if r.get("tier") != "extended"]
+
+    # ONLY the sections an extended row BROUGHT IN are dropped, never every
+    # section that ends up empty. A required attachment puts a section in the
+    # universe with no requirement rows of its own — the locate stage still has
+    # to look for it, and reporting a missing attachment is the compliance
+    # rejection this tool exists to prevent. Dropping those would silently stop
+    # telling a PI their Letters of Collaboration are absent.
+    introduced = {r.get("section") for r in all_rows
+                  if r.get("tier") == "extended" and r.get("section")}
+    surviving = {r.get("section") for r in rows if r.get("section")}
+    orphaned = introduced - surviving
+    sections = {k: v for k, v in (profile.get("sections") or {}).items()
+                if k not in orphaned}
+    return {**profile, "requirements": rows, "sections": sections}
+
+
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
                  budget: Optional[dict] = None, use_ai: bool = True,
                  pages: Optional[dict] = None) -> dict:
@@ -964,6 +992,25 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     pages      — section key -> REAL page count, from an upload. Absent it,
                  page rules report an estimate and never a verdict.
     """
+    # THE SOLICITATION AND THE RULEBOOK'S BASICS — product decision 2026-08-26,
+    # the same narrowing Check a Section took earlier that day. Measured on a
+    # live proposal: 204 rules (48 solicitation + 14 basics + 142 extended)
+    # became 62. A fix-list of two hundred rows buries the handful that matter,
+    # which is the failure this repo predicted in writing before the extracted
+    # PAPPG rules ever shipped.
+    #
+    # THIS RETIRES THE EXTENDED ROWS ENTIRELY. Check a Section already excluded
+    # them, so this was the last path that read them: 142 reviewed rules now sit
+    # in kb_structured/_pappg_24_1_rules.json with no reader, including the 19
+    # prohibitions ("Do not request NSF funds for alcoholic beverages"). That is
+    # a real loss and it was taken knowingly. What makes it defensible is that
+    # NONE of the 142 carries a deterministic check — every code-decided rule is
+    # among the curated 14 — so this narrows the model-judged half and leaves
+    # the arithmetic untouched.
+    #
+    # Filtered HERE rather than at profile build, so a stored profile is
+    # unchanged and the decision can be revisited by editing one line.
+    profile = _basics_and_solicitation(profile)
     sections = profile.get("sections") or {}
     requirements = profile.get("requirements") or []
     solicitation_id = profile.get("id") or ""
@@ -1239,7 +1286,11 @@ def review_section(text: str, *, section: str, rulebook: str,
         # against a solicitation. Deliberately not run by `review_draft`: a whole
         # package is many thousands of words, and a proofread of all of it is a
         # different feature with a different cost, not this one scaled up.
-        "wording": proofread.proofread(text, use_ai=use_ai),
+        # The section's own headings, read off the RULE that enforces them so
+        # the locator and the checker can never name different ones — the same
+        # reason `_section_page_limit` reads the allowance off `rb_page_limit`.
+        "wording": proofread.proofread(text, use_ai=use_ai,
+                                       headings=_section_headings(rows)),
         # THE SCORE IS A RULES-MET SHARE, NEVER "how done this section is".
         # This used to return None, on the reasoning that a percentage would
         # read as "your Project Summary is 60% written" — which the rules cannot
@@ -1271,6 +1322,20 @@ def review_section(text: str, *, section: str, rulebook: str,
     out["verdict"] = verdict(out["score"], mistakes=out["mistakes"],
                              wording=out["wording"])
     return out
+
+
+def _section_headings(rows: list[dict]) -> list[str]:
+    """The headings this section's own rule requires, or [].
+
+    Read from the RULES rather than typed a second time: two copies of one list
+    drift, and then the wording locator names a heading the checker does not
+    require. Same contract as `_section_page_limit` below.
+    """
+    for r in rows or []:
+        if r.get("check") == "rb_headings":
+            names = (r.get("check_args") or {}).get("headings") or []
+            return [str(n) for n in names]
+    return []
 
 
 def _section_page_limit(rows: list[dict], section: str) -> Optional[float]:

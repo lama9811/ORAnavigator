@@ -102,37 +102,6 @@ function StatusChip({ status }) {
   );
 }
 
-// Where a section's rules come from, for the picker's own headings.
-//
-// A PI should be able to see, before running anything, which parts of their
-// package their funder wrote rules for and which are NSF's standing policy.
-// `score.by_source` says the same thing AFTER a run; this says it before.
-//
-// Falls back to ONE ungrouped list whenever the entries carry no counts --
-// that is the auth-free route's answer, which is rulebook-only by definition,
-// and three headings over one homogeneous group is noise.
-function groupSections(sections) {
-  const counted = (sections || []).some(
-    (s) => typeof s.solicitation_rules === "number");
-  if (!counted) return [{ heading: null, items: sections || [] }];
-
-  const bucket = (s) => {
-    if (!s.solicitation_rules) return 2;
-    return s.rulebook_rules ? 1 : 0;
-  };
-  const headings = [
-    "From your solicitation",
-    "Your solicitation + NSF baseline",
-    "NSF baseline (PAPPG)",
-  ];
-  return headings
-    .map((heading, i) => ({
-      heading,
-      items: sections.filter((s) => bucket(s) === i),
-    }))
-    .filter((g) => g.items.length);
-}
-
 const ACCEPT = ".pdf,.docx,.txt,.md,.markdown,.text,.rst,.csv,.tex";
 
 function humanSize(bytes) {
@@ -189,6 +158,15 @@ export default function SectionCheckModal({ submission, onClose }) {
     })();
     return () => { live = false; };
   }, [submission?.id]);
+
+  // What the picker already told us about the section being checked, so the
+  // running message can be specific instead of naming a rulebook it may not be
+  // the only source for.
+  const pendingRuleCount = (() => {
+    const s = sections.find((x) => x.key === section);
+    if (!s || typeof s.solicitation_rules !== "number") return 0;
+    return (s.solicitation_rules || 0) + (s.rulebook_rules || 0);
+  })();
 
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const canRun = mode === "upload" ? Boolean(file) : Boolean(text.trim());
@@ -291,7 +269,18 @@ export default function SectionCheckModal({ submission, onClose }) {
         {step === "running" && (
           <div className="scm-loading">
             <div className="scm-spinner" />
-            <p>Checking {sectionLabel} against the PAPPG&rsquo;s rules&hellip;</p>
+            {/* NOT "against the PAPPG's rules". Since 2026-08-26 a section is
+                checked against the solicitation's rules AND NSF's basics, and
+                naming one of the two is how a PI concludes their funder is
+                being ignored -- the same stale sentence that was already fixed
+                in the header and missed here. The picker knows the split, so
+                say the number instead of guessing at a name. */}
+            <p>
+              Checking your {sectionLabel}
+              {pendingRuleCount > 0 && <> against {pendingRuleCount} rule
+                {pendingRuleCount === 1 ? "" : "s"}</>}
+              &hellip;
+            </p>
           </div>
         )}
 
@@ -325,18 +314,16 @@ function InputView({
           value={section}
           onChange={(e) => setSection(e.target.value)}
         >
-          {groupSections(sections).map(({ heading, items }) => (
-            heading
-              ? (
-                <optgroup key={heading} label={heading}>
-                  {items.map((s) => (
-                    <option key={s.key} value={s.key}>{s.label}</option>
-                  ))}
-                </optgroup>
-              )
-              : items.map((s) => (
-                <option key={s.key} value={s.key}>{s.label}</option>
-              ))
+          {/* ONE FLAT LIST. These were grouped under headings naming where
+              each section's rules came from -- "From your solicitation", "NSF
+              baseline". Every section is checked against BOTH, so the headings
+              described provenance and a PI read them as "these are checked
+              differently". The split still appears where it changes what you
+              do about it: in the score, after the run, as "NSF 4/4,
+              NSF 23-598 0/1". The ORDER now carries what is left -- the order
+              a proposal is actually written in. */}
+          {sections.map((s) => (
+            <option key={s.key} value={s.key}>{s.label}</option>
           ))}
         </select>
       </label>
@@ -832,7 +819,10 @@ function WordingPanel({ wording }) {
                 than guessed — a wrong line number is acted on, a missing one
                 is not. A quote alone still means hunting 500 words for it. */}
             {w.where && (
-              <span className="scm-wording-where">line {w.where.line}</span>
+              <span className="scm-wording-where">
+                {w.where.heading && <>{w.where.heading} &middot; </>}
+                line {w.where.line}
+              </span>
             )}
           </div>
           <div className="scm-wording-detail">{w.detail}</div>
@@ -914,12 +904,17 @@ function ResultsView({ result, extraction, onBack }) {
 
       <WordingPanel wording={result.wording} />
 
+      {/* The SOURCES are named by `score.basis`, which derives them from the
+          rules that actually scored. Restating them here got it wrong -- it
+          credited the PAPPG on sections where every rule came from the
+          solicitation -- and put one fact in two places, which is the failure
+          this modal has already had to unship once. What survives is the part
+          `basis` does not carry. */}
       <p className="scm-disclaimer">
-        Checked against {result.rulebook || "the PAPPG"}&rsquo;s rules for{" "}
-        {result.label || "this section"}. The score counts only the rules that
-        could be checked against your text &mdash; it is not a measure of how
-        well written this section is, or of how likely the proposal is to be
-        funded.
+        The score counts only the rules that could be checked against your text
+        &mdash; it is not a measure of how well written {result.label
+          ? `your ${result.label}` : "this section"} is, or of how likely the
+        proposal is to be funded.
       </p>
 
       <div className="scm-results-actions">

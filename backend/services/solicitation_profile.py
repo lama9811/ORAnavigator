@@ -166,6 +166,28 @@ def heading_regex(alias: str) -> re.Pattern:
     )
 
 
+def _title_if_lower(phrase: str) -> str:
+    """Capitalise a mined name, but only if the funder did not capitalise it.
+
+    A phrase mined from mid-sentence arrives lower-case ("restrict the content
+    of letters of collaboration"), and rendering "letters of collaboration"
+    beside "Project Summary" in a picker reads as a defect. A phrase carrying
+    any capital is the funder's own casing and is left exactly as written --
+    including forms a title-caser would ruin.
+
+    Filler words stay lower-case unless they lead, so "Facilities, Equipment
+    and Other Resources" keeps NSF's own shape rather than becoming
+    "... And Other ...".
+    """
+    if phrase != phrase.lower():
+        return phrase
+    out = []
+    for i, word in enumerate(phrase.split()):
+        bare = word.strip(".,;:()").lower()
+        out.append(word if i and bare in _SECTION_FILLER else word.capitalize())
+    return " ".join(out)
+
+
 def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
                   attachments: Optional[list] = None) -> dict:
     """Assemble the section universe the locate stage segments the draft into.
@@ -241,6 +263,37 @@ def sections_from(requirements: list[dict], page_limits: Optional[dict] = None,
         if req.get("section") and req.get("section_label"):
             authored.setdefault(section_key(str(req["section"])),
                                 str(req["section_label"]))
+
+    # FALLBACK: mine the funder's own wording out of the requirement LABELS.
+    #
+    # `canon_section` strips filler when it builds a key, so "Letter of Intent"
+    # becomes `letter_intent` and title-casing that back gives "Letter Intent"
+    # — a name nobody writes, offered in the section picker. `section_label` is
+    # the intended source and the extraction emits it sometimes; when it does
+    # not, the real name is still sitting in the rows ("Include required title
+    # format in Letter of Intent").
+    #
+    # SET EQUALITY is the safety property, the same one every other section
+    # comparison in this module rests on: a phrase is accepted only when its
+    # meaning-carrying words are EXACTLY the key's. Containment would let
+    # "Project Description Supplementary Documents" name `project_description`
+    # and lose a real section, which is the hole equality exists to close.
+    for req in requirements or []:
+        key = section_key(str(req.get("section") or ""))
+        if not key or key in authored:
+            continue
+        wanted = section_signature(key)
+        if not wanted:
+            continue
+        words = str(req.get("label") or "").split()
+        for size in range(len(wanted), min(len(wanted) + 3, len(words)) + 1):
+            for i in range(len(words) - size + 1):
+                phrase = " ".join(words[i:i + size]).strip(".,;:()")
+                if phrase and section_signature(phrase) == wanted:
+                    authored[key] = _title_if_lower(phrase)
+                    break
+            if key in authored:
+                break
 
     for req in requirements or []:
         if req.get("section"):
@@ -369,22 +422,38 @@ def sections_offered_for(profile: Optional[dict], rulebook: str) -> list[dict]:
                 rulebook_baseline.rules_for(rulebook, key, tier="basic")),
         })
 
-    # 1. What this solicitation names, in its own order — it leads the picker,
-    #    and where a program requires a letter of intent that is genuinely the
-    #    first thing its PI writes.
+    # ORDER IS THE ONLY THING LEFT TO CARRY THE MESSAGE. The picker used to
+    # group these under headings naming where each section's rules came from,
+    # and a PI read that as "these are checked differently" — every section is
+    # checked against BOTH sources, so the headings described provenance, not
+    # behaviour, and were removed. What was left was an order that only made
+    # sense inside the groups: sections were emitted as the solicitation
+    # happened to mention them, so on a real proposal Budget led the list and
+    # Project Summary sat fifth.
+    #
+    # 1. Parts the rulebook has never heard of — a letter of intent, letters of
+    #    collaboration. They cannot be placed in its order because they are not
+    #    in it, and for a program that requires one the letter of intent is
+    #    genuinely the first thing its PI writes, so the front is right.
     for key, meta in sections.items():
-        if not total.get(key):
+        if not total.get(key) or not scored.get(key):
             continue
         sig = section_signature(meta.get("label") or key) or section_signature(key)
-        rb_key = to_base.get(sig) if sig else None
-        if rb_key:
-            _emit(rb_key, labels[rb_key], key)
-        elif scored.get(key):
-            _emit(key, meta.get("label") or _section_label(key), key)
+        if sig and to_base.get(sig):
+            continue                       # the rulebook knows it — step 2 places it
+        _emit(key, meta.get("label") or _section_label(key), key)
 
-    # 2. The rulebook's own sections this solicitation is silent about.
-    for s in base:
-        _emit(s["key"], s["label"], resolve_section_key(sections, s["label"]))
+    # 2. Everything the rulebook knows, in ITS order — Research.gov's, which is
+    #    the order a PI meets these parts of a package. A section the rulebook
+    #    holds only extended rules for (Budget) is offered here when the
+    #    solicitation fills it, and takes its proper place rather than the front.
+    ordered = [s["key"] for s in base]
+    ordered += [k for k in known if k not in set(ordered)]
+    for key in ordered:
+        sol_key = resolve_section_key(sections, labels.get(key, key)) or (
+            key if key in sections else None)
+        if key in {s["key"] for s in base} or (sol_key and total.get(sol_key)):
+            _emit(key, labels.get(key, key), sol_key)
 
     return out
 

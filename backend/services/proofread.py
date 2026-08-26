@@ -181,8 +181,31 @@ def _dash_variants(chars: list[str], lines: list[int]) -> list[tuple[str, list[i
     return [("".join(joined_c), joined_l), ("".join(kept_c), kept_l)]
 
 
-def locate_quote(text: str, quote: str) -> Optional[dict]:
-    """{"line", "context"} for `quote` inside `text`, or None if unplaceable.
+def _heading_above(text: str, line: int, headings: Optional[list]) -> Optional[str]:
+    """The nearest heading ABOVE `line`, from the ones the rule names.
+
+    ONLY the named headings count. A short line is not a heading, and guessing
+    would label a wrapped sentence fragment as a section -- so text sitting
+    above every heading gets None rather than the first one below it. Same
+    fail-to-absent posture as the line number: a heading the quote does not sit
+    under sends an author to the wrong paragraph.
+    """
+    if not headings:
+        return None
+    wanted = {" ".join(h.lower().split()): h for h in headings}
+    found = None
+    for i, raw in enumerate((text or "").splitlines(), 1):
+        if i > line:
+            break
+        key = " ".join(raw.strip().lower().split()).rstrip(":")
+        if key in wanted:
+            found = wanted[key]
+    return found
+
+
+def locate_quote(text: str, quote: str,
+                 headings: Optional[list] = None) -> Optional[dict]:
+    """{"line", "context", "heading"} for `quote`, or None if unplaceable.
 
     Reports the line the quote STARTS on: a quote written across a wrap is one
     the reader reads as a single phrase, and the first line is what they jump
@@ -208,11 +231,13 @@ def locate_quote(text: str, quote: str) -> Optional[dict]:
                 source = (text or "").splitlines()
                 return {"line": line,
                         "context": (source[line - 1].strip()
-                                    if line - 1 < len(source) else "")}
+                                    if line - 1 < len(source) else ""),
+                        "heading": _heading_above(text, line, headings)}
     return None
 
 
-def proofread(text: str, *, use_ai: bool = True) -> list[dict]:
+def proofread(text: str, *, use_ai: bool = True,
+              headings: Optional[list] = None) -> list[dict]:
     """Mechanical language errors in `text`, each quoting the draft.
 
     Returns [] on every failure path — no model, a bad response, an unparseable
@@ -261,7 +286,7 @@ def proofread(text: str, *, use_ai: bool = True) -> list[dict]:
             # Deterministic, and ABSENT rather than wrong when the quote cannot
             # be placed. Never a gate: a row that passed the quote check must
             # not be dropped because the locator was less tolerant.
-            "where": locate_quote(text, quote),
+            "where": locate_quote(text, quote, headings),
             # Marks the row as a model opinion wherever it is rendered, so it can
             # never be shown alongside deterministic rows without saying so.
             "source": "ai",
