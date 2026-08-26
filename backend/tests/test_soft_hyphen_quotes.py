@@ -147,3 +147,71 @@ def test_a_dash_used_as_punctuation_between_spaces_is_untouched():
     assert quote_in("the award runs 2019 - 2024 inclusive",
                     "the award runs 2019 - 2024 inclusive")
     assert not quote_in("the award runs 2019 - 2024 inclusive", "20192024")
+
+
+# ── LIGATURES: the same failure, a third character-level cause ─────────────
+
+LIGATURE_TEXT = (
+    "Funding requests outside the typical range should have corresponding\n"
+    "detailed budget justications that demonstrate the relevance of the\n"
+    "request to the project. The Foundation Oce of Integrative Activities\n"
+    "notes the rate in eect for the award period.")
+
+
+def test_a_quote_verifies_when_the_pdf_lost_its_LIGATURES():
+    """Found on a real NSF solicitation the PI uploaded.
+
+    A typeset PDF sets `fi`, `ff` and `ffi` as SINGLE glyphs. pdfplumber cannot
+    decode them and emits a control character -- 112 times in that document --
+    and `read_pdf` strips those, so `justification` is stored as `justication`
+    and `Office` as `Oce`. 72 words were mangled that way.
+
+    The model reads the mangled text and writes the word CORRECTLY when it
+    quotes, so its quote no longer matches our copy and golden rule 2 discards a
+    real requirement. Measured: that solicitation reported "2 proposed
+    requirements were dropped because they could not be quoted", and the one
+    reproduced here is a genuine NSF rule about budget justifications.
+
+    Un-stripping is not available: the same control character stands for
+    SEVERAL ligatures (`Noti-cation` is fi, `o-cer` is ffi, `e-ect` is ff), so
+    nothing in the character says which letters were lost. The comparison is
+    made aware of the artifact instead.
+    """
+    assert quote_in(
+        LIGATURE_TEXT,
+        "detailed budget justifications that demonstrate the relevance")
+
+
+def test_the_longest_ligature_is_stripped_first():
+    """`office` is `o` + `ffi` + `ce`. Taking `ff` first leaves `oice`, which
+    matches nothing -- so the order is part of the fix, not an implementation
+    detail."""
+    assert quote_in(LIGATURE_TEXT, "The Foundation Office of Integrative")
+
+
+def test_a_double_f_ligature_verifies():
+    assert quote_in(LIGATURE_TEXT, "the rate in effect for the award period")
+
+
+# ── and it must not become a way in ────────────────────────────────────────
+
+def test_a_quote_with_no_ligature_letters_is_matched_no_more_loosely():
+    """The fallback is only attempted when the quote actually contains one of
+    the sequences a PDF can lose. A quote without them can never take the
+    looser path, so the widening cannot reach ordinary text."""
+    assert not quote_in(LIGATURE_TEXT, "the budget must not exceed the cap")
+
+
+def test_a_fabricated_quote_containing_a_ligature_is_still_rejected():
+    assert not quote_in(LIGATURE_TEXT,
+                        "the office of research requires fifteen signatures")
+
+
+def test_an_exact_quote_is_unaffected():
+    assert quote_in(LIGATURE_TEXT, "outside the typical range")
+
+
+def test_the_ligature_path_composes_with_list_noise():
+    noisy = "(cid:127) detailed budget justications that demonstrate"
+    assert quote_in(noisy, "detailed budget justifications that demonstrate",
+                    drop_list_noise=True)

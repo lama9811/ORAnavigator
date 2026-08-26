@@ -90,6 +90,34 @@ def _readings(s: str) -> list[str]:
     return [_SOFT_HYPHEN_RE.sub(r"\1\2", s), kept]
 
 
+# A THIRD CHARACTER-LEVEL ARTIFACT, and the one that silently loses whole
+# requirements. A typeset PDF sets `fi`, `ff` and `ffi` as SINGLE glyphs.
+# pdfplumber cannot decode them and emits a control character -- 112 times in
+# one real NSF solicitation -- and `solicitation_extractor.read_pdf` strips
+# those, so `justification` is stored as `justication` and `Office` as `Oce`.
+# 72 words were mangled in that document.
+#
+# The model reads the mangled text and writes the word CORRECTLY when it
+# quotes, so its quote no longer matches our copy and golden rule 2 discards a
+# real rule. That solicitation reported "2 proposed requirements were dropped
+# because they could not be quoted"; both were genuine NSF requirements.
+#
+# UN-STRIPPING IS NOT AVAILABLE. The same control character stands for several
+# different ligatures -- `Noti-cation` is fi, `o-cer` is ffi, `e-ect` is ff --
+# so nothing in the character says which letters were lost. The COMPARISON is
+# made aware of the artifact instead, which needs no guess about the text.
+#
+# LONGEST FIRST: "office" is o + ffi + ce, and taking `ff` first leaves "oice",
+# which matches nothing.
+_LIGATURES = ("ffl", "ffi", "ff", "fl", "fi")
+
+
+def _drop_ligatures(s: str) -> str:
+    for lig in _LIGATURES:
+        s = s.replace(lig, "")
+    return s
+
+
 def quote_in(text: str, quote: str, *, drop_list_noise: bool = False) -> bool:
     """True if `quote` appears in `text`, ignoring whitespace/line-wrap and case.
 
@@ -105,4 +133,14 @@ def quote_in(text: str, quote: str, *, drop_list_noise: bool = False) -> bool:
     if not q:
         return False
     haystacks = _readings(normalize(text, drop_list_noise=drop_list_noise))
-    return any(qr in hay for qr in _readings(q) for hay in haystacks)
+    if any(qr in hay for qr in _readings(q) for hay in haystacks):
+        return True
+    # LIGATURE FALLBACK, attempted only after an honest match has failed AND
+    # only when the quote actually contains a sequence a PDF can lose. That
+    # second condition is a safety property, not an optimisation: a quote with
+    # no ligature letters can never take the looser path, so this widening
+    # cannot reach ordinary text.
+    if not any(lig in q for lig in _LIGATURES):
+        return False
+    bare = _drop_ligatures(q)
+    return any(bare in _drop_ligatures(hay) for hay in haystacks)
