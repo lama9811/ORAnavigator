@@ -404,6 +404,15 @@ export default function MyProposals() {
             setActive(created);  // jump straight into the new proposal
             loadList();
           }}
+          // The requirement read can land a minute after Create. When it does
+          // the proposal has genuinely changed -- it gains its requirement list,
+          // and with it Draft Review, the solicitation's own Section Check
+          // sections and an "attached" badge -- so the open view has to follow.
+          onLateAttach={(updated) => {
+            setActive((cur) => (cur && updated && cur.id === updated.id
+              ? updated : cur));
+            loadList();
+          }}
         />
       )}
     </div>
@@ -710,6 +719,7 @@ function DetailView({ submission, onBack, onToggleTask, onDelete, onRefresh, bus
           initialSourceId={attachSourceId}
           onClose={() => { setShowSolicitation(false); setAttachSourceId(null); }}
           onCreated={() => { setShowSolicitation(false); setAttachSourceId(null); onRefresh(); }}
+          onLateAttach={() => onRefresh()}
         />
       )}
 

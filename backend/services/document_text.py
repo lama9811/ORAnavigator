@@ -33,6 +33,36 @@ from typing import Optional
 MAX_PAGES = 400
 MAX_CHARS = 1_500_000
 
+# How pdfplumber decides where one word ends and the next begins.
+#
+# It measures the horizontal GAP between glyphs against a tolerance, and that
+# tolerance defaults to a FIXED 3 points. TeX does not write a space character
+# between words — it moves the pen — and in a 10pt document that move is often
+# ~2pt, under the default. The words are then welded together.
+#
+# Measured on a real awarded NSF 23-598 package (Morgan State, 56 pages,
+# LaTeX): 863 run-together tokens over 18 characters, including every heading
+# the reviewer looks for — `IntellectualMerit`, `BroaderImpacts`,
+# `ResultsfromPriorNSFsupport`. Nothing reported a broken read; three separate
+# features just said false things about the PROPOSAL instead. The locate stage
+# could not find those sections; `quote_in` rejected the reviewer's own quotes,
+# so 21 of 34 fix-list rows were correct findings demoted to `not_found`; and
+# the language checks returned 142 "mistakes" of which exactly one was real.
+#
+# A RATIO scales the tolerance with the font size instead of pinning it, which
+# is the property that makes it safe across documents: 0.15 is 1.5pt at 10pt
+# body text and proportionally more in a heading. Measured across both awarded
+# packages: run-together tokens 863 -> 1 and 21 -> 1, all heading probes
+# recovered, and the whole-word counts of ordinary vocabulary UNCHANGED
+# (representation 85, mathematics 78, undergraduate 60, research 269) — so the
+# spacing was not bought by chopping real words up, which is the mirror failure
+# and would break `quote_in` just as badly while looking like a different bug.
+#
+# 0.20 already regressed (111 welded tokens); 0.25 regressed badly (613).
+# Shared with services/solicitation_extractor.read_pdf so the upload path and
+# the solicitation path cannot drift into reading the same PDF differently.
+PDF_X_TOLERANCE_RATIO = 0.15
+
 # Extensions we can actually read. Checked against the filename only as a first
 # pass — content sniffing decides for anything ambiguous.
 PDF_EXTS = {".pdf"}
@@ -63,7 +93,8 @@ def _extract_pdf(data: bytes) -> tuple[str, int, bool]:
             if i >= MAX_PAGES:
                 truncated = True
                 break
-            pages.append(page.extract_text() or "")
+            pages.append(
+                page.extract_text(x_tolerance_ratio=PDF_X_TOLERANCE_RATIO) or "")
     text = "\n".join(pages)
     if len(text) > MAX_CHARS:
         text = text[:MAX_CHARS]

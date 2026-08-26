@@ -73,10 +73,26 @@ from services.text_match import quote_in as _quote_in
 MODEL = os.getenv("EIR_REVIEW_MODEL", "gemini-3.6-flash")
 MODEL_LOCATION = os.getenv("EIR_REVIEW_LOCATION", "global")
 
-# A full Project Description runs ~15 pages. Truncating the paste would make a
-# late section look missing, so the cap is generous; the model's context is not
-# the binding constraint here.
-MAX_DRAFT_CHARS = 120_000
+# The most text handed to the model in one prompt.
+#
+# 120_000 WAS TOO SMALL, and the failure was silent. A real awarded NSF 23-598
+# package (56 pages, Morgan State, 2026) extracts to 145,023 characters, so the
+# last 25,023 never reached the locate stage. Measured on that document: at
+# 120_000 the locate stage found 8 sections; given the whole text it found 10,
+# and the two it gained were exactly the ones past the cut — Special
+# Information/Supplementary Documents (heading at 131,720) and the Letters of
+# Collaboration (136,314). Every requirement filed under them reported "Not
+# located" and left the score's denominator, on a proposal NSF funded.
+#
+# 400_000 covers a package roughly three times that long. It is ~100k tokens
+# against gemini-3.6-flash's context, so the model is not the constraint — and
+# measured on the same document, handing it the WHOLE text was not slower:
+# 3.4s for 145,023 chars against 16.5s for the truncated 120,000.
+#
+# It is still a cap, so `review_draft` REPORTS when it bites (`truncated`).
+# The old comment called the cap generous and moved on; the number was wrong
+# and nothing would have said so.
+MAX_DRAFT_CHARS = 400_000
 
 # Gemini thinking is CAPPED here, not disabled, and the number is measured.
 # gemini-3.6-flash thinks by default and that costs ~9s a review. Turning it
@@ -168,6 +184,35 @@ def _find_offset(text: str, marker: str) -> Optional[int]:
 _SUBSECTIONS = {"broader_impacts": "project_description"}
 
 
+def _parent_section(child_key: str, sections: dict) -> Optional[str]:
+    """The parent of `child_key` in THIS section universe, or None.
+
+    Matched on `section_signature`, never on the raw key, because the row
+    sources spell one part of a proposal with different functions:
+    `canon_section` SINGULARISES ("broader_impact") while `section_key` does not
+    ("broader_impacts"), and this table is written in the second spelling. A
+    stored profile is re-canonicalised on every load, so the first spelling is
+    the one production actually builds -- the guard above was keyed on the one
+    it never sees, and so never fired outside its own tests.
+
+    Measured before this was fixed, on a package that did exactly what this tool
+    asks: the Project Summary span came back 104 words instead of 155, cut at
+    its own third heading, so `pappg_ps_headings` reported "Missing Broader
+    Impacts" and `pappg_ps_impacts` reported "the draft lacks a dedicated
+    Broader Impacts section" -- about a summary that has one.
+
+    The PARENT is resolved through the universe for the same reason, and that
+    also preserves the old behaviour of only treating a child as nested when its
+    parent is a section this solicitation actually names."""
+    sig = sp.section_signature(child_key)
+    if not sig:
+        return None
+    for child, parent in _SUBSECTIONS.items():
+        if sp.section_signature(child) == sig:
+            return sp.resolve_section_key(sections, parent)
+    return None
+
+
 def _spans_from_markers(text: str, markers: dict, sections: dict) -> dict:
     """{section_key: first_line} -> {section_key: {"text","start","end","marker"}}.
 
@@ -189,7 +234,7 @@ def _spans_from_markers(text: str, markers: dict, sections: dict) -> dict:
     # A child is held out of the tiling whenever its parent is a section THIS
     # solicitation names — even if the parent turns out not to be located, since
     # the point is that it must not cut a sibling either way.
-    subs = {k: v for k, v in offsets.items() if _SUBSECTIONS.get(k) in sections}
+    subs = {k: v for k, v in offsets.items() if _parent_section(k, sections)}
     found = sorted((off, k, m) for k, (off, m) in offsets.items() if k not in subs)
 
     spans = {}
@@ -199,7 +244,7 @@ def _spans_from_markers(text: str, markers: dict, sections: dict) -> dict:
                       "end": end, "marker": marker}
 
     for key, (off, marker) in subs.items():
-        parent = spans.get(_SUBSECTIONS[key])
+        parent = spans.get(_parent_section(key, sections))
         if parent is not None:
             rel = _find_offset(text[parent["start"]:parent["end"]], marker)
             if rel is None:
@@ -568,7 +613,7 @@ _CREDIT = {
 
 
 def score(findings: list[dict], *, solicitation_id: str = "",
-          scope: str = "the solicitation") -> Optional[dict]:
+          scope: Optional[str] = None) -> Optional[dict]:
     """Completeness against `solicitation_id`, computed in code (golden rule 1).
 
     Deliberately NOT a funding prediction and deliberately not model-assigned.
@@ -602,6 +647,16 @@ def score(findings: list[dict], *, solicitation_id: str = "",
     for b in by_source.values():
         b["percent"] = int(math.floor(100.0 * b["earned"] / b["assessed"] + 0.5))
         b["earned"] = round(b["earned"], 1)
+    if scope is None:
+        # DERIVED, never asserted. `review_section` used to pass a fixed
+        # "the PAPPG's rules for this section", so a Letter of Intent — a
+        # section the rulebook holds no rules for at all — told the PI its
+        # score measured completeness against NSF's standing policy when every
+        # rule counted came from their own solicitation. The authorities that
+        # actually contributed are already computed one line above.
+        names = list(by_source)
+        scope = (" and ".join(names) if len(names) < 3
+                 else ", ".join(names[:-1]) + " and " + names[-1]) or "the solicitation"
     return {
         "percent": pct,
         "band": band,
@@ -616,9 +671,18 @@ def score(findings: list[dict], *, solicitation_id: str = "",
         # set that is six sevenths NSF's standing policy — attributing rules to a
         # solicitation that never stated them. `by_source` carries the breakdown;
         # this sentence stays true instead of trying to carry it too.
+        #
+        # The guard is `by_source` naming THAT SOLICITATION AND NOTHING ELSE,
+        # not `len(by_source) == 1`. The looser form let the mirror bug through
+        # and it shipped: a Project Summary whose only scored rule was the
+        # rulebook's own deterministic heading check (every semantic row
+        # `unclear`) reported "100% of the 1 NSF 23-598 requirements" about a
+        # rule NSF 23-598 never wrote. One entry is not the same fact as the
+        # right entry.
         "basis": (f"{pct}% of the {len(scored)} "
                   + (f"{solicitation_id} "
-                     if solicitation_id and len(by_source) == 1 else "")
+                     if solicitation_id and list(by_source) == [solicitation_id]
+                     else "")
                   + "requirements this reviewer could assess are addressed in your draft. "
                   # THE PRESENCE CAVEAT, and it travels with the number into both
                   # modals because it is the guardrail, not decoration. A PI asked
@@ -630,6 +694,101 @@ def score(findings: list[dict], *, solicitation_id: str = "",
                   f"it is. This measures completeness against {scope}, not the "
                   "quality of the writing or the likelihood of an award."),
     }
+
+
+# ── VERDICT ─────────────────────────────────────────────────────────────────
+# TWO COUNTS, ONE READING. Measured on a running backend 2026-08-26: a Project
+# Summary carrying a doubled word, two misspellings, a wrong word, a sentence
+# with no terminal punctuation and ten more wording problems reported
+# **5 of 5 rules met, 100%**. Every one of the fifteen had been found —
+# `mechanical_checks`, `language_slips` and the model proofreader all ran — and
+# every one was outside the score, on the reasoning that a typo is not
+# incompleteness against a solicitation. The reasoning holds; the screen it
+# produced does not. A PI reading 100% concludes the section is done.
+#
+# NOTHING IS BLENDED, and that is the design rather than a shortcut. An error is
+# verifiable — a doubled word is in the text or it is not. A weight is an
+# opinion: folding fifteen errors and five rules into one percentage means
+# deciding a typo is worth some fraction of a missing Broader Impacts statement,
+# and no fraction of that is defensible. So both counts stay whole and only the
+# VERDICT reads both — which is the one thing the old headline could not do,
+# because it only ever knew one of them.
+_ISSUE_MINOR_MAX = 5
+
+
+def verdict(score_block: Optional[dict], *, mistakes: list,
+            wording: list) -> dict:
+    """A reading of BOTH what the rules found and what the proofreaders found.
+
+    Deterministic and model-free, like `score()` itself (golden rule 1). The
+    model's contribution is already inside the two lists; this only counts them.
+
+    Levels, in the order they are decided:
+      needs_work  a scored rule is unmet, OR more than five errors. A section
+                  missing its Broader Impacts statement is not "minor" because
+                  the spelling is perfect — the rules are the floor and errors
+                  sit on top of it, never instead of it.
+      minor       every rule met, one to five errors.
+      clean       every rule met, no errors found. UNREACHABLE without a score,
+                  because claiming a clean bill of health for a rules check that
+                  never ran is the same lie as a completeness percentage
+                  computed with the semantic half missing.
+
+    The wording is deliberately the weakest true statement available. "No
+    problems found" is what was measured; "ready to submit" is not ours to say,
+    and this repo has rendered presence as approval four times already.
+    """
+    counts = {"mistakes": len(mistakes or []), "wording": len(wording or []),
+              "total": len(mistakes or []) + len(wording or [])}
+    total = counts["total"]
+    assessed = (score_block or {}).get("assessed") or 0
+    earned = (score_block or {}).get("earned")
+    rules_met = bool(score_block) and (score_block.get("percent") == 100)
+    fraction = (f"{_trim(earned)} of {assessed}" if score_block else "")
+
+    if not score_block:
+        level = "minor" if 0 < total <= _ISSUE_MINOR_MAX else (
+            "needs_work" if total else "unknown")
+        head = ("The rules were not checked for this section"
+                + (", and the writing has " + _plural(total) + "."
+                   if total else ", and no writing problems were found."))
+        return {"level": level, "label": _LEVEL_LABELS[level],
+                "issues": counts, "summary": head}
+
+    if not rules_met or total > _ISSUE_MINOR_MAX:
+        level = "needs_work"
+    elif total:
+        level = "minor"
+    else:
+        level = "clean"
+
+    if rules_met and total:
+        summary = (f"Every rule was met ({fraction}), but the writing has "
+                   f"{_plural(total)}. Fix those before you submit.")
+    elif rules_met:
+        summary = f"Every rule was met ({fraction}) and no writing problems were found."
+    elif total:
+        summary = (f"{fraction} rules met, and the writing has "
+                   f"{_plural(total)}.")
+    else:
+        summary = f"{fraction} rules met. No writing problems were found."
+    return {"level": level, "label": _LEVEL_LABELS[level],
+            "issues": counts, "summary": summary}
+
+
+_LEVEL_LABELS = {"clean": "No problems found", "minor": "Minor issues",
+                 "needs_work": "Needs work", "unknown": "Not checked"}
+
+
+def _plural(n: int) -> str:
+    return f"{n} problem" if n == 1 else f"{n} problems"
+
+
+def _trim(value) -> str:
+    """1.0 -> "1", 3.5 -> "3.5". The fraction is read, not computed with."""
+    if value is None:
+        return "0"
+    return str(int(value)) if float(value).is_integer() else str(value)
 
 
 # ── ASSEMBLY ────────────────────────────────────────────────────────────────
@@ -791,6 +950,34 @@ def apply_delegation(findings: list[dict]) -> list[dict]:
     return findings
 
 
+def _basics_and_solicitation(profile: dict) -> dict:
+    """`profile` with the rulebook's EXTENDED rows removed, sections and all.
+
+    The sections go with them: an extended row can be the only thing that put a
+    section in the universe, and leaving an empty one behind would report a PI's
+    package as missing a part nothing was going to check anyway.
+
+    A shallow copy, never a mutation — the caller's profile is the stored one
+    and other tools still read every row from it.
+    """
+    all_rows = profile.get("requirements") or []
+    rows = [r for r in all_rows if r.get("tier") != "extended"]
+
+    # ONLY the sections an extended row BROUGHT IN are dropped, never every
+    # section that ends up empty. A required attachment puts a section in the
+    # universe with no requirement rows of its own — the locate stage still has
+    # to look for it, and reporting a missing attachment is the compliance
+    # rejection this tool exists to prevent. Dropping those would silently stop
+    # telling a PI their Letters of Collaboration are absent.
+    introduced = {r.get("section") for r in all_rows
+                  if r.get("tier") == "extended" and r.get("section")}
+    surviving = {r.get("section") for r in rows if r.get("section")}
+    orphaned = introduced - surviving
+    sections = {k: v for k, v in (profile.get("sections") or {}).items()
+                if k not in orphaned}
+    return {**profile, "requirements": rows, "sections": sections}
+
+
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
                  budget: Optional[dict] = None, use_ai: bool = True,
                  pages: Optional[dict] = None) -> dict:
@@ -805,6 +992,25 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     pages      — section key -> REAL page count, from an upload. Absent it,
                  page rules report an estimate and never a verdict.
     """
+    # THE SOLICITATION AND THE RULEBOOK'S BASICS — product decision 2026-08-26,
+    # the same narrowing Check a Section took earlier that day. Measured on a
+    # live proposal: 204 rules (48 solicitation + 14 basics + 142 extended)
+    # became 62. A fix-list of two hundred rows buries the handful that matter,
+    # which is the failure this repo predicted in writing before the extracted
+    # PAPPG rules ever shipped.
+    #
+    # THIS RETIRES THE EXTENDED ROWS ENTIRELY. Check a Section already excluded
+    # them, so this was the last path that read them: 142 reviewed rules now sit
+    # in kb_structured/_pappg_24_1_rules.json with no reader, including the 19
+    # prohibitions ("Do not request NSF funds for alcoholic beverages"). That is
+    # a real loss and it was taken knowingly. What makes it defensible is that
+    # NONE of the 142 carries a deterministic check — every code-decided rule is
+    # among the curated 14 — so this narrows the model-judged half and leaves
+    # the arithmetic untouched.
+    #
+    # Filtered HERE rather than at profile build, so a stored profile is
+    # unchanged and the decision can be revisited by editing one line.
+    profile = _basics_and_solicitation(profile)
     sections = profile.get("sections") or {}
     requirements = profile.get("requirements") or []
     solicitation_id = profile.get("id") or ""
@@ -815,7 +1021,7 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             "solicitation": _solicitation_meta(profile),
             "ai": False, "findings": [], "reviewer_notes": [], "score": None,
             "sections_located": [], "sections_missing": list(sections),
-            "word_count": 0, "mistakes": [],
+            "word_count": 0, "mistakes": [], "truncated": None,
             "message": "Paste your proposal to get a completeness review.",
         }
 
@@ -893,6 +1099,14 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             {"key": k, "label": v["label"]} for k, v in sections.items() if k not in spans
         ],
         "word_count": len(text.split()),
+        # A cap that is never reported is invisible however large it is. Same
+        # contract as solicitation_extractor's `truncated` / `input_chars`:
+        # both numbers, so a PI can see how much of their package was actually
+        # read instead of being handed a completeness score computed over part
+        # of it. ABSENT (None) when the package fitted — a warning that renders
+        # on every review stops being read.
+        "truncated": ({"chars": len(text), "read": MAX_DRAFT_CHARS}
+                      if len(text) > MAX_DRAFT_CHARS else None),
         # Mechanical errors — placeholders, dangling figure references, a total
         # that contradicts the saved budget. Deterministic and quoted, and
         # deliberately OUTSIDE `findings` and outside the score: a leftover
@@ -940,6 +1154,16 @@ def review_section(text: str, *, section: str, rulebook: str,
     one section here, so unlike the whole-package path the count is exact.
     """
     label = rulebook_baseline.section_label(section)
+    if profile and not rulebook_baseline.rules_for(rulebook, section, tier="basic"):
+        # A section only the SOLICITATION names. `section_label` builds a name
+        # out of the key when the rulebook has never heard of the section, so
+        # `letter_intent` renders as "Letter Intent" while the profile carries
+        # the funder's own wording, "Letter of Intent" — a tool that misspells
+        # the deliverable it is checking reads as one that does not know it.
+        # Scoped to sections the rulebook does NOT own, so Research.gov's
+        # wording keeps winning everywhere it actually applies.
+        meta = (profile.get("sections") or {}).get(section)
+        label = (meta or {}).get("label") or label
     text = (text or "").strip()
     base = {
         "section": section, "label": label, "rulebook": rulebook,
@@ -950,7 +1174,18 @@ def review_section(text: str, *, section: str, rulebook: str,
     if not text:
         return {**base, "message": f"Paste your {label} to have it checked."}
 
-    rows = rulebook_baseline.rules_for(rulebook, section)
+    # BASICS ONLY — see the note on rulebook_baseline.RULES. The extended rows
+    # are the long tail read out of the rulebook itself (fonts, margins,
+    # conditionals, per-proposal-type variants); measured on a live proposal
+    # they outnumbered that solicitation's own rules 138 to 33, and 45 to 6 on
+    # its Budget section, which is not what a PI opens this screen to see.
+    #
+    # NOT a narrowing of the product: `review_draft` reads the whole profile
+    # and still gets every extended row, so a PI who has never met NSF's font
+    # rules meets them in a full package review. Same distinction
+    # `checklist_filter` draws keeping 7 of 24 requirements as tick-boxes while
+    # the stored profile keeps all 24.
+    rows = rulebook_baseline.rules_for(rulebook, section, tier="basic")
     if profile:
         # The picker sends a RULEBOOK key; a profile is keyed in the
         # solicitation's OWN vocabulary, and `sections_from` keeps whichever
@@ -964,8 +1199,16 @@ def review_section(text: str, *, section: str, rulebook: str,
         sections = profile.get("sections") or {}
         key = section if section in sections else (
             sp.resolve_section_key(sections, label) or section)
+        # EXTENDED ROWS ARE EXCLUDED HERE TOO, and this is the door that
+        # mattered. `baseline_rows` injects every rulebook rule INTO the profile
+        # at load time — that is what makes the rulebook retroactive for
+        # proposals stored before it existed — so a profile carries the extended
+        # rows whether or not this function looks them up directly. Narrowing
+        # only the lookup above changed nothing on a real proposal: a live
+        # Budget check still returned 51 rules, 45 of them extended.
+        seen = {b["id"] for b in rows}
         rows = rows + [r for r in sp.requirements_for(profile, key)
-                       if r["id"] not in {b["id"] for b in rows}]
+                       if r["id"] not in seen and r.get("tier") != "extended"]
     if not rows:
         return {**base, "message": (
             f"No rules are on file for {label}. Nothing was checked.")}
@@ -1009,7 +1252,7 @@ def review_section(text: str, *, section: str, rulebook: str,
     order = {r["id"]: i for i, r in enumerate(rows)}
     findings.sort(key=lambda f: order.get(f["id"], 999))
 
-    return {
+    out = {
         **base,
         "findings": findings,
         "ai": any(f["source"] == "ai" for f in findings),
@@ -1024,6 +1267,9 @@ def review_section(text: str, *, section: str, rulebook: str,
             "length": section_guidance.length_guidance(
                 base["word_count"], _section_page_limit(rows, section)),
             "priorities": section_guidance.priorities(findings),
+            # The list's own name, decided by what is IN it. "Do this first"
+            # over a section that met every rule reads as failure.
+            "priorities_heading": section_guidance.priorities_heading(findings),
         },
         # ONE SECTION, so the whole-document rules are off. Every well-cited
         # Project Description used to come back with "Works are cited but no
@@ -1040,7 +1286,11 @@ def review_section(text: str, *, section: str, rulebook: str,
         # against a solicitation. Deliberately not run by `review_draft`: a whole
         # package is many thousands of words, and a proofread of all of it is a
         # different feature with a different cost, not this one scaled up.
-        "wording": proofread.proofread(text, use_ai=use_ai),
+        # The section's own headings, read off the RULE that enforces them so
+        # the locator and the checker can never name different ones — the same
+        # reason `_section_page_limit` reads the allowance off `rb_page_limit`.
+        "wording": proofread.proofread(text, use_ai=use_ai,
+                                       headings=_section_headings(rows)),
         # THE SCORE IS A RULES-MET SHARE, NEVER "how done this section is".
         # This used to return None, on the reasoning that a percentage would
         # read as "your Project Summary is 60% written" — which the rules cannot
@@ -1053,17 +1303,39 @@ def review_section(text: str, *, section: str, rulebook: str,
         # half came from. Same `score()` and same `_CREDIT` as Draft Review —
         # one scorer, two entry points, so the two can never disagree about the
         # same section.
+        # `scope` is DERIVED inside score() from the rules that actually scored.
+        # This used to pass a fixed "<rulebook>'s rules for this section", which
+        # named the PAPPG on a Letter of Intent — a section the rulebook holds
+        # no rules for at all.
         "score": score(findings,
-                       solicitation_id=(profile or {}).get("id", ""),
-                       scope=f"{rulebook}'s rules for this section"
-                             + (f" and {(profile or {}).get('id')}'s own"
-                                if profile and (profile or {}).get("id") else "")),
+                       solicitation_id=(profile or {}).get("id", "")),
         "message": (
             "The AI reviewer was not run for this check, so the requirements "
             "needing judgment are marked unclear below rather than assessed — "
             "only the rule-based checks are complete."
         ) if skipped_semantic else None,
     }
+    # THE VERDICT READS BOTH HALVES, and is the only thing here that does.
+    # `score` knows the rules and nothing about the writing; `mistakes` and
+    # `wording` know the writing and nothing about the rules. Measured before
+    # this existed: five rules met, fifteen errors found, headline "100%".
+    out["verdict"] = verdict(out["score"], mistakes=out["mistakes"],
+                             wording=out["wording"])
+    return out
+
+
+def _section_headings(rows: list[dict]) -> list[str]:
+    """The headings this section's own rule requires, or [].
+
+    Read from the RULES rather than typed a second time: two copies of one list
+    drift, and then the wording locator names a heading the checker does not
+    require. Same contract as `_section_page_limit` below.
+    """
+    for r in rows or []:
+        if r.get("check") == "rb_headings":
+            names = (r.get("check_args") or {}).get("headings") or []
+            return [str(n) for n in names]
+    return []
 
 
 def _section_page_limit(rows: list[dict], section: str) -> Optional[float]:

@@ -175,7 +175,13 @@ _PAPPG_RULES: list[dict] = [
          "Project Summary fits on one page",
          "File cannot exceed one page.",
          "An over-length Project Summary is returned without review.",
-         kind="deterministic", check="rb_page_limit", flag_if_present=True,
+         # NOT `flag_if_present`, though the PAPPG words it as "File cannot
+         # exceed one page". The flag exists to tell the SEMANTIC reviewer that
+         # absence means pass — and a deterministic row never reaches it, so
+         # the flag bought nothing here and rendered a `[prohibited]` tag
+         # beside a label phrased POSITIVELY ("fits on one page"), which reads
+         # as "fitting on one page is prohibited". Reported by a PI.
+         kind="deterministic", check="rb_page_limit",
          check_args={"section": PROJECT_SUMMARY, "limit": 1}),
 
     # ── Project Description ─────────────────────────────────────────────────
@@ -201,7 +207,8 @@ _PAPPG_RULES: list[dict] = [
          "opportunity. If the funding opportunity does not provide a specific "
          "limit, the 15-page limit stated in the PAPPG should be followed.",
          "Most funders return an over-length section without review.",
-         kind="deterministic", check="rb_page_limit", flag_if_present=True,
+         # Same reason as pappg_ps_one_page above.
+         kind="deterministic", check="rb_page_limit",
          check_args={"section": PROJECT_DESCRIPTION, "limit": 15}),
 
     # ── References Cited ────────────────────────────────────────────────────
@@ -292,7 +299,33 @@ def _apply_source_upgrades(curated: list[dict], upgrades: dict) -> None:
 
 _apply_source_upgrades(_PAPPG_RULES, _SOURCE_UPGRADES)
 
-RULES: dict[str, list[dict]] = {"the PAPPG": _PAPPG_RULES + _REVIEWED_ROWS}
+# TWO POPULATIONS, and merging them without a label is what let one bury the
+# other on screen.
+#
+# `basic`    — the 14 rows read off Research.gov's own per-section "Content
+#              Instructions" screens: NSF's own distillation of what each
+#              section must contain. Every deterministic check is here.
+# `extended` — the 142 read out of PAPPG Chapter II: real rules, reviewed row
+#              by row, but the long tail (fonts, margins, conditionals,
+#              prohibitions, per-proposal-type variants).
+#
+# A full Draft Review takes both. Check a Section takes `basic` only, so that a
+# solicitation's own rules are not outnumbered on the one screen a PI opens
+# while writing that section — measured at 138 PAPPG rows against 33 from the
+# solicitation, and 45 against 6 on Budget, before this split.
+#
+# The tag is written HERE, once, rather than left for callers to infer by
+# comparing against `_PAPPG_RULES`: a caller reaching into a private list is a
+# caller that silently mis-tiers the day a rule moves between them.
+def _tag(rows: list[dict], tier: str) -> list[dict]:
+    for row in rows:
+        row["tier"] = tier
+    return rows
+
+
+RULES: dict[str, list[dict]] = {
+    "the PAPPG": _tag(_PAPPG_RULES, "basic") + _tag(_REVIEWED_ROWS, "extended"),
+}
 
 
 # ── structural skeletons ────────────────────────────────────────────────────
@@ -336,12 +369,19 @@ SKELETONS: dict[str, dict[str, dict]] = {
 }
 
 
-def rules_for(rulebook: str, section: Optional[str] = None) -> list[dict]:
-    """Rows for `rulebook`, optionally narrowed to one section.
+def rules_for(rulebook: str, section: Optional[str] = None,
+              tier: Optional[str] = None) -> list[dict]:
+    """Rows for `rulebook`, optionally narrowed to one section and/or one tier.
 
     An unknown rulebook returns [] rather than raising: a solicitation citing
-    something we hold no rules for must behave exactly as it does today."""
+    something we hold no rules for must behave exactly as it does today.
+
+    `tier="basic"` is Check a Section's view — see the note on RULES. Omitting
+    it keeps every row, which is what a full Draft Review takes, so no existing
+    caller changes behaviour by not passing it."""
     rows = RULES.get(rulebook or "", [])
+    if tier is not None:
+        rows = [r for r in rows if r.get("tier") == tier]
     if section is None:
         return list(rows)
     return [r for r in rows if r["section"] == section]
@@ -378,7 +418,11 @@ def sections_offered(rulebook: str) -> list[dict]:
     once. This filters the PICKER, not the rulebook — the same distinction
     `checklist_filter` draws when it keeps 7 of 24 requirements as tick-boxes
     while the stored profile keeps all 24."""
-    have = {r["section"] for r in rules_for(rulebook)
+    # BASIC rows only, because this is Check a Section's picker and Check a
+    # Section reviews basics plus the solicitation. A picker advertising a
+    # section the review would then find empty is how a PI selects one and is
+    # told there is nothing on file for it.
+    have = {r["section"] for r in rules_for(rulebook, tier="basic")
             if r.get("check") != "rb_not_in_text"}
     return [{"key": k, "label": _SECTION_LABELS[k]}
             for k in _SECTION_ORDER if k in have]

@@ -567,9 +567,26 @@ def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 8,
             # a quote the model pulled from an overlapping region still verifies.
             # drop_list_noise because this is model output vs PDF-extracted text,
             # and bulleted items are the commonest shape of a real requirement.
+            # ONE DEFINITION OF VERIFIED, with a fast path in front of it.
+            #
+            # This used to BE the definition — `normalize(...) not in haystack`,
+            # with the normalised document hoisted out of the loop. Reasonable
+            # as an optimisation, and it made this module the only place golden
+            # rule 2 has a second, private implementation. So when `quote_in`
+            # learned to read dash-broken words and then to tolerate ligatures
+            # a typeset PDF loses, the extractor got neither — and it is the
+            # component that reads solicitations out of typeset PDFs, which is
+            # exactly where both artifacts occur. Measured on a real NSF
+            # solicitation: two genuine requirements dropped, both quoting a
+            # word the PDF had mangled (`justification` -> `justication`).
+            #
+            # The hoisted haystack is kept because re-normalising 50,000
+            # characters per row would be waste; `quote_in` is consulted only
+            # for the rows the fast path would otherwise throw away.
             if normalize(row["source"], drop_list_noise=True) not in haystack:
-                dropped += 1
-                continue
+                if not quote_in(text, row["source"], drop_list_noise=True):
+                    dropped += 1
+                    continue
             if row["id"] in by_id:
                 continue
             by_id[row["id"]] = row

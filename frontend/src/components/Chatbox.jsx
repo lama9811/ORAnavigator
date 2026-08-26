@@ -101,6 +101,56 @@ const getFileIcon = (filename) => {
   return <File className="file-icon generic" />;
 };
 
+// A screenshot that will not load must render as NOTHING, not as a broken box.
+//
+// The URL is a plain string carried from the KB manifest through
+// forms_catalog.images_for_titles to the browser; no layer in between ever
+// fetches it, so nothing can know it is dead until the browser tries. When one
+// was (73 of 262 were, for three weeks in Aug 2026 -- a double-escaping defect
+// repaired in every copy of the data except the served manifest) the answer
+// grew a torn-page icon captioned with the lesson title, under a heading
+// promising a screenshot. That reads as a broken PRODUCT, and it is strictly
+// worse than the tile being absent, because the caption asserts a picture
+// exists.
+//
+// So this is the second layer, not the fix: the URLs are repaired at the
+// source and guarded by backend/tests/test_etraining_image_urls_resolve.py.
+// What this adds is that the next dead URL -- a republished Rise module mints
+// new asset keys, and three modules have already been republished once -- costs
+// a missing illustration rather than a visibly broken answer.
+//
+// The whole block goes when every image fails, label included: "From the
+// training" over an empty grid is the same false promise one size up.
+function TrainingShots({ images }) {
+  const [failed, setFailed] = useState(() => new Set());
+  const shown = (images || []).filter((im) => im?.url && !failed.has(im.url));
+  if (shown.length === 0) return null;
+  return (
+    <div className="message-shots">
+      <span className="message-shots-label">From the training</span>
+      <div className="message-shots-grid">
+        {shown.map((im, ii) => (
+          <a key={im.url || ii} href={im.url} target="_blank" rel="noopener noreferrer"
+             className="message-shot" title={im.caption || "Open full size"}>
+            <img
+              src={im.url}
+              alt={im.caption || "Training screenshot"}
+              loading="lazy"
+              onError={() => setFailed((prev) => {
+                if (prev.has(im.url)) return prev;
+                const next = new Set(prev);
+                next.add(im.url);
+                return next;
+              })}
+            />
+            {im.caption && <span className="message-shot-cap">{im.caption}</span>}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Chatbox({ initialMessages = [], onSessionChange, sessionId }) {
   const navigate = useNavigate();
   // --- STATE ---
@@ -1327,19 +1377,8 @@ export default function Chatbox({ initialMessages = [], onSessionChange, session
                       </div>
                     )}
 
-                    {msg.sender === "bot" && !msg.isStreaming && msg.images && msg.images.length > 0 && (
-                      <div className="message-shots">
-                        <span className="message-shots-label">From the training</span>
-                        <div className="message-shots-grid">
-                          {msg.images.map((im, ii) => (
-                            <a key={ii} href={im.url} target="_blank" rel="noopener noreferrer"
-                               className="message-shot" title={im.caption || "Open full size"}>
-                              <img src={im.url} alt={im.caption || "Training screenshot"} loading="lazy" />
-                              {im.caption && <span className="message-shot-cap">{im.caption}</span>}
-                            </a>
-                          ))}
-                        </div>
-                      </div>
+                    {msg.sender === "bot" && !msg.isStreaming && (
+                      <TrainingShots images={msg.images} />
                     )}
 
                     {msg.sender === "bot" && !msg.isStreaming && msg.attachments && msg.attachments.length > 0 && (

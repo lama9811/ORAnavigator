@@ -38,7 +38,8 @@ const REQUIREMENT_GRACE_MS = 2000;
 
 export default function SolicitationUploadModal({ onClose, onCreated, initialUrl = "",
                                                   submissionId = null,
-                                                  initialSourceId = null }) {
+                                                  initialSourceId = null,
+                                                  onLateAttach = null }) {
   // step: "pick" -> "extracting" -> "review" -> "creating"
   const [step, setStep] = useState("pick");
   const [error, setError] = useState("");
@@ -309,6 +310,52 @@ export default function SolicitationUploadModal({ onClose, onCreated, initialUrl
       }
       const submission = await res.json();
       onCreated(submission);
+
+      // DELIVER A LATE READ INSTEAD OF DISCARDING IT.
+      //
+      // Create never blocks on the requirement read -- waiting out 60-150s is
+      // the one thing that could lose a PI their work, and that rule does not
+      // change here. What changes is what happens to a read that lands AFTER
+      // the save. It used to be thrown away.
+      //
+      // Measured on a real proposal: the document was read at 19:18:02, the PI
+      // clicked Create at 19:18:38, and the requirement read finished into a
+      // closing modal. The proposal kept the funder's numbers and the document
+      // and no requirement list -- so Draft Review 409'd, the badge read "rules
+      // only", and Section Check offered the rulebook's sections alone. One
+      // attach has to reach every tool.
+      //
+      // The PUT is the SAME endpoint the attach flow uses, and re-attaching is
+      // keyed by requirement id, so a task the PI ticked off in the intervening
+      // minute survives (tests/test_late_requirement_attach.py). A failure here
+      // changes nothing: the proposal already exists and can be re-attached by
+      // hand, so this never surfaces an error over work that succeeded.
+      const lateId = submission?.id || submissionId;
+      if (lateId && readRef.current.state === "running" && readRef.current.promise) {
+        readRef.current.promise
+          .then(async () => {
+            const late = readRef.current;
+            if (late.state !== "ready" || !late.data?.requirements?.length) return;
+            const r = await fetch(
+              `${API_BASE}/api/me/submissions/${lateId}/solicitation`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", ...authHeaders() },
+                body: JSON.stringify({
+                  extracted,
+                  requirements: late.data.requirements,
+                  merit_criteria: late.data.merit_criteria,
+                  eligibility_notes: late.data.eligibility_notes,
+                  read_report: late.data.read_report,
+                  extraction: late.data.extraction,
+                  source: { kind: source?.kind, filename: source?.filename || null,
+                            url: source?.url || null },
+                  source_id: boundSourceId,
+                }),
+              });
+            if (r.ok && onLateAttach) onLateAttach(await r.json());
+          })
+          .catch(() => { /* the proposal is already saved; nothing to undo */ });
+      }
     } catch (e) {
       setError(e.message || (attaching ? "Couldn't attach the solicitation."
                                        : "Couldn't create the proposal."));

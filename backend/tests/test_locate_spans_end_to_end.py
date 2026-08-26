@@ -198,3 +198,74 @@ def test_a_facilities_heading_written_without_commas_still_locates():
         "Facilities Equipment and Other Resources")
     result = draft_review.review_draft(text, profile=_nsf_profile(), use_ai=False)
     assert _by_id(result)["pappg_fe_no_financials"]["status"] == "clear"
+
+
+# ── B3: the guard has to fire on the key PRODUCTION actually builds ─────────
+
+def _nsf_profile_canonical():
+    """The same profile, with the Broader Impacts row spelled the way a STORED
+    proposal spells it.
+
+    `proposals_service.load_solicitation_profile` runs every stored row through
+    `solicitation_requirements.canon_section` on every load — that is what
+    retroactively repairs profiles extracted before a canonicalisation improved.
+    `canon_section` SINGULARISES, so a row the extractor wrote as
+    "Broader Impacts" reaches the engine as `broader_impact`, not
+    `broader_impacts`. Every other test in this file hand-writes the plural,
+    which is the spelling `_SUBSECTIONS` is keyed on — so they exercise a key
+    production never produces.
+    """
+    from services.solicitation_requirements import canon_section
+    extracted = [
+        {"id": "sol_ps_loi", "section": canon_section("Project Summary"),
+         "label": "Include the LOI number in the Project Summary",
+         "kind": "semantic", "scored": True,
+         "source": ("The Project Summary must include the LOI number in addition "
+                    "to all the requirements outlined in the PAPPG."),
+         "why": "", "keywords": ["loi"]},
+        {"id": "sol_bi_plan", "section": canon_section("Broader Impacts"),
+         "label": "Describe the broader impacts plan",
+         "kind": "semantic", "scored": True,
+         "source": "The Broader Impacts section must describe the plan.",
+         "why": "", "keywords": ["broader impacts"]},
+    ]
+    return sp.build_generic({}, extracted, id="NSF 99-999",
+                            title="A generic NSF solicitation")
+
+
+def test_the_subsection_guard_fires_on_the_canonicalised_section_key():
+    """The same compliant package as B1, through the key production builds.
+
+    `_SUBSECTIONS` is keyed `broader_impacts` (the `section_key` spelling) while
+    a stored row arrives as `broader_impact` (the `canon_section` spelling), so
+    the child is never held out of the tiling. Deterministic locate hides it —
+    `_locate_fallback` looks for the alias "broader impact", which no PI writes,
+    so the child is simply not located. The AI locate DOES return the heading a
+    PI wrote, and then the guard has to work: measured on a real review, the
+    Project Summary span came back 104 words instead of 155, cut at its own
+    third heading, and `pappg_ps_headings` reported "Missing Broader Impacts"
+    while `pappg_ps_impacts` reported "the draft lacks a dedicated Broader
+    Impacts section" — both about a summary that has one.
+
+    Driven through `_spans_from_markers` because that is where the guard lives
+    and where the model's markers arrive; stubbing Gemini would test the stub.
+
+    Fourth instance of this repo's oldest failure family: two modules computing
+    a section key with two different functions and neither noticing.
+    """
+    sections = _nsf_profile_canonical()["sections"]
+    bi_key = next(k for k in sections if "broader" in k)
+
+    # Exactly what the model returns for this package: the verbatim heading
+    # lines, including the summary's own "Broader Impacts".
+    markers = {"project_summary": "Project Summary",
+               bi_key: "Broader Impacts",
+               "project_description": "Project Description"}
+    spans = draft_review._spans_from_markers(COMPLIANT_PACKAGE, markers, sections)
+
+    ps = spans["project_summary"]
+    assert "Broader Impacts" in ps["text"], (
+        "the Project Summary was truncated at its own Broader Impacts heading "
+        f"({len(ps['text'].split())} words)")
+    assert "curriculum developed here" in ps["text"], (
+        "the summary lost its Broader Impacts statement to the sub-section")

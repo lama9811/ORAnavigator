@@ -196,3 +196,136 @@ def test_upload_unknown_rulebook_is_400(ctx):
                      "rulebook": "the Hitchhiker's Guide"},
                files={"file": ("x.pdf", _CORRUPT_PDF, "application/pdf")})
     assert r.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# THE PICKER IS DRIVEN BY THE PROPOSAL, NOT BY THE RULEBOOK ALONE (2026-08-26).
+#
+# `GET /api/me/section-check/sections` is auth-free and takes no submission, so
+# it could only ever answer for the rulebook. Every proposal was therefore
+# offered the PAPPG's seven sections whatever its own solicitation asked for,
+# and `_section_check_inputs` 400'd anything the PAPPG had no rules for -- so a
+# solicitation-only section was unreachable twice over.
+#
+# Measured on a real NSF 23-598 proposal: 8 scored rules on the Letter of
+# Intent, which for that program is the first thing NSF requires, with no way
+# for a PI to check it.
+# ---------------------------------------------------------------------------
+
+_LOI_PROFILE = {
+    "id": "NSF 23-598",
+    "title": "HBCU-EiR",
+    "contract": {},
+    "requirements": [
+        {"id": "sol_loi_title", "section": "letter_intent",
+         "section_label": "Letter of Intent",
+         "label": "Include required title format in Letter of Intent",
+         "kind": "semantic", "scored": True,
+         "source": "The Letter of Intent title must begin 'Excellence in Research:'.",
+         "why": "", "keywords": []},
+        {"id": "sol_loi_pi", "section": "letter_intent",
+         "section_label": "Letter of Intent",
+         "label": "Include PI and Co-PI contact information in Letter of Intent",
+         "kind": "semantic", "scored": True,
+         "source": "The Letter of Intent must list PI and Co-PI contact information.",
+         "why": "", "keywords": []},
+    ],
+}
+
+
+@pytest.fixture
+def ctx_with_solicitation(ctx):
+    """The same harness, with a solicitation attached to the PI's submission."""
+    c, sub_id, theirs_id, Session = ctx
+    s = Session()
+    sub = s.get(Submission, sub_id)
+    sub.solicitation_json = json.dumps(_LOI_PROFILE)
+    s.commit()
+    s.close()
+    return c, sub_id, theirs_id, Session
+
+
+def test_the_picker_for_a_proposal_names_its_own_sections(ctx_with_solicitation):
+    c, sub_id, _, _ = ctx_with_solicitation
+    r = c.get(f"/api/me/submissions/{sub_id}/section-check/sections")
+    assert r.status_code == 200, r.text
+    sections = r.json()["sections"]
+    keys = [s["key"] for s in sections]
+    assert "letter_intent" in keys, keys
+    # and the NSF baseline is still there, silence in the solicitation
+    # notwithstanding. References Cited rather than Senior/Key Personnel:
+    # Check a Section takes the rulebook's BASIC rows only, and Senior/Key
+    # holds none of them (see test_section_check_basics_only.py).
+    assert "references_cited" in keys, keys
+    loi = next(s for s in sections if s["key"] == "letter_intent")
+    assert loi["label"] == "Letter of Intent"
+    assert loi["solicitation_rules"] == 2 and loi["rulebook_rules"] == 0
+
+
+def test_a_solicitation_only_section_is_no_longer_rejected(ctx_with_solicitation):
+    """The 400 gate asked the RULEBOOK whether the section existed.
+
+    So Letter of Intent was refused even once the picker offered it -- the
+    second of the two places that made this rulebook-only.
+    """
+    c, sub_id, _, _ = ctx_with_solicitation
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check",
+               json={"section": "letter_intent",
+                     "text": "Letter of Intent\n\nExcellence in Research: Sensing\n"
+                             "PI: Dr. A. Rivera, arivera@morgan.edu\n",
+                     "rulebook": "the PAPPG"})
+    assert r.status_code == 200, r.text
+    ids = {f["id"] for f in r.json()["result"]["findings"]}
+    assert {"sol_loi_title", "sol_loi_pi"} <= ids, sorted(ids)
+
+
+def test_a_section_neither_source_knows_is_still_400(ctx_with_solicitation):
+    """Widening the gate must not open it. `cover_letter` is in neither."""
+    c, sub_id, _, _ = ctx_with_solicitation
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check",
+               json={"section": "cover_letter", "text": FIVE_LINE,
+                     "rulebook": "the PAPPG"})
+    assert r.status_code == 400
+
+
+def test_the_picker_404s_on_another_users_proposal(ctx_with_solicitation):
+    """It reads that proposal's solicitation, so it carries the same rule as
+    every other per-submission route."""
+    c, _, theirs_id, _ = ctx_with_solicitation
+    r = c.get(f"/api/me/submissions/{theirs_id}/section-check/sections")
+    assert r.status_code == 404
+
+
+def test_the_auth_free_picker_offers_the_sections_the_basics_cover(ctx_with_solicitation):
+    """A proposal with no solicitation, and the modal's first paint, both still
+    need an answer that needs no submission.
+
+    FOUR, not the rulebook's nine: Check a Section reviews the rulebook's BASIC
+    rows plus the solicitation, and only these four sections hold any basics.
+    A picker offering a section the review would then find empty is how a PI
+    selects one and is told there is nothing on file for it.
+    """
+    c, _, _, _ = ctx_with_solicitation
+    r = c.get("/api/me/section-check/sections")
+    assert r.status_code == 200
+    assert {s["key"] for s in r.json()["sections"]} == {
+        "project_summary", "project_description", "references_cited",
+        "facilities_equipment_and_other_resources"}
+
+
+def test_upload_accepts_a_solicitation_only_section(ctx_with_solicitation):
+    """The upload path carries its own copy of the gate, and copies drift.
+
+    Fixing only the JSON route would leave a PI who uploads their Letter of
+    Intent as a file with the 400 the paste path no longer gives them -- one
+    feature answering two ways depending on how the text arrived.
+    """
+    c, sub_id, _, _ = ctx_with_solicitation
+    body = (b"Letter of Intent\n\nExcellence in Research: Sensing\n"
+            b"PI: Dr. A. Rivera, arivera@morgan.edu\n")
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
+               data={"section": "letter_intent", "rulebook": "the PAPPG"},
+               files={"file": ("loi.txt", body, "text/plain")})
+    assert r.status_code == 200, r.text
+    ids = {f["id"] for f in r.json()["result"]["findings"]}
+    assert {"sol_loi_title", "sol_loi_pi"} <= ids, sorted(ids)

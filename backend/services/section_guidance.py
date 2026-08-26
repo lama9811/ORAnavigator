@@ -81,6 +81,26 @@ def length_guidance(word_count: int, page_limit: Optional[float]) -> Optional[di
             "page_limit": page_limit, "message": message}
 
 
+# Statuses that mean the rule is SATISFIED. A row in one of these has nothing
+# for the author to fix, only — at most — something to strengthen.
+_PASSING = {"addressed", "clear"}
+
+
+def priorities_heading(findings: list[dict]) -> str:
+    """What to call the list, given what is actually in it.
+
+    "Do this first" over a section that met every rule is a to-do framing on a
+    section with nothing to do, and it reads as failure. Authored HERE rather
+    than in a modal, for the same reason `score()` authors its own `basis` and
+    `verdict()` its own summary: a caption that lives in one modal is a caption
+    the other one renders without.
+    """
+    for f in findings or []:
+        if f.get("status") in _ACTIONABLE and f.get("status") not in _PASSING:
+            return "Do this first"
+    return "Ways to strengthen this"
+
+
 def priorities(findings: list[dict], limit: int = _DEFAULT_LIMIT) -> list[dict]:
     """The few things to do next, ordered, each carrying its own suggestion.
 
@@ -98,7 +118,21 @@ def priorities(findings: list[dict], limit: int = _DEFAULT_LIMIT) -> list[dict]:
         status = f.get("status")
         if status not in _ACTIONABLE:
             continue
-        text = (f.get("suggestion") or "").strip() or (f.get("note") or "").strip()
+        # THE NOTE IS A FALLBACK FOR A FAILURE, NEVER FOR A PASS, and the
+        # asymmetry is the whole fix. A failing row's note says what is MISSING,
+        # which an author can act on even when it is phrased as a diagnosis. A
+        # PASSING row's note says what was FOUND — a confirmation — and putting
+        # that in a to-do list tells someone to do a thing they have done.
+        #
+        # Reported by a PI on a Project Summary that met all four of its rules:
+        # the deterministic heading check has nothing to suggest (it is binary
+        # and it passed), so it arrived with an empty `suggestion` and was
+        # listed carrying "Found “Overview”, “Intellectual Merit”, “Broader
+        # Impacts”, each on its own line." The docstring above already said
+        # such a row is dropped; this fallback was quietly overriding it.
+        text = (f.get("suggestion") or "").strip()
+        if not text and status not in _PASSING:
+            text = (f.get("note") or "").strip()
         if not text:
             continue
         # An advisory row is a conditional the author may not even be subject to

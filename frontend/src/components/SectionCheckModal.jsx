@@ -121,24 +121,52 @@ export default function SectionCheckModal({ submission, onClose }) {
   const [extraction, setExtraction] = useState(null);
   const [error, setError] = useState("");
 
-  // Auth-free on the backend (a static list of section names), but sending the
-  // header anyway costs nothing and keeps this call looking like every other
-  // one in the file rather than a special case someone has to remember.
+  // THE PER-SUBMISSION ROUTE, because the picker is a property of the PROPOSAL.
+  //
+  // This used to call the auth-free /api/me/section-check/sections, which
+  // answers for the rulebook and cannot do better -- it never sees a
+  // submission. So every proposal was offered the PAPPG's seven sections
+  // whatever its own solicitation asked for, and a solicitation's own
+  // deliverables were unreachable: on a live NSF 23-598 proposal that was 8
+  // scored Letter of Intent rules a PI had no way to check.
+  //
+  // The auth-free route stays the fallback, deliberately. It is the right
+  // answer for a proposal with no solicitation, and if the per-proposal call
+  // fails the PI still gets a working picker rather than an empty one.
   useEffect(() => {
     let live = true;
-    fetch(`${API_BASE}/api/me/section-check/sections`, { headers: authHeaders() })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((body) => {
-        if (!live) return;
-        const list = body?.sections;
-        if (Array.isArray(list) && list.length) {
-          setSections(list);
-          setSection((cur) => (list.some((s) => s.key === cur) ? cur : list[0].key));
-        }
-      })
-      .catch(() => { /* keep the fallback list */ });
+    const id = submission?.id;
+    const urls = [
+      id ? `${API_BASE}/api/me/submissions/${id}/section-check/sections` : null,
+      `${API_BASE}/api/me/section-check/sections`,
+    ].filter(Boolean);
+
+    (async () => {
+      for (const url of urls) {
+        try {
+          const r = await fetch(url, { headers: authHeaders() });
+          if (!r.ok) continue;
+          const list = (await r.json())?.sections;
+          if (!live) return;
+          if (Array.isArray(list) && list.length) {
+            setSections(list);
+            setSection((cur) => (list.some((s) => s.key === cur) ? cur : list[0].key));
+            return;
+          }
+        } catch { /* try the next one */ }
+      }
+    })();
     return () => { live = false; };
-  }, []);
+  }, [submission?.id]);
+
+  // What the picker already told us about the section being checked, so the
+  // running message can be specific instead of naming a rulebook it may not be
+  // the only source for.
+  const pendingRuleCount = (() => {
+    const s = sections.find((x) => x.key === section);
+    if (!s || typeof s.solicitation_rules !== "number") return 0;
+    return (s.solicitation_rules || 0) + (s.rulebook_rules || 0);
+  })();
 
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const canRun = mode === "upload" ? Boolean(file) : Boolean(text.trim());
@@ -212,9 +240,15 @@ export default function SectionCheckModal({ submission, onClose }) {
         <header className="scm-header">
           <div>
             <h2>Check a Section</h2>
+            {/* This read "against the PAPPG's rules ... no solicitation
+                needed", which was true when that was all it did. Since
+                2026-08-26 it checks your solicitation's own rules for the
+                section plus NSF's basics, and a screen that describes an older
+                version of itself is how a PI concludes the tool ignores their
+                funder. The solicitation is named first because it leads. */}
             <div className="scm-sub">
-              Check one section against the PAPPG's rules while you're still
-              writing it &mdash; no solicitation needed.
+              Check one section against your solicitation&rsquo;s rules and
+              NSF&rsquo;s basics, while you&rsquo;re still writing it.
             </div>
           </div>
           <button className="scm-close" onClick={onClose} aria-label="Close">
@@ -235,7 +269,18 @@ export default function SectionCheckModal({ submission, onClose }) {
         {step === "running" && (
           <div className="scm-loading">
             <div className="scm-spinner" />
-            <p>Checking {sectionLabel} against the PAPPG&rsquo;s rules&hellip;</p>
+            {/* NOT "against the PAPPG's rules". Since 2026-08-26 a section is
+                checked against the solicitation's rules AND NSF's basics, and
+                naming one of the two is how a PI concludes their funder is
+                being ignored -- the same stale sentence that was already fixed
+                in the header and missed here. The picker knows the split, so
+                say the number instead of guessing at a name. */}
+            <p>
+              Checking your {sectionLabel}
+              {pendingRuleCount > 0 && <> against {pendingRuleCount} rule
+                {pendingRuleCount === 1 ? "" : "s"}</>}
+              &hellip;
+            </p>
           </div>
         )}
 
@@ -269,6 +314,14 @@ function InputView({
           value={section}
           onChange={(e) => setSection(e.target.value)}
         >
+          {/* ONE FLAT LIST. These were grouped under headings naming where
+              each section's rules came from -- "From your solicitation", "NSF
+              baseline". Every section is checked against BOTH, so the headings
+              described provenance and a PI read them as "these are checked
+              differently". The split still appears where it changes what you
+              do about it: in the score, after the run, as "NSF 4/4,
+              NSF 23-598 0/1". The ORDER now carries what is left -- the order
+              a proposal is actually written in. */}
           {sections.map((s) => (
             <option key={s.key} value={s.key}>{s.label}</option>
           ))}
@@ -493,7 +546,11 @@ function GuidancePanel({ guidance }) {
       {priorities.length > 0 && (
         <>
           <div className="scm-guidance-title">
-            <ListChecks size={13} /> Do this first
+            {/* The heading is DECIDED BY THE BACKEND from what is in the
+                list. "Do this first" over a section that met every rule reads
+                as failure — reported by a PI whose Project Summary passed all
+                four of its checkable rules and was handed a to-do list. */}
+            <ListChecks size={13} /> {guidance.priorities_heading || "Do this first"}
           </div>
           <ol className="scm-guidance-list">
             {priorities.map((p) => (
@@ -641,11 +698,23 @@ function ExtractionLine({ extraction }) {
 // who meets every PAPPG rule and misses every solicitation rule sees the same
 // combined number as one who did the reverse — and only the second is likely to
 // come back from NSF without review.
-function SectionScorePanel({ score, length }) {
-  if (!score) return null;
-  const sources = Object.entries(score.by_source || {});
+function SectionScorePanel({ score, length, verdict }) {
+  if (!score && !verdict) return null;
+  const sources = Object.entries((score || {}).by_source || {});
+  // THE VERDICT DRIVES THE COLOUR, not the rules percentage. Measured before
+  // this existed: a Project Summary with a doubled word, two misspellings, a
+  // wrong word and eleven more problems met all five of its rules and painted
+  // the panel green at 100%. The rules number is still shown and still true —
+  // it just is not the whole news, and the box must not look finished while
+  // fifteen errors sit under it.
+  const level = verdict ? verdict.level : (score || {}).band;
+  const issues = (verdict || {}).issues;
   return (
-    <div className={`scm-score scm-score-${score.band}`}>
+    <div className={`scm-score scm-score-${level}`}>
+      {verdict && (
+        <div className="scm-verdict-label">{verdict.label}</div>
+      )}
+      {score && (
       <div className="scm-score-head">
         <div className="scm-score-count">
           <span className="scm-score-earned">{score.earned}</span>
@@ -658,6 +727,35 @@ function SectionScorePanel({ score, length }) {
           <div className="scm-score-basis">{score.basis}</div>
         </div>
       </div>
+      )}
+
+      {/* ISSUES AT THE SAME WEIGHT AS THE RULES COUNT. Deliberately NOT folded
+          into the percentage: an error is verifiable, a weight is an opinion,
+          and blending them would mean deciding what fraction of a missing
+          Broader Impacts statement one typo is worth. Two counts, one verdict
+          sentence that reads both. */}
+      {issues && issues.total > 0 && (
+        <div className="scm-score-issues">
+          <div className="scm-score-count">
+            <span className="scm-score-earned">{issues.total}</span>
+          </div>
+          <div className="scm-score-body">
+            <div className="scm-score-title">
+              writing {issues.total === 1 ? "problem" : "problems"} found
+            </div>
+            <div className="scm-score-basis">
+              {issues.mistakes > 0 && `${issues.mistakes} found by a rule`}
+              {issues.mistakes > 0 && issues.wording > 0 && " \u00b7 "}
+              {issues.wording > 0 && `${issues.wording} found by the proofreader`}
+              {" \u2014 listed below, each quoting your text."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {verdict && (
+        <div className="scm-verdict-summary">{verdict.summary}</div>
+      )}
 
       {/* THE LENGTH SITS IN THIS BOX, not in a grey line further down. A PI
           seeing a large "100%" beside a faint "uses 28% of the page" reads the
@@ -717,12 +815,27 @@ function WordingPanel({ wording }) {
           <div className="scm-wording-label">
             {w.label}
             <span className="scm-tag scm-tag-soft">AI</span>
+            {/* WHERE, when we could place it. Computed in code, absent rather
+                than guessed — a wrong line number is acted on, a missing one
+                is not. A quote alone still means hunting 500 words for it. */}
+            {w.where && (
+              <span className="scm-wording-where">
+                {w.where.heading && <>{w.where.heading} &middot; </>}
+                line {w.where.line}
+              </span>
+            )}
           </div>
           <div className="scm-wording-detail">{w.detail}</div>
           {w.evidence && (
             <div className="scm-evidence">
               <Quote size={12} /> <span>{w.evidence}</span>
             </div>
+          )}
+          {/* The whole line as the author wrote it, so the fragment above can
+              be found by eye rather than by Ctrl-F. Suppressed when the quote
+              IS the line, which is the common short-quote case. */}
+          {w.where?.context && w.where.context !== w.evidence && (
+            <div className="scm-wording-context">{w.where.context}</div>
           )}
         </div>
       ))}
@@ -751,6 +864,7 @@ function ResultsView({ result, extraction, onBack }) {
           before the structural guidance that tells them what the section is
           for. It sits above the findings so the count it summarises follows. */}
       <SectionScorePanel score={result.score}
+                         verdict={result.verdict}
                          length={result.guidance?.length} />
 
       <GuidancePanel guidance={result.guidance} />
@@ -790,12 +904,17 @@ function ResultsView({ result, extraction, onBack }) {
 
       <WordingPanel wording={result.wording} />
 
+      {/* The SOURCES are named by `score.basis`, which derives them from the
+          rules that actually scored. Restating them here got it wrong -- it
+          credited the PAPPG on sections where every rule came from the
+          solicitation -- and put one fact in two places, which is the failure
+          this modal has already had to unship once. What survives is the part
+          `basis` does not carry. */}
       <p className="scm-disclaimer">
-        Checked against {result.rulebook || "the PAPPG"}&rsquo;s rules for{" "}
-        {result.label || "this section"}. The score counts only the rules that
-        could be checked against your text &mdash; it is not a measure of how
-        well written this section is, or of how likely the proposal is to be
-        funded.
+        The score counts only the rules that could be checked against your text
+        &mdash; it is not a measure of how well written {result.label
+          ? `your ${result.label}` : "this section"} is, or of how likely the
+        proposal is to be funded.
       </p>
 
       <div className="scm-results-actions">

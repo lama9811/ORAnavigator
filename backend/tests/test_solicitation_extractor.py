@@ -375,7 +375,12 @@ def test_read_pdf_counts_pages_that_yielded_no_text(monkeypatch):
     dropped -- otherwise a 34-page scan looks like a complete 0-page read."""
     class _Page:
         def __init__(self, t): self._t = t
-        def extract_text(self): return self._t
+        # **kw because read_pdf passes x_tolerance_ratio (font-scaled word
+        # segmentation -- see document_text.PDF_X_TOLERANCE_RATIO). A double
+        # whose signature drifts from the real one turns a good read into a
+        # swallowed "PDF parse failed" -- which is the very thing this test
+        # asserts against, so the stub must accept what the caller sends.
+        def extract_text(self, **kw): return self._t
 
     class _PDF:
         pages = [_Page("Real text on page one."), _Page(""), _Page("   ")]
