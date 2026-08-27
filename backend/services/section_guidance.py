@@ -48,7 +48,8 @@ _DEFAULT_LIMIT = 3
 _ACTIONABLE = {"not_found": 0, "flagged": 0, "partial": 1, "addressed": 2, "clear": 2}
 
 
-def length_guidance(word_count: int, page_limit: Optional[float]) -> Optional[dict]:
+def length_guidance(word_count: int, page_limit: Optional[float],
+                    pages: Optional[int] = None) -> Optional[dict]:
     """How much of its allowance a section uses, or None when there is nothing
     worth saying.
 
@@ -56,9 +57,27 @@ def length_guidance(word_count: int, page_limit: Optional[float]) -> Optional[di
     none, and deriving an allowance for them would fabricate the limit. Returns
     None for an empty section too: nothing pasted is a different problem, already
     reported by the locate stage, and a "0% of your page" line would bury it.
+
+    `pages` is the REAL count from an uploaded PDF, and where it exists this
+    says nothing about length. The estimate divides by WORDS_PER_PAGE, so a
+    dense one-page section measures 102% and the message called it "over the
+    limit on most formatting" and told the author to "upload it to have this
+    checked properly" — beside a deterministic row reading "1 page, within the
+    1-page limit", on a draft that had just been uploaded. Both false, and
+    contradicting the row next to them.
+
+    Over the limit is suppressed for the same reason: `rb_page_limit` already
+    reports the TRUE number ("2 pages, over the 1-page limit"), and an estimate
+    beside it offers a second, different number for one fact.
+
+    The MEASUREMENT survives either way — the word count is real and was moved
+    into the score box deliberately. Only the estimated percentage and the
+    verdict drawn from it go.
     """
     if not page_limit or page_limit <= 0 or not word_count or word_count <= 0:
         return None
+    if isinstance(pages, int) and pages > 0:
+        return {"words": word_count, "page_limit": page_limit, "pages": pages}
     allowance = int(round(WORDS_PER_PAGE * page_limit))
     pct = int(round(100.0 * word_count / allowance))
     if _SHORT_PCT <= pct <= _LONG_PCT:

@@ -136,10 +136,21 @@ def test_a_section_whose_rules_were_all_extended_is_no_longer_offered():
 
 
 def test_a_section_the_solicitation_fills_is_still_offered():
-    """Budget has 0 basics, so only the solicitation keeps it alive."""
-    keys = [s["key"] for s in sp.sections_offered_for(_profile_with_budget_rules(),
-                                                      PAPPG)]
-    assert "budget_and_budget_justification" in keys, keys
+    """A section with 0 basics is kept alive by the solicitation alone.
+
+    Budget was this example until 2026-08-27, when it was withheld from the
+    picker outright; a Data Management Plan makes the same point without being
+    withheld. The property under test is unchanged: a section the rulebook
+    holds no basic rules for must still be offered when the solicitation
+    fills it.
+    """
+    profile = sp.build_generic({}, [
+        _row("sol_dmp", "data_management_plan",
+             "State how data will be shared and archived",
+             section_label="Data Management Plan"),
+    ], id="NSF 23-598", title="t")
+    keys = [s["key"] for s in sp.sections_offered_for(profile, PAPPG)]
+    assert "data_management_plan" in keys, keys
 
 
 def test_the_rulebook_only_picker_offers_only_sections_with_basics():
