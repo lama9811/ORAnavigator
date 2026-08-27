@@ -603,6 +603,28 @@ def _reviewer_notes(spans: dict, profile: dict) -> list[dict]:
 # Credit per status. Absent from this map => excluded from the denominator
 # entirely (could_not_locate, not_checked, unclear) — the honest treatment of
 # "we did not assess this", as opposed to "we assessed it and it is missing".
+def _source_rank(finding: dict) -> int:
+    """0 for the solicitation's own rule, 1 for the rulebook's.
+
+    The solicitation LEADS and the rulebook is the floor, so the PI meets their
+    own funder's asks first. `build_generic` already appends baseline rows last
+    for this reason; `review_section` looks the rulebook up directly and had the
+    opposite order, so a Project Summary showed five PAPPG rows above the one
+    rule NSF 23-598 actually wrote for it.
+
+    Applied at BOTH sort sites rather than fixing the one that was wrong: two
+    entry points that disagree about the order of one section is the confusion
+    `review_section` exists to remove.
+
+    ORDER ONLY -- no row is added, dropped or restatused, so no score moves.
+    Provenance still reaches the reader through the per-row tag and
+    `score.by_source`; it is deliberately NOT a heading, because the three
+    provenance headings were removed on 2026-08-26 after a PI read them as
+    "these are checked differently" when every section is checked against both.
+    """
+    return 1 if finding.get("rulebook") else 0
+
+
 _CREDIT = {
     "addressed": 1.0,
     "partial": 0.5,
@@ -1078,7 +1100,7 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     findings = apply_draft_scope(findings)
 
     order = {r["id"]: i for i, r in enumerate(requirements)}
-    findings.sort(key=lambda f: order.get(f["id"], 999))
+    findings.sort(key=lambda f: (_source_rank(f), order.get(f["id"], 999)))
 
     ai_used = bool(ai_located or ai_reviewed)
     return {
@@ -1250,7 +1272,7 @@ def review_section(text: str, *, section: str, rulebook: str,
     findings = apply_delegation(findings)
     findings = apply_draft_scope(findings)
     order = {r["id"]: i for i, r in enumerate(rows)}
-    findings.sort(key=lambda f: order.get(f["id"], 999))
+    findings.sort(key=lambda f: (_source_rank(f), order.get(f["id"], 999)))
 
     out = {
         **base,
@@ -1264,8 +1286,13 @@ def review_section(text: str, *, section: str, rulebook: str,
         # inconsistent on exactly the question the author already distrusts. A
         # word count and an ordering are arithmetic.
         "guidance": {
+            # `pages` is the real count from the upload path. Passing it is the
+            # whole fix for a screen that said "over the limit ... upload it to
+            # have this checked properly" beside a deterministic row reading
+            # "1 page, within the 1-page limit", on an uploaded PDF.
             "length": section_guidance.length_guidance(
-                base["word_count"], _section_page_limit(rows, section)),
+                base["word_count"], _section_page_limit(rows, section),
+                pages=pages),
             "priorities": section_guidance.priorities(findings),
             # The list's own name, decided by what is IN it. "Do this first"
             # over a section that met every rule reads as failure.

@@ -768,9 +768,16 @@ function SectionScorePanel({ score, length, verdict }) {
             <div className="scm-score-src">
               <span className="scm-score-src-name">length</span>
               <span className="scm-score-src-num">{length.words} words</span>
+              {/* A REAL page count from an uploaded PDF beats the estimate and
+                  replaces it. "102% of your one page" on a file pdfplumber
+                  counted as one page reads as over-length, next to a
+                  deterministic row saying it fits. The backend omits `pct`
+                  whenever it knows the true `pages`. */}
               <span className="scm-score-src-of">
-                {length.pct}% of your {length.page_limit === 1
-                  ? "one page" : `${length.page_limit} pages`}
+                {length.pages != null
+                  ? `${length.pages} page${length.pages === 1 ? "" : "s"}`
+                  : `${length.pct}% of your ${length.page_limit === 1
+                      ? "one page" : `${length.page_limit} pages`}`}
               </span>
             </div>
           )}
