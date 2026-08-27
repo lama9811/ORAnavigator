@@ -251,15 +251,16 @@ def test_the_picker_for_a_proposal_names_its_own_sections(ctx_with_solicitation)
     assert r.status_code == 200, r.text
     sections = r.json()["sections"]
     keys = [s["key"] for s in sections]
-    assert "letter_intent" in keys, keys
+    # Letter of Intent is WITHHELD from this picker since 2026-08-27 -- it is a
+    # separate submission with an earlier deadline, not a part of the proposal.
+    # Its rules stay on the profile and a full Draft Review still checks them.
+    assert "letter_intent" not in keys, keys
     # and the NSF baseline is still there, silence in the solicitation
     # notwithstanding. References Cited rather than Senior/Key Personnel:
     # Check a Section takes the rulebook's BASIC rows only, and Senior/Key
     # holds none of them (see test_section_check_basics_only.py).
     assert "references_cited" in keys, keys
-    loi = next(s for s in sections if s["key"] == "letter_intent")
-    assert loi["label"] == "Letter of Intent"
-    assert loi["solicitation_rules"] == 2 and loi["rulebook_rules"] == 0
+    assert "project_summary" in keys, keys
 
 
 def test_a_solicitation_only_section_is_no_longer_rejected(ctx_with_solicitation):

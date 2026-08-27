@@ -59,24 +59,30 @@ def _row(rid, section, label, *, scored=True, section_label=None):
 def _nsf_like_profile():
     """A profile shaped like the real NSF 23-598 one, on the same section keys.
 
-    `letter_intent` / `budget_justification` are the spellings `canon_section`
-    produces, which is what a STORED profile carries -- deliberately NOT the
-    rulebook's `budget_and_budget_justification`, because the two names for one
-    section are exactly what the merge has to collapse.
+    `supplementary_document` is the spelling `canon_section` produces, which is
+    what a STORED profile carries -- deliberately NOT the rulebook's
+    `special_information_and_supplementary_documentation`, because the two names
+    for one section are exactly what the merge has to collapse.
+
+    Budget and Letter of Intent used to be this fixture's solicitation-only
+    examples. Both are withheld from the picker since 2026-08-27, so a Data
+    Management Plan stands in: still a real part of a proposal, still one the
+    rulebook holds no basics for, still not withheld.
     """
     rows = [
-        _row("sol_loi_title", "letter_intent",
-             "Include required title format in Letter of Intent",
-             section_label="Letter of Intent"),
-        _row("sol_loi_pi", "letter_intent",
-             "Include PI and Co-PI contact information in Letter of Intent",
-             section_label="Letter of Intent"),
+        _row("sol_dmp_share", "data_management_plan",
+             "State how data will be shared and archived",
+             section_label="Data Management Plan"),
+        _row("sol_dmp_format", "data_management_plan",
+             "Name the formats and repositories to be used",
+             section_label="Data Management Plan"),
         _row("sol_ps_loi", "project_summary",
              "Include the LOI number in the Project Summary"),
-        _row("sol_bud_equip", "budget_justification",
-             "No more than 30% of the budget can be allocated for equipment"),
-        _row("sol_collab", "letter_collaboration",
-             "Letters of collaboration follow the required single sentence",
+        _row("sol_supp", "supplementary_document",
+             "Letters of support follow the required format",
+             section_label="Supplementary Documents"),
+        _row("sol_mentor", "postdoctoral_mentoring_plan",
+             "Describe mentoring activities if postdocs are requested",
              scored=False),
     ]
     return sp.build_generic({}, rows, id="NSF 23-598", title="HBCU-EiR")
@@ -89,12 +95,13 @@ def _keys(offered):
 # ── the picker ─────────────────────────────────────────────────────────────
 
 def test_the_picker_offers_a_section_only_the_solicitation_names():
-    """Letter of Intent is the deliverable this whole change exists for."""
+    """A section the rulebook has never heard of must still be checkable."""
     offered = sp.sections_offered_for(_nsf_like_profile(), PAPPG)
-    key = sp.resolve_section_key({s["key"]: s for s in offered}, "Letter of Intent")
+    key = sp.resolve_section_key({s["key"]: s for s in offered},
+                                 "Data Management Plan")
     assert key is not None, (
-        "the picker does not offer Letter of Intent, so its 8 solicitation "
-        f"rules stay unreachable. offered: {_keys(offered)}")
+        "the picker does not offer the Data Management Plan, so its "
+        f"solicitation rules stay unreachable. offered: {_keys(offered)}")
 
 
 def test_the_picker_still_offers_a_section_only_the_rulebook_covers():
@@ -116,43 +123,48 @@ def test_the_picker_still_offers_a_section_only_the_rulebook_covers():
 
 
 def test_a_section_named_two_ways_is_offered_once():
-    """`budget_justification` (solicitation) and `budget_and_budget_justification`
-    (rulebook) are one part of a proposal, and a picker showing both is the
-    two-spellings bug this repo has now shipped three times."""
+    """`supplementary_document` (solicitation) and
+    `special_information_and_supplementary_documentation` (rulebook) are one
+    part of a proposal, and a picker showing both is the two-spellings bug this
+    repo has now shipped three times. Budget used to be this example and is now
+    withheld, so the other named equivalence carries the test."""
     offered = sp.sections_offered_for(_nsf_like_profile(), PAPPG)
-    budgets = [s for s in offered
-               if sp.section_signature(s["label"]) == sp.section_signature(
-                   "Budget and Budget Justification")]
-    assert len(budgets) == 1, f"budget appears {len(budgets)} times: {budgets}"
+    wanted = sp._equivalent_signatures(sp.section_signature("Supplementary Documents"))
+    hits = [s for s in offered if sp.section_signature(s["label"]) in wanted]
+    assert len(hits) == 1, f"supplementary appears {len(hits)} times: {hits}"
 
 
 def test_a_solicitation_section_with_nothing_scoreable_is_not_offered():
     """Same test `sections_offered` already applies to Cover Sheet.
 
-    `letter_collaboration` carries one CONDITIONAL row. A section whose every
-    row is advisory is a dead end dressed as a tool -- the PI picks it and gets
-    a page of "if this applies to you". The row still appears in a full Draft
-    Review, which is where an advisory row belongs.
+    `postdoctoral_mentoring_plan` carries one CONDITIONAL row. A section whose
+    every row is advisory is a dead end dressed as a tool -- the PI picks it and
+    gets a page of "if this applies to you". The row still appears in a full
+    Draft Review, which is where an advisory row belongs.
+
+    Deliberately NOT `letter_collaboration` any more: that is now withheld
+    outright, so it would pass this test for the wrong reason and stop guarding
+    the unscoreable rule at all.
     """
     offered = _keys(sp.sections_offered_for(_nsf_like_profile(), PAPPG))
-    assert "letter_collaboration" not in offered, offered
+    assert "postdoctoral_mentoring_plan" not in offered, offered
 
 
 def test_the_solicitations_own_sections_come_first():
     """Order carries the message that the solicitation leads.
 
-    The LOI is also genuinely the first thing a PI writes for this program, so
-    the ordering is not only cosmetic.
+    A section the rulebook has never heard of has no place in the rulebook's
+    order, so the front is where it belongs rather than the tail.
     """
     offered = _keys(sp.sections_offered_for(_nsf_like_profile(), PAPPG))
-    assert offered[0] == "letter_intent", offered
+    assert offered[0] == "data_management_plan", offered
 
 
 def test_each_offered_section_says_where_its_rules_come_from():
     """The picker has to be able to group without recomputing the split."""
     offered = {s["key"]: s for s in sp.sections_offered_for(_nsf_like_profile(), PAPPG)}
-    assert offered["letter_intent"]["solicitation_rules"] == 2
-    assert offered["letter_intent"]["rulebook_rules"] == 0
+    assert offered["data_management_plan"]["solicitation_rules"] == 2
+    assert offered["data_management_plan"]["rulebook_rules"] == 0
     assert offered["references_cited"]["solicitation_rules"] == 0
     assert offered["references_cited"]["rulebook_rules"] > 0
     ps = offered["project_summary"]
@@ -171,21 +183,20 @@ def test_a_solicitation_only_section_can_actually_be_reviewed():
     """Offering it is worthless if the engine cannot check it.
 
     `review_section` reads its label from `rulebook_baseline.section_label`,
-    which knows nothing of this section and returns the machine-made
-    "Letter Intent". The profile has the real name.
+    which knows nothing of this section and would return a machine-made name.
+    The profile has the real one.
     """
     from services import draft_review
     profile = _nsf_like_profile()
-    text = ("Letter of Intent\n\n"
-            "Excellence in Research: Adaptive Zwitterionic Networks\n"
-            "PI: Dr. A. Rivera, arivera@morgan.edu. Co-PI: Dr. B. Osei.\n")
+    text = ("Data Management Plan\n\n"
+            "Datasets are deposited in a public repository in open formats.\n")
     result = draft_review.review_section(
-        text, section="letter_intent", rulebook=PAPPG,
+        text, section="data_management_plan", rulebook=PAPPG,
         profile=profile, use_ai=False)
-    assert result["label"] == "Letter of Intent", result["label"]
+    assert result["label"] == "Data Management Plan", result["label"]
     ids = {f["id"] for f in result["findings"]}
-    assert {"sol_loi_title", "sol_loi_pi"} <= ids, (
-        f"the solicitation's own LOI rules were not checked: {sorted(ids)}")
+    assert {"sol_dmp_share", "sol_dmp_format"} <= ids, (
+        f"the solicitation's own rules were not checked: {sorted(ids)}")
 
 
 # ── ONE FLAT LIST, in the order a proposal is written ──────────────────────
@@ -200,28 +211,32 @@ def test_a_solicitation_only_section_can_actually_be_reviewed():
 # the groups were hiding was arbitrary once flattened: solicitation-named
 # sections came first, so Budget led the list and Project Summary sat fifth.
 
-def _budget_first_profile():
-    """A profile whose FIRST extracted row is a Budget rule.
+def _late_section_first_profile():
+    """A profile whose FIRST extracted row belongs to a LATE section.
 
-    The live proposal is shaped this way, and it is what exposed the ordering:
+    The live proposal was shaped this way and it is what exposed the ordering:
     sections were emitted in the order the solicitation happened to mention
-    them, so Budget led the picker and Project Summary sat fifth. The earlier
-    fixture hid it by mentioning the Letter of Intent first.
+    them, so a late part led the picker and Project Summary sat fifth. Budget
+    was the original example and is withheld now, so Supplementary Documents --
+    which the rulebook orders near the end -- carries it.
     """
     rows = [
-        _row("sol_bud", "budget_justification", "Cap equipment at 30 percent",
-             section_label="Budget and Budget Justification"),
-        _row("sol_loi", "letter_intent", "Include the required title format",
-             section_label="Letter of Intent"),
+        _row("sol_supp", "supplementary_document",
+             "Letters of support follow the required format",
+             section_label="Supplementary Documents"),
+        _row("sol_dmp", "data_management_plan", "State how data will be shared",
+             section_label="Data Management Plan"),
         _row("sol_ps", "project_summary", "Include the LOI number"),
     ]
     return sp.build_generic({}, rows, id="NSF 23-598", title="t")
 
 
-def test_budget_does_not_jump_the_queue_just_because_it_was_mentioned_first():
-    offered = _keys(sp.sections_offered_for(_budget_first_profile(), PAPPG))
-    assert offered.index("project_summary") < offered.index(
-        "budget_and_budget_justification"), offered
+def test_a_late_section_does_not_jump_the_queue_just_because_it_was_first():
+    offered = _keys(sp.sections_offered_for(_late_section_first_profile(), PAPPG))
+    late = sp.resolve_section_key({k: {"label": k} for k in offered},
+                                  "Supplementary Documents")
+    assert late in offered, offered
+    assert offered.index("project_summary") < offered.index(late), offered
 
 
 def test_the_rulebook_sections_keep_the_order_a_proposal_is_written_in():
@@ -234,9 +249,9 @@ def test_the_rulebook_sections_keep_the_order_a_proposal_is_written_in():
 
 
 def test_a_section_only_the_solicitation_names_comes_first():
-    """The Letter of Intent is not in the rulebook's order because the rulebook
-    has never heard of it -- and for this program it is genuinely the first
-    thing a PI writes, so the front is where it belongs rather than the tail."""
+    """A Data Management Plan is not in the rulebook's order because the
+    rulebook has never heard of it, so the front is where it belongs rather
+    than the tail."""
     offered = _keys(sp.sections_offered_for(_nsf_like_profile(), PAPPG))
-    assert offered[0] == "letter_intent", offered
-    assert offered.index("letter_intent") < offered.index("project_summary")
+    assert offered[0] == "data_management_plan", offered
+    assert offered.index("data_management_plan") < offered.index("project_summary")

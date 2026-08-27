@@ -323,6 +323,48 @@ def make_profile(*, id: str, title: str, url: Optional[str] = None,
     }
 
 
+# Parts of a submission that are never offered for a ONE-SECTION check
+# (product decision, 2026-08-27). Every spelling is listed, because the three
+# row sources name one section three ways and a key that slipped through would
+# put the entry back silently.
+#
+#   * budget / budget justification — the figures are the Budget Helper's job,
+#     computed deterministically there; a prose checker cannot verify them.
+#   * letter of intent — NOT a part of the proposal. Its deadline falls months
+#     earlier and it is a separate submission, so listing it among proposal
+#     sections teaches a first-time PI something false.
+#   * letter of collaboration — boilerplate whose wording NSF fixes and which a
+#     collaborator signs, not the PI.
+#   * letter of institutional support — the chair or dean writes it, and the
+#     only rule held for it is a page limit. An attachment to chase, which the
+#     checklist already tracks, not a section to check.
+#
+# THE TEST, so a future section can be judged the same way: a part belongs in
+# this picker only when the PI WRITES it, getting it wrong carries a consequence
+# they cannot see coming, and there are rules that can be checked against text.
+#
+# WITHHELD FROM THE PICKER, NOT DELETED — the rows stay in the profile and a
+# full Draft Review still checks every one, exactly as Cover Sheet and Format of
+# the Proposal are already withheld. That is what keeps this a shorter menu
+# rather than a compliance hole: a funder's budget rules routinely carry an
+# equipment-share cap and a ban on voluntary committed cost sharing, and those
+# must still be enforced somewhere.
+#
+# These are the NAMES of parts of a submission, not a funder branch — nothing
+# here asks who the sponsor is, and a test in this module's suite fails if any
+# solicitation is named above.
+_NOT_SECTION_CHECKABLE = frozenset({
+    "budget_and_budget_justification",
+    "budget_justification",
+    "letter_intent",
+    "letter_of_intent",
+    "letter_collaboration",
+    "letter_of_collaboration",
+    "letter_institutional_support",
+    "letter_of_institutional_support",
+})
+
+
 def sections_offered_for(profile: Optional[dict], rulebook: str) -> list[dict]:
     """The sections THIS proposal can have checked one at a time.
 
@@ -363,7 +405,8 @@ def sections_offered_for(profile: Optional[dict], rulebook: str) -> list[dict]:
 
     base = rulebook_baseline.sections_offered(rulebook)
     if not profile:
-        return [dict(s) for s in base]
+        return [dict(s) for s in base
+                if s["key"] not in _NOT_SECTION_CHECKABLE]
 
     sections = profile.get("sections") or {}
     rows = [r for r in (profile.get("requirements") or []) if not r.get("rulebook")]
@@ -408,7 +451,7 @@ def sections_offered_for(profile: Optional[dict], rulebook: str) -> list[dict]:
     out, seen = [], set()
 
     def _emit(key: str, label: str, sol_key: Optional[str]) -> None:
-        if key in seen:
+        if key in seen or key in _NOT_SECTION_CHECKABLE:
             return
         seen.add(key)
         out.append({
