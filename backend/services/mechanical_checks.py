@@ -262,10 +262,15 @@ _MISSPELLING_RE = re.compile(
     r"\b(" + "|".join(sorted(_MISSPELLINGS)) + r")\b", re.IGNORECASE)
 
 # Two-word slips where both words are real, so no single-token rule can see them.
+# Wrong in EVERY register -- that is the bar for this table. "in regards to"
+# was here and was retired: usage guides call it nonstandard, but competent
+# editors disagree, so it is a JUDGEMENT, and the panel rendering these rows
+# promises "found by a rule, not a judgement -- these are errors". It was one of
+# only two rows surviving on a FUNDED proposal, which is where the mismatch
+# showed. Anything needing calibration does not belong here.
 _CONFUSED_PHRASES = {
     "rather then": "rather than",
     "as oppose to": "as opposed to",
-    "in regards to": "in regard to",
     "could of": "could have",
     "would of": "would have",
     "should of": "should have",
@@ -286,6 +291,164 @@ _SPACE_BEFORE_RE = re.compile(r"[ \t]+([,;:])|[ \t]+(\.)(?=[ \t]|$)")
 # Anything inside one of these is a URL or DOI, where dots abut letters by design.
 _URLISH = ("http", "www.", "doi.org", "@")
 
+# \u2500\u2500 Text that did not linearize \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+# A PDF is two-dimensional and this text is one-dimensional, so a typeset
+# formula or table arrives with its sub/superscripts and cells RELOCATED. The
+# hole a displaced token leaves behind reads as "space before punctuation", and
+# two cells landing side by side read as a doubled word. Measured on the
+# Project Description of a FUNDED NSF proposal: 56 rows, 54 of them this.
+#
+# These rules are LAYOUT-SENSITIVE and are the only ones gated. The word-level
+# rules (placeholders, misspellings, confused phrases) read the WORDS, which
+# survive relinearisation, and stay on everywhere.
+#
+# OVER-SUPPRESSION IS THE DANGEROUS DIRECTION: a real error dropped here is
+# never learned about, while a surviving false positive is merely annoying. So
+# the evidence must be positive and local, never "this looks technical".
+
+# pdfplumber's marker for a glyph it could not map. Nothing on a line carrying
+# one is reliably what the author typed.
+_UNMAPPED_GLYPH = "(cid:"
+# Operators that essentially never appear in running prose. Lower-case Greek is
+# DELIBERATELY ABSENT -- a chemist writes "\u03b2-lactam" and "\u03bc-molar" in ordinary
+# sentences, and treating those as maths would strip the spacing checks from
+# every technical draft.
+_MATHS_SYMBOLS = set("\u2297\u2295\u2282\u2286\u2283\u2287\u222a\u2229\u2208\u2209\u220b\u2192\u2190\u21a6\u21d2\u21d4\u2211\u220f\u222b\u221a\u221e\u2264\u2265\u2260\u2248\u2261\u226a\u226b\u2200\u2203\u2204\u2202\u2207\u22a5\u2227\u2228\u00ac\u00b1\u00d7\u00f7\u27e8\u27e9\u2205\u2124\u211d\u2102\u2115\u00af")
+# A line that is nothing but stranded fragments -- the displaced subscripts
+# themselves ("1", "2 3", "xi i xj xj i ij", "0\u00af 1\u00af 0\u00af"). Its presence NEXT to a
+# line is what proves that line was mis-linearized, and it is the only evidence
+# available where the maths symbols went onto a different line than the prose.
+_MAX_FRAGMENT_CHARS = 3
+
+
+def _is_fragment_line(line: str) -> bool:
+    """Every token short enough to be a displaced sub/superscript, not a word."""
+    tokens = line.split()
+    if not tokens:
+        return False
+    return all(len(t) <= _MAX_FRAGMENT_CHARS for t in tokens)
+
+
+def _damaged_lines(text: str) -> set[int]:
+    """Indices of lines whose spacing cannot be trusted.
+
+    A line is damaged when it carries direct evidence itself (an unmapped glyph
+    or a maths operator), or when it ADJOINS a fragment line -- because the
+    fragment line holds the very tokens that were lifted out of it.
+    """
+    lines = text.split("\n")
+    fragments = {i for i, ln in enumerate(lines) if _is_fragment_line(ln)}
+    damaged = set()
+    for i, ln in enumerate(lines):
+        if _UNMAPPED_GLYPH in ln or any(c in _MATHS_SYMBOLS for c in ln):
+            damaged.add(i)
+        elif (i - 1) in fragments or (i + 1) in fragments:
+            damaged.add(i)
+    return damaged | fragments
+
+
+def _line_index(text: str, pos: int) -> int:
+    return text.count("\n", 0, pos)
+
+
+# A line the PDF stamps on every page -- "Not for distribution", a submission
+# receipt, a running header. It repeats VERBATIM, which is the whole signal, so
+# no funder's wording is hard-coded here. Three is once-a-page on the shortest
+# document that could have furniture at all.
+_FURNITURE_REPEATS = 3
+
+
+# A pagination stamp marks everything beside it as furniture however FEW times
+# it occurs -- which is the case the repeat count cannot see, and a one-page
+# section is exactly where it arises.
+_PAGE_STAMP_RE = re.compile(r"^Page\s+\d+\s+of\s+\d+$", re.IGNORECASE)
+
+
+def _running_furniture(text: str) -> set[str]:
+    counts: dict[str, int] = {}
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped:
+            counts[stripped] = counts.get(stripped, 0) + 1
+    return {ln for ln, n in counts.items() if n >= _FURNITURE_REPEATS}
+
+
+# A font that stores "Ž" as "Z" + a bare caron leaves the accent as its own
+# character, and the extractor then pushes the following punctuation off the
+# word: "D. Ž. Djoković" arrives as "D. Zˇ . Djokovic´". A token ENDING in a
+# bare accent is always this decomposition, never something an author typed --
+# a properly composed "Djoković" is one character and is untouched by this.
+_BARE_DIACRITICS = (
+    set("´`¨¸")
+    | {chr(c) for c in range(0x02B0, 0x0300)}   # spacing modifier letters
+    | {chr(c) for c in range(0x0300, 0x0370)}   # combining marks
+)
+
+# A row of table cells, not a sentence: no terminal punctuation, and the tokens
+# are overwhelmingly capitalised labels. Extracted PROSE wraps and so also ends
+# without punctuation -- capitalisation is what tells the two apart, and it is
+# why the ratio is load-bearing rather than decoration.
+_TABLE_CAPS_RATIO = 0.6
+_MIN_TABLE_TOKENS = 3
+
+
+def _looks_like_table_row(line: str) -> bool:
+    tokens = line.split()
+    if len(tokens) < _MIN_TABLE_TOKENS:
+        return False
+    if line.rstrip()[-1:] in ".!?":
+        return False
+    alpha = [t for t in tokens if t[:1].isalpha()]
+    if len(alpha) < _MIN_TABLE_TOKENS:
+        return False
+    caps = sum(1 for t in alpha if t[:1].isupper())
+    return caps / len(alpha) >= _TABLE_CAPS_RATIO
+
+
+def _is_stranded_at_line_end(text: str, ws_start: int) -> bool:
+    """The mark is the last thing on its line, with nothing after it.
+
+    That is what a lifted italic run leaves behind: the page reads "...fit the
+    Journal of Algebra, among others", the extractor moves the italic title to
+    its own line, and the comma that followed it dangles. Prose does not end a
+    line with a space-separated bare comma.
+
+    A PERIOD is deliberately excluded: a sentence legitimately ends a line with
+    one, so "…across 12 sites ." is a REAL typo, not debris. Including it here
+    silenced that case, and the guard test caught it.
+    """
+    end = text.find("\n", ws_start)
+    rest = text[ws_start:end if end != -1 else len(text)]
+    return rest.strip() in {",", ";", ":"}
+
+
+def _is_typesetting_period(text: str, ws_start: int, mark: str) -> bool:
+    """A floating period that belongs to a machine-set reference, not to prose.
+
+    Two shapes, both from References Cited and both measured there:
+      * `Wegner. . Vol. 920.` -- pdfplumber lifted the italic TITLE out of a
+        BibTeX entry and left the periods that bracketed it side by side.
+      * `doi: 10 . 3842 / SIGMA . 2021 . 031` -- TeX sets a long DOI with
+        breakable spaces, so every segment boundary reads as a stray period.
+
+    Deliberately NOT a "this line is a bibliography entry" test: a bracketed
+    citation number is ordinary in a Project Description, so keying on `[12]`
+    would strip the spacing checks from real prose.
+    """
+    if mark != ".":
+        return False
+    before = text[:ws_start].rstrip()
+    if before.endswith("."):           # `. .` -- a removed italic run
+        return True
+    # Inside a DOI: everything after the `doi:` on this line is one machine
+    # identifier, however TeX chose to break it.
+    line_start = text.rfind("\n", 0, ws_start) + 1
+    if "doi:" in text[line_start:ws_start].lower():
+        return True
+    after = text[ws_start:].lstrip()[1:].lstrip()
+    return bool(before[-1:].isdigit() and after[:1].isdigit())
+
+
 _LIST_MARKER_RE = re.compile(r"^\s*(?:[-*\u2022\u00b7]|\(?\d+[.)]|[a-z][.)])\s+")
 # A bibliography line ends on a page range or a volume number, not a period.
 _REFERENCE_TAIL_RE = re.compile(r"[\d\u2013-]+\s*$")
@@ -298,10 +461,17 @@ _TAIL_CHARS = 110
 
 def _doubled_words(text: str) -> list[dict]:
     rows = []
+    damaged = _damaged_lines(text)
     for m in _DOUBLED_RE.finditer(text):
         if m.group(1).lower() in _LEGIT_DOUBLES:
             continue
         if "\n" in m.group(2):          # across a line break it is a layout artifact
+            continue
+        if _line_index(text, m.start()) in damaged:
+            continue
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        line_end = text.find("\n", m.start())
+        if _looks_like_table_row(text[line_start:line_end if line_end != -1 else len(text)]):
             continue
         rows.append(_row(
             "doubled_word", "A word is repeated",
@@ -334,16 +504,27 @@ def _misspellings(text: str) -> list[dict]:
 
 def _spacing(text: str) -> list[dict]:
     rows = []
+    damaged = _damaged_lines(text)
     for m in _NO_SPACE_AFTER_RE.finditer(text):
         window = text[max(0, m.start() - 40):m.end() + 40]
         if any(u in window for u in _URLISH):
+            continue
+        if _line_index(text, m.start()) in damaged:
             continue
         rows.append(_row(
             "spacing", "Missing space after a period",
             "Two sentences are run together with no space between them.",
             _snippet(text, m.start(), m.end())))
     for m in _SPACE_BEFORE_RE.finditer(text):
+        if _line_index(text, m.start()) in damaged:
+            continue
         mark = m.group(1) or m.group(2)
+        if _is_typesetting_period(text, m.start(), mark):
+            continue
+        if _is_stranded_at_line_end(text, m.start()):
+            continue
+        if text[:m.start()].rstrip()[-1:] in _BARE_DIACRITICS:
+            continue
         rows.append(_row(
             "spacing", "Space before punctuation",
             f'There is a space before the "{mark}". Close it up.',
@@ -359,13 +540,35 @@ def _unfinished_sentences(text: str) -> list[dict]:
     written without one, bibliography entries end on a page range, and anything
     short is a label rather than a sentence."""
     rows = []
+    furniture = _running_furniture(text)
     for para in re.split(r"\n\s*\n", text):
         stripped = para.strip()
         if not stripped:
             continue
         lines = [ln for ln in stripped.splitlines() if ln.strip()]
+        # Drop trailing page furniture so the REAL end of the prose is what gets
+        # judged -- and quoted. A one-page section ends "...social experiences."
+        # followed by "Page 4 of 56" and a submission stamp; without this the
+        # rule reports the stamp, on a paragraph that ended perfectly well.
+        while lines:
+            tail = lines[-1].strip()
+            if _PAGE_STAMP_RE.match(tail) or tail in furniture:
+                lines.pop()
+                continue
+            # A stamp sitting directly on a pagination line is furniture too,
+            # whatever its wording -- that is what makes this funder-agnostic.
+            if len(lines) >= 2 and _PAGE_STAMP_RE.match(lines[-2].strip()):
+                lines.pop()
+                continue
+            break
+        if not lines:
+            continue
+        stripped = "\n".join(lines).strip()
         last_line = lines[-1].strip()
         if _LIST_MARKER_RE.match(last_line):
+            continue
+        # Displaced sub/superscripts, not a sentence missing its period.
+        if all(_is_fragment_line(ln) for ln in lines):
             continue
         if len(stripped.split()) < _MIN_PROSE_WORDS:
             continue
