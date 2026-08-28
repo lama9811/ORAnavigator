@@ -121,6 +121,61 @@ THINKING_BUDGET = 1024
 # a 3-rule section a single round-trip.
 REVIEW_BATCH = 15
 
+# How many times Check a Section asks the reviewer the same question.
+#
+# Measured on a real awarded Project Summary, five identical uploads: four
+# scored 100% and one 92%. Five of six rules were stable every run; the one that
+# moved is a genuinely BORDERLINE call (an Overview naming objectives but not
+# methods). Rules decided by code never move, and a clear-cut judgement does not
+# either -- a weak 47-word summary was identical across all five runs.
+#
+# Temperature is already 0 and thinking is already capped, and CLAUDE.md records
+# two measured attempts to fix this class by prompt tuning, one of which cost
+# two thirds of the recall on real errors and was reverted. Asking more than
+# once and taking the median is the lever that is left.
+SEMANTIC_VOTES = 3
+
+# Status ordering for the median. Two vocabularies that never mix -- a row is a
+# prohibition or it is not -- so one table serves both.
+_VOTE_RANK = {"not_found": 0, "flagged": 0, "partial": 1, "clear": 2, "addressed": 2}
+
+
+def merge_votes(votes: list[list[dict]]) -> list[dict]:
+    """One finding per requirement, taking the MEDIAN status across runs.
+
+    The median is a single rule covering both cases: with a 2-1 majority it IS
+    the majority, and with three different answers it is the middle one rather
+    than whichever call happened to return first. With an even number of usable
+    votes it takes the LOWER, so a disagreement never resolves upward into a
+    claim the draft has not earned.
+
+    Returns the winning run's row WHOLE. A note arguing `partial` printed under
+    a status of `addressed` would be a new kind of wrong, so note, evidence and
+    suggestion travel with the status they were written for.
+
+    `unclear` means the reviewer returned nothing for that row -- it is not an
+    opinion, so it does not get a vote. When every run failed it is all there is
+    and it stands.
+    """
+    if len(votes) <= 1:
+        return list(votes[0]) if votes else []
+    order: list[str] = []
+    seen: dict[str, list[dict]] = {}
+    for run in votes:
+        for f in run:
+            rid = f.get("id")
+            if rid not in seen:
+                seen[rid] = []
+                order.append(rid)
+            seen[rid].append(f)
+    out = []
+    for rid in order:
+        rows = seen[rid]
+        ranked = sorted((r for r in rows if r.get("status") in _VOTE_RANK),
+                        key=lambda r: _VOTE_RANK[r["status"]])
+        out.append(ranked[(len(ranked) - 1) // 2] if ranked else rows[0])
+    return out
+
 _SCORE_BANDS = ((85, "green"), (60, "amber"))
 
 
@@ -428,7 +483,8 @@ def _section_label(sections: dict, key: str) -> str:
 
 
 def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
-                    sections: dict, solicitation_id: str) -> list[dict]:
+                    sections: dict, solicitation_id: str,
+                    votes: int = 1) -> list[dict]:
     """Coverage for one section's requirements, grounded and verified.
 
     BATCHED, and the batching is load-bearing. Every requirement for a section used
@@ -459,10 +515,34 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
     if len(reqs) > REVIEW_BATCH:
         out: list[dict] = []
         for i in range(0, len(reqs), REVIEW_BATCH):
-            out.extend(_review_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
-                                     sections, solicitation_id))
+            out.extend(_voted_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
+                                    sections, solicitation_id, votes))
         return out
-    return _review_batch(section_key, span, reqs, sections, solicitation_id)
+    return _voted_batch(section_key, span, reqs, sections, solicitation_id, votes)
+
+
+def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
+                 solicitation_id: str, votes: int) -> list[dict]:
+    """`_review_batch` asked `votes` times, merged by median.
+
+    Concurrent, so three votes cost roughly one call's wall clock rather than
+    three. A vote that raises is dropped rather than losing the round: two
+    usable answers still decide, and only losing ALL of them falls back.
+    """
+    if votes <= 1:
+        return _review_batch(section_key, span, reqs, sections, solicitation_id)
+    results = []
+    with ThreadPoolExecutor(max_workers=votes) as pool:
+        futures = [pool.submit(_review_batch, section_key, span, reqs,
+                               sections, solicitation_id) for _ in range(votes)]
+        for fut in futures:
+            try:
+                results.append(fut.result())
+            except Exception as exc:            # one vote lost, not the round
+                print(f"[REVIEW] a vote failed: {exc}")
+    if not results:
+        return _semantic_fallback(reqs, span["text"])
+    return merge_votes(results)
 
 
 def _review_batch(section_key: str, span: dict, reqs: list[dict],
@@ -1252,8 +1332,13 @@ def review_section(text: str, *, section: str, rulebook: str,
             # the model only through _review_system's prompt text ("requirements
             # from <id>"). Passing the RULEBOOK name is correct here and reads
             # correctly: these rules do come from the PAPPG, not a solicitation.
+            # VOTED here and not in review_draft: this is the entry point a PI
+            # re-runs on one paragraph, where an unstable answer is visible and
+            # infuriating. Tripling a ~14-section Draft Review is the 429 storm
+            # the fan-out cap already exists to prevent.
             findings.extend(_review_section(section, spans[section], semantic,
-                                            mini["sections"], rulebook))
+                                            mini["sections"], rulebook,
+                                            votes=SEMANTIC_VOTES))
         else:
             # use_ai=False must not make semantic rules VANISH. Run the same
             # fallback review_draft uses on an AI outage, so a caller sees
