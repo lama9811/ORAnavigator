@@ -68,10 +68,16 @@ def test_failures_still_come_before_thin_passes():
     assert [p["id"] for p in sg.priorities(findings)] == ["missing", "thin"]
 
 
-def test_an_advisory_failure_still_ranks_below_a_real_one():
+def test_a_conditional_is_left_out_when_something_real_failed():
+    """It used to rank below the real failure and still be listed. Since
+    2026-08-28 it is left out entirely while anything real needs fixing -- a
+    rule the author may not even be subject to is not part of "do this first".
+    It is still visible on its own row, and it IS listed once nothing real is
+    failing (see test_conditional_postdocs_rule.py).
+    """
     findings = [_f("conditional", "not_found", scored=False),
                 _f("real", "not_found")]
-    assert [p["id"] for p in sg.priorities(findings)] == ["real", "conditional"]
+    assert [p["id"] for p in sg.priorities(findings)] == ["real"]
 
 
 def test_rows_nobody_can_act_on_are_still_excluded():

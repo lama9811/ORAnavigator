@@ -277,11 +277,22 @@ _PAPPG_RULES: list[dict] = [
          "This section should include any senior/key personnel or postdoctoral "
          "scholars for whom no funds are being requested in the budget.",
          "It is the only place an unfunded contributor is visible to a reviewer."),
+    # CONDITIONAL. NSF's sentence says "include ANY ... postdoctoral scholars for
+    # whom no funds are being requested" — "any" means "if there are any". A PI
+    # whose budget requests zero postdocs has none to name, and this row was
+    # asking them to write a sentence about people who are not on the project.
+    # Reported on a real proposal whose three budget years all read
+    # "( 0 ) POST DOCTORAL SCHOLARS", scored 5 of 6 for it.
+    #
+    # The senior/key personnel half stays SCORED: equally conditional in wording,
+    # but a Facilities section naming no unfunded contributors at all is a real
+    # gap, and unfunded senior collaborators are the common case.
     _row("pappg_fe_unfunded_postdocs", FACILITIES,
          "Names postdoctoral scholars drawing no funds",
          "This section should include any senior/key personnel or postdoctoral "
          "scholars for whom no funds are being requested in the budget.",
-         "An unfunded postdoc is invisible to a reviewer unless this section names them."),
+         "An unfunded postdoc is invisible to a reviewer unless this section names them.",
+         scored=False),
 ]
 
 # ── the reviewed PAPPG table ────────────────────────────────────────────────
