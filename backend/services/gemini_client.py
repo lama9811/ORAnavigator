@@ -21,12 +21,18 @@ sponsor coercion are tightly coupled); it could later delegate to this module.
 
 import json
 import os
+import threading
 import time
 from typing import Optional
 
 _genai = None
 _client = None
+# "The one attempt has FINISHED" — success or failure. Set in a `finally`, so a
+# thread that is still inside the constructor has NOT set it and a second
+# caller waits for the answer instead of being told there is none. See
+# get_client() for why that ordering is the whole bug.
 _init_attempted = False
+_init_lock = threading.Lock()
 
 # The model + region every existing caller gets. Do NOT change these to "upgrade"
 # callers wholesale — the chat path is latency-critical and deliberately on Flash.
@@ -56,26 +62,47 @@ def get_client():
     """Lazily build + cache a Gemini client (Vertex first, API key fallback).
 
     Returns None — and stays None for the rest of the process — if init fails,
-    so callers can detect "AI unavailable" without a network round-trip."""
+    so callers can detect "AI unavailable" without a network round-trip.
+
+    SERIALISED, because a Section Check is itself a concurrent caller:
+    `_voted_batch` asks the model three times at once. This used to set
+    `_init_attempted = True` BEFORE building the client, so while the first
+    thread sat in the constructor every other thread read the flag, took it for
+    a finished failure, and got None — "AI unavailable" for a layer that was
+    merely still starting. Measured 2026-08-28: three of four concurrent
+    callers, and end to end an uploaded Project Summary returning in 0.3s with
+    every semantic rule `unclear`.
+
+    The flag now means "the one attempt has FINISHED", set in a `finally`, so
+    the fast-None-forever contract on a REAL failure is unchanged — a genuine
+    failure still costs exactly one attempt for the life of the process."""
     global _client, _init_attempted, _genai
     if _client is not None:
         return _client
     if _init_attempted:
         return None
-    _init_attempted = True
-    try:
-        from google import genai
-        _genai = genai
-        project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
+    with _init_lock:
+        # Re-checked under the lock: whoever waited here while another thread
+        # built the client must return THAT client, not start a second one.
+        if _client is not None:
+            return _client
+        if _init_attempted:
+            return None
         try:
-            _client = genai.Client(vertexai=True, project=project,
-                                   location=DEFAULT_LOCATION)
-        except Exception:
-            api_key = os.getenv("GEMINI_API_KEY", "")
-            if api_key:
-                _client = genai.Client(api_key=api_key)
-    except Exception as e:
-        print(f"   [GEMINI] client init failed: {e}")
+            from google import genai
+            _genai = genai
+            project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
+            try:
+                _client = genai.Client(vertexai=True, project=project,
+                                       location=DEFAULT_LOCATION)
+            except Exception:
+                api_key = os.getenv("GEMINI_API_KEY", "")
+                if api_key:
+                    _client = genai.Client(api_key=api_key)
+        except Exception as e:
+            print(f"   [GEMINI] client init failed: {e}")
+        finally:
+            _init_attempted = True
     return _client
 
 

@@ -82,9 +82,22 @@ def test_the_section_list_is_offered(ctx):
     assert "project_summary" in keys
 
 
-def test_a_paste_is_checked_without_a_solicitation(ctx):
+def test_a_paste_is_checked_without_a_solicitation(ctx, monkeypatch):
     """The rules are NSF's, so this must NOT 409 the way draft-review does."""
     c, sub_id, _, _ = ctx
+    # The AI layer is off process-wide (conftest), and a section check whose
+    # semantic half never ran now withholds its score rather than reporting the
+    # deterministic remainder as a percentage. Stub the reviewer so the rows are
+    # genuinely ASSESSED -- which is what makes the `by_source` split below mean
+    # anything, rather than being read off a number the outage produced.
+    from services import draft_review as _dr
+
+    def _assessed(section_key, span, reqs, sections, solicitation_id, votes=1):
+        return [_dr._finding(rq, "addressed", "stubbed", "", source="ai")
+                for rq in reqs]
+
+    monkeypatch.setattr(_dr, "_review_section", _assessed)
+
     r = c.post(f"/api/me/submissions/{sub_id}/section-check",
                json={"section": "project_summary", "text": FIVE_LINE,
                      "rulebook": "the PAPPG"})
@@ -95,6 +108,23 @@ def test_a_paste_is_checked_without_a_solicitation(ctx):
     assert list(body["score"]["by_source"]) == ["the PAPPG"]
     assert any(f["id"] == "pappg_ps_headings" and f["status"] == "not_found"
                for f in body["findings"])
+
+
+def test_a_paste_is_not_scored_when_the_reviewer_cannot_be_reached(ctx):
+    """The same request with the AI layer down: 200, no score, and a reason.
+
+    Not a 409 and not an error -- the deterministic rules really did run and
+    their findings are worth showing. Only the NUMBER is withheld.
+    """
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check",
+               json={"section": "project_summary", "text": FIVE_LINE,
+                     "rulebook": "the PAPPG"})
+    assert r.status_code == 200
+    body = r.json()["result"]
+    assert body["score"] is None
+    assert body["message"]
+    assert body["findings"], "the rule-based checks still ran and still count"
 
 
 def test_another_users_submission_is_404(ctx):

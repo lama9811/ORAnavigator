@@ -1379,6 +1379,7 @@ def review_section(text: str, *, section: str, rulebook: str,
 
     semantic = [r for r in rows if r["kind"] == "semantic"]
     skipped_semantic = False
+    ai_unavailable = False
     if semantic:
         if use_ai:
             # _review_section's last parameter is `solicitation_id`, which reaches
@@ -1389,9 +1390,32 @@ def review_section(text: str, *, section: str, rulebook: str,
             # re-runs on one paragraph, where an unstable answer is visible and
             # infuriating. Tripling a ~14-section Draft Review is the 429 storm
             # the fan-out cap already exists to prevent.
-            findings.extend(_review_section(section, spans[section], semantic,
-                                            mini["sections"], rulebook,
-                                            votes=SEMANTIC_VOTES))
+            sem_rows = _review_section(section, spans[section], semantic,
+                                       mini["sections"], rulebook,
+                                       votes=SEMANTIC_VOTES)
+            findings.extend(sem_rows)
+            # THE SEMANTIC HALF EITHER RAN OR IT DID NOT, and the difference is
+            # invisible in the findings alone: every vote failing leaves every
+            # row `unclear`, `unclear` is absent from _CREDIT, and the score
+            # then reports the share of the DETERMINISTIC rules that passed —
+            # 100% green on a draft nobody judged. Measured 2026-08-28: ten
+            # uploads of one Project Summary, seven scoring 93% "Needs work"
+            # and three reporting 100% "No problems found" because their model
+            # call was lost. Read here, before apply_delegation rewrites a
+            # status, so this asks what the REVIEWER returned.
+            #
+            # ALL of them, never any: one skipped row is a fact about the model
+            # and the rest were genuinely assessed, so their share is still an
+            # honest number and withholding it would discard a real answer.
+            #
+            # NOT the same as `use_ai=False`, and the two must not be merged.
+            # A caller passing use_ai=False ASKED for the rule-based checks
+            # alone and is scored on them by a deliberate product decision
+            # (2026-08-20, "by request"); no endpoint does it, and its message
+            # already says the judgement rules were not assessed. THIS is the
+            # case nobody chose: the reviewer was asked and nothing came back.
+            ai_unavailable = bool(sem_rows) and all(
+                f.get("status") == "unclear" for f in sem_rows)
         else:
             # use_ai=False must not make semantic rules VANISH. Run the same
             # fallback review_draft uses on an AI outage, so a caller sees
@@ -1472,9 +1496,21 @@ def review_section(text: str, *, section: str, rulebook: str,
         # This used to pass a fixed "<rulebook>'s rules for this section", which
         # named the PAPPG on a Letter of Intent — a section the rulebook holds
         # no rules for at all.
-        "score": score(findings,
-                       solicitation_id=(profile or {}).get("id", "")),
+        #
+        # WITHHELD when the semantic half never ran, the same rule review_draft
+        # already follows: a percentage computed with that half missing reads as
+        # a verdict on the draft when it is a verdict on our availability, and
+        # here it read as the BEST possible verdict. `verdict()` already refuses
+        # to call anything "clean" without a score for exactly this reason, and
+        # it explains what was and was not checked from the findings themselves.
+        "score": None if ai_unavailable else score(
+            findings, solicitation_id=(profile or {}).get("id", "")),
         "message": (
+            "The AI reviewer could not be reached, so the requirements needing "
+            "judgment are marked unclear below rather than assessed, and no "
+            "score is shown — one computed from the rule-based checks alone "
+            "would describe our availability, not your draft. Try again."
+        ) if ai_unavailable else (
             "The AI reviewer was not run for this check, so the requirements "
             "needing judgment are marked unclear below rather than assessed — "
             "only the rule-based checks are complete."

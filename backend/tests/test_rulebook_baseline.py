@@ -313,7 +313,14 @@ def test_a_supplied_profiles_own_semantic_row_reaches_the_section_check():
     ids = {f["id"] for f in out["findings"]}
     assert _PAPPG_ROW["id"] in ids
     assert "pappg_ps_headings" in ids
-    assert out["score"] is not None
+    # The AI layer is down here (conftest), so every semantic row comes back
+    # unclear and the score is WITHHELD -- see
+    # tests/test_ai_outage_is_not_a_clean_bill.py. Scoring the deterministic
+    # remainder used to report 100% "No problems found" for a draft nobody
+    # judged. What this test is about -- the profile's row reaching the review
+    # -- is asserted above and is unaffected.
+    assert out["score"] is None
+    assert out.get("message")
 
 
 def test_a_profiles_own_check_callable_reaches_run_deterministic():

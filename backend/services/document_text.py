@@ -63,6 +63,30 @@ MAX_CHARS = 1_500_000
 # the solicitation path cannot drift into reading the same PDF differently.
 PDF_X_TOLERANCE_RATIO = 0.15
 
+# THE VERTICAL HALF OF THE SAME PROBLEM, and it scrambles READING ORDER rather
+# than spacing. pdfplumber groups characters into lines by baseline, and
+# pdfplumber's default y_tolerance of 3 splits a line whenever part of it sits
+# slightly off — a superscript-styled numeral, or an italic run set in a
+# different face. Measured on the awarded NSF EiR Project Description, where
+# both shapes occur:
+#
+#   "...two undergraduates in Year ; three \n 1 \n undergraduates in Year ; and,"
+#   "a part of my \n Super Representation \n with two primary goals: ... \n
+#    Theory research program \n representation theory of..."
+#
+# The digits and the italic phrase are lifted OUT of their sentences onto lines
+# of their own. The reviewer reassembles the sentence correctly and quotes it,
+# `quote_in` compares against our scrambled copy, fails, and golden rule 2
+# demotes a real `addressed` to `not_found` — so a funded proposal was told it
+# never described its undergraduate research opportunities, ten runs out of ten.
+#
+# 5 not 8: both fix the two cases above, but 8 also MERGES lines that are
+# genuinely separate (+1,117 chars of run-together text on the same document)
+# while 5 changes the length by 0.1% (57,763 -> 57,682). Shared with
+# solicitation_extractor.read_pdf for the same reason the ratio above is: the
+# upload path and the solicitation path must not read one PDF differently.
+PDF_Y_TOLERANCE = 5
+
 # Extensions we can actually read. Checked against the filename only as a first
 # pass — content sniffing decides for anything ambiguous.
 PDF_EXTS = {".pdf"}
@@ -94,7 +118,8 @@ def _extract_pdf(data: bytes) -> tuple[str, int, bool]:
                 truncated = True
                 break
             pages.append(
-                page.extract_text(x_tolerance_ratio=PDF_X_TOLERANCE_RATIO) or "")
+                page.extract_text(x_tolerance_ratio=PDF_X_TOLERANCE_RATIO,
+                                  y_tolerance=PDF_Y_TOLERANCE) or "")
     text = "\n".join(pages)
     if len(text) > MAX_CHARS:
         text = text[:MAX_CHARS]
