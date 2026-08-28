@@ -133,6 +133,9 @@ def test_the_deterministic_checks_are_untouched():
         "pappg_pd_page_limit": "rb_page_limit",
         "pappg_rc_et_al": "rb_et_al",
         "pappg_fe_no_financials": "rb_no_financials",
+        # Moved from model judgement to code on 2026-08-28 -- it was the last
+        # unstable rule in Facilities. See test_narrative_check.py.
+        "pappg_fe_narrative": "rb_narrative",
     }, checks
 
 

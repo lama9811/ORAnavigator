@@ -1,0 +1,125 @@
+""""Written as a narrative" is decided by code, not by taste.
+
+WHY. It was the last unstable rule in Facilities: `addressed` 5 runs of 6 and
+`not_found` once, on an unchanged 617-word section, leaving a 16-point score
+swing after the compound rules were split. Splitting cannot help -- it asks one
+question. The trouble is that the question is a matter of taste, and the draft
+that triggered it IS narrative prose containing a single table of unfunded
+collaborators. One run read the table and said no.
+
+NSF's concern is narrower than "tone", and its own `why` line says so: "A bare
+equipment list does not tell a reviewer the project is feasible." The rule
+exists to stop someone uploading a bulleted inventory, not to police how much
+prose surrounds a table. That is checkable in code: does the section contain
+real sentences?
+
+MEASURED before choosing the threshold. Prose sentences (>= 8 words, ending in
+terminal punctuation) across every section of a real awarded proposal:
+
+    Facilities 18 · Project Summary 13 · Data Management Plan 4 (145 words)
+
+and on the shapes the rule exists to catch:
+
+    bare list 0 · table only 0 · short bulleted items with periods 0
+
+Real sections start at 4; degenerate ones are 0. The threshold is 3 -- below
+everything real and above everything the rule is for. A model is not needed to
+tell those apart, and asking one reintroduces the wobble.
+
+WHAT THIS GIVES UP, deliberately: a section that is genuinely prose but badly
+written now passes. It always should have. This rule was never a quality
+judgement, and the app has no ground truth for one -- `sample_proposals` holds
+22 funded proposals and zero declined.
+"""
+
+from services import rulebook_baseline as rb
+from services import rulebook_checks as rc
+
+
+SECTION = "facilities_equipment_and_other_resources"
+
+
+def _ctx(text):
+    return {"spans": {SECTION: {"text": text, "marker": "Facilities", "start": 0}}}
+
+
+def _req():
+    return next(r for r in rb.rules_for("the PAPPG", SECTION, tier="basic")
+                if r["id"] == "pappg_fe_narrative")
+
+
+def _run(text):
+    return rc.rb_narrative(_ctx(text), _req())
+
+
+PROSE = (
+    "Morgan State University is the prime organization for this research. "
+    "The Department of Mathematics houses undergraduate and graduate students "
+    "pursuing degrees in the mathematical sciences. "
+    "In particular, the department maintains a computer lab, graduate offices, "
+    "and Zoom-capable rooms for collaboration with external partners."
+)
+
+
+# ── the rule is now decided by code ────────────────────────────────────────
+
+def test_the_narrative_rule_is_deterministic():
+    req = _req()
+    assert req["kind"] == "deterministic", req
+    assert req["check"] == "rb_narrative", req
+
+
+def test_prose_passes():
+    status, note, _ = _run(PROSE)
+    assert status == "addressed", (status, note)
+
+
+def test_prose_containing_a_table_still_passes():
+    """The draft that caused the wobble: narrative prose with one table of
+    unfunded collaborators in the middle of it."""
+    text = (PROSE + "\n\nName Affiliation Role Location\n"
+            "Jonas T. Hartwig Iowa State University Collaborator Ames, IA\n"
+            "Rachel Kirsch George Mason University Collaborator Fairfax, VA\n")
+    status, note, _ = _run(text)
+    assert status == "addressed", (status, note)
+
+
+def test_a_bare_list_is_caught():
+    status, note, _ = _run("Facilities\nComputer lab\nZoom rooms\nGraduate offices\n"
+                           "Library access\nHigh-performance cluster")
+    assert status == "not_found", (status, note)
+    assert "list" in note.lower() or "narrative" in note.lower(), note
+
+
+def test_short_bulleted_items_with_periods_are_still_a_list():
+    """Periods alone do not make prose -- an inventory punctuated item by item
+    is the same upload NSF is refusing."""
+    status, _, _ = _run("Computer lab. Zoom rooms. Graduate offices. Library access.")
+    assert status == "not_found"
+
+
+def test_a_table_only_section_is_caught():
+    status, _, _ = _run("Name Affiliation Role Location\n"
+                        "Jonas Hartwig Iowa State Collaborator Ames IA\n")
+    assert status == "not_found"
+
+
+# ── guards ─────────────────────────────────────────────────────────────────
+
+def test_an_unlocated_section_is_not_reported_as_a_bare_list():
+    """Same rule the other deterministic checks follow: not finding the section
+    is not a finding about the section."""
+    status, note, _ = rc.rb_narrative({"spans": {}}, _req())
+    assert status not in ("not_found", "addressed"), (status, note)
+
+
+def test_a_short_but_real_section_passes():
+    """The smallest genuinely narrative section measured on a real proposal was
+    a 145-word Data Management Plan with 4 prose sentences. The threshold sits
+    below that on purpose."""
+    text = ("The research yields journal articles with manuscripts hosted in the "
+            "arXiv and in institutional repositories. "
+            "Data generated by the project will be shared on request. "
+            "Software produced under this award is released under an open licence.")
+    status, note, _ = _run(text)
+    assert status == "addressed", (status, note)

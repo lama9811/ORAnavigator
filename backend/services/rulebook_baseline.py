@@ -243,11 +243,18 @@ _PAPPG_RULES: list[dict] = [
          "Cost information belongs in the budget; NSF treats it as an error here.",
          kind="deterministic", check="rb_no_financials", flag_if_present=True,
          check_args={"section": FACILITIES}),
+    # DETERMINISTIC since 2026-08-28. As a model judgement this was the last
+    # unstable rule in the section — `addressed` 5 runs of 6 on an unchanged
+    # draft — because "is this narrative?" is a matter of taste. NSF's concern
+    # is a bare inventory, which is checkable: does the section contain real
+    # sentences? See rulebook_checks.rb_narrative for the measured threshold.
     _row("pappg_fe_narrative", FACILITIES,
          "Written as a narrative",
          "This section should be narrative in nature and include internal and "
          "external resources (both physical and personnel).",
-         "A bare equipment list does not tell a reviewer the project is feasible."),
+         "A bare equipment list does not tell a reviewer the project is feasible.",
+         kind="deterministic", check="rb_narrative",
+         check_args={"section": FACILITIES}),
     # SPLIT on the internal/external axis only. NSF's sentence carries two axes,
     # so a strict reading gives four rules — but a draft describes a lab and the
     # people in it in one breath, and four would give a 617-word section eight
