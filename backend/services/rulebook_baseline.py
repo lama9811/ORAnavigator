@@ -153,12 +153,23 @@ _PAPPG_RULES: list[dict] = [
     # already had to unship exactly that (generic_checks._quote_if_it_names,
     # found by a user under "Why is this required?"). The honest alternative is
     # to state the derivation; inventing an NSF sentence would be worse still.
-    _row("pappg_ps_overview", PROJECT_SUMMARY,
-         "The Overview describes the objectives and the methods",
+    # SPLIT from one rule that asked both at once. A draft naming its objectives
+    # but not its methods is genuinely half-satisfied, and the model rounded
+    # that differently run to run — measured at 100/88/63/88/63 on one
+    # unchanged file. Two questions, two answers, and the author is told which
+    # half is missing instead of reading a bare "partial".
+    _row("pappg_ps_overview_objectives", PROJECT_SUMMARY,
+         "The Overview states the objectives",
          "Derived from NSF's requirement that the Project Summary carry a "
          "separate Overview section header — this row checks that something "
          "substantive sits under it. NSF's own wording is in the PAPPG.",
          "A heading with nothing substantive under it reads to a reviewer as no answer at all."),
+    _row("pappg_ps_overview_methods", PROJECT_SUMMARY,
+         "The Overview states the methods to be employed",
+         "Derived from NSF's requirement that the Project Summary carry a "
+         "separate Overview section header — this row checks that something "
+         "substantive sits under it. NSF's own wording is in the PAPPG.",
+         "Objectives without methods tell a reviewer what you want, not how you will get there."),
     _row("pappg_ps_merit", PROJECT_SUMMARY,
          "The Intellectual Merit statement addresses intellectual merit",
          "Derived from NSF's requirement that the Project Summary carry a "
@@ -237,16 +248,33 @@ _PAPPG_RULES: list[dict] = [
          "This section should be narrative in nature and include internal and "
          "external resources (both physical and personnel).",
          "A bare equipment list does not tell a reviewer the project is feasible."),
-    _row("pappg_fe_coverage", FACILITIES,
-         "Covers internal and external resources, physical and personnel",
+    # SPLIT on the internal/external axis only. NSF's sentence carries two axes,
+    # so a strict reading gives four rules — but a draft describes a lab and the
+    # people in it in one breath, and four would give a 617-word section eight
+    # rules against three for the whole Project Description. Over-splitting
+    # turns a check into a nag; there is a test recording this judgement.
+    _row("pappg_fe_coverage_internal_external", FACILITIES,
+         "Describes resources available outside your own institution",
+         "This section should be narrative in nature and include internal and "
+         "external resources (both physical and personnel).",
+         "A section listing only what is on campus reads as a project with no partners."),
+    _row("pappg_fe_coverage_physical_personnel", FACILITIES,
+         "Describes people, not only equipment and space",
          "This section should be narrative in nature and include internal and "
          "external resources (both physical and personnel).",
          "Reviewers assess feasibility from this section; omissions read as gaps."),
-    _row("pappg_fe_unfunded", FACILITIES,
-         "Names senior/key personnel and postdocs drawing no funds",
+    # SPLIT: naming unfunded senior personnel and naming unfunded postdocs are
+    # independent, and this is the rule that was measured wobbling.
+    _row("pappg_fe_unfunded_personnel", FACILITIES,
+         "Names senior/key personnel drawing no funds",
          "This section should include any senior/key personnel or postdoctoral "
          "scholars for whom no funds are being requested in the budget.",
          "It is the only place an unfunded contributor is visible to a reviewer."),
+    _row("pappg_fe_unfunded_postdocs", FACILITIES,
+         "Names postdoctoral scholars drawing no funds",
+         "This section should include any senior/key personnel or postdoctoral "
+         "scholars for whom no funds are being requested in the budget.",
+         "An unfunded postdoc is invisible to a reviewer unless this section names them."),
 ]
 
 # ── the reviewed PAPPG table ────────────────────────────────────────────────
@@ -290,11 +318,22 @@ def _apply_source_upgrades(curated: list[dict], upgrades: dict) -> None:
     written that way deliberately because inventing an NSF sentence would be
     worse than admitting the gap. The PAPPG slice closes the gap. Nothing else
     is rewritten: Research.gov's wording is NSF's wording, correctly attributed,
-    and churning it would move the only yardstick test_pappg_recall.py has."""
+    and churning it would move the only yardstick test_pappg_recall.py has.
+
+    An upgrade also reaches the HALVES of a rule that has since been split:
+    `pappg_ps_overview` became `pappg_ps_overview_objectives` and
+    `..._methods`, and both quote the same NSF sentence. Matching the prefix
+    keeps that working through a regeneration of the extracted table, which is
+    keyed on the original id and cannot know about a later split.
+    """
     by_id = {r["id"]: r for r in curated}
     for rid, source in upgrades.items():
         if rid in by_id:
             by_id[rid]["source"] = source
+            continue
+        for row in curated:
+            if row["id"].startswith(rid + "_"):
+                row["source"] = source
 
 
 _apply_source_upgrades(_PAPPG_RULES, _SOURCE_UPGRADES)
