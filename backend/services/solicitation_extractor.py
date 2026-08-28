@@ -27,7 +27,8 @@ from typing import Optional
 
 # ONE definition, imported rather than repeated: the upload path and the
 # solicitation path must never read the same PDF differently.
-from services.document_text import PDF_X_TOLERANCE_RATIO as _PDF_X_TOLERANCE_RATIO
+from services.document_text import (PDF_X_TOLERANCE_RATIO as _PDF_X_TOLERANCE_RATIO,
+                                    PDF_Y_TOLERANCE as _PDF_Y_TOLERANCE)
 
 # Lazy import: pdfplumber adds startup cost; we only need it on demand.
 _pdfplumber = None
@@ -516,7 +517,8 @@ def read_pdf(pdf_bytes: bytes) -> dict:
                 # PDF_X_TOLERANCE_RATIO. The default fixed 3pt tolerance
                 # welds TeX-set words together.
                 t = page.extract_text(
-                    x_tolerance_ratio=_PDF_X_TOLERANCE_RATIO) or ""
+                    x_tolerance_ratio=_PDF_X_TOLERANCE_RATIO,
+                    y_tolerance=_PDF_Y_TOLERANCE) or ""
                 if t.strip():
                     pages_text.append(t)
                 else:

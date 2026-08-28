@@ -275,3 +275,57 @@ def test_a_well_formed_response_is_never_rewritten(monkeypatch):
     payload = '{"findings": [{"id": "x", "note": "already fine"}]}'
     monkeypatch.setattr(gc, "_generate", lambda *a, **k: payload)
     assert gc.generate_json("p") == {"findings": [{"id": "x", "note": "already fine"}]}
+
+
+# ── a bare top-level array ─────────────────────────────────────────────────
+#
+# CAUGHT ON A REAL SECTION, 2026-08-28. The reviewer answered a 15-rule Project
+# Description with a bare JSON ARRAY -- `[{...}, {...}]` -- instead of the
+# `{"findings": [...]}` envelope the prompt asks for. It parses perfectly and
+# every assessment in it is correct.
+#
+# `generate_json` returned None anyway, because it ends with
+# `parsed if isinstance(parsed, dict) else None`. `_review_batch` reads None as
+# a failed call and marks all 15 requirements `unclear`, which is absent from
+# _CREDIT -- so the section scored 3 of 3 on its deterministic rules and
+# displayed a confident **100%** while fifteen real rules went unchecked. A
+# false 100% is worse than a wrong number; it says "nothing to fix".
+#
+# The dict contract is kept for every existing caller. A caller that can also
+# accept an array opts in BY NAME, so the wrapper is explicit rather than a
+# silent change of shape underneath five other callers.
+
+def test_a_bare_array_is_rejected_by_default(monkeypatch):
+    """The existing contract. Callers expecting a dict must keep getting one."""
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "_generate", lambda *a, **k: '[{"id": "x"}]')
+    assert gc.generate_json("p") is None
+
+
+def test_a_caller_can_opt_in_to_a_bare_array(monkeypatch):
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "_generate", lambda *a, **k: '[{"id": "x"}]')
+    assert gc.generate_json("p", list_key="findings") == {"findings": [{"id": "x"}]}
+
+
+def test_opting_in_does_not_disturb_a_proper_envelope(monkeypatch):
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "_generate",
+                        lambda *a, **k: '{"findings": [{"id": "x"}], "extra": 1}')
+    assert gc.generate_json("p", list_key="findings") == {
+        "findings": [{"id": "x"}], "extra": 1}
+
+
+def test_a_bare_array_missing_its_closing_bracket_is_repaired(monkeypatch):
+    """Both repairs have to compose -- the envelope bug and the missing-closer
+    bug were seen on the same section within an hour."""
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "_generate", lambda *a, **k: '[{"id": "x"}')
+    assert gc.generate_json("p", list_key="findings") == {"findings": [{"id": "x"}]}
+
+
+def test_a_bare_scalar_is_still_rejected(monkeypatch):
+    """Wrapping is for a LIST of results, not for anything that parses."""
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "_generate", lambda *a, **k: '"just a string"')
+    assert gc.generate_json("p", list_key="findings") is None

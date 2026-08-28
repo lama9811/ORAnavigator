@@ -21,12 +21,18 @@ sponsor coercion are tightly coupled); it could later delegate to this module.
 
 import json
 import os
+import threading
 import time
 from typing import Optional
 
 _genai = None
 _client = None
+# "The one attempt has FINISHED" — success or failure. Set in a `finally`, so a
+# thread that is still inside the constructor has NOT set it and a second
+# caller waits for the answer instead of being told there is none. See
+# get_client() for why that ordering is the whole bug.
 _init_attempted = False
+_init_lock = threading.Lock()
 
 # The model + region every existing caller gets. Do NOT change these to "upgrade"
 # callers wholesale — the chat path is latency-critical and deliberately on Flash.
@@ -56,26 +62,47 @@ def get_client():
     """Lazily build + cache a Gemini client (Vertex first, API key fallback).
 
     Returns None — and stays None for the rest of the process — if init fails,
-    so callers can detect "AI unavailable" without a network round-trip."""
+    so callers can detect "AI unavailable" without a network round-trip.
+
+    SERIALISED, because a Section Check is itself a concurrent caller:
+    `_voted_batch` asks the model three times at once. This used to set
+    `_init_attempted = True` BEFORE building the client, so while the first
+    thread sat in the constructor every other thread read the flag, took it for
+    a finished failure, and got None — "AI unavailable" for a layer that was
+    merely still starting. Measured 2026-08-28: three of four concurrent
+    callers, and end to end an uploaded Project Summary returning in 0.3s with
+    every semantic rule `unclear`.
+
+    The flag now means "the one attempt has FINISHED", set in a `finally`, so
+    the fast-None-forever contract on a REAL failure is unchanged — a genuine
+    failure still costs exactly one attempt for the life of the process."""
     global _client, _init_attempted, _genai
     if _client is not None:
         return _client
     if _init_attempted:
         return None
-    _init_attempted = True
-    try:
-        from google import genai
-        _genai = genai
-        project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
+    with _init_lock:
+        # Re-checked under the lock: whoever waited here while another thread
+        # built the client must return THAT client, not start a second one.
+        if _client is not None:
+            return _client
+        if _init_attempted:
+            return None
         try:
-            _client = genai.Client(vertexai=True, project=project,
-                                   location=DEFAULT_LOCATION)
-        except Exception:
-            api_key = os.getenv("GEMINI_API_KEY", "")
-            if api_key:
-                _client = genai.Client(api_key=api_key)
-    except Exception as e:
-        print(f"   [GEMINI] client init failed: {e}")
+            from google import genai
+            _genai = genai
+            project = os.getenv("GOOGLE_CLOUD_PROJECT") or "infra-vertex-494621-v1"
+            try:
+                _client = genai.Client(vertexai=True, project=project,
+                                       location=DEFAULT_LOCATION)
+            except Exception:
+                api_key = os.getenv("GEMINI_API_KEY", "")
+                if api_key:
+                    _client = genai.Client(api_key=api_key)
+        except Exception as e:
+            print(f"   [GEMINI] client init failed: {e}")
+        finally:
+            _init_attempted = True
     return _client
 
 
@@ -238,16 +265,40 @@ def _close_unbalanced(text: str) -> Optional[str]:
     return text + "".join(reversed(stack))
 
 
+def _as_dict(parsed, list_key: Optional[str]) -> Optional[dict]:
+    """A dict as-is; a bare list wrapped when the caller named a key for it."""
+    if isinstance(parsed, dict):
+        return parsed
+    if list_key and isinstance(parsed, list):
+        return {list_key: parsed}
+    return None
+
+
 def generate_json(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 4096,
                   timeout_s: Optional[float] = None,
                   system_instruction: Optional[str] = None,
                   thinking_budget: Optional[int] = None,
                   model: Optional[str] = None,
-                  location: Optional[str] = None) -> Optional[dict]:
+                  location: Optional[str] = None,
+                  list_key: Optional[str] = None) -> Optional[dict]:
     """JSON Gemini call. Forces application/json, strips any markdown fences,
     parses with strict=False (tolerates control chars from PDF text). Returns a
-    dict, or None on unavailable / malformed / non-dict output. Never raises."""
+    dict, or None on unavailable / malformed / non-dict output. Never raises.
+
+    `list_key` opts a caller in to a BARE TOP-LEVEL ARRAY, wrapping it as
+    {list_key: [...]}. Seen live on a 15-rule Project Description: the reviewer
+    answered with `[{...}, {...}]` instead of `{"findings": [...]}`. It parsed
+    perfectly and every assessment in it was right, and the dict-only return
+    threw all fifteen away — the section then scored 3 of 3 on its deterministic
+    rules and displayed a confident 100% while fifteen real rules went
+    unchecked. A false 100% is worse than a wrong number: it says "nothing to
+    fix".
+
+    Opt-in BY NAME rather than a silent widening, because five other callers
+    rely on the dict contract and a shape that changes underneath them is how
+    this class of bug started.
+    """
     raw = _generate(prompt, temperature=temperature,
                     max_output_tokens=max_output_tokens,
                     json_mode=True, timeout_s=timeout_s,
@@ -291,8 +342,8 @@ def generate_json(prompt: str, *, temperature: float = 0.0,
                 parsed = json.loads(candidate, strict=False)
             except (json.JSONDecodeError, ValueError):
                 continue
-            return parsed if isinstance(parsed, dict) else None
+            return _as_dict(parsed, list_key)
         snippet = text[:300].replace("\n", "\\n")
         print(f"   [GEMINI] JSON parse failed: {e} | {snippet}")
         return None
-    return parsed if isinstance(parsed, dict) else None
+    return _as_dict(parsed, list_key)

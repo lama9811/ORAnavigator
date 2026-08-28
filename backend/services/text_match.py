@@ -30,6 +30,8 @@ separate Cloud Run Job and cannot import from backend/.
 from __future__ import annotations
 
 import re
+from collections import Counter
+from typing import Optional
 
 # Bullet glyphs and pdfplumber's undecoded-glyph artifacts ("(cid:127)"). These
 # sit BETWEEN the items of a bulleted list, which is the single most common
@@ -118,6 +120,120 @@ def _drop_ligatures(s: str) -> str:
     return s
 
 
+# A FOURTH ARTIFACT, ADDED 2026-08-28: page furniture injected MID-SENTENCE.
+# Research.gov stamps every page of a submitted proposal with a header/footer
+# block, so a sentence crossing a page boundary extracts as
+#
+#     "Hence, your research programs are strongly
+#      Page 52 of 56
+#      Revised Proposal Budget Revision #1 for 2503008 Submitted On ...
+#      Submitted/PI: Dwight A Williams Ii /Proposal No: 2503008
+#      supported by me and they firmly align with the mission ..."
+#
+# The reviewer reads the sentence and quotes it whole; a contiguous match then
+# fails and golden rule 2 demotes a real `addressed` to `not_found`. Measured on
+# the awarded NSF EiR package: "Attach Letter of Institutional Support" reported
+# MISSING, under a note describing the letter that is right there. A required
+# attachment declared missing is the compliance rejection this tool exists to
+# prevent, invented by the tool.
+#
+# ANCHORED TO THE PAGE MARKER, NEVER TO REPETITION ALONE. In that same file the
+# line "Sincerely," occurs three times — real prose, in three letters. Dropping
+# lines because they repeat would delete an author's words from the text every
+# claim is checked against, which is the dangerous direction. A line is
+# furniture only if it sits in an unbroken run beside a "Page N of M" marker AND
+# recurs at least as often as those markers do, i.e. it is on essentially every
+# page.
+_PAGE_MARKER_RE = re.compile(r"^\s*page\s+\d+\s+of\s+\d+\s*$", re.I)
+
+# How far a furniture run may reach from its marker. A header/footer is a few
+# lines; an unbounded walk could eat a paragraph that happens to repeat.
+_FURNITURE_REACH = 4
+
+
+def _strip_page_furniture(text: str) -> Optional[str]:
+    """`text` with per-page headers/footers removed, or None if there are none.
+
+    Returns None rather than the unchanged text so the caller can skip building
+    a second reading it would never need — the same "cannot reach ordinary text"
+    property the ligature fallback gets from testing the quote first.
+    """
+    lines = (text or "").split("\n")
+    marks = [i for i, ln in enumerate(lines) if _PAGE_MARKER_RE.match(ln)]
+    if not marks:
+        return None
+    counts = Counter(ln.strip() for ln in lines if ln.strip())
+    floor = len(marks)          # on every page, or it is not furniture
+
+    drop: set[int] = set()
+    for i in marks:
+        drop.add(i)
+        for step in (-1, 1):
+            j = i + step
+            while 0 <= j < len(lines) and abs(j - i) <= _FURNITURE_REACH:
+                key = lines[j].strip()
+                if key and counts[key] >= floor:
+                    drop.add(j)
+                    j += step
+                    continue
+                break
+    if not drop:
+        return None
+    return "\n".join(ln for i, ln in enumerate(lines) if i not in drop)
+
+
+# AN ABRIDGED QUOTE, ADDED 2026-08-28. The reviewer shortens its evidence with
+# an ellipsis — "There are presently 50 math and actuarial science majors along
+# with 37 doctoral students... Faculty at MSU are expected to carry 12 credit
+# hours" — where both halves are in the draft, in that order, with a sentence
+# between them. Not a CONTIGUOUS span, so this dropped it and the row was
+# reported `not_found`: the draft was told it never described its institutional
+# context. Measured over 50 runs of the awarded package, 30 findings were
+# demoted this way and every one was in Project Description; after the
+# reading-order fix, 32 of 55 dropped quotes carried an ellipsis and 25 of those
+# had every fragment present, in order. The same shape defeats this repo's own
+# curated NSF fixture row.
+#
+# WHAT IS GIVEN UP, PRECISELY. Golden rule 2 asks that a claim be checkable
+# against the author's own words. Every word of the quote is still required to
+# be in the draft, in the sequence the reviewer wrote them; only ADJACENCY is
+# relaxed. A fabrication is not in the text under any reading and still fails.
+#
+# THE MINIMUM LENGTH IS THE GUARD THAT MATTERS. Without it this degrades into a
+# bag-of-words match: "the PI... the work... the results" appears in order in
+# almost every proposal ever written. ONE short fragment rejects the WHOLE
+# quote rather than just that fragment — the conservative direction, because a
+# lost quote costs a row and a wrong one costs the grounding guarantee.
+_ELLIPSIS_RE = re.compile(r"\[\s*\.\s*\.\s*\.\s*\]|\.\s*\.\s*\.|…")
+_MIN_FRAGMENT = 20
+
+
+def _abridged_fragments(q: str) -> Optional[list[str]]:
+    """The pieces of an ellipsis-abridged quote, or None if it is not one.
+
+    None — never a partial list — when any piece is too short to be evidence,
+    so the caller cannot accidentally verify a quote on its long half alone.
+    """
+    if not _ELLIPSIS_RE.search(q):
+        return None
+    parts = [p.strip(" .,;:") for p in _ELLIPSIS_RE.split(q)]
+    parts = [p for p in parts if p]
+    if not parts or any(len(p) < _MIN_FRAGMENT for p in parts):
+        return None
+    return parts
+
+
+def _in_order(hay: str, parts: list[str]) -> bool:
+    """Every fragment present, each one after the previous ends."""
+    pos = 0
+    for p in parts:
+        j = hay.find(p, pos)
+        if j < 0:
+            return False
+        pos = j + len(p)
+    return True
+
+
 def quote_in(text: str, quote: str, *, drop_list_noise: bool = False) -> bool:
     """True if `quote` appears in `text`, ignoring whitespace/line-wrap and case.
 
@@ -133,7 +249,21 @@ def quote_in(text: str, quote: str, *, drop_list_noise: bool = False) -> bool:
     if not q:
         return False
     haystacks = _readings(normalize(text, drop_list_noise=drop_list_noise))
+    # The page-furniture reading is ADDITIONAL, never a replacement: the text as
+    # extracted stays a haystack, so a quote of a line that this drops (the
+    # author's own "Sincerely,") still verifies against the original.
+    unfurnished = _strip_page_furniture(text)
+    if unfurnished is not None:
+        haystacks += _readings(normalize(unfurnished,
+                                         drop_list_noise=drop_list_noise))
     if any(qr in hay for qr in _readings(q) for hay in haystacks):
+        return True
+    # ABRIDGEMENT FALLBACK, after the honest match and before the ligature one.
+    # Reached only when the quote itself contains an ellipsis, so it cannot
+    # touch a quote that does not use one — the same "cannot reach ordinary
+    # text" property the ligature fallback gets from testing the quote first.
+    parts = _abridged_fragments(q)
+    if parts and any(_in_order(hay, parts) for hay in haystacks):
         return True
     # LIGATURE FALLBACK, attempted only after an honest match has failed AND
     # only when the quote actually contains a sequence a PDF can lose. That
