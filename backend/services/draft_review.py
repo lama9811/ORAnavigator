@@ -817,9 +817,13 @@ def score(findings: list[dict], *, solicitation_id: str = "",
 # because it only ever knew one of them.
 _ISSUE_MINOR_MAX = 5
 
+# Statuses meaning the rule is SATISFIED. Derived from _CREDIT rather than typed
+# again, so a new full-credit status cannot appear in one and not the other.
+_PASSING = {s for s, credit in _CREDIT.items() if credit >= 1.0}
+
 
 def verdict(score_block: Optional[dict], *, mistakes: list,
-            wording: list) -> dict:
+            wording: list, findings: Optional[list] = None) -> dict:
     """A reading of BOTH what the rules found and what the proofreaders found.
 
     Deterministic and model-free, like `score()` itself (golden rule 1). The
@@ -851,9 +855,33 @@ def verdict(score_block: Optional[dict], *, mistakes: list,
     if not score_block:
         level = "minor" if 0 < total <= _ISSUE_MINOR_MAX else (
             "needs_work" if total else "unknown")
-        head = ("The rules were not checked for this section"
-                + (", and the writing has " + _plural(total) + "."
-                   if total else ", and no writing problems were found."))
+        # WHY THIS BRANCH READS THE FINDINGS. Withholding the number is correct
+        # when no scored rule could be assessed -- but "the rules were not
+        # checked" was printed even when a rule HAD been checked and passed,
+        # directly above an open "Addressed" group saying so. References Cited
+        # is where it shows: two rules, and only one of them scoreable, so a
+        # single unassessed rule empties the denominator while the advisory
+        # `et al.` check sits there having passed.
+        rows = list(findings or [])
+        scoreable = [f for f in rows if f.get("scored")]
+        advisory_passed = [f for f in rows
+                           if not f.get("scored") and f.get("status") in _PASSING]
+        if not rows:
+            head = "The rules were not checked for this section"
+        elif scoreable:
+            # Transient: a scored rule exists and did not come back.
+            head = ("No scored rule could be assessed this time — running the "
+                    "check again usually fixes it")
+        else:
+            # Permanent: nothing here can produce a score, so do not send the
+            # author round a loop that cannot end.
+            head = "This section has no scored rules"
+        if advisory_passed:
+            n = len(advisory_passed)
+            head += (f", though {n} advisory rule{'' if n == 1 else 's'} "
+                     f"{'was' if n == 1 else 'were'} checked and passed")
+        head += (", and the writing has " + _plural(total) + "."
+                 if total else ", and no writing problems were found.")
         return {"level": level, "label": _LEVEL_LABELS[level],
                 "issues": counts, "summary": head}
 
@@ -1432,7 +1460,7 @@ def review_section(text: str, *, section: str, rulebook: str,
     # `wording` know the writing and nothing about the rules. Measured before
     # this existed: five rules met, fifteen errors found, headline "100%".
     out["verdict"] = verdict(out["score"], mistakes=out["mistakes"],
-                             wording=out["wording"])
+                             wording=out["wording"], findings=out["findings"])
     return out
 
 
