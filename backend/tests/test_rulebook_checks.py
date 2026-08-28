@@ -224,7 +224,7 @@ def test_a_paste_estimate_is_excluded_from_the_score():
 def test_every_check_is_registered():
     assert set(rc.CHECKS) == {"rb_not_in_text",
                               "rb_headings", "rb_no_urls", "rb_no_financials",
-                              "rb_et_al", "rb_page_limit"}
+                              "rb_et_al", "rb_narrative", "rb_page_limit"}
 
 
 def test_every_deterministic_rule_names_a_check_that_exists():

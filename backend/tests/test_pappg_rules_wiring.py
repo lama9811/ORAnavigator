@@ -45,12 +45,18 @@ def test_the_reviewed_rules_reach_RULES():
 
 
 def test_the_curated_rules_survive_the_merge():
-    """The 14 hand-curated rows carry every deterministic check. A merge that
-    replaced them with extracted look-alikes would swap code for model opinion."""
+    """The hand-curated rows carry every deterministic check. A merge that
+    replaced them with extracted look-alikes would swap code for model opinion.
+
+    `pappg_fe_unfunded` was SPLIT into _personnel/_postdocs on 2026-08-28 -- it
+    asked two questions and its answer moved run to run. Both halves are named
+    here, so the split cannot quietly become a deletion.
+    """
     ids = {r["id"] for r in rb.RULES[PAPPG]}
     for curated in ("pappg_ps_headings", "pappg_ps_one_page", "pappg_pd_impacts_header",
                     "pappg_pd_no_urls", "pappg_pd_page_limit", "pappg_rc_et_al",
-                    "pappg_fe_no_financials", "pappg_fe_unfunded"):
+                    "pappg_fe_no_financials", "pappg_fe_unfunded_personnel",
+                    "pappg_fe_unfunded_postdocs"):
         assert curated in ids, f"curated rule {curated} was lost in the merge"
 
 
@@ -172,7 +178,8 @@ def test_the_three_derived_project_summary_rows_now_quote_nsf():
     rule 2's whole point."""
     slices = _slices()
     by_id = {r["id"]: r for r in rb.RULES[PAPPG]}
-    for rid in ("pappg_ps_overview", "pappg_ps_merit", "pappg_ps_impacts"):
+    for rid in ("pappg_ps_overview_objectives", "pappg_ps_overview_methods",
+                "pappg_ps_merit", "pappg_ps_impacts"):
         src = by_id[rid]["source"]
         assert not src.startswith("Derived from"), f"{rid} still carries a derived line"
         assert quote_in(slices["project_summary"], src, drop_list_noise=True), \

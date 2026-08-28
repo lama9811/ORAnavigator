@@ -71,12 +71,21 @@ def _f(id, status, suggestion="", note="", scored=True, label=None):
 
 
 def test_priorities_put_real_failures_before_thin_passes():
+    """Ordering among the things to FIX: absent before thin.
+
+    The met row ("a") used to be listed third. It is not any more -- a PI
+    reported a Facilities plan headed "Do this first" whose second and third
+    entries were rules the section already met, so a plan containing anything
+    to fix now contains ONLY things to fix. See
+    test_priorities_only_lists_fixes.py, which owns that behaviour and keeps the
+    all-passing case intact.
+    """
     out = sg.priorities([
         _f("a", "addressed", "Name who benefits."),
         _f("b", "not_found", "Add the LOI number."),
         _f("c", "partial", "State the specific advance."),
     ])
-    assert [p["id"] for p in out] == ["b", "c", "a"]
+    assert [p["id"] for p in out] == ["b", "c"]
 
 
 def test_a_flagged_prohibition_ranks_with_the_failures():

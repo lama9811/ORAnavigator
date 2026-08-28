@@ -121,6 +121,61 @@ THINKING_BUDGET = 1024
 # a 3-rule section a single round-trip.
 REVIEW_BATCH = 15
 
+# How many times Check a Section asks the reviewer the same question.
+#
+# Measured on a real awarded Project Summary, five identical uploads: four
+# scored 100% and one 92%. Five of six rules were stable every run; the one that
+# moved is a genuinely BORDERLINE call (an Overview naming objectives but not
+# methods). Rules decided by code never move, and a clear-cut judgement does not
+# either -- a weak 47-word summary was identical across all five runs.
+#
+# Temperature is already 0 and thinking is already capped, and CLAUDE.md records
+# two measured attempts to fix this class by prompt tuning, one of which cost
+# two thirds of the recall on real errors and was reverted. Asking more than
+# once and taking the median is the lever that is left.
+SEMANTIC_VOTES = 3
+
+# Status ordering for the median. Two vocabularies that never mix -- a row is a
+# prohibition or it is not -- so one table serves both.
+_VOTE_RANK = {"not_found": 0, "flagged": 0, "partial": 1, "clear": 2, "addressed": 2}
+
+
+def merge_votes(votes: list[list[dict]]) -> list[dict]:
+    """One finding per requirement, taking the MEDIAN status across runs.
+
+    The median is a single rule covering both cases: with a 2-1 majority it IS
+    the majority, and with three different answers it is the middle one rather
+    than whichever call happened to return first. With an even number of usable
+    votes it takes the LOWER, so a disagreement never resolves upward into a
+    claim the draft has not earned.
+
+    Returns the winning run's row WHOLE. A note arguing `partial` printed under
+    a status of `addressed` would be a new kind of wrong, so note, evidence and
+    suggestion travel with the status they were written for.
+
+    `unclear` means the reviewer returned nothing for that row -- it is not an
+    opinion, so it does not get a vote. When every run failed it is all there is
+    and it stands.
+    """
+    if len(votes) <= 1:
+        return list(votes[0]) if votes else []
+    order: list[str] = []
+    seen: dict[str, list[dict]] = {}
+    for run in votes:
+        for f in run:
+            rid = f.get("id")
+            if rid not in seen:
+                seen[rid] = []
+                order.append(rid)
+            seen[rid].append(f)
+    out = []
+    for rid in order:
+        rows = seen[rid]
+        ranked = sorted((r for r in rows if r.get("status") in _VOTE_RANK),
+                        key=lambda r: _VOTE_RANK[r["status"]])
+        out.append(ranked[(len(ranked) - 1) // 2] if ranked else rows[0])
+    return out
+
 _SCORE_BANDS = ((85, "green"), (60, "amber"))
 
 
@@ -388,6 +443,25 @@ def _review_system(solicitation_id: str) -> str:
         "6. Be strict about the line between 'partial' and 'addressed': a vague gesture at a "
         "topic is 'partial'. Reviewers are strict, and a false 'addressed' costs this author "
         "an award.\n"
+        # ABSENCE HAS TO COST SOMETHING. Every POSITIVE claim is already gated by
+        # the verbatim quote in rule 3; `not_found` was gated by nothing, so a
+        # reply that never read past the first paragraph is indistinguishable
+        # from one that read the whole section — and it is the cheaper answer to
+        # produce. The asymmetry points the wrong way here: a false 'addressed'
+        # is caught by the quote gate, while a false 'not_found' reaches the PI
+        # as "you did not write this" about something they did write.
+        "7. READ THE ENTIRE DRAFT TEXT before judging any requirement. The requirements are "
+        "a fixed list and are NOT in document order — a draft answers them in its own order, "
+        "so the content for a requirement may appear anywhere, including a later paragraph, "
+        "a table, or a differently titled subsection.\n"
+        "8. BEFORE RETURNING 'not_found', search the whole draft again for other wordings of "
+        "the same idea — synonyms, the author's own terminology, an example standing in for "
+        "the general claim. In the note for a 'not_found', say what you looked for. Absence "
+        "is a finding you must reach, not the answer you give when nothing caught your eye.\n"
+        "9. NEVER INFER what the draft says. Do not answer from the requirement's own "
+        "wording, from the section's title, from other requirements in the list, or from "
+        "what a proposal of this kind usually contains. Judge only the words in front of "
+        "you.\n"
     )
 
 
@@ -428,7 +502,8 @@ def _section_label(sections: dict, key: str) -> str:
 
 
 def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
-                    sections: dict, solicitation_id: str) -> list[dict]:
+                    sections: dict, solicitation_id: str,
+                    votes: int = 1) -> list[dict]:
     """Coverage for one section's requirements, grounded and verified.
 
     BATCHED, and the batching is load-bearing. Every requirement for a section used
@@ -459,10 +534,34 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
     if len(reqs) > REVIEW_BATCH:
         out: list[dict] = []
         for i in range(0, len(reqs), REVIEW_BATCH):
-            out.extend(_review_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
-                                     sections, solicitation_id))
+            out.extend(_voted_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
+                                    sections, solicitation_id, votes))
         return out
-    return _review_batch(section_key, span, reqs, sections, solicitation_id)
+    return _voted_batch(section_key, span, reqs, sections, solicitation_id, votes)
+
+
+def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
+                 solicitation_id: str, votes: int) -> list[dict]:
+    """`_review_batch` asked `votes` times, merged by median.
+
+    Concurrent, so three votes cost roughly one call's wall clock rather than
+    three. A vote that raises is dropped rather than losing the round: two
+    usable answers still decide, and only losing ALL of them falls back.
+    """
+    if votes <= 1:
+        return _review_batch(section_key, span, reqs, sections, solicitation_id)
+    results = []
+    with ThreadPoolExecutor(max_workers=votes) as pool:
+        futures = [pool.submit(_review_batch, section_key, span, reqs,
+                               sections, solicitation_id) for _ in range(votes)]
+        for fut in futures:
+            try:
+                results.append(fut.result())
+            except Exception as exc:            # one vote lost, not the round
+                print(f"[REVIEW] a vote failed: {exc}")
+    if not results:
+        return _semantic_fallback(reqs, span["text"])
+    return merge_votes(results)
 
 
 def _review_batch(section_key: str, span: dict, reqs: list[dict],
@@ -737,9 +836,13 @@ def score(findings: list[dict], *, solicitation_id: str = "",
 # because it only ever knew one of them.
 _ISSUE_MINOR_MAX = 5
 
+# Statuses meaning the rule is SATISFIED. Derived from _CREDIT rather than typed
+# again, so a new full-credit status cannot appear in one and not the other.
+_PASSING = {s for s, credit in _CREDIT.items() if credit >= 1.0}
+
 
 def verdict(score_block: Optional[dict], *, mistakes: list,
-            wording: list) -> dict:
+            wording: list, findings: Optional[list] = None) -> dict:
     """A reading of BOTH what the rules found and what the proofreaders found.
 
     Deterministic and model-free, like `score()` itself (golden rule 1). The
@@ -771,9 +874,33 @@ def verdict(score_block: Optional[dict], *, mistakes: list,
     if not score_block:
         level = "minor" if 0 < total <= _ISSUE_MINOR_MAX else (
             "needs_work" if total else "unknown")
-        head = ("The rules were not checked for this section"
-                + (", and the writing has " + _plural(total) + "."
-                   if total else ", and no writing problems were found."))
+        # WHY THIS BRANCH READS THE FINDINGS. Withholding the number is correct
+        # when no scored rule could be assessed -- but "the rules were not
+        # checked" was printed even when a rule HAD been checked and passed,
+        # directly above an open "Addressed" group saying so. References Cited
+        # is where it shows: two rules, and only one of them scoreable, so a
+        # single unassessed rule empties the denominator while the advisory
+        # `et al.` check sits there having passed.
+        rows = list(findings or [])
+        scoreable = [f for f in rows if f.get("scored")]
+        advisory_passed = [f for f in rows
+                           if not f.get("scored") and f.get("status") in _PASSING]
+        if not rows:
+            head = "The rules were not checked for this section"
+        elif scoreable:
+            # Transient: a scored rule exists and did not come back.
+            head = ("No scored rule could be assessed this time — running the "
+                    "check again usually fixes it")
+        else:
+            # Permanent: nothing here can produce a score, so do not send the
+            # author round a loop that cannot end.
+            head = "This section has no scored rules"
+        if advisory_passed:
+            n = len(advisory_passed)
+            head += (f", though {n} advisory rule{'' if n == 1 else 's'} "
+                     f"{'was' if n == 1 else 'were'} checked and passed")
+        head += (", and the writing has " + _plural(total) + "."
+                 if total else ", and no writing problems were found.")
         return {"level": level, "label": _LEVEL_LABELS[level],
                 "issues": counts, "summary": head}
 
@@ -1252,8 +1379,13 @@ def review_section(text: str, *, section: str, rulebook: str,
             # the model only through _review_system's prompt text ("requirements
             # from <id>"). Passing the RULEBOOK name is correct here and reads
             # correctly: these rules do come from the PAPPG, not a solicitation.
+            # VOTED here and not in review_draft: this is the entry point a PI
+            # re-runs on one paragraph, where an unstable answer is visible and
+            # infuriating. Tripling a ~14-section Draft Review is the 429 storm
+            # the fan-out cap already exists to prevent.
             findings.extend(_review_section(section, spans[section], semantic,
-                                            mini["sections"], rulebook))
+                                            mini["sections"], rulebook,
+                                            votes=SEMANTIC_VOTES))
         else:
             # use_ai=False must not make semantic rules VANISH. Run the same
             # fallback review_draft uses on an AI outage, so a caller sees
@@ -1347,7 +1479,7 @@ def review_section(text: str, *, section: str, rulebook: str,
     # `wording` know the writing and nothing about the rules. Measured before
     # this existed: five rules met, fifteen errors found, headline "100%".
     out["verdict"] = verdict(out["score"], mistakes=out["mistakes"],
-                             wording=out["wording"])
+                             wording=out["wording"], findings=out["findings"])
     return out
 
 

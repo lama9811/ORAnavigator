@@ -399,7 +399,10 @@ def test_use_ai_false_does_not_silently_drop_semantic_rules():
     out = draft_review.review_section(FIVE_LINE, section="project_summary",
                                       rulebook="the PAPPG", use_ai=False)
     ids = {f["id"] for f in out["findings"]}
-    for semantic_id in ("pappg_ps_overview", "pappg_ps_merit", "pappg_ps_impacts"):
+    # pappg_ps_overview was split into _objectives/_methods; both are semantic.
+    for semantic_id in ("pappg_ps_overview_objectives",
+                        "pappg_ps_overview_methods",
+                        "pappg_ps_merit", "pappg_ps_impacts"):
         assert semantic_id in ids, f"{semantic_id} missing from findings"
         row = next(f for f in out["findings"] if f["id"] == semantic_id)
         assert row["status"] == "unclear"
@@ -462,7 +465,9 @@ def test_no_row_quotes_a_sentence_that_does_not_state_its_rule():
 
     headings_quote = next(r["source"] for r in rb.rules_for("the PAPPG")
                           if r["id"] == "pappg_ps_headings")
-    for row_id in ("pappg_ps_overview", "pappg_ps_merit", "pappg_ps_impacts"):
+    # Both halves of the split Overview row must still quote NSF verbatim.
+    for row_id in ("pappg_ps_overview_objectives", "pappg_ps_overview_methods",
+                   "pappg_ps_merit", "pappg_ps_impacts"):
         row = next(r for r in rb.rules_for("the PAPPG") if r["id"] == row_id)
         assert row["source"] != headings_quote, (
             f"{row_id} reuses the headings quote, which does not state its rule")

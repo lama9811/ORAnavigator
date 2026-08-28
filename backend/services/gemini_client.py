@@ -198,6 +198,46 @@ def generate_text(prompt: str, *, temperature: float = 0.0,
                      model=model, location=location)
 
 
+def _close_unbalanced(text: str) -> Optional[str]:
+    """`text` with any unclosed objects/arrays closed, or None if unrepairable.
+
+    Observed live: a reviewer reply ending `..."}\\n]` -- the outer object's
+    closing brace simply absent, with finish_reason STOP and 1932 of 8192 output
+    tokens used, so not truncation at the ceiling. One missing character costs a
+    whole batch, because `_review_batch` reads a failed parse as a failed call
+    and marks every requirement in it `unclear`.
+
+    Scans OUTSIDE strings only -- an evidence quote containing braces is
+    ordinary in this app ("the set {x, y}"), and counting those as structure
+    would append the wrong closers. Returns None while a string is still open,
+    because a reply cut mid-value is genuinely lost and guessing at it would
+    invent data.
+    """
+    stack: list[str] = []
+    in_string = False
+    escaped = False
+    for ch in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch in "{[":
+            stack.append("}" if ch == "{" else "]")
+        elif ch in "}]":
+            if not stack or stack[-1] != ch:
+                return None          # genuinely malformed, not merely unfinished
+            stack.pop()
+    if in_string or not stack:
+        return None
+    return text + "".join(reversed(stack))
+
+
 def generate_json(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 4096,
                   timeout_s: Optional[float] = None,
@@ -225,6 +265,33 @@ def generate_json(prompt: str, *, temperature: float = 0.0,
     try:
         parsed = json.loads(text, strict=False)
     except (json.JSONDecodeError, ValueError) as e:
+        # A CLOSING fence with no opening one. Observed live: the reviewer
+        # returned valid JSON followed by a bare "```", the stripper above never
+        # fired because the text does not START with a fence, and the call was
+        # thrown away with "Extra data: line 1 column 8421".
+        #
+        # The cost is a whole batch, not a row: `draft_review._review_batch`
+        # reads None as a failed call and falls back to `unclear` for EVERY
+        # requirement in it. Measured on a real Project Description, 15 rules
+        # went `unclear` at once and the section scored 3 of 3 on its
+        # deterministic rules instead of 13 of 16 -- and `unclear` is absent
+        # from _CREDIT, so they left the denominator with nothing on screen to
+        # say so.
+        #
+        # Repaired only AFTER an honest parse has failed, so a response that
+        # already parses is never touched -- an `evidence` quote containing a
+        # code fence is a real thing a reviewer can return.
+        repaired = text.rstrip()
+        if repaired.endswith("```"):
+            repaired = repaired[:-3].rstrip()
+        for candidate in (repaired, _close_unbalanced(repaired)):
+            if candidate is None or candidate == text:
+                continue
+            try:
+                parsed = json.loads(candidate, strict=False)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            return parsed if isinstance(parsed, dict) else None
         snippet = text[:300].replace("\n", "\\n")
         print(f"   [GEMINI] JSON parse failed: {e} | {snippet}")
         return None

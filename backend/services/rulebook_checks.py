@@ -147,6 +147,59 @@ def rb_no_financials(ctx: dict, req: dict) -> tuple:
     ), shown
 
 
+# ── narrative, not a bare list ──────────────────────────────────────────────
+#
+# DECIDED BY CODE, and that is the whole point. As a model judgement this was
+# the last unstable rule in Facilities: `addressed` 5 runs of 6 and `not_found`
+# once on an unchanged 617-word section, because "is this narrative?" is a
+# matter of taste and the draft is prose containing one table. Splitting cannot
+# help -- it asks a single question; the question itself was the problem.
+#
+# NSF's concern is narrower than tone, and the rule's own `why` says so: "A bare
+# equipment list does not tell a reviewer the project is feasible." So the
+# checkable question is whether the section contains real sentences.
+#
+# MEASURED across a real awarded proposal before the threshold was chosen:
+# Facilities 18 prose sentences, Project Summary 13, and the smallest genuinely
+# narrative section (a 145-word Data Management Plan) 4 -- against 0 for a bare
+# list, 0 for a table, and 0 for short bulleted items punctuated one by one.
+# Real starts at 4; degenerate is 0. Three sits below everything real and above
+# everything this rule exists to catch.
+_PROSE_SENTENCE_RE = re.compile(r"[^.!?]{20,}?[.!?]")
+_MIN_PROSE_WORDS = 8
+_MIN_PROSE_SENTENCES = 3
+
+
+def _prose_sentences(text: str) -> list[str]:
+    """Runs ending in terminal punctuation and long enough to be a sentence.
+
+    Requiring the terminator is what stops an unpunctuated list counting as one
+    very long sentence; requiring the length is what stops "Computer lab." from
+    counting as prose.
+    """
+    flat = " ".join((text or "").split())
+    return [s for s in _PROSE_SENTENCE_RE.findall(flat)
+            if len(s.split()) >= _MIN_PROSE_WORDS]
+
+
+def rb_narrative(ctx: dict, req: dict) -> tuple:
+    text = _span_text(ctx, req)
+    if text is None:
+        return _unlocated("Your Facilities, Equipment and Other Resources section")
+    sentences = _prose_sentences(text)
+    if len(sentences) >= _MIN_PROSE_SENTENCES:
+        return "addressed", (
+            f"Written in prose — {len(sentences)} full sentences. A table or list "
+            "inside an otherwise narrative section is fine."
+        ), sentences[0][:160]
+    return "not_found", (
+        "This reads as a list or table rather than a narrative. NSF asks for this "
+        "section to be narrative in nature, because a bare inventory does not tell "
+        "a reviewer the project is feasible — describe what the resources are and "
+        "what they let you do."
+    ), ""
+
+
 # ── et al. ──────────────────────────────────────────────────────────────────
 
 # The literal token with its period. "et alia" and the surname "Etal" must not
@@ -240,6 +293,7 @@ CHECKS = {
     "rb_no_urls": rb_no_urls,
     "rb_no_financials": rb_no_financials,
     "rb_et_al": rb_et_al,
+    "rb_narrative": rb_narrative,
     "rb_page_limit": rb_page_limit,
     "rb_not_in_text": rb_not_in_text,
 }
