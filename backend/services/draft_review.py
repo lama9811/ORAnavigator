@@ -443,6 +443,25 @@ def _review_system(solicitation_id: str) -> str:
         "6. Be strict about the line between 'partial' and 'addressed': a vague gesture at a "
         "topic is 'partial'. Reviewers are strict, and a false 'addressed' costs this author "
         "an award.\n"
+        # ABSENCE HAS TO COST SOMETHING. Every POSITIVE claim is already gated by
+        # the verbatim quote in rule 3; `not_found` was gated by nothing, so a
+        # reply that never read past the first paragraph is indistinguishable
+        # from one that read the whole section — and it is the cheaper answer to
+        # produce. The asymmetry points the wrong way here: a false 'addressed'
+        # is caught by the quote gate, while a false 'not_found' reaches the PI
+        # as "you did not write this" about something they did write.
+        "7. READ THE ENTIRE DRAFT TEXT before judging any requirement. The requirements are "
+        "a fixed list and are NOT in document order — a draft answers them in its own order, "
+        "so the content for a requirement may appear anywhere, including a later paragraph, "
+        "a table, or a differently titled subsection.\n"
+        "8. BEFORE RETURNING 'not_found', search the whole draft again for other wordings of "
+        "the same idea — synonyms, the author's own terminology, an example standing in for "
+        "the general claim. In the note for a 'not_found', say what you looked for. Absence "
+        "is a finding you must reach, not the answer you give when nothing caught your eye.\n"
+        "9. NEVER INFER what the draft says. Do not answer from the requirement's own "
+        "wording, from the section's title, from other requirements in the list, or from "
+        "what a proposal of this kind usually contains. Judge only the words in front of "
+        "you.\n"
     )
 
 
