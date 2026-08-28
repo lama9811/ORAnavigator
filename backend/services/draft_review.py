@@ -607,6 +607,12 @@ def _review_batch(section_key: str, span: dict, reqs: list[dict],
         thinking_budget=THINKING_BUDGET,
         system_instruction=_review_system(solicitation_id),
         model=MODEL, location=MODEL_LOCATION,
+        # The reviewer sometimes answers with a BARE ARRAY of findings instead
+        # of the {"findings": [...]} envelope the prompt asks for. It parses,
+        # and every assessment in it is right. Without this the dict-only
+        # contract discarded all 15 rules of a Project Description and the
+        # section displayed a confident 100% from its 3 deterministic rules.
+        list_key="findings",
     )
     if not ai or not isinstance(ai.get("findings"), list):
         return _semantic_fallback(reqs, section_text)

@@ -238,16 +238,40 @@ def _close_unbalanced(text: str) -> Optional[str]:
     return text + "".join(reversed(stack))
 
 
+def _as_dict(parsed, list_key: Optional[str]) -> Optional[dict]:
+    """A dict as-is; a bare list wrapped when the caller named a key for it."""
+    if isinstance(parsed, dict):
+        return parsed
+    if list_key and isinstance(parsed, list):
+        return {list_key: parsed}
+    return None
+
+
 def generate_json(prompt: str, *, temperature: float = 0.0,
                   max_output_tokens: int = 4096,
                   timeout_s: Optional[float] = None,
                   system_instruction: Optional[str] = None,
                   thinking_budget: Optional[int] = None,
                   model: Optional[str] = None,
-                  location: Optional[str] = None) -> Optional[dict]:
+                  location: Optional[str] = None,
+                  list_key: Optional[str] = None) -> Optional[dict]:
     """JSON Gemini call. Forces application/json, strips any markdown fences,
     parses with strict=False (tolerates control chars from PDF text). Returns a
-    dict, or None on unavailable / malformed / non-dict output. Never raises."""
+    dict, or None on unavailable / malformed / non-dict output. Never raises.
+
+    `list_key` opts a caller in to a BARE TOP-LEVEL ARRAY, wrapping it as
+    {list_key: [...]}. Seen live on a 15-rule Project Description: the reviewer
+    answered with `[{...}, {...}]` instead of `{"findings": [...]}`. It parsed
+    perfectly and every assessment in it was right, and the dict-only return
+    threw all fifteen away — the section then scored 3 of 3 on its deterministic
+    rules and displayed a confident 100% while fifteen real rules went
+    unchecked. A false 100% is worse than a wrong number: it says "nothing to
+    fix".
+
+    Opt-in BY NAME rather than a silent widening, because five other callers
+    rely on the dict contract and a shape that changes underneath them is how
+    this class of bug started.
+    """
     raw = _generate(prompt, temperature=temperature,
                     max_output_tokens=max_output_tokens,
                     json_mode=True, timeout_s=timeout_s,
@@ -291,8 +315,8 @@ def generate_json(prompt: str, *, temperature: float = 0.0,
                 parsed = json.loads(candidate, strict=False)
             except (json.JSONDecodeError, ValueError):
                 continue
-            return parsed if isinstance(parsed, dict) else None
+            return _as_dict(parsed, list_key)
         snippet = text[:300].replace("\n", "\\n")
         print(f"   [GEMINI] JSON parse failed: {e} | {snippet}")
         return None
-    return parsed if isinstance(parsed, dict) else None
+    return _as_dict(parsed, list_key)
