@@ -164,4 +164,18 @@ def priorities(findings: list[dict], limit: int = _DEFAULT_LIMIT) -> list[dict]:
             "text": text, "advisory": advisory,
         }))
     ranked.sort(key=lambda r: (r[0], r[1]))
-    return [r[2] for r in ranked[:limit]]
+    # WHEN ANYTHING NEEDS FIXING, THE PLAN IS ONLY THE THINGS THAT NEED FIXING.
+    #
+    # Reported by a PI on a Facilities check: one `partial` and two `addressed`
+    # rows arrived as a single list under "Do this first", so two of the three
+    # things they were told to do first were rules the section already met. The
+    # heading was right; the list was not. CLAUDE.md records the same error from
+    # the other direction — "'Do this first' over four met rules is approval
+    # rendered as failure" — which is why priorities_heading() exists.
+    #
+    # With nothing to fix, the met-but-improvable rows stand alone under "Ways
+    # to strengthen this": that case is unchanged, and is why this filters
+    # rather than simply dropping passes.
+    fixes = [r for r in ranked if r[2]["status"] not in _PASSING]
+    chosen = fixes or ranked
+    return [r[2] for r in chosen[:limit]]
