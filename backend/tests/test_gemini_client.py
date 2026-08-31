@@ -352,3 +352,19 @@ def test_no_seed_key_when_none_is_given():
     request for every caller that never asked for one."""
     cfg = gc._build_config(0.0, 100, True, None, None)
     assert "seed" not in cfg
+
+
+def test_generate_json_forwards_the_seed(monkeypatch):
+    """It accepted `seed` and silently DROPPED it, while generate_text forwarded
+    it. Every call on both review paths goes through generate_json, so a seed
+    experiment run against the reviewer never sent one -- and the resulting
+    "Vertex ignores the seed" conclusion was measuring nothing. Found by audit,
+    not by a test, because nothing asserted the forwarding."""
+    seen = {}
+
+    def fake(prompt, **kw):
+        seen.update(kw)
+        return '{"ok": true}'
+    monkeypatch.setattr(gc, "_generate", fake)
+    gc.generate_json("p", seed=11)
+    assert seen.get("seed") == 11

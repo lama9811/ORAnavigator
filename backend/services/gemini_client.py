@@ -319,7 +319,8 @@ def generate_json(prompt: str, *, temperature: float = 0.0,
                     json_mode=True, timeout_s=timeout_s,
                     system_instruction=system_instruction,
                     thinking_budget=thinking_budget,
-                    model=model, location=location)
+                    model=model, location=location,
+                    seed=seed)
     if not raw:
         return None
     text = raw.strip()
