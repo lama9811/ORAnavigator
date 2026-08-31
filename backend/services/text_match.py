@@ -67,6 +67,18 @@ _SOFT_HYPHEN_RE = re.compile(r"(\w)[-\u2010\u2011\u2012\u2013\u2014]\s+(\w)")
 _DASHES = "-\u2010\u2011\u2012\u2013\u2014"
 
 
+def has_line_break_hyphen(s: str) -> bool:
+    """True when `s` contains a word split by a dash at a line end.
+
+    The SAME rule `_readings` uses, exposed because `proofread` needs to
+    recognise our own extraction damage and a second definition of it would
+    drift -- this module exists because "verified" was once implemented twice.
+    A dash between spaces ("2019 - 2024") does not match: a word character is
+    required on both sides.
+    """
+    return bool(_SOFT_HYPHEN_RE.search(s or ""))
+
+
 def _readings(s: str) -> list[str]:
     """Every defensible reading of `s` where a hyphen ends a line.
 

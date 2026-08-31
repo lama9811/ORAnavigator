@@ -136,11 +136,20 @@ def _client_for(location: Optional[str]):
 def _build_config(temperature: float, max_output_tokens: int,
                   json_mode: bool, timeout_s: Optional[float],
                   system_instruction: Optional[str],
-                  thinking_budget: Optional[int] = None) -> dict:
+                  thinking_budget: Optional[int] = None,
+                  seed: Optional[int] = None) -> dict:
     config: dict = {
         "temperature": temperature,
         "max_output_tokens": max_output_tokens,
     }
+    if seed is not None:
+        # THE SAMPLING SEED, and it DOES NOT BUY DETERMINISM on Vertex -- measured,
+        # see the note by draft_review.SEMANTIC_VOTES. It reaches the SDK (verified
+        # at the wire, config.seed == 11) and the same draft still scored 86% and
+        # 93% across 10 runs. Kept because it is free and correct plumbing; do not
+        # reach for it expecting reproducible reads. Omitted (None) => every
+        # existing caller sends a byte-identical request.
+        config["seed"] = seed
     if thinking_budget is not None:
         # Gemini 2.5 Flash "thinking" is ON by default and adds seconds of
         # latency. For latency-critical, low-temperature, grounded/structured
@@ -166,6 +175,7 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
               json_mode: bool, timeout_s: Optional[float],
               system_instruction: Optional[str] = None,
               thinking_budget: Optional[int] = None,
+              seed: Optional[int] = None,
               model: Optional[str] = None,
               location: Optional[str] = None) -> Optional[str]:
     """Single Gemini round-trip → raw response text, or None on any failure.
@@ -188,7 +198,8 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
                     model=model,
                     contents=prompt,
                     config=_build_config(temperature, max_output_tokens, json_mode,
-                                         timeout_s, system_instruction, thinking_budget),
+                                         timeout_s, system_instruction, thinking_budget,
+                                         seed),
                 )
             except TypeError:
                 # SDK rejected the http_options timeout key — retry without it.
@@ -196,7 +207,8 @@ def _generate(prompt: str, *, temperature: float, max_output_tokens: int,
                     model=model,
                     contents=prompt,
                     config=_build_config(temperature, max_output_tokens, json_mode,
-                                         None, system_instruction, thinking_budget),
+                                         None, system_instruction, thinking_budget,
+                                         seed),
                 )
             return (response.text or "").strip() or None
         except Exception as e:
@@ -214,6 +226,7 @@ def generate_text(prompt: str, *, temperature: float = 0.0,
                   timeout_s: Optional[float] = None,
                   system_instruction: Optional[str] = None,
                   thinking_budget: Optional[int] = None,
+                  seed: Optional[int] = None,
                   model: Optional[str] = None,
                   location: Optional[str] = None) -> Optional[str]:
     """Free-text Gemini call. Returns the text, or None if unavailable/failed."""
@@ -222,6 +235,7 @@ def generate_text(prompt: str, *, temperature: float = 0.0,
                      json_mode=False, timeout_s=timeout_s,
                      system_instruction=system_instruction,
                      thinking_budget=thinking_budget,
+                     seed=seed,
                      model=model, location=location)
 
 
@@ -279,6 +293,7 @@ def generate_json(prompt: str, *, temperature: float = 0.0,
                   timeout_s: Optional[float] = None,
                   system_instruction: Optional[str] = None,
                   thinking_budget: Optional[int] = None,
+                  seed: Optional[int] = None,
                   model: Optional[str] = None,
                   location: Optional[str] = None,
                   list_key: Optional[str] = None) -> Optional[dict]:

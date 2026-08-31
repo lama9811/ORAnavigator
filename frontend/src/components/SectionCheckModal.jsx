@@ -104,6 +104,16 @@ function StatusChip({ status }) {
 
 const ACCEPT = ".pdf,.docx,.txt,.md,.markdown,.text,.rst,.csv,.tex";
 
+// UPLOAD ONLY since 2026-08-31; the paste box was removed. A paste and an upload
+// of one section could never agree, and not because of model variance: a page
+// count is a property of a PDF, so the page-limit rule is CHECKED on an upload
+// and `not_checked` on a paste -- 7 rules assessed against 6, different
+// denominators, every single time. Measured on one awarded Project Summary from
+// identical text: upload 93%, paste 92%. For a tool PIs hand to ORA, and that
+// ORA staff run themselves, that mismatch costs more than pasting saves.
+// The paste ENDPOINT still exists and is still tested; this screen just does not
+// call it.
+
 function humanSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
@@ -113,8 +123,6 @@ function humanSize(bytes) {
 export default function SectionCheckModal({ submission, onClose }) {
   const [sections, setSections] = useState(FALLBACK_SECTIONS);
   const [section, setSection] = useState("project_summary");
-  const [mode, setMode] = useState("paste"); // paste | upload
-  const [text, setText] = useState("");
   const [file, setFile] = useState(null);
   const [step, setStep] = useState("input"); // input | running | results
   const [result, setResult] = useState(null);
@@ -159,17 +167,7 @@ export default function SectionCheckModal({ submission, onClose }) {
     return () => { live = false; };
   }, [submission?.id]);
 
-  // What the picker already told us about the section being checked, so the
-  // running message can be specific instead of naming a rulebook it may not be
-  // the only source for.
-  const pendingRuleCount = (() => {
-    const s = sections.find((x) => x.key === section);
-    if (!s || typeof s.solicitation_rules !== "number") return 0;
-    return (s.solicitation_rules || 0) + (s.rulebook_rules || 0);
-  })();
-
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  const canRun = mode === "upload" ? Boolean(file) : Boolean(text.trim());
+  const canRun = Boolean(file);
   const sectionLabel =
     sections.find((s) => s.key === section)?.label
     || FALLBACK_SECTIONS.find((s) => s.key === section)?.label
@@ -187,26 +185,16 @@ export default function SectionCheckModal({ submission, onClose }) {
     setError("");
     setExtraction(null);
     try {
-      let res;
-      if (mode === "upload") {
-        const form = new FormData();
-        form.append("section", section);
-        form.append("rulebook", RULEBOOK);
-        form.append("file", file, file.name);
-        res = await fetch(
-          `${API_BASE}/api/me/submissions/${submission.id}/section-check/upload`,
-          { method: "POST", headers: { ...authHeaders() }, body: form }
-        );
-      } else {
-        res = await fetch(
-          `${API_BASE}/api/me/submissions/${submission.id}/section-check`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...authHeaders() },
-            body: JSON.stringify({ section, text, rulebook: RULEBOOK }),
-          }
-        );
-      }
+      // The paste endpoint still exists and is still tested; this screen no
+      // longer calls it. See the note by `mode` for why.
+      const form = new FormData();
+      form.append("section", section);
+      form.append("rulebook", RULEBOOK);
+      form.append("file", file, file.name);
+      const res = await fetch(
+        `${API_BASE}/api/me/submissions/${submission.id}/section-check/upload`,
+        { method: "POST", headers: { ...authHeaders() }, body: form }
+      );
       if (!res.ok) {
         let detail = `Check failed (${res.status})`;
         try {
@@ -259,8 +247,6 @@ export default function SectionCheckModal({ submission, onClose }) {
         {step === "input" && (
           <InputView
             sections={sections} section={section} setSection={setSection}
-            mode={mode} setMode={setMode}
-            text={text} setText={setText} words={words}
             file={file} addFile={addFile} removeFile={() => setFile(null)}
             error={error} canRun={canRun} onRun={run}
           />
@@ -269,18 +255,14 @@ export default function SectionCheckModal({ submission, onClose }) {
         {step === "running" && (
           <div className="scm-loading">
             <div className="scm-spinner" />
-            {/* NOT "against the PAPPG's rules". Since 2026-08-26 a section is
-                checked against the solicitation's rules AND NSF's basics, and
-                naming one of the two is how a PI concludes their funder is
-                being ignored -- the same stale sentence that was already fixed
-                in the header and missed here. The picker knows the split, so
-                say the number instead of guessing at a name. */}
-            <p>
-              Checking your {sectionLabel}
-              {pendingRuleCount > 0 && <> against {pendingRuleCount} rule
-                {pendingRuleCount === 1 ? "" : "s"}</>}
-              &hellip;
-            </p>
+            {/* JUST THE SECTION NAME. This used to add "against N rules", and
+                the count is not what a PI wants while they wait -- it is detail
+                they cannot act on, and the results screen states the same number
+                a moment later where it means something. Do NOT name a rulebook
+                here either: since 2026-08-26 a section is checked against the
+                solicitation's rules AND NSF's basics, and naming one of the two
+                is how a PI concludes their funder is being ignored. */}
+            <p>Checking your {sectionLabel}&hellip;</p>
           </div>
         )}
 
@@ -298,8 +280,8 @@ export default function SectionCheckModal({ submission, onClose }) {
 }
 
 function InputView({
-  sections, section, setSection, mode, setMode,
-  text, setText, words, file, addFile, removeFile,
+  sections, section, setSection,
+  file, addFile, removeFile,
   error, canRun, onRun,
 }) {
   const inputRef = useRef(null);
@@ -329,40 +311,10 @@ function InputView({
       </label>
 
       <p className="scm-intro">
-        Paste what you have so far, or upload a single file for this section.
-        Either works &mdash; you don&rsquo;t need a finished draft or the rest
-        of the proposal.
+        Upload one file for this section. A rough draft is fine.
       </p>
 
-      <div className="scm-modes" role="tablist">
-        <button
-          role="tab" aria-selected={mode === "paste"}
-          className={`scm-mode${mode === "paste" ? " is-active" : ""}`}
-          onClick={() => setMode("paste")}
-        >
-          Paste text
-        </button>
-        <button
-          role="tab" aria-selected={mode === "upload"}
-          className={`scm-mode${mode === "upload" ? " is-active" : ""}`}
-          onClick={() => setMode("upload")}
-        >
-          Upload a file
-        </button>
-      </div>
-
-      {mode === "paste" ? (
-        <textarea
-          className="scm-textarea"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={
-            "Overview\n...\n\nIntellectual Merit\n...\n\nBroader Impacts\n..."
-          }
-          spellCheck={false}
-        />
-      ) : (
-        <>
+      <>
           <div
             className={`scm-drop${over ? " is-over" : ""}`}
             onDragOver={(e) => { e.preventDefault(); setOver(true); }}
@@ -409,23 +361,20 @@ function InputView({
               </button>
             </div>
           )}
-        </>
-      )}
+      </>
 
-      {/* The one honest line this feature depends on: a paste can only ever
-          give a word-count ESTIMATE of length, never a real page count. */}
+      {/* WHY UPLOAD ONLY. A real page count exists only in a PDF, so this is
+          also the only path on which the page-limit rule is actually checked. */}
       <p className="scm-hint">
-        Upload the PDF if you want the page limit checked properly &mdash;
-        from pasted text we can only estimate it.
+        A PDF gives a real page count, so the page limit is checked rather than
+        estimated.
       </p>
 
       {error && <div className="scm-errorbox"><AlertTriangle size={14} /> {error}</div>}
 
       <div className="scm-input-footer">
         <span className="scm-wordcount">
-          {mode === "upload"
-            ? (file ? "1 file selected" : "No file selected")
-            : `${words.toLocaleString()} ${words === 1 ? "word" : "words"}`}
+          {file ? "1 file selected" : "No file selected"}
         </span>
         <button className="scm-run" onClick={onRun} disabled={!canRun}>
           Check this section
@@ -433,7 +382,7 @@ function InputView({
       </div>
 
       <p className="scm-privacy">
-        Your text is read in memory and discarded &mdash; nothing is saved or
+        Your file is read in memory and discarded &mdash; nothing is saved or
         stored.
       </p>
     </div>
@@ -596,6 +545,18 @@ function FindingRow({ f }) {
           {f.label}
           {f.prohibition && <span className="scm-tag">prohibited</span>}
           {!f.scored && <span className="scm-tag scm-tag-soft">advisory</span>}
+          {/* THE READERS DID NOT AGREE. This section is checked by asking the
+              model three times and taking the median, and until now a 2-1 split
+              and a 3-0 agreement printed identically. A PI ran one Project
+              Summary twice, got two different answers, and had nothing on
+              screen telling them which rows were settled. Measured over 12 runs
+              of that file: six of seven rules were identical every time and one
+              split not_found 6 / partial 5 / addressed 1. The status is still
+              the median and the score is untouched -- this only says the call
+              was close, which is the cue to go and look. */}
+          {f.borderline && (
+            <span className="scm-tag scm-tag-soft" title="The three readers disagreed on this one — worth checking yourself.">borderline</span>
+          )}
           {f.delegated_to && (
             <span className="scm-tag scm-tag-defer">defers to {f.delegated_to}</span>
           )}

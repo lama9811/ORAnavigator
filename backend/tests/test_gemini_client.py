@@ -329,3 +329,26 @@ def test_a_bare_scalar_is_still_rejected(monkeypatch):
     from services import gemini_client as gc
     monkeypatch.setattr(gc, "_generate", lambda *a, **k: '"just a string"')
     assert gc.generate_json("p", list_key="findings") is None
+
+
+# ── SEED: making a repeated review return the same answer ────────────────────
+#
+# temperature=0.0 is NOT determinism. Measured 2026-08-31 on one unchanged
+# Project Summary, 12 runs: six of seven rules were identical every time and one
+# split not_found 6 / partial 5 / addressed 1, moving the score 86/93/100%. A PI
+# ran the same file twice and got two different answers.
+#
+# `seed` is the sampling seed the SDK already accepts. It is best effort on
+# Vertex, not a contract -- which is why the caller that sets it also has a
+# measured check, not just this unit test.
+
+def test_a_seed_is_passed_through_when_given():
+    cfg = gc._build_config(0.0, 100, True, None, None, seed=7)
+    assert cfg["seed"] == 7
+
+
+def test_no_seed_key_when_none_is_given():
+    """Existing callers must be byte-identical -- an unexpected key changes the
+    request for every caller that never asked for one."""
+    cfg = gc._build_config(0.0, 100, True, None, None)
+    assert "seed" not in cfg

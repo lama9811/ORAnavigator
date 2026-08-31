@@ -42,6 +42,8 @@ contains exactly N errors".
 from __future__ import annotations
 
 import os
+import re
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from services import gemini_client
@@ -59,6 +61,44 @@ MODEL_LOCATION = os.getenv("EIR_REVIEW_LOCATION", "global")
 THINKING_BUDGET = 512
 
 _ALLOWED_KINDS = {"spelling", "grammar", "punctuation", "word_choice"}
+
+# WHAT IS ACTUALLY SHOWN. `word_choice` is parsed (the prompt still asks for the
+# four kinds -- see below for why the prompt is left alone) and then dropped.
+#
+# Measured 2026-08-31 over 18 live runs of one awarded Project Summary: BOTH
+# false positives were this kind, and both were rewrites of correct prose --
+# "use 'respectively' instead of the adjective 'respective'" over NSF's own
+# "photons and electrons, for respective examples". `_SYSTEM` already forbids
+# rewrites in words and the model does it anyway; CLAUDE.md records that
+# tightening the prompt against this exact shape removed it (0 of 6) and cost
+# TWO THIRDS of the recall on real errors (4 of 6 -> 1 of 6), and was reverted.
+# So it is filtered here, in code, and the prompt is not touched.
+#
+# This is also what pays for the union in `proofread` below: a wider net catches
+# more junk, and this removes the class the junk came from rather than trading
+# it against recall. `language_slips` still catches confused-word pairs
+# ("rather then") deterministically, so little real coverage is lost.
+_REPORTED_KINDS = {"spelling", "grammar", "punctuation"}
+
+# HOW MANY TIMES THE MODEL IS ASKED. The rules have had this since
+# `draft_review.SEMANTIC_VOTES`; this pass had nothing, and was the more
+# unstable half of a Section Check because of it.
+PROOFREAD_VOTES = 5
+
+# HOW MANY READERS MUST SEE AN ISSUE BEFORE IT IS SHOWN. One, and a threshold of
+# two was TRIED AND REVERTED -- do not re-add it without re-measuring.
+#
+# The arithmetic said 2-of-5 would keep 98% of real errors and cut noise from 22%
+# to 5%, from a measured per-call rate of 8/12 and 9/12. It assumed the five
+# calls fail INDEPENDENTLY. They do not: a single call returns both real errors
+# or neither, and that correlation carries across a whole run. Measured over 10
+# real uploads with the threshold on: noise went to ZERO and the two genuine
+# errors fell from 8/10 to 5/10. A proofreader that misses a real comma half the
+# time is worse than one that occasionally shows an extra.
+#
+# The lesson worth keeping: votes here are NOT independent samples, so binomial
+# reasoning about them is wrong. Measure the configuration, never the model of it.
+PROOFREAD_MIN_VOTES = 1
 
 _SYSTEM = """You are a proofreader checking one section of a research proposal
 for MECHANICAL LANGUAGE ERRORS ONLY.
@@ -236,18 +276,66 @@ def locate_quote(text: str, quote: str,
     return None
 
 
-def proofread(text: str, *, use_ai: bool = True,
-              headings: Optional[list] = None) -> list[dict]:
-    """Mechanical language errors in `text`, each quoting the draft.
+# WORDS THE TYPESETTER SPLIT, derived from the DRAFT rather than from the quote.
+# Testing the quote for "dash + space" is not enough and that was measured: over
+# 10 live uploads three artifacts still got through, because the model quotes the
+# word both ways -- the draft holds "superal- gebra" and the model returned
+# "Lie superal-gebra" with the gap closed. Only the text knows a split happened,
+# so the damaged forms are collected from it once and matched against the quote.
+_SPLIT_RE = re.compile(r"(\w+)[-\u2010\u2011\u2012\u2013\u2014](\s+)(\w+)")
 
-    Returns [] on every failure path — no model, a bad response, an unparseable
-    row — because a proofreading pass is the least important thing on the screen
-    and must never be the reason a review fails (golden rule 3).
-    """
-    text = (text or "").strip()
-    if not text or not use_ai:
-        return []
 
+def _split_words(text: str) -> frozenset:
+    """Both readings of every word a line-end dash broke, lower-cased."""
+    out = set()
+    for m in _SPLIT_RE.finditer(text or ""):
+        left, right = m.group(1).lower(), m.group(3).lower()
+        out.add(f"{left}-{right}")        # the model's closed-up form
+        out.add(f"{left}- {right}")       # the form actually in the draft
+    return frozenset(out)
+
+
+def _is_split_word_artifact(quote: str, split: frozenset) -> bool:
+    q = " ".join((quote or "").lower().split())
+    return any(form in q for form in split)
+
+
+# A SUBMISSION-SYSTEM STAMP, recognised by SHAPE rather than by repetition.
+# `mechanical_checks._running_furniture` needs a line to repeat three times,
+# which is right for a whole package and useless for ONE SECTION: measured on a
+# real one-page Project Summary, "Submitted/PI: ... /Proposal No: 2503008"
+# appears exactly ONCE and was reported as a spelling error ("Ii"). These are
+# markers a portal prints on the page, never prose an author wrote.
+_STAMP_RE = re.compile(r"(proposal\s+no\.?\s*:|page\s+\d+\s+of\s+\d+|submitted/pi\s*:)",
+                       re.I)
+
+
+def _stamp_lines(text: str) -> frozenset:
+    """Lines that a submission system printed, not lines the author wrote."""
+    from services.mechanical_checks import _running_furniture
+    lines = {" ".join(ln.lower().split())
+             for ln in (text or "").split("\n") if _STAMP_RE.search(ln)}
+    # Plus anything genuinely repeating, which is what catches a whole-package
+    # header that carries no recognisable marker.
+    lines |= {" ".join(ln.lower().split()) for ln in _running_furniture(text or "")}
+    return frozenset(l for l in lines if l)
+
+
+def _in_furniture(quote: str, furniture: frozenset) -> bool:
+    """True when `quote` sits inside a line the submission system stamped."""
+    if not furniture:
+        return False
+    q = " ".join((quote or "").lower().split())
+    return bool(q) and any(q in line for line in furniture)
+
+
+def _one_pass(text: str, furniture: frozenset = frozenset(),
+              split: frozenset = frozenset()) -> list[dict]:
+    """One model call -> validated candidates [{kind, detail, quote}].
+
+    Everything that can reject a row happens here, so a vote contributes only
+    rows that would have been shown on their own. Returns [] on every failure
+    path (golden rule 3)."""
     data = gemini_client.generate_json(
         f"Proofread this text:\n\n{text[:MAX_CHARS]}",
         system_instruction=_SYSTEM,
@@ -259,9 +347,7 @@ def proofread(text: str, *, use_ai: bool = True,
     )
     if not isinstance(data, dict):
         return []
-
-    rows: list[dict] = []
-    seen: set[str] = set()
+    out: list[dict] = []
     for raw in (data.get("issues") or []):
         if not isinstance(raw, dict):
             continue
@@ -274,21 +360,142 @@ def proofread(text: str, *, use_ai: bool = True,
         # finding without evidence.
         if not quote_in(text, quote):   # (text, quote) -- not the reverse
             continue
-        key = " ".join(quote.lower().split())
-        if key in seen:          # the same sentence reported twice
+        kind = kind if kind in _ALLOWED_KINDS else "word_choice"
+        # An unknown kind was already bucketed as `word_choice`, so it leaves
+        # with it. Conservative on purpose, the same direction as the gate above.
+        if kind not in _REPORTED_KINDS:
             continue
-        seen.add(key)
-        rows.append({
-            "kind": kind if kind in _ALLOWED_KINDS else "word_choice",
-            "label": _LABELS.get(kind, "Wording"),
-            "detail": detail,
-            "evidence": quote,
-            # Deterministic, and ABSENT rather than wrong when the quote cannot
-            # be placed. Never a gate: a row that passed the quote check must
-            # not be dropped because the locator was less tolerant.
-            "where": locate_quote(text, quote, headings),
-            # Marks the row as a model opinion wherever it is rendered, so it can
-            # never be shown alongside deterministic rows without saying so.
-            "source": "ai",
-        })
-    return rows
+        # OUR OWN EXTRACTION DAMAGE IS NOT THE AUTHOR'S SPELLING. Measured over
+        # 10 real uploads of one awarded PDF: the two genuine errors were steady
+        # at 8/10, and EVERY other row was a word the typesetter split at a line
+        # end ("superal- gebra", "theo- retical", "commu- nities") or a
+        # Research.gov header line -- each appearing in one run, swinging the
+        # count 0..6. The words are spelled correctly in the author's document;
+        # they cannot act on either, so both are noise by definition.
+        if _tm.has_line_break_hyphen(quote) or _is_split_word_artifact(quote, split):
+            continue
+        if _in_furniture(quote, furniture):
+            continue
+        out.append({"kind": kind, "detail": detail, "quote": quote})
+    return out
+
+
+def _norm(s: str) -> str:
+    return " ".join((s or "").lower().split())
+
+
+def _union(passes: list[list[dict]], text: str,
+           min_votes: int = 1) -> list[dict]:
+    """Every candidate any pass found, one row per underlying error.
+
+    THE UNION IS NOT A MEDIAN, and the difference is the whole point. Measured
+    over 18 live runs, a single call surfaced the two real errors in a section
+    about HALF the time. A 2-of-3 threshold over a ~50% per-call rate recovers
+    ~50% -- i.e. nothing; the union takes it to roughly 1 miss in 8. Precision is
+    bought back by `_REPORTED_KINDS`, not by the threshold.
+
+    Rows merge on KIND plus an OVERLAP of their spans in the draft. Containment
+    is not enough and that was measured, not assumed: the live runs quoted one
+    comma as "work; and, the PI extends", "; and, the PI extends" and "and, the
+    PI extends their previous use" -- the first and last OVERLAP without either
+    containing the other, so a containment test printed two rows for one error.
+    Position is the thing they actually share.
+
+    Requiring the KINDS to match is the guard that keeps two different faults in
+    one sentence as two rows (its own test). Two rows of the SAME kind whose
+    spans overlap are treated as one error, which is the intended reading of
+    "the same place".
+
+    The SHORTEST span represents the group: this module has already had to fix a
+    row that quoted a whole 445-character paragraph instead of the part at fault.
+    """
+    flat = _norm(text)
+    groups: list[dict] = []
+    for rows in passes:
+        for cand in rows:
+            q = _norm(cand["quote"])
+            i = flat.find(q)
+            span = (i, i + len(q)) if i >= 0 else None
+            for g in groups:
+                if cand["kind"] != g["kind"]:
+                    continue
+                # An unplaceable quote (the tolerant gate accepted it, a plain
+                # find does not) cannot be compared by position, so it falls
+                # back to containment rather than merging on nothing.
+                if span is None or g["span"] is None:
+                    gq = _norm(g["rows"][0]["quote"])
+                    if q in gq or gq in q:
+                        g["rows"].append(cand)
+                        break
+                elif span[0] < g["span"][1] and g["span"][0] < span[1]:
+                    g["rows"].append(cand)
+                    g["span"] = (min(span[0], g["span"][0]),
+                                 max(span[1], g["span"][1]))
+                    break
+            else:
+                groups.append({"kind": cand["kind"], "span": span, "rows": [cand]})
+    out = []
+    for g in groups:
+        # THE THRESHOLD. A group is one underlying error; `rows` is how many
+        # readers reported it. One reader in five is noise, not a finding.
+        if len(g["rows"]) < min_votes:
+            continue
+        best = min(g["rows"], key=lambda c: len(c["quote"]))
+        out.append((g["span"][0] if g["span"] else len(flat), best))
+    # Document order, so two runs that found the same set present it the same
+    # way. An unplaceable quote sorts last rather than jumping around.
+    out.sort(key=lambda t: t[0])
+    return [b for _, b in out]
+
+
+def proofread(text: str, *, use_ai: bool = True,
+              headings: Optional[list] = None,
+              votes: Optional[int] = None) -> list[dict]:
+    """Mechanical language errors in `text`, each quoting the draft.
+
+    Returns [] on every failure path -- no model, a bad response, an unparseable
+    row -- because a proofreading pass is the least important thing on the screen
+    and must never be the reason a review fails (golden rule 3).
+
+    Asked `votes` times CONCURRENTLY, so three calls cost roughly one call's wall
+    clock. A vote that raises is dropped rather than losing the round; only
+    losing all of them returns nothing.
+    """
+    text = (text or "").strip()
+    if not text or not use_ai:
+        return []
+
+    n = PROOFREAD_VOTES if votes is None else max(1, int(votes))
+
+    furniture = _stamp_lines(text)
+    split = _split_words(text)
+
+    if n == 1:
+        passes = [_one_pass(text, furniture, split)]
+    else:
+        passes = []
+        with ThreadPoolExecutor(max_workers=n) as pool:
+            futures = [pool.submit(_one_pass, text, furniture, split)
+                       for _ in range(n)]
+            for fut in futures:
+                try:
+                    passes.append(fut.result())
+                except Exception as exc:      # one vote lost, not the round
+                    print(f"[PROOFREAD] a vote failed: {exc}")
+
+    # A single vote can never clear a threshold of two, so votes=1 stays a plain
+    # single call rather than silently reporting nothing at all.
+    merged = _union(passes, text, PROOFREAD_MIN_VOTES if n > 1 else 1)
+    return [{
+        "kind": c["kind"],
+        "label": _LABELS.get(c["kind"], "Wording"),
+        "detail": c["detail"],
+        "evidence": c["quote"],
+        # Deterministic, and ABSENT rather than wrong when the quote cannot
+        # be placed. Never a gate: a row that passed the quote check must
+        # not be dropped because the locator was less tolerant.
+        "where": locate_quote(text, c["quote"], headings),
+        # Marks the row as a model opinion wherever it is rendered, so it can
+        # never be shown alongside deterministic rows without saying so.
+        "source": "ai",
+    } for c in merged]

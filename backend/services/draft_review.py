@@ -135,9 +135,33 @@ REVIEW_BATCH = 15
 # once and taking the median is the lever that is left.
 SEMANTIC_VOTES = 3
 
+# A FIXED SAMPLING SEED WAS TRIED HERE AND DOES NOT WORK -- do not re-add it.
+# `gemini_client` can pass `seed` and it was verified reaching the SDK at the
+# wire (config.seed == 11). Measured 2026-08-31, 10 runs of one unchanged
+# Project Summary with distinct fixed per-vote seeds: the score was STILL 86%
+# and 93% and "The Overview states the methods to be employed" still split
+# partial 6 / not_found 4 -- identical to the unseeded 12-run baseline. Vertex
+# treats a seed as best effort, and thinking is on here (it cannot be turned
+# off: disabling it made the reviewer OMIT rows, assessed 38.7 -> 35.3). The
+# only thing that removes this variance is not asking the model again for the
+# same bytes.
+
 # Status ordering for the median. Two vocabularies that never mix -- a row is a
 # prohibition or it is not -- so one table serves both.
 _VOTE_RANK = {"not_found": 0, "flagged": 0, "partial": 1, "clear": 2, "addressed": 2}
+
+
+def _looks_truncated(note: Optional[str]) -> bool:
+    """A note that starts mid-sentence, i.e. one the model cut the front off.
+
+    The test is the FIRST character after stripping: prose the model writes for
+    these rows always opens with a capital. A note opening lower-case is either
+    damaged or, at worst, stylistically odd -- and the only consequence of a
+    false positive is preferring a different reader's sentence, which is why the
+    cheap test is the right one.
+    """
+    n = (note or "").strip()
+    return bool(n) and not (n[0].isupper() or n[0].isdigit() or n[0] in "\u201c\"'(")
 
 
 def merge_votes(votes: list[list[dict]]) -> list[dict]:
@@ -173,7 +197,50 @@ def merge_votes(votes: list[list[dict]]) -> list[dict]:
         rows = seen[rid]
         ranked = sorted((r for r in rows if r.get("status") in _VOTE_RANK),
                         key=lambda r: _VOTE_RANK[r["status"]])
-        out.append(ranked[(len(ranked) - 1) // 2] if ranked else rows[0])
+        # THE MEDIAN, and a resolve-DOWN rule was tried here and REVERTED --
+        # do not re-add it without re-measuring. Taking the lower answer on any
+        # disagreement sounds safer and measurably destroys consistency: it lets
+        # ONE dissenting reader of three flip a rule, where the median needs two.
+        # Measured 2026-08-31 on one awarded Project Summary, 8 runs each:
+        # median gave 2 distinct scores with 1 rule moving; resolve-down gave 4
+        # distinct scores (71/79/86/93) with 3 rules moving. The generous reading
+        # losing a split is worth less than the tool contradicting itself.
+        pick = ranked[(len(ranked) - 1) // 2] if ranked else rows[0]
+        # A NOTE THAT ARRIVES BROKEN IS NOT SHOWN. Measured 2026-08-31: 15 of 210
+        # notes over 30 real uploads began mid-sentence -- " recorded explicitly
+        # in the Overview section.", " requirements are addressed in the Overview
+        # section." Instrumented at the wire, the MODEL emits them that way, with
+        # a leading space and a missing first word; our code only strips
+        # whitespace. Nearly all landed on one rule, and on screen they read as
+        # broken software.
+        #
+        # Nothing is invented: several readers answer every row, so a readable
+        # note is taken from a row that ALREADY WON the vote. The status is never
+        # changed to obtain one (its own test), and if every reader broke it the
+        # broken note stands rather than a fabricated sentence about a draft.
+        if pick.get("status") in _VOTE_RANK and _looks_truncated(pick.get("note")):
+            better = next((r for r in ranked
+                           if r["status"] == pick["status"]
+                           and not _looks_truncated(r.get("note"))), None)
+            if better is not None:
+                pick = better
+        chosen = dict(pick)
+        # `borderline` REPORTS the disagreement rather than resolving it away.
+        # A PI ran one Project Summary twice and got two different answers; over
+        # 12 runs of that identical file six of seven rules were identical every
+        # time and one ("The Overview states the methods to be employed") split
+        # not_found 6 / partial 5 / addressed 1 -- the entire 86-100% range.
+        #
+        # That rule is genuinely on the line: the Overview says what the work
+        # ADDRESSES and never names a method. Forcing a stable answer would make
+        # it confident, not correct, and would hide the one signal worth having.
+        # So the median still decides the status and the score is untouched --
+        # this only says the readers did not agree.
+        #
+        # Only real opinions count. `unclear` means a run returned nothing for
+        # the row, so it is absent from `ranked` and cannot manufacture a split.
+        chosen["borderline"] = len({r["status"] for r in ranked}) > 1
+        out.append(chosen)
     return out
 
 _SCORE_BANDS = ((85, "green"), (60, "amber"))
