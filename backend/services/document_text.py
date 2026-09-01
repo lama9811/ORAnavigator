@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import io
 import os
+import re
 from typing import Optional
 
 # Generous, and enforced VISIBLY. A 15-page NSF Project Description is ~10k
@@ -225,6 +226,101 @@ def extract_upload(filename: str, data: bytes) -> dict:
 
     out.update(text=text, pages=pages, chars=len(text), truncated=truncated)
     return out
+
+
+# A NUMBERED PREFIX IS ORDERING, NOT A NAME. Real packages arrive as
+# "01-Project-Summary.pdf" ... "11-Letters-and-Supplementary-Documents.pdf".
+_FILE_ORDER_PREFIX = re.compile(r"^\s*\d+[-_. ]+")
+
+
+def _stem_as_section_name(filename: str) -> str:
+    """The filename read as a section NAME: ordering stripped, separators spaced."""
+    stem = os.path.splitext(filename or "")[0]
+    stem = _FILE_ORDER_PREFIX.sub("", stem)
+    return stem.replace("_", " ").replace("-", " ").strip()
+
+
+def map_files_to_sections(files: list[dict], sections: dict) -> tuple[str, dict, list, list]:
+    """Which uploaded file IS which section, so the reviewer need not guess.
+
+    Returns `(text, spans, leftover, mapping)`:
+      text     — every file joined, filename as a heading, exactly as `combine()`
+      spans    — {section key: span} with start/end as REAL offsets into `text`
+      leftover — files that mapped to nothing, still inside `text` for the locate stage
+      mapping  — one row per file, for the UI, so a mis-map is visible not silent
+
+    WHY. Measured over five uploads of one awarded 11-file package: `locate_sections`
+    found 6 sections on one run and ONE on another -- reading the entire 45-page
+    package as "References Cited", which collapsed 48 assessable rules to 14 and
+    scored a FUNDED proposal at 29%. The seams were never in doubt: the PI uploaded
+    one file per section. This hands them over instead of paying a model call to
+    rediscover them.
+
+    A HYBRID, NEVER A REPLACEMENT. Only ~5 of 11 real filenames resolve, so anything
+    unmapped stays in `text` and reaches the reviewer through `locate_sections` as
+    before -- the same path a pasted draft and a single combined PDF depend on.
+
+    OFFSETS ARE INTO THE COMBINED TEXT, not into the file. `draft_review` slices by
+    `span["start"]`/`["end"]` to carve Broader Impacts out of the Project Description
+    and to order the section map, so a span carrying file-local offsets would corrupt
+    both. Building the text here is what lets the offsets be right.
+
+    Resolution reuses `solicitation_profile.resolve_section_key`, so a filename is
+    matched by the SAME rule a requirement row is, and the matcher is never loosened
+    here (its set-equality is what stops "Project Description Supplementary
+    Documents" folding into "Project Description").
+    """
+    from services import solicitation_profile as _sp
+
+    spans: dict = {}
+    leftover: list = []
+    mapping: list = []
+    chunks: list = []
+    cursor = 0
+    for f in files or []:
+        row = {"filename": f.get("filename"), "section": None, "source": None,
+               "pages": f.get("pages") or 0}
+        text = (f.get("text") or "").strip()
+        if f.get("error") or not text:
+            # No text is no section. Already reported in `extraction.files`.
+            row["source"] = "unreadable"
+            mapping.append(row)
+            continue
+
+        heading = _stem_as_section_name(f.get("filename") or "")
+        chunk = f"{heading}\n\n{text}" if heading else text
+        # Where this file's own text begins once the heading and the joiner are in.
+        body_at = cursor + (len(heading) + 2 if heading else 0)
+
+        chosen = f.get("section")
+        key = None
+        if chosen and chosen in (sections or {}):
+            key, row["source"] = chosen, "chosen"
+        else:
+            key = _sp.resolve_section_key(sections or {}, heading)
+            if key:
+                row["source"] = "filename"
+
+        # A section already claimed keeps its first file. Two files for one section
+        # is a packaging mistake worth surfacing; silently overwriting one is the
+        # failure mode this codebase keeps having to undo.
+        if key and key not in spans:
+            spans[key] = {
+                "text": text, "start": body_at, "end": body_at + len(text),
+                "marker": heading or key,
+                "pages": f.get("pages") or 0, "filename": f.get("filename"),
+            }
+            row["section"] = key
+        else:
+            if key:
+                row["source"] = "duplicate"
+            leftover.append(f)
+
+        mapping.append(row)
+        chunks.append(chunk)
+        cursor += len(chunk) + 2      # the "\n\n" joiner below
+
+    return "\n\n".join(chunks), spans, leftover, mapping
 
 
 def combine(files: list[dict]) -> str:

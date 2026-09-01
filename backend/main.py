@@ -4664,7 +4664,17 @@ async def draft_review_upload(
             raise HTTPException(400, "Those files are too large in total (max 60 MB).")
         extracted.append(_dt.extract_upload(upload.filename or "file", data))
 
-    draft_text = _dt.combine(extracted)
+    # ONE FILE IS ONE SECTION, when the filename says so. This replaces
+    # `_dt.combine`: it produces the same document, and additionally hands back
+    # which file IS which section and each one's REAL page count -- both of which
+    # the old path computed and threw away, leaving the reviewer to re-guess the
+    # seams with a model call. See services/document_text.map_files_to_sections.
+    draft_text, file_spans, _leftover, file_map = _dt.map_files_to_sections(
+        extracted, (profile or {}).get("sections") or {})
+    # Section key -> real page count, the shape run_deterministic wants. Without
+    # it every page rule runs on a word-count estimate even though we hold the
+    # exact count from the PDF.
+    page_counts = {k: v["pages"] for k, v in file_spans.items() if v.get("pages")}
     if not draft_text.strip():
         # Nothing readable. Return the per-file errors rather than a review that
         # would report every requirement as missing.
@@ -4675,7 +4685,9 @@ async def draft_review_upload(
             "error": "Couldn't read any text from those files.",
         }
 
-    result = _dr.review_draft(draft_text, profile=profile, title=sub.title, budget=budget)
+    result = _dr.review_draft(draft_text, profile=profile, title=sub.title,
+                              budget=budget, pages=page_counts or None,
+                              file_spans=file_spans or None)
     return {
         "submission_id": submission_id,
         "sponsor": sub.sponsor,
@@ -4685,6 +4697,9 @@ async def draft_review_upload(
         "extraction": {
             "files": [{k: v for k, v in f.items() if k != "text"} for f in extracted],
             "words": len(draft_text.split()),
+            # Which file was read as which section, so a mis-map is visible on
+            # screen rather than silently shaping the score.
+            "sections": file_map,
         },
     }
 

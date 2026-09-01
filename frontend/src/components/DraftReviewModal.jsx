@@ -1142,6 +1142,18 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
         </div>
       )}
 
+      {/* WHEN TOO LITTLE OF THE PACKAGE COULD BE PLACED. Above the score, for the
+          same reason the truncation banner is: a reader must meet the caveat
+          before the number, not after it. Measured on the awarded proposal as one
+          combined Research.gov PDF — 2 of 9 sections found, 21 of 70 rules
+          assessable, a funded proposal scoring 48% on every run. A steady wrong
+          number reads as a settled one, which is worse than a varying one. */}
+      {result.coverage_warning && (
+        <div className="eir-banner eir-banner-warn">
+          <AlertTriangle size={14} /> {result.coverage_warning}
+        </div>
+      )}
+
       <MistakesPanel mistakes={result.mistakes} />
 
       <ScorePanel score={result.score} solicitationId={solId} />
