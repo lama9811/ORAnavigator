@@ -14,12 +14,22 @@
   align-items: center;
   justify-content: center;
   z-index: 1200; /* above the sticky navbar (1000) */
-  padding: 20px;
+  padding: 0;
   animation: eir-fade-in 0.15s;
 }
 
 @keyframes eir-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* ── FULL-SCREEN SURFACE (2026-09-01, product decision) ─────────────────────
+   These modals used to be 640-900px boxes floating on a dimmed page, which on
+   a 1440px screen is literally half the window. They now fill it.
+
+   The SURFACE is full-bleed so the app disappears behind it -- that is what
+   makes it read as a page rather than a dialog. The CONTENT is still held to a
+   centred reading column via padding, because a line of prose running the full
+   width of a 2560px monitor is harder to read, not easier, and this modal is
+   mostly prose. One number controls it: change the px value below.
+   ────────────────────────────────────────────────────────────────────────── */
 .eir-modal {
   --eir-ok: #5F7A4A;
   --eir-warn: #C9A24C;
@@ -31,11 +41,12 @@
   --eir-skip-bg: rgba(148, 163, 184, 0.10);
 
   background: var(--bg-card);
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 820px;
+  border-radius: 0;
+  padding: 24px max(24px, calc((100% - 1200px) / 2));
+  max-width: none;
   width: 100%;
-  max-height: 92vh;
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   box-shadow: var(--shadow-xl, 0 20px 60px rgba(0, 0, 0, 0.4));
 }

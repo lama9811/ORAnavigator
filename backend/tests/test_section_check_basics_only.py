@@ -51,7 +51,7 @@ def test_every_rule_declares_which_population_it_belongs_to():
     assert tiers == {"basic", "extended"}, tiers
     # 17 since 2026-08-28: three compound rules were split into two each,
     # so a draft is told WHICH half is missing instead of reading "partial".
-    assert sum(1 for r in rows if r["tier"] == "basic") == 17
+    assert sum(1 for r in rows if r["tier"] == "basic") == 19
 
 
 def test_the_basics_carry_every_deterministic_check():
@@ -69,7 +69,7 @@ def test_the_basics_carry_every_deterministic_check():
 
 def test_rules_for_can_ask_for_the_basics_alone():
     basics = rb.rules_for(PAPPG, tier="basic")
-    assert len(basics) == 17
+    assert len(basics) == 19
     assert len(basics) < len(rb.rules_for(PAPPG))
 
 

@@ -132,6 +132,10 @@ def test_the_deterministic_checks_are_untouched():
         "pappg_pd_no_urls": "rb_no_urls",
         "pappg_pd_page_limit": "rb_page_limit",
         "pappg_rc_et_al": "rb_et_al",
+        # 2026-09-01: References Cited's first deterministic SCORED rule. Its
+        # only scored rule before this was model-judged, so the section's
+        # percentage was one opinion with a denominator of one.
+        "pappg_rc_year": "rb_citation_year",
         "pappg_fe_no_financials": "rb_no_financials",
         # Moved from model judgement to code on 2026-08-28 -- it was the last
         # unstable rule in Facilities. See test_narrative_check.py.
@@ -140,4 +144,4 @@ def test_the_deterministic_checks_are_untouched():
 
 
 def test_the_basic_count_reflects_the_split():
-    assert len(_ids()) == 17, _ids()
+    assert len(_ids()) == 19, _ids()

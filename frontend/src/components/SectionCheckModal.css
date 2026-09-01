@@ -13,12 +13,22 @@
   align-items: center;
   justify-content: center;
   z-index: 1200; /* above the sticky navbar (1000) */
-  padding: 20px;
+  padding: 0;
   animation: scm-fade-in 0.15s;
 }
 
 @keyframes scm-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
+/* ── FULL-SCREEN SURFACE (2026-09-01, product decision) ─────────────────────
+   These modals used to be 640-900px boxes floating on a dimmed page, which on
+   a 1440px screen is literally half the window. They now fill it.
+
+   The SURFACE is full-bleed so the app disappears behind it -- that is what
+   makes it read as a page rather than a dialog. The CONTENT is still held to a
+   centred reading column via padding, because a line of prose running the full
+   width of a 2560px monitor is harder to read, not easier, and this modal is
+   mostly prose. One number controls it: change the px value below.
+   ────────────────────────────────────────────────────────────────────────── */
 .scm-modal {
   --scm-ok: #5F7A4A;
   --scm-warn: #C9A24C;
@@ -30,11 +40,12 @@
   --scm-skip-bg: rgba(148, 163, 184, 0.10);
 
   background: var(--bg-card);
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 780px;
+  border-radius: 0;
+  padding: 24px max(24px, calc((100% - 1200px) / 2));
+  max-width: none;
   width: 100%;
-  max-height: 92vh;
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   box-shadow: var(--shadow-xl, 0 20px 60px rgba(0, 0, 0, 0.4));
 }
@@ -797,9 +808,13 @@ body.dark .scm-modal {
 
 .scm-score-head { display: flex; gap: 18px; align-items: center; }
 
-/* THE FRACTION IS THE HEADLINE, the percentage is a footnote to it. A bare
-   "100%" in 2.5rem reads as a grade no matter what the caption says; "7 of 7"
-   reads as a count, which is what it is. */
+/* THE PERCENTAGE IS THE HEADLINE (product decision, 2026-09-01). It previously
+   led with the fraction — "7 of 7" reads as a count, a bare "100%" reads as a
+   grade — and that reasoning still stands; it was overruled deliberately for a
+   panel with less on it. Two things carry the guardrail in the fraction's
+   place: the "presence, not quality" caption below the number, and the number
+   taking the verdict colour, so a section with open problems is never a green
+   100. If this ever reads as a grade again, that is the trade to revisit. */
 .scm-score-count {
   line-height: 1;
   color: var(--text-main);
@@ -807,6 +822,9 @@ body.dark .scm-modal {
   white-space: nowrap;
 }
 .scm-score-earned { font-size: 2.1rem; font-weight: 700; }
+.scm-score-clean      .scm-score-earned { color: var(--scm-ok); }
+.scm-score-minor      .scm-score-earned { color: var(--scm-warn); }
+.scm-score-needs_work .scm-score-earned { color: var(--scm-fail); }
 .scm-score-of { font-size: 1.05rem; font-weight: 600; color: var(--text-secondary); }
 .scm-score-pct { font-size: 0.85rem; font-weight: 600; color: var(--text-tertiary); }
 
@@ -821,6 +839,14 @@ body.dark .scm-modal {
   font-size: 0.81rem;
   line-height: 1.5;
   margin: 4px 0 8px;
+}
+
+/* What is left of the caption after the paragraph came out. Small, but never
+   removed: the number counts presence and must never be read as a grade. */
+.scm-score-caption {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  margin-top: 2px;
 }
 
 /* The split. Rendered only when there IS more than one authority — a single

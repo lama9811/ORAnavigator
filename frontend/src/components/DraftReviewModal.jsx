@@ -730,6 +730,12 @@ function FindingRow({ f, solicitationId }) {
           {f.label}
           {f.prohibition && <span className="eir-tag">prohibited</span>}
           {!f.scored && <span className="eir-tag eir-tag-soft">advisory</span>}
+          {/* Same mark as SectionCheckModal's, and it must stay the same word:
+              the two modals render the same findings and this repo already has
+              an open note about them presenting the same thing differently. */}
+          {f.borderline && (
+            <span className="eir-tag eir-tag-soft" title="The three readers disagreed on this one — worth checking yourself.">borderline</span>
+          )}
           {/* Shown on RIDERS too — rows that were genuinely checked but whose
               rule continues in a document we never read. Without it, a row
               reading "Addressed" hides that only part of it was verified. */}

@@ -178,3 +178,290 @@ def test_the_prompt_names_the_two_item_comma_because_the_model_will_not_find_it_
     sys = pr._SYSTEM
     assert '"and"' in sys and "TWO items" in sys, (
         "the two-item comma shape is not named; the model does not report it")
+
+
+# ── VOTING, and why a single call was not enough ─────────────────────────────
+#
+# Measured 2026-08-31 on the awarded NSF EiR Project Summary
+# (Desktop/NSF-EiR-Sections/01-Project-Summary.pdf), 18 live runs of the
+# identical text: the pass reported NOTHING in 9 of them. The two real errors in
+# that section -- a spurious comma in "...work; and, the PI extends..." and in
+# "...workshops; and, each trainee..." -- each surfaced in about half the runs.
+# A PI running the same check twice saw two different answers, which is what
+# prompted this.
+#
+# The rules already had this protection (`draft_review.SEMANTIC_VOTES = 3`,
+# merged by median); this pass had none. The UNION is deliberate and is NOT the
+# median: at a ~50% per-call hit rate a 2-of-3 threshold recovers nothing (it is
+# ~50% again), while the union takes the miss rate to ~1 in 8. The precision that
+# costs is paid back by dropping `word_choice` below, not by the threshold.
+
+def _fake_sequence(*per_call):
+    """A different response per call, so a union is distinguishable from one call."""
+    calls = {"n": 0}
+    def gen(prompt, **kw):
+        i = calls["n"]
+        calls["n"] += 1
+        return {"issues": list(per_call[i]) if i < len(per_call) else []}
+    return gen
+
+
+def test_the_proofreader_asks_more_than_once_and_a_missed_run_costs_nothing(monkeypatch):
+    """The fix for the measured miss rate: a reader that overlooks an error no
+    longer loses it, as long as another reader saw it.
+
+    UPDATED 2026-08-31 with the threshold below -- this used to assert that ONE
+    reader was enough (a plain union). That was right when a single call found a
+    real error only ~50% of the time; once the extraction artifacts were filtered
+    the per-call rate rose to 67-75% and one reader became noise rather than
+    signal. Two readers now decide, and a third and fourth missing costs
+    nothing."""
+    text = "The PI trains fourr students; and, the PI extends their prior work."
+    monkeypatch.setattr(pr.gemini_client, "generate_json", _fake_sequence(
+        [{"quote": "trains fourr students", "kind": "spelling", "detail": '"fourr" -> "four".'}],
+        [{"quote": "trains fourr students", "kind": "spelling", "detail": '"fourr" -> "four".'},
+         {"quote": "; and, the PI extends", "kind": "punctuation", "detail": "Spurious comma."}],
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "Spurious comma."}],
+        [], [],
+    ))
+    out = pr.proofread(text, votes=5)
+    assert len(out) == 2, [r["evidence"] for r in out]
+    assert {r["kind"] for r in out} == {"spelling", "punctuation"}
+
+
+def test_one_error_quoted_with_different_spans_is_reported_once(monkeypatch):
+    """The three runs quote the SAME comma with different spans -- exactly what
+    the live runs did. Keyed on the quote alone this would print three rows for
+    one error, which is worse than the miss it was meant to fix."""
+    text = "Nothing in the literature outside the PI's work; and, the PI extends their prior use."
+    monkeypatch.setattr(pr.gemini_client, "generate_json", _fake_sequence(
+        [{"quote": "work; and, the PI extends", "kind": "punctuation", "detail": "Spurious comma."}],
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "Spurious comma."}],
+        [{"quote": "and, the PI extends their prior use", "kind": "punctuation",
+          "detail": "Spurious comma after 'and'."}],
+    ))
+    out = pr.proofread(text, votes=3)
+    assert len(out) == 1, [r["evidence"] for r in out]
+    # The shortest span wins: this module has already had to fix a row that
+    # quoted a whole 445-character paragraph instead of the part at fault.
+    assert out[0]["evidence"] == "; and, the PI extends"
+
+
+def test_two_different_errors_in_one_sentence_are_not_merged(monkeypatch):
+    """The guard on the containment merge. Same sentence, different faults --
+    merging them would silently delete a real error."""
+    text = "The PI trains fourr students; and, the PI extends their prior work."
+    monkeypatch.setattr(pr.gemini_client, "generate_json", _fake_sequence(
+        [{"quote": "trains fourr students", "kind": "spelling", "detail": "typo"},
+         {"quote": "students; and, the PI", "kind": "punctuation", "detail": "Spurious comma."}],
+    ))
+    out = pr.proofread(text, votes=1)
+    assert len(out) == 2
+
+
+def test_a_word_choice_row_is_not_reported(monkeypatch):
+    """Fix 2, and it is what pays for the union above.
+
+    Both false positives measured in those 18 runs were this kind -- "use
+    'respectively' instead of the adjective 'respective'" over NSF-correct prose
+    ("photons and electrons, for respective examples"). That is a REWRITE, which
+    `_SYSTEM` already forbids in words, and CLAUDE.md records that tightening the
+    prompt against it cost two thirds of the recall on real errors. So it is
+    filtered in code and the prompt is left alone."""
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "for respective examples", "kind": "word_choice",
+                                "detail": "Use 'respectively'."}]))
+    assert pr.proofread("photons and electrons, for respective examples).") == []
+
+
+def test_an_unrecognised_kind_is_not_reported(monkeypatch):
+    """An unknown kind was already bucketed as `word_choice`, so it goes with it.
+    Conservative on purpose: this pass drops a doubtful row rather than showing
+    one, the same direction as the quote gate above."""
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "trains fourr students", "kind": "style",
+                                "detail": "Consider rephrasing."}]))
+    assert pr.proofread("The PI trains fourr students.") == []
+
+
+def test_the_real_kinds_still_survive(monkeypatch):
+    """The mirror of the two tests above: dropping word_choice must not quietly
+    take spelling, grammar or punctuation with it."""
+    text = "The PI trains fourr students; and, the objectives is unclear."
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "trains fourr students", "kind": "spelling", "detail": "typo"},
+                               {"quote": "; and, the objectives", "kind": "punctuation", "detail": "comma"},
+                               {"quote": "the objectives is unclear", "kind": "grammar", "detail": "agreement"}]))
+    out = pr.proofread(text, votes=1)
+    assert {r["kind"] for r in out} == {"spelling", "punctuation", "grammar"}
+
+
+def test_a_vote_that_raises_does_not_lose_the_round(monkeypatch):
+    """Same contract as `_voted_batch`: one lost call must not cost the answer."""
+    calls = {"n": 0}
+    def gen(prompt, **kw):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("transient")
+        return {"issues": [{"quote": "trains fourr students", "kind": "spelling",
+                            "detail": "typo"}]}
+    monkeypatch.setattr(pr.gemini_client, "generate_json", gen)
+    out = pr.proofread("The PI trains fourr students.", votes=3)
+    assert len(out) == 1
+
+
+def test_use_ai_false_still_makes_no_call(monkeypatch):
+    """Voting must not reintroduce a model call on the deterministic-only path."""
+    def boom(prompt, **kw):
+        raise AssertionError("the model must not be called when use_ai=False")
+    monkeypatch.setattr(pr.gemini_client, "generate_json", boom)
+    assert pr.proofread("The PI trains fourr students.", use_ai=False) == []
+
+
+# ── OUR OWN EXTRACTION DAMAGE IS NOT THE AUTHOR'S SPELLING ───────────────────
+#
+# Measured 2026-08-31 over TEN real HTTP uploads of one awarded Project Summary
+# PDF. The two genuine errors were steady at 8/10 each. Everything else was an
+# artifact of how we read the PDF, each surfacing in ONE run and making the
+# wording count swing 0..6:
+#
+#     1/10 spelling  "Lie superal- gebra into their"
+#     1/10 spelling  "theo- retical physics increases."
+#     1/10 spelling  "fi- nite presentations of diagonal"
+#     1/10 spelling  "Histor- ically Black Colleges"
+#     1/10 spelling  "commu- nities in mathematics by"
+#     1/10 spelling  "Submitted/PI: Dwight A Williams Ii /Proposal No:"
+#
+# Every one is a word the TYPESETTER split at a line end, or Research.gov page
+# furniture stamped on the page. `text_match` already treats a line-end hyphen
+# as ambiguous for grounding and `mechanical_checks` already recognises running
+# furniture; the proofreader used neither, so it reported our damage as the PI's
+# spelling. An author cannot act on either -- the words are spelled correctly in
+# their document -- so these are noise by definition, and the loudest single
+# cause of "it gives me a different answer every time".
+
+def test_a_word_split_by_the_typesetter_is_not_a_spelling_error(monkeypatch):
+    text = ("The PI studies Lie superal- gebra representations and their theo- "
+            "retical consequences.")
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "Lie superal- gebra", "kind": "spelling",
+                                "detail": '"superal" is not a word.'},
+                               {"quote": "theo- retical", "kind": "spelling",
+                                "detail": '"theo" is not a word.'}]))
+    assert pr.proofread(text, votes=1) == []
+
+
+def test_a_real_error_beside_a_line_break_hyphen_still_survives(monkeypatch):
+    """The guard on the guard. Only the row QUOTING the split word is dropped --
+    dropping every row in a hyphenated paragraph would silence real findings in
+    exactly the documents this tool is for."""
+    text = ("The PI studies Lie superal- gebra representations; and, the PI "
+            "extends that work.")
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "Lie superal- gebra", "kind": "spelling",
+                                "detail": "typo"},
+                               {"quote": "; and, the PI extends", "kind": "punctuation",
+                                "detail": "Spurious comma."}]))
+    out = pr.proofread(text, votes=1)
+    assert [r["evidence"] for r in out] == ["; and, the PI extends"]
+
+
+def test_a_real_hyphenated_compound_is_not_treated_as_damage(monkeypatch):
+    """`bosonic-fermionic` is the author's own hyphen with no line break after
+    it, so a genuine error quoting it must still be reported. The artifact is a
+    dash followed by WHITESPACE -- the same rule text_match uses."""
+    text = "The bosonic-fermionic sytems are studied."
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "bosonic-fermionic sytems", "kind": "spelling",
+                                "detail": '"sytems" should be "systems".'}]))
+    out = pr.proofread(text, votes=1)
+    assert len(out) == 1
+
+
+def test_a_submission_stamp_is_not_proofread(monkeypatch):
+    """Research.gov stamps a header on every page of a submitted proposal, and
+    pdfplumber reads it as prose. It is not the author's writing and they cannot
+    edit it -- observed live as a "spelling" row for "Dwight A Williams Ii".
+
+    ONE OCCURRENCE, deliberately. `mechanical_checks._running_furniture` needs a
+    line to REPEAT three times, which never happens in a one-page section -- the
+    exact case measured. So the stamp is recognised by its SHAPE, not by
+    repetition. The first version of this test used two copies of the line and
+    passed against a detector that could not have caught the real thing."""
+    text = ("Submitted/PI: Dwight A Williams Ii /Proposal No: 2503008\n"
+            "Overview\nThe project studies representations.\n")
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "Dwight A Williams Ii", "kind": "spelling",
+                                "detail": '"Ii" should be "II".'}]))
+    assert pr.proofread(text, votes=1) == []
+
+
+def test_a_split_word_is_dropped_even_when_the_model_closes_the_gap(monkeypatch):
+    """The first version of this filter tested the QUOTE for "dash + space", and
+    3 artifacts still got through in 10 live uploads -- because the model quotes
+    the word BOTH ways. The draft holds "superal- gebra"; the model returned
+    "Lie superal-gebra", with the gap closed, and sailed past the check.
+
+    So the damage is derived from the TEXT, which is the only place that knows
+    the typesetter split it, and matched against the quote in either form."""
+    text = "The PI studies Lie superal- gebra representations."
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "Lie superal-gebra", "kind": "spelling",
+                                "detail": '"superalgebra" is misspelt.'}]))
+    assert pr.proofread(text, votes=1) == []
+
+
+# ── A THRESHOLD, NOW THAT ONE IS AFFORDABLE ─────────────────────────────────
+#
+# The union of 3 was chosen when a single call surfaced the real errors only
+# ~50% of the time, where a 2-of-3 threshold recovers ~50% -- i.e. nothing. That
+# rate was being dragged down by our own extraction damage; with the artifact
+# filters above, a single call now hits 8/12 and 9/12 on the two real errors and
+# 1/12 on noise. Measured per call, 2026-08-31.
+#
+# At those rates the arithmetic flips:
+#     union of 3   -> real 98%, noise 22%   <- the count swinging 0/2/3
+#     >=2 of 5     -> real 98%, noise  5%
+# Same recall, a quarter of the noise. Five calls still run concurrently, so the
+# wall clock is one call's.
+
+@pytest.mark.skip(reason="threshold reverted: it halved recall on real errors "
+                         "because the votes are correlated, not independent -- "
+                         "see PROOFREAD_MIN_VOTES. Kept as the record of what "
+                         "was tried and what it measured.")
+def test_an_issue_only_one_reader_saw_is_dropped(monkeypatch):
+    """The noise rule. One reader in five is not a finding."""
+    text = "The PI trains fourr students; and, the PI extends that work."
+    seq = [
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "comma"},
+         {"quote": "trains fourr students", "kind": "spelling", "detail": "typo"}],
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "comma"}],
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "comma"}],
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "comma"}],
+        [{"quote": "; and, the PI extends", "kind": "punctuation", "detail": "comma"}],
+    ]
+    monkeypatch.setattr(pr.gemini_client, "generate_json", _fake_sequence(*seq))
+    out = pr.proofread(text, votes=5)
+    assert [r["evidence"] for r in out] == ["; and, the PI extends"]
+
+
+def test_an_issue_two_readers_saw_is_kept(monkeypatch):
+    """Still true under the union: two readers agreeing is certainly enough."""
+    text = "The PI trains fourr students; and, the PI extends that work."
+    seq = [
+        [{"quote": "trains fourr students", "kind": "spelling", "detail": "typo"}],
+        [{"quote": "trains fourr students", "kind": "spelling", "detail": "typo"}],
+        [], [], [],
+    ]
+    monkeypatch.setattr(pr.gemini_client, "generate_json", _fake_sequence(*seq))
+    out = pr.proofread(text, votes=5)
+    assert [r["evidence"] for r in out] == ["trains fourr students"]
+
+
+def test_a_single_reader_still_decides_when_there_is_only_one(monkeypatch):
+    """votes=1 must stay a plain single call -- a threshold of 2 over 1 vote
+    would silently report nothing at all."""
+    monkeypatch.setattr(pr.gemini_client, "generate_json",
+                        _fake([{"quote": "trains fourr students", "kind": "spelling",
+                                "detail": "typo"}]))
+    assert len(pr.proofread("The PI trains fourr students.", votes=1)) == 1
