@@ -96,12 +96,22 @@ def test_an_advisory_rule_that_failed_is_not_reported_as_passing():
 
 # ── the wiring ─────────────────────────────────────────────────────────────
 
-def test_review_section_actually_passes_its_findings_to_the_verdict():
-    """Without this the fix above is dead code -- mutation-testing showed
-    removing `findings=` at the call site broke nothing. References Cited is the
-    real shape: its one scoreable rule is model-judged (so `unclear` with the AI
-    off, leaving no score) while its `et al.` check is deterministic, advisory,
-    and passes.
+def test_review_section_scores_references_cited_from_its_deterministic_rule():
+    """WHAT THIS USED TO ASSERT, and why it changed on 2026-09-01.
+
+    It asserted `score is None` here, because References Cited was the one
+    section that produced NO score with the AI off: its only scoreable rule was
+    model-judged. That was the defect -- a section whose percentage was a single
+    model verdict, printing 100, 50, 0 or nothing -- and `pappg_rc_year` fixed
+    it. The section now scores from code alone, so the old assertion pinned the
+    behaviour we deliberately removed.
+
+    ⚠️ THE MUTATION GUARD THIS TEST CARRIED HAS LOST ITS ANCHOR. Removing
+    `findings=` at the `_verdict(...)` call site used to break this test,
+    because only the no-score branch of `_verdict` reads `findings`. With a
+    score present that branch never runs, and no section in the basic tier can
+    now reach "no score AND a passing advisory rule" -- the combination this
+    test was built on. The guard needs a new home; it is NOT provided here.
     """
     from services import draft_review, solicitation_profile as sp
     profile = sp.build_generic({}, [], id="NSF 23-598", title="t")
@@ -111,7 +121,14 @@ def test_review_section_actually_passes_its_findings_to_the_verdict():
     result = draft_review.review_section(
         text, section="references_cited", rulebook="the PAPPG",
         profile=profile, use_ai=False)
-    assert result.get("score") is None, result.get("score")
+    score = result.get("score")
+    assert score is not None, "the deterministic year rule must score alone"
+    assert score["assessed"] == 1, score
+    assert score["percent"] == 100, score
     summary = result["verdict"]["summary"]
     assert "rules were not checked" not in summary.lower(), summary
-    assert "advisory" in summary.lower(), summary
+    # The advisory `et al.` row still runs and still passes -- it is simply no
+    # longer the only thing this section can say.
+    et_al = next(f for f in result["findings"] if f["id"] == "pappg_rc_et_al")
+    assert et_al["status"] == "clear", et_al
+    assert et_al["scored"] is False, et_al

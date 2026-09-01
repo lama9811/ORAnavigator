@@ -227,6 +227,23 @@ _PAPPG_RULES: list[dict] = [
          "Citations follow accepted scholarly practice",
          "Follow accepted scholarly practices in providing citations for source materials.",
          "An incomplete reference list reads as carelessness to a reviewer in your field."),
+    # THE SCORED DETERMINISTIC ROW for this section, added 2026-09-01. Before
+    # it, References Cited had exactly ONE scored rule -- the semantic
+    # "scholarly practice" row above -- so its percentage was one model verdict
+    # and could only ever print 100, 50, 0 or nothing. NSF's sentence names six
+    # elements; the year is the only one checkable without the cited work in
+    # hand, so it is the only one claimed here. Author sequence needs the
+    # publication itself and is deliberately not a rule.
+    _row("pappg_rc_year", REFERENCES_CITED,
+         "Each reference includes a year of publication",
+         "Each reference must include the names of all authors (in the same "
+         "sequence in which they appear in the publication), the article and "
+         "journal title, book title, volume number, page numbers, and year of "
+         "publication.",
+         "A reviewer who cannot locate a reference cannot weigh the claim it "
+         "supports.",
+         kind="deterministic", check="rb_citation_year",
+         check_args={"section": REFERENCES_CITED}),
     # scored=False: NSF's own sentence carries an exception, and a conditional
     # ask must never be counted against a compliant proposal.
     _row("pappg_rc_et_al", REFERENCES_CITED,
@@ -380,8 +397,35 @@ def _tag(rows: list[dict], tier: str) -> list[dict]:
     return rows
 
 
+# PROMOTED out of the extended 142 into Check a Section's view, by id.
+#
+# The tier split is a defence against VOLUME -- 138 PAPPG rows drowning 33 from
+# the solicitation -- not a judgement that every extended row is minor. A few
+# are not, and promoting one by id beats copying its text into _PAPPG_RULES:
+# a copy would state the same NSF sentence in two rows, and a full Draft Review
+# would then show the rule twice. One row, one fact, seen by both readers.
+#
+# references_cited: this section had exactly ONE scored basic rule, the vague
+# "scholarly practice" row, so its percentage was a single model verdict that
+# could only print 100, 50, 0 or nothing. This rule carries the strongest stated
+# reason in the section -- NSF's own `why` is that it stops a PI dodging the
+# 15-page Project Description limit by burying narrative in the references --
+# and it was sitting where Check a Section never ran it.
+_PROMOTED_TO_BASIC = {
+    "pappg_reference_cited_restrict_references_cited"
+    "_to_bibliographic_citations_only",
+}
+
+
+def _tag_reviewed(rows: list[dict]) -> list[dict]:
+    for row in rows:
+        row["tier"] = ("basic" if row["id"] in _PROMOTED_TO_BASIC
+                       else "extended")
+    return rows
+
+
 RULES: dict[str, list[dict]] = {
-    "the PAPPG": _tag(_PAPPG_RULES, "basic") + _tag(_REVIEWED_ROWS, "extended"),
+    "the PAPPG": _tag(_PAPPG_RULES, "basic") + _tag_reviewed(_REVIEWED_ROWS),
 }
 
 

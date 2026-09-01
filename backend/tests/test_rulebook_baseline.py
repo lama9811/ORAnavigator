@@ -36,6 +36,67 @@ def test_a_semantic_row_names_no_check():
                 assert r.get("check") is None, r["id"]
 
 
+# ── References Cited must be measurable, not a single opinion ──────────────
+# Every assertion below is scoped to tier="basic" ON PURPOSE: that is Check a
+# Section's view, the screen a PI opens while writing. The `extended` 142 are a
+# full Draft Review's business and are not narrowed here.
+
+CITATIONS_ONLY = ("pappg_reference_cited_restrict_references_cited"
+                  "_to_bibliographic_citations_only")
+
+
+def _refs_basic():
+    return rb.rules_for("the PAPPG", "references_cited", tier="basic")
+
+
+def test_references_cited_has_more_than_one_scored_rule():
+    """The defect this section had: ONE scored rule in the basic tier, so the
+    percentage was a single model verdict and could only print 100, 50, 0 or
+    nothing. A section offered to a PI as a measurement needs a denominator
+    bigger than one."""
+    scored = [r for r in _refs_basic() if r.get("scored")]
+    assert len(scored) >= 3, [r["id"] for r in scored]
+
+
+def test_references_cited_has_a_deterministic_scored_rule():
+    """At least one rule decided by code, so the score is not entirely opinion."""
+    assert [r for r in _refs_basic()
+            if r.get("scored") and r["kind"] == "deterministic"]
+
+
+def test_the_citations_only_rule_reaches_check_a_section():
+    """NSF's stated reason is the strongest in this section -- it stops a PI
+    dodging the 15-page Project Description limit by burying narrative here --
+    and it was sitting in the extended tier where Check a Section never ran
+    it."""
+    row = next(r for r in _refs_basic() if r["id"] == CITATIONS_ONLY)
+    assert row["scored"] is True, row
+    assert "bibliographic citations only" in row["source"]
+
+
+def test_the_citations_only_rule_is_judged_by_a_model_not_by_code():
+    """MEASURED, not assumed: no deterministic signal separated a bibliography
+    from narrative prose. Counting prose sentences flags real APA and IEEE lists
+    (their article titles read as sentences -- 3 each, same as narrative);
+    counting finite verbs misses nominal-style narrative entirely ("Types of
+    data. Requirements registers, ..." scores 0). It is a judgement about
+    meaning, so a model reads it -- it must never be quietly turned into a code
+    check on the strength of a signal that was already tried and failed."""
+    row = next(r for r in _refs_basic() if r["id"] == CITATIONS_ONLY)
+    assert row["kind"] == "semantic", row
+    assert row.get("check") is None, row
+
+
+def test_check_a_section_never_scores_author_sequence():
+    """Verifying "the same sequence in which they appear in the publication"
+    needs the publication. Nothing here has it, so a model asked this can only
+    guess, and a guess must not enter a denominator a PI reads as a
+    measurement."""
+    for r in _refs_basic():
+        if r.get("scored"):
+            assert "sequence" not in r["label"].lower(), r["id"]
+
+
 def test_the_et_al_row_is_not_scored():
     """NSF's own sentence carries '(except for large consortia papers)'. A
     conditional ask is advisory and never counted against a compliant draft."""

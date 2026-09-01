@@ -221,6 +221,82 @@ def rb_et_al(ctx: dict, req: dict) -> tuple:
     ), "et al."
 
 
+# ── reference completeness ──────────────────────────────────────────────────
+
+# NSF names six elements a reference must carry. The YEAR is the one that is
+# checkable without the cited work in hand: four digits, present or absent.
+# Author sequence needs the publication itself, so no rule here claims it.
+_YEAR_RE = re.compile(r"\b(?:1[89]|20)\d{2}\b")
+
+# A line that STARTS a reference, in the styles a PI actually submits:
+#   [12] ...            bracketed number (IEEE, and the NSF sample)
+#   12. ...             numbered list
+#   Smith, J. ...       surname, initial (APA, Chicago)
+#   A. Patel ...        initial, surname (IEEE author-first)
+# Anything else continues the entry above it, which is what a wrapped title is.
+_ENTRY_START_RE = re.compile(
+    r"^(?:\[\d+\]|\d{1,3}\.\s|[A-Z][A-Za-z'\u2019-]+,\s*[A-Z]\.|[A-Z]\.\s*[A-Z][A-Za-z-]+)")
+
+
+def _reference_entries(text: str) -> list:
+    """Split a references section into entries, surviving wrapped lines.
+
+    pdfplumber breaks a long entry across lines, so counting LINES reports a
+    complete four-entry list as eight and half of them yearless. Entries are
+    therefore started only by an explicit marker and every other line is glued
+    to the one above.
+
+    FALLBACK: a list whose entries are all organisation-authored ("National
+    Science Foundation. ...") has no marker to find. When NOTHING in the section
+    looks like an entry start, each non-empty line is one entry -- which is the
+    right reading of exactly that list, and cannot fire while any marker exists.
+    """
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    if not lines:
+        return []
+    if not any(_ENTRY_START_RE.match(l) for l in lines):
+        return lines
+    entries: list = []
+    for line in lines:
+        if _ENTRY_START_RE.match(line):
+            entries.append(line)
+        elif entries:
+            entries[-1] += " " + line
+        # Lines BEFORE the first marker are preamble -- the section heading the
+        # span begins with, most often. Counting "References Cited" as an entry
+        # reported "1 of 2 references have no year" about a single complete
+        # reference; the existing suite caught it on the first full run.
+    return entries
+
+
+def rb_citation_year(ctx: dict, req: dict) -> tuple:
+    text = _span_text(ctx, req)
+    if text is None:
+        return _unlocated("Your References Cited section")
+    entries = _reference_entries(text)
+    if not entries:
+        return "not_found", (
+            "No reference entries were found in this section, so the year of "
+            "publication could not be checked on any of them."
+        ), ""
+    missing = [e for e in entries if not _YEAR_RE.search(e)]
+    total = len(entries)
+    if not missing:
+        return "addressed", (
+            f"All {total} reference{'s' if total != 1 else ''} carry a year of "
+            "publication."
+        ), entries[0][:160]
+    if len(missing) == total:
+        return "not_found", (
+            f"None of the {total} reference{'s' if total != 1 else ''} carry a "
+            "year of publication. NSF asks every entry to include one."
+        ), missing[0][:160]
+    return "partial", (
+        f"{len(missing)} of {total} references have no year of publication. "
+        "NSF asks every entry to include one so a reviewer can locate the work."
+    ), missing[0][:160]
+
+
 # ── page limits ─────────────────────────────────────────────────────────────
 
 def rb_page_limit(ctx: dict, req: dict) -> tuple:
@@ -292,6 +368,7 @@ CHECKS = {
     "rb_headings": rb_headings,
     "rb_no_urls": rb_no_urls,
     "rb_no_financials": rb_no_financials,
+    "rb_citation_year": rb_citation_year,
     "rb_et_al": rb_et_al,
     "rb_narrative": rb_narrative,
     "rb_page_limit": rb_page_limit,
