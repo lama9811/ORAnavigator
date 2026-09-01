@@ -47,6 +47,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from services import gemini_client
+from services import review_cache as _rc
 from services import text_match as _tm
 from services.text_match import quote_in
 
@@ -470,6 +471,13 @@ def proofread(text: str, *, use_ai: bool = True,
     furniture = _stamp_lines(text)
     split = _split_words(text)
 
+    # CACHED ON THE TEXT, so re-reading an unchanged draft gives the same rows.
+    # The key is a one-way hash; the draft itself is never stored.
+    ck = _rc.key(text, "proofread", n, len(headings or []), reqs=[])
+    hit = _rc.get(ck)
+    if hit is not None:
+        return [dict(r) for r in hit]
+
     if n == 1:
         passes = [_one_pass(text, furniture, split)]
     else:
@@ -486,7 +494,7 @@ def proofread(text: str, *, use_ai: bool = True,
     # A single vote can never clear a threshold of two, so votes=1 stays a plain
     # single call rather than silently reporting nothing at all.
     merged = _union(passes, text, PROOFREAD_MIN_VOTES if n > 1 else 1)
-    return [{
+    rows = [{
         "kind": c["kind"],
         "label": _LABELS.get(c["kind"], "Wording"),
         "detail": c["detail"],
@@ -499,3 +507,8 @@ def proofread(text: str, *, use_ai: bool = True,
         # never be shown alongside deterministic rows without saying so.
         "source": "ai",
     } for c in merged]
+    # ONLY A NON-EMPTY READING IS STORED. Empty means either a clean draft or a
+    # MISS, and the votes are correlated -- a run finds both real errors or
+    # neither. Freezing a miss would last the entry's life; re-reading costs a
+    # clean draft nothing and gives a missed error another go.
+    return _rc.put(ck, rows) if rows else rows

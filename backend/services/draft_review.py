@@ -56,7 +56,9 @@ from typing import Optional
 
 from services import delegated_rules
 from services import draft_scope
+from services import draft_scope as _ds
 from services import gemini_client
+from services import review_cache as _rc
 from services import mechanical_checks
 from services import rulebook_baseline
 from services import section_guidance
@@ -607,6 +609,21 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
     return _voted_batch(section_key, span, reqs, sections, solicitation_id, votes)
 
 
+def _cache_if_real(ck: str, rows: list[dict]) -> list[dict]:
+    """Store a real reading; never store a failure.
+
+    `_semantic_fallback` also reaches the merge path -- a model returning None
+    yields fallback rows rather than raising -- so "did every vote raise" is NOT
+    the test for whether this is an answer. An `unclear` row means nobody judged
+    it, and freezing that in would turn a passing outage into a permanent one for
+    the life of the entry.
+    """
+    if any(r.get("source") == "fallback" or r.get("status") == "unclear"
+           for r in rows):
+        return rows
+    return _rc.put(ck, rows)
+
+
 def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
                  solicitation_id: str, votes: int) -> list[dict]:
     """`_review_batch` asked `votes` times, merged by median.
@@ -615,8 +632,17 @@ def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
     three. A vote that raises is dropped rather than losing the round: two
     usable answers still decide, and only losing ALL of them falls back.
     """
+    # CACHED ON (draft text, these rules) -- see services/review_cache.py for
+    # what is and is not stored, and for the six cheaper fixes that were measured
+    # and found insufficient. A failure is never stored.
+    ck = _rc.key(span["text"], section_key, solicitation_id, votes, reqs=reqs)
+    hit = _rc.get(ck)
+    if hit is not None:
+        return [dict(f) for f in hit]
+
     if votes <= 1:
-        return _review_batch(section_key, span, reqs, sections, solicitation_id)
+        return _cache_if_real(ck, _review_batch(section_key, span, reqs,
+                                                sections, solicitation_id))
     results = []
     with ThreadPoolExecutor(max_workers=votes) as pool:
         futures = [pool.submit(_review_batch, section_key, span, reqs,
@@ -627,8 +653,8 @@ def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
             except Exception as exc:            # one vote lost, not the round
                 print(f"[REVIEW] a vote failed: {exc}")
     if not results:
-        return _semantic_fallback(reqs, span["text"])
-    return merge_votes(results)
+        return _semantic_fallback(reqs, span["text"])   # NOT cached, deliberately
+    return _cache_if_real(ck, merge_votes(results))
 
 
 def _review_batch(section_key: str, span: dict, reqs: list[dict],
@@ -1200,9 +1226,30 @@ def _basics_and_solicitation(profile: dict) -> dict:
     return {**profile, "requirements": rows, "sections": sections}
 
 
+def _coverage_warning(spans: dict, sections: dict) -> Optional[str]:
+    """A note when too little of the package could be placed to trust the score.
+
+    The test is the FRACTION, not a count: a proposal with two sections and one
+    located is not poorly covered, and a threshold in whole sections would flag
+    it. Below a third located, on a profile big enough for that to mean
+    something, the score is resting on so few rules that reporting it plainly
+    would mislead.
+    """
+    total = len(sections or {})
+    found = len([k for k in (spans or {}) if k in (sections or {})])
+    if total < 5 or found >= max(2, total / 3.0):
+        return None
+    return (f"Only {found} of {total} sections could be found in what you uploaded, "
+            "so most rules could not be checked and the score below rests on a "
+            "small part of your proposal. This usually means the file is one "
+            "combined PDF with no section headings in its text. Uploading your "
+            "sections as separate files lets each one be checked properly.")
+
+
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
                  budget: Optional[dict] = None, use_ai: bool = True,
-                 pages: Optional[dict] = None) -> dict:
+                 pages: Optional[dict] = None,
+                 file_spans: Optional[dict] = None) -> dict:
     """Review a pasted proposal against the solicitation `profile` describes.
 
     draft_text — the whole proposal, one blob.
@@ -1247,7 +1294,23 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             "message": "Paste your proposal to get a completeness review.",
         }
 
+    # SECTIONS WE WERE GIVEN BEAT SECTIONS WE GUESSED. `file_spans` comes from the
+    # upload path, where the PI hands us one file per section and the filename
+    # names it -- so the seams are known, not inferred. Measured over five uploads
+    # of one awarded 11-file package, `locate_sections` found 6 sections on one run
+    # and ONE on another (reading all 45 pages as "References Cited"), which
+    # collapsed 48 assessable rules to 14 and scored a FUNDED proposal at 29%.
+    #
+    # Locate STILL RUNS, over the same full text, because only about 5 of 11 real
+    # filenames resolve and the rest must still be placed. Its results are merged
+    # with `setdefault`, so a guess can fill a gap but can never overwrite a
+    # section a file already identified.
     spans, ai_located = locate_sections(text, sections, use_ai=use_ai)
+    if file_spans:
+        merged = dict(file_spans)
+        for key, span in spans.items():
+            merged.setdefault(key, span)
+        spans = merged
 
     findings = run_deterministic(text, spans, profile, title=title, budget=budget,
                                  pages=pages)
@@ -1298,6 +1361,10 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     # AFTER delegation, so a delegated row keeps its stronger status, and before
     # score() so an out-of-scope row leaves the denominator.
     findings = apply_draft_scope(findings)
+    # PACKAGE-ONLY. A Letter of Intent has its own earlier deadline and is not
+    # part of the package; review_section deliberately does NOT do this, so a PI
+    # can still check the letter itself. See services/draft_scope.
+    findings = _ds.apply_package_scope(findings)
 
     order = {r["id"]: i for i, r in enumerate(requirements)}
     findings.sort(key=lambda f: (_source_rank(f), order.get(f["id"], 999)))
@@ -1320,6 +1387,24 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         "sections_missing": [
             {"key": k, "label": v["label"]} for k, v in sections.items() if k not in spans
         ],
+        # WHEN THE DOCUMENT COULD NOT BE SPLIT, SAY SO. Measured on the awarded
+        # proposal uploaded as ONE combined Research.gov PDF: 2 of 9 sections
+        # located on every run, 21 of 70 rules assessable, and a FUNDED proposal
+        # scored 48% -- consistently, which is worse than varying, because a
+        # steady number reads as a settled one.
+        #
+        # It is not a locate failure. That PDF has no boundaries in its text:
+        # "Project Summary" appears once in 56 pages and never on its own line,
+        # and its page furniture is identical throughout and never names the
+        # section. The same package as its 11 real section files scores 76% with
+        # 50 rules assessed, so the remedy is the INPUT and the review should say
+        # that rather than hand over a confident number built on a fifth of its
+        # rules. Same principle as the scraper: a silent stop reads as "we found
+        # everything" when it means "we stopped looking".
+        #
+        # ABSENT unless it bites -- a warning that renders on every review stops
+        # being read.
+        "coverage_warning": _coverage_warning(spans, sections),
         "word_count": len(text.split()),
         # A cap that is never reported is invisible however large it is. Same
         # contract as solicitation_extractor's `truncated` / `input_chars`:
