@@ -661,7 +661,6 @@ function ExtractionLine({ extraction }) {
 // come back from NSF without review.
 function SectionScorePanel({ score, length, verdict }) {
   if (!score && !verdict) return null;
-  const sources = Object.entries((score || {}).by_source || {});
   // THE VERDICT DRIVES THE COLOUR, not the rules percentage. Measured before
   // this existed: a Project Summary with a doubled word, two misspellings, a
   // wrong word and eleven more problems met all five of its rules and painted
@@ -678,14 +677,14 @@ function SectionScorePanel({ score, length, verdict }) {
       {score && (
       <div className="scm-score-head">
         <div className="scm-score-count">
-          <span className="scm-score-earned">{score.earned}</span>
-          <span className="scm-score-of"> of {score.assessed}</span>
+          <span className="scm-score-earned">{score.percent}%</span>
         </div>
         <div className="scm-score-body">
-          <div className="scm-score-title">
-            rules met <span className="scm-score-pct">({score.percent}%)</span>
-          </div>
-          <div className="scm-score-basis">{score.basis}</div>
+          <div className="scm-score-title">rules met</div>
+          {/* The paragraph this replaces is still built by the backend and is
+              still rendered in DraftReviewModal. Three words carry the same
+              guardrail here: the number counts presence, never quality. */}
+          <div className="scm-score-caption">presence, not quality</div>
         </div>
       </div>
       )}
@@ -723,7 +722,7 @@ function SectionScorePanel({ score, length, verdict }) {
           first and not the second — which is exactly the report that prompted
           this. Same weight, same border, one glance. It is a MEASUREMENT: NSF
           sets a maximum and never a minimum, so this never says "too short". */}
-      {(length || sources.length > 1) && (
+      {length && (
         <div className="scm-score-split">
           {length && (
             <div className="scm-score-src">
@@ -742,13 +741,6 @@ function SectionScorePanel({ score, length, verdict }) {
               </span>
             </div>
           )}
-          {sources.length > 1 && sources.map(([name, s]) => (
-            <div className="scm-score-src" key={name}>
-              <span className="scm-score-src-name">{name}</span>
-              <span className="scm-score-src-num">{s.earned} of {s.assessed}</span>
-              <span className="scm-score-src-of">{s.percent}%</span>
-            </div>
-          ))}
         </div>
       )}
     </div>
@@ -872,12 +864,13 @@ function ResultsView({ result, extraction, onBack }) {
 
       <WordingPanel wording={result.wording} />
 
-      {/* The SOURCES are named by `score.basis`, which derives them from the
-          rules that actually scored. Restating them here got it wrong -- it
-          credited the PAPPG on sections where every rule came from the
-          solicitation -- and put one fact in two places, which is the failure
-          this modal has already had to unship once. What survives is the part
-          `basis` does not carry. */}
+      {/* Naming the SOURCES here got it wrong once -- it credited the PAPPG on
+          sections where every rule came from the solicitation -- and put one
+          fact in two places, which is the failure this modal has already had to
+          unship once. So this says what the score is NOT, and never which
+          authority it came from. `score.basis` used to carry that above; as of
+          2026-09-01 the panel no longer renders it, and this paragraph is the
+          only long-form caveat left on the screen. */}
       <p className="scm-disclaimer">
         The score counts only the rules that could be checked against your text
         &mdash; it is not a measure of how well written {result.label
