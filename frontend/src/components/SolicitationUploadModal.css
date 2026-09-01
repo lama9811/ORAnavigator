@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1200; /* above the sticky navbar (z-index 1000) so the header isn't clipped */
-  padding: 20px;
+  padding: 0;
   animation: solicitation-fade-in 0.15s;
 }
 
@@ -18,13 +18,24 @@
   to { opacity: 1; }
 }
 
+/* ── FULL-SCREEN SURFACE (2026-09-01, product decision) ─────────────────────
+   These modals used to be 640-900px boxes floating on a dimmed page, which on
+   a 1440px screen is literally half the window. They now fill it.
+
+   The SURFACE is full-bleed so the app disappears behind it -- that is what
+   makes it read as a page rather than a dialog. The CONTENT is still held to a
+   centred reading column via padding, because a line of prose running the full
+   width of a 2560px monitor is harder to read, not easier, and this modal is
+   mostly prose. One number controls it: change the px value below.
+   ────────────────────────────────────────────────────────────────────────── */
 .solicitation-modal {
   background: var(--bg-card);
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 640px;
+  border-radius: 0;
+  padding: 24px max(24px, calc((100% - 1200px) / 2));
+  max-width: none;
   width: 100%;
-  max-height: 92vh;
+  height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }

@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1200;
-  padding: 16px;
+  padding: 0;
   animation: bh-fade 0.15s ease-out;
 }
 @keyframes bh-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -17,9 +17,10 @@
 .bh-modal {
   background: #fff;
   width: 100%;
-  max-width: 900px;
-  max-height: 92vh;
-  border-radius: 16px;
+  max-width: none;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 0;
   box-shadow: 0 24px 60px rgba(11, 37, 69, 0.3);
   display: flex;
   flex-direction: column;
@@ -439,3 +440,18 @@
 .bh-table tbody tr { border-bottom: 1px solid #f1f5f9; }
 .bh-grid-subtotal td { font-weight: 600; background: #f8fafc; }
 .bh-grid-total td { font-weight: 800; background: #eef2ff; color: #0b2545; border-top: 2px solid #cbd5e1; }
+
+/* ── FULL-SCREEN SURFACE (2026-09-01, product decision) ─────────────────────
+   These modals used to be 640-900px boxes floating on a dimmed page, which on
+   a 1440px screen is literally half the window. They now fill it.
+
+   The SURFACE is full-bleed so the app disappears behind it -- that is what
+   makes it read as a page rather than a dialog. The CONTENT is still held to a
+   centred reading column via padding, because a line of prose running the full
+   width of a 2560px monitor is harder to read, not easier, and this modal is
+   mostly prose. One number controls it: change the px value below.
+   ────────────────────────────────────────────────────────────────────────── */
+.bh-header,
+.bh-scroll {
+  padding-inline: max(18px, calc((100% - 1600px) / 2));
+}
