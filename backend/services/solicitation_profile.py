@@ -549,6 +549,53 @@ def _refile_rows(rows: list[dict], sections: dict) -> list[dict]:
     return out
 
 
+# A RULE THE FUNDER WROTE AS A PROHIBITION MUST BE JUDGED AS ONE.
+#
+# Absence means PASS for a prohibition and FAIL for everything else, and only a
+# row carrying `flag_if_present` is read with the first vocabulary. The 19
+# curated PAPPG prohibitions were marked by hand at build time; rows read out of
+# a SOLICITATION were never marked at all.
+#
+# Measured 2026-09-01 on a real awarded package: "Do not include voluntary
+# committed cost sharing" came back `not_found` under the note "The draft does
+# not include any voluntary committed cost sharing" -- the reviewer confirming
+# compliance while we scored it a miss. Verified independently: "cost sharing"
+# appears ZERO times in that budget justification. (The full measurement lives in
+# tests/test_extracted_prohibitions.py; this module stays free of any funder's
+# name, and a test enforces that.)
+#
+# THE MIRROR IS THE DANGEROUS DIRECTION. Marking a CONTENT rule as a prohibition
+# makes a draft that OMITS it come back `clear`, reporting a missing requirement
+# as compliance -- so this matches DIRECTIVE phrasing only, never a bare "not".
+# "could not be done elsewhere" and "for whom no funds are requested" are
+# ordinary requirement prose and each has a guard test.
+_PROHIBITION_RE = re.compile(
+    r"\bdo(es)? not\s+(include|submit|request|use|budget|apply|exceed|count|list)\b"
+    r"|\b(must|may|shall|should|can)\s+not\s+(be\s+)?(include|submit|request|use|"
+    r"apply|applied|budget|budgeted|charge|charged|count|counted|list|listed|exceed)"
+    r"|\bis prohibited\b|\bare prohibited\b|\bprohibits?\b|\bprohibited\b"
+    r"|\bnot\s+(allowed|permitted|allowable)\b"
+    r"|\bno\s+\w+(\s+\w+){0,3}\s+(may|shall)\s+be\s+(included|submitted|requested)\b",
+    re.I)
+
+
+def mark_extracted_prohibitions(rows: list[dict]) -> list[dict]:
+    """Set `flag_if_present` on solicitation rows the funder phrased as a ban.
+
+    Rulebook rows are left alone -- theirs was decided by hand at build time, and
+    re-deciding it here would put two authorities on one flag. A row already
+    marked is left alone for the same reason.
+    """
+    out = []
+    for r in rows:
+        if (not r.get("rulebook") and not r.get("flag_if_present")
+                and _PROHIBITION_RE.search(f"{r.get('label') or ''} {r.get('source') or ''}")):
+            r = dict(r)
+            r["flag_if_present"] = True
+        out.append(r)
+    return out
+
+
 def build_generic(contract: dict, requirements: list[dict], *, id: str, title: str,
                   url: Optional[str] = None,
                   merit_criteria: Optional[list] = None,
@@ -585,6 +632,10 @@ def build_generic(contract: dict, requirements: list[dict], *, id: str, title: s
                              page_limits=contract.get("page_limits"),
                              attachments=contract.get("required_attachments"))
     rows = _refile_rows(rows, sections)
+    # Applied on LOAD, not at extraction, so it repairs every profile already in
+    # the database -- the same retroactive pattern as canon_section and
+    # compliance_sentinel's verdicts.
+    rows = mark_extracted_prohibitions(rows)
     return make_profile(
         id=id, title=title, url=url,
         sections=sections,

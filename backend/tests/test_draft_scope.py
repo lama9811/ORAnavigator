@@ -129,3 +129,90 @@ def test_recomputed_every_review_so_the_fix_is_retroactive():
     from services import draft_review as dre
     out = dre.apply_draft_scope([_finding()])
     assert out[0]["status"] == "not_in_draft"
+
+
+# ── TWO MORE THINGS A PROPOSAL DOCUMENT CANNOT CONTAIN (2026-09-01) ─────────
+#
+# Measured on the AWARDED NSF EiR package, uploaded as its 11 real section files:
+# 76%, and 14 scored rules lost points. Only about two of the fourteen were fair.
+# Four of them were these two families:
+#
+#   "Submit annual project report prior to budget period end"
+#   "Submit final project report and outcomes report following expiration"
+#   "Letter of Intent included"
+#   "List PI as point of contact on Letter of Intent"
+#
+# A POST-AWARD REPORT is due after an award that does not exist yet -- no draft
+# can contain one, and no PI can act on it while writing. A LETTER OF INTENT is a
+# SEPARATE submission with an earlier deadline; by the time a package exists the
+# LOI is months gone, so counting it means EVERY proposal to this solicitation
+# loses those points permanently.
+#
+# Both become `not_in_draft`: absent from _CREDIT, so out of the denominator,
+# with a note naming where they ARE handled. The risk in this module is
+# OVER-excluding (its docstring says so), so both patterns are narrow and both
+# have a mirror test below proving a real content rule still survives.
+
+def test_a_post_award_report_is_not_scored_against_the_draft():
+    assert not ds.is_draft_checkable(
+        "Submit annual project report prior to budget period end",
+        "Submit an annual project report 90 days prior to the end of the budget period.")
+
+
+def test_a_final_report_after_expiration_is_not_scored_against_the_draft():
+    assert not ds.is_draft_checkable(
+        "Submit final project report and outcomes report",
+        "Submit a final project report and a project outcomes report following "
+        "expiration of the award.")
+
+
+def test_describing_a_reporting_PLAN_in_the_draft_still_counts():
+    """The mirror. A solicitation asking the Project Description to SAY how
+    results will be reported is a content rule, and dropping it would hide a
+    real gap -- the failure this module's docstring calls its dangerous
+    direction."""
+    assert ds.is_draft_checkable(
+        "Describe the plan for reporting results in the Project Description",
+        "The Project Description must describe how findings will be reported "
+        "and disseminated.")
+
+
+# The Letter of Intent is PACKAGE-scoped, not rule-scoped, and the difference is
+# load-bearing: `apply_draft_scope` runs in BOTH review_draft and review_section,
+# so excluding LOI rules outright would leave a PI who opens Check a Section on
+# their Letter of Intent with every rule reading "Done at submission". The letter
+# is perfectly checkable ON ITS OWN; it simply is not part of a package.
+
+def test_a_letter_of_intent_rule_is_dropped_from_a_PACKAGE_review():
+    rows = ds.apply_package_scope([
+        {"id": "a", "section": "letter_intent", "label": "Letter of Intent included",
+         "status": "not_found", "scored": True, "note": "n"},
+    ])
+    assert rows[0]["status"] == "not_in_draft"
+    assert "separate" in rows[0]["note"].lower()
+
+
+def test_the_same_rule_is_untouched_when_checking_the_letter_itself():
+    """Section Check on the Letter of Intent must still assess its own rules."""
+    rows = [{"id": "a", "section": "letter_intent", "label": "Letter of Intent included",
+             "status": "not_found", "scored": True, "note": "n"}]
+    assert ds.apply_package_scope(rows, section="letter_intent")[0]["status"] == "not_found"
+
+
+def test_package_scope_leaves_every_other_section_alone():
+    rows = ds.apply_package_scope([
+        {"id": "b", "section": "project_summary", "label": "x",
+         "status": "not_found", "scored": True, "note": "n"},
+    ])
+    assert rows[0]["status"] == "not_found"
+
+
+def test_naming_the_LOI_number_inside_another_section_still_counts():
+    """The mirror. NSF 23-598 requires the Project SUMMARY to carry the LOI
+    number -- that is text in the package and must stay scored."""
+    rows = ds.apply_package_scope([
+        {"id": "c", "section": "project_summary",
+         "label": "Include LOI number in Project Summary",
+         "status": "not_found", "scored": True, "note": "n"},
+    ])
+    assert rows[0]["status"] == "not_found"

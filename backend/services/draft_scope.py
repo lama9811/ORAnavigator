@@ -33,6 +33,7 @@ sentence. When in doubt the row stays scored.
 from __future__ import annotations
 
 import re
+from typing import Optional
 
 # Named submission systems. A rule about operating one of these is a rule about
 # a website, not about a document.
@@ -76,6 +77,68 @@ _CONTENT = re.compile(
     r"|no\s+more\s+than\s+\d+\s*%|letter\b)\b", re.I)
 
 
+# A POST-AWARD REPORT IS DUE AFTER AN AWARD THAT DOES NOT EXIST YET. No draft can
+# contain one and no PI can act on it while writing, so scoring it against a
+# package is scoring a proposal for not being an award. Measured on the AWARDED
+# NSF EiR package: "Submit annual project report prior to budget period end" and
+# "Submit final project report and outcomes report following expiration" both
+# came back `not_found` on a funded proposal.
+#
+# NARROW ON PURPOSE, because over-excluding is this module's dangerous direction:
+# a REPORT NOUN qualified by annual/final/interim/outcomes, or a submit-a-report
+# ask tied to the award period. "Describe the plan for reporting results in the
+# Project Description" matches neither and stays scored (its own test).
+_REPORT_NOUN = re.compile(
+    r"\b(annual|final|interim|outcomes?)\s+(project\s+)?(report|reports)\b", re.I)
+_AWARD_PERIOD = re.compile(
+    r"\bbudget period\b|\bexpiration of the award\b|\bduring the award\b"
+    r"|\bafter the award\b|\baward period\b", re.I)
+_SUBMIT_REPORT = re.compile(r"\bsubmit\b[^.]{0,80}\breport\b", re.I)
+
+
+def _is_post_award(blob: str) -> bool:
+    return bool(_REPORT_NOUN.search(blob)
+                or (_SUBMIT_REPORT.search(blob) and _AWARD_PERIOD.search(blob)))
+
+
+# SECTIONS THAT ARE A SEPARATE SUBMISSION, not a part of the package. A Letter of
+# Intent has its own, earlier deadline; by the time a package exists it is months
+# gone, so counting its rules means EVERY proposal to such a solicitation loses
+# those points permanently. Measured on the awarded package: 3 of the 14 scored
+# rules that lost points were LOI rules.
+#
+# PACKAGE-SCOPED, NOT RULE-SCOPED, and that distinction is load-bearing:
+# `apply_draft_scope` runs in review_section too, so excluding these outright
+# would leave a PI who opens Check a Section on their Letter of Intent with every
+# rule reading "Done at submission". The letter is perfectly checkable on its own.
+#
+# Keyed on the SECTION, never on the sponsor -- a letter of intent is a
+# proposal-process concept, not one funder's vocabulary.
+_SEPARATE_SUBMISSIONS = {"letter_intent"}
+
+
+def apply_package_scope(findings: list[dict], *,
+                        section: Optional[str] = None) -> list[dict]:
+    """Stop scoring a PACKAGE on parts that are submitted separately.
+
+    `section` is the one section being checked, when this is a Section Check --
+    that section's own rules are then left alone, because checking the letter
+    itself is exactly what that screen is for.
+    """
+    out = []
+    for f in findings:
+        sec = f.get("section")
+        if (sec in _SEPARATE_SUBMISSIONS and sec != section
+                and f.get("status") not in ("not_in_draft",)):
+            f = dict(f)
+            f["status"] = "not_in_draft"
+            f["note"] = ("A Letter of Intent is a separate submission with its own, "
+                         "earlier deadline, so it is not part of this package. Check "
+                         "it on its own from Check a Section.")
+        out.append(f)
+    return out
+
+
 def is_draft_checkable(label: str, source: str) -> bool:
     """Can a proposal DOCUMENT satisfy this requirement?
 
@@ -86,6 +149,11 @@ def is_draft_checkable(label: str, source: str) -> bool:
     blob = f"{label or ''} {source or ''}"
     if not blob.strip():
         return True
+
+    # A post-award report is never about the document, whatever else the sentence
+    # says, so it short-circuits before the content-wording rule below.
+    if _is_post_award(blob):
+        return False
 
     out_of_scope = (_SUBMITTER.search(blob) or _REGISTRATION.search(blob)
                     or _PERSON_LIMIT.search(blob) or _FORM_FIELD.search(blob)
