@@ -4662,7 +4662,13 @@ async def draft_review_upload(
             continue
         if total_bytes > _DRAFT_MAX_TOTAL_BYTES:
             raise HTTPException(400, "Those files are too large in total (max 60 MB).")
-        extracted.append(_dt.extract_upload(upload.filename or "file", data))
+        # `sections` opts this file into STRUCTURAL splitting: a single
+        # combined Research.gov PDF carries its own sub-document
+        # boundaries, and reading them is what lets a PI upload the file
+        # Research.gov handed them instead of eleven separate ones.
+        extracted.append(_dt.extract_upload(
+            upload.filename or "file", data,
+            sections=(profile or {}).get("sections")))
 
     # ONE FILE IS ONE SECTION, when the filename says so. This replaces
     # `_dt.combine`: it produces the same document, and additionally hands back
@@ -4680,14 +4686,20 @@ async def draft_review_upload(
         # would report every requirement as missing.
         return {
             "submission_id": submission_id, "sponsor": sub.sponsor, "result": None,
-            "extraction": {"files": [{k: v for k, v in f.items() if k != "text"}
+            "extraction": {"files": [{k: v for k, v in f.items()
+                                      if k not in ("text", "section_spans")}
                                      for f in extracted], "words": 0},
             "error": "Couldn't read any text from those files.",
         }
 
+    # Did the PDF's OWN structure name these sections? If so the model is not
+    # asked to name whatever is left, so the score's denominator is fixed rather
+    # than depending on a guess that lands on some runs and not others.
+    structural = any(f.get("section_spans") for f in extracted)
     result = _dr.review_draft(draft_text, profile=profile, title=sub.title,
                               budget=budget, pages=page_counts or None,
-                              file_spans=file_spans or None)
+                              file_spans=file_spans or None,
+                              structural=structural)
     return {
         "submission_id": submission_id,
         "sponsor": sub.sponsor,
@@ -4695,7 +4707,8 @@ async def draft_review_upload(
         # Per-file report so the UI can show what was read and what wasn't. The
         # extracted TEXT is deliberately not echoed back.
         "extraction": {
-            "files": [{k: v for k, v in f.items() if k != "text"} for f in extracted],
+            "files": [{k: v for k, v in f.items()
+                       if k not in ("text", "section_spans")} for f in extracted],
             "words": len(draft_text.split()),
             # Which file was read as which section, so a mis-map is visible on
             # screen rather than silently shaping the score.

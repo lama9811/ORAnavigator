@@ -107,9 +107,25 @@ def section_signature(name: str) -> frozenset:
 # grows entries that only make sense for one sponsor, it belongs in
 # `rulebook_baseline` (which is keyed on the rulebook) rather than here — this
 # module is deliberately dependency-free and must stay that way.
+#
+# The SECOND entry is NSF's own table of contents spelling the same slot a third
+# way, and it was found by a PI reading the section map rather than by a test.
+# The rulebook writes "Special Information and Supplementary DOCUMENTATION";
+# NSF's generated table of contents writes "Special Information/Supplementary
+# DOCUMENTS", which singularises to `document`. One word apart, so the row
+# resolved to nothing.
+#
+# That cost real content: on an awarded package, pages 46-54 — the Data
+# Management Plan, the Mentoring Plan and the institutional support letter —
+# went unchecked. NO PAGE OF THAT BLOCK NAMES THE SLOT (each attachment names
+# ITSELF), so the table of contents is the only place it is written down, and
+# with the row unresolved the trailing-block elimination in
+# `services.pdf_sections` never fired.
 _EQUIVALENT_SECTIONS = (
     (frozenset({"supplementary", "document"}),
      frozenset({"special", "information", "supplementary", "documentation"})),
+    (frozenset({"supplementary", "document"}),
+     frozenset({"special", "information", "supplementary", "document"})),
 )
 
 
@@ -141,15 +157,29 @@ def resolve_section_key(sections: dict, name: str) -> Optional[str]:
         return None
     wanted = _equivalent_signatures(sig)
     for k, meta in sections.items():
-        if section_signature(meta.get("label") or k) in wanted:
-            return k
-        if any(section_signature(a) in wanted for a in (meta.get("aliases") or [])):
-            return k
-        # The KEY itself, for a universe whose entry carries neither a label
-        # matching the equivalence nor an alias for it.
-        if section_signature(k) in wanted:
+        if section_signatures(k, meta) & set(wanted):
             return k
     return None
+
+
+def section_signatures(key: str, meta: dict) -> set:
+    """Every signature one section answers to — label, aliases, and the key.
+
+    PUBLIC and extracted from `resolve_section_key`'s loop rather than left
+    inline, because a second caller now needs the same derivation and two copies
+    of "what names this section" would drift. The key itself is included for a
+    universe whose entry carries neither a label matching an equivalence nor an
+    alias for it.
+
+    This says which names REFER to a section. It does not say how they must
+    match — `resolve_section_key` demands set EQUALITY against these, which is
+    what stops "Project Description Supplementary Documents" folding into
+    `project_description`, and a caller wanting anything looser must justify it
+    at its own call site.
+    """
+    out = {section_signature(meta.get("label") or key), section_signature(key)}
+    out.update(section_signature(a) for a in (meta.get("aliases") or []))
+    return {s for s in out if s}
 
 
 def heading_regex(alias: str) -> re.Pattern:

@@ -655,6 +655,21 @@ function ScorePanel({ score, solicitationId }) {
           Completeness against {solicitationId || "this solicitation"}
         </div>
         <div className="eir-score-basis">{score.basis}</div>
+        {/* HOW MANY RULES WERE ACTUALLY CHECKED, in the score box.
+            The basis line says the percentage covers "the requirements this
+            reviewer could assess" — true, and it never said how many it could
+            not, so a number over 6 rules and a number over 60 read identically.
+            The unassessed rows were always on screen, but only inside the
+            collapsed "Not checked here" group, and this file's own rule is that
+            a fold must say how much it hides. `not_assessed` counts exactly the
+            statuses absent from the score's denominator — unclear,
+            could_not_locate, not_checked, delegated, not_in_draft — each of
+            which means the same thing to a reader: nobody looked. */}
+        <div className="eir-score-coverage">
+          {score.not_assessed
+            ? `${score.assessed} rules checked · ${score.not_assessed} not checked`
+            : `all ${score.assessed} rules checked`}
+        </div>
         <div className="eir-score-bar">
           <div className="eir-score-fill" style={{ width: `${score.percent}%` }} />
         </div>

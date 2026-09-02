@@ -172,8 +172,26 @@ def test_a_dense_section_is_reviewed_in_batches_not_one_giant_prompt():
     assert len(sizes) > 1, "40 rules should not have fitted in one batch"
 
 
-def test_a_small_section_is_still_one_call():
-    """Batching must not turn today's 3-rule section into three round-trips."""
+def test_a_small_section_now_asks_about_ONE_RULE_AT_A_TIME():
+    """This assertion was REVERSED on 2026-09-02, deliberately.
+
+    It used to read "batching must not turn today's 3-rule section into three
+    round-trips" — a LATENCY contract, written when `_review_section` looped
+    over its batches SERIALLY. They run concurrently now, so three calls cost
+    roughly one round-trip and that cost is gone.
+
+    What replaced it is a CONSISTENCY contract, measured. A rule judged in a
+    crowd is collateral damage from the others sharing its generation: on a real
+    awarded Project Summary, ten uploads each, `pappg_ps_overview_methods` split
+    not_found 7 / partial 3 with a 15-rule batch (scores 83% x7, 92% x3) and
+    came back **92% ten of ten with nothing moving** at one rule per call. On a
+    7-rule section one rule is 14 points of the score, so this is where a flip
+    costs most and where isolating it is cheapest.
+
+    The old test is not deleted because the risk it guarded is still real —
+    `test_a_large_section_is_bounded_by_the_NUMBER_of_calls` in
+    tests/test_model_call_ceiling.py is where that now lives, over the section
+    sizes where round-trips actually add up."""
     from unittest import mock
     from services import draft_review
 
@@ -185,7 +203,7 @@ def test_a_small_section_is_still_one_call():
                                            _SECTIONS, "X")
 
     assert len(out) == 3
-    assert len(sizes) == 1, f"3 rules took {len(sizes)} calls"
+    assert sizes == [1, 1, 1], f"3 rules were asked as {sizes}"
 
 
 def test_one_failed_batch_does_not_lose_the_others():
