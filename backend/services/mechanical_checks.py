@@ -70,8 +70,21 @@ _PLACEHOLDER_CASED = re.compile(
 # "as shown in Figure 3" / "see Table 2"
 _REFERENCE_RE = re.compile(r"\b(Figure|Fig\.|Table)\s+(\d+[A-Za-z]?)\b", re.IGNORECASE)
 # A caption line: the label starts the line, which is how captions are written.
-_CAPTION_RE = re.compile(r"^[ \t]*(Figure|Fig\.|Table)\s+(\d+[A-Za-z]?)\s*[.:—-]",
-                         re.IGNORECASE | re.MULTILINE)
+#
+# THE LABEL MAY STAND ALONE, and requiring punctuation after it reported a
+# caption as a dangling reference TO ITSELF. NSF's Collaborators & Other
+# Affiliations form writes each table's caption as a bare line —
+#
+#     Table 4
+#     4 Name: Organizational Affiliation Optional (email, Department)
+#
+# — so a funded proposal was told "Table 4 is referred to but never labelled"
+# on a page where the label is right there. Still anchored to the LINE START and
+# still requiring the line to END there, so "Table 4 shows the results" stays a
+# reference rather than becoming its own caption.
+_CAPTION_RE = re.compile(
+    r"^[ \t]*(Figure|Fig\.|Table)\s+(\d+[A-Za-z]?)(?:\s*[.:—-]|[ \t]*$)",
+    re.IGNORECASE | re.MULTILINE)
 
 # (Smith 2019) / (Lee et al., 2021) / [17]
 _CITATION_RE = re.compile(
@@ -329,18 +342,64 @@ def _is_fragment_line(line: str) -> bool:
     return all(len(t) <= _MAX_FRAGMENT_CHARS for t in tokens)
 
 
+# TWO ROWS OF A FORM ZIPPED TOGETHER. pdfplumber groups characters into lines by
+# baseline, and `document_text.PDF_Y_TOLERANCE = 5` is wide enough that NSF's
+# budget form -- which stacks two rows of small type within five points -- comes
+# back as ONE line with the two rows' characters interleaved by x-position:
+#
+#   'A. KS eE yN AIO ssR o/ cK iaE tY es P (E LR isS t O eaN cN h E sL e: ...'
+#
+# i.e. "A. SENIOR/KEY PERSONNEL: PD/PI, Co-PI's, Faculty ..." merged with the row
+# beneath it. A PI was shown four "space before punctuation" mistakes quoting
+# that line, on a FUNDED proposal.
+#
+# LOWERING THE TOLERANCE IS NOT THE FIX, and that is measured. At y_tolerance=2
+# the form reads cleanly and drops 56 characters per page elsewhere, and the
+# Project Description's superscript numerals vanish ("two undergraduates in
+# Year 1" -> "in Year ; three") -- the exact sentence the tolerance was raised
+# to 5 to repair. No single value reads both correctly, so the reading is left
+# alone and this stops the damage being reported as the author's writing.
+#
+# THE SIGNAL IS MEAN TOKEN LENGTH, not `all(len(t) <= 3)`. That older test is
+# right for a line of displaced subscripts and wrong here: interleaving leaves a
+# MIX ('arI/' is four characters), so one long fragment let the whole line
+# through. Interleaving SHATTERS words, so the mean collapses -- measured 2.2 on
+# the form row against 3.5-4.1 for real prose built of short words.
+#
+# Measured over all 12 PDFs of the awarded package: 20 of 1,337 judged lines
+# (1.5%) trip this, and every one is the budget form, interleaved maths, a table
+# row of single letters, or the Morgan letterhead's spaced-out logo. No prose
+# sentence is among them.
+_MIN_TOKENS_TO_JUDGE = 6          # fewer than this and a low mean is a heading
+_MIN_MEAN_TOKEN_CHARS = 3.0
+
+
+def _is_interleaved_line(line: str) -> bool:
+    """Words shattered into fragments — two columns read as one line."""
+    tokens = [t for t in line.split() if any(c.isalpha() for c in t)]
+    if len(tokens) < _MIN_TOKENS_TO_JUDGE:
+        return False
+    return sum(len(t) for t in tokens) / len(tokens) < _MIN_MEAN_TOKEN_CHARS
+
+
 def _damaged_lines(text: str) -> set[int]:
     """Indices of lines whose spacing cannot be trusted.
 
-    A line is damaged when it carries direct evidence itself (an unmapped glyph
-    or a maths operator), or when it ADJOINS a fragment line -- because the
-    fragment line holds the very tokens that were lifted out of it.
+    A line is damaged when it carries direct evidence itself (an unmapped glyph,
+    a maths operator, or its own words shattered into fragments), or when it
+    ADJOINS a fragment line -- because the fragment line holds the very tokens
+    that were lifted out of it.
+
+    An interleaved line does NOT damage its neighbours: the adjacency rule
+    exists for text something was lifted OUT of, and nothing was lifted out of
+    the rows either side of a merged one.
     """
     lines = text.split("\n")
     fragments = {i for i, ln in enumerate(lines) if _is_fragment_line(ln)}
     damaged = set()
     for i, ln in enumerate(lines):
-        if _UNMAPPED_GLYPH in ln or any(c in _MATHS_SYMBOLS for c in ln):
+        if (_UNMAPPED_GLYPH in ln or any(c in _MATHS_SYMBOLS for c in ln)
+                or _is_interleaved_line(ln)):
             damaged.add(i)
         elif (i - 1) in fragments or (i + 1) in fragments:
             damaged.add(i)
@@ -567,8 +626,10 @@ def _unfinished_sentences(text: str) -> list[dict]:
         last_line = lines[-1].strip()
         if _LIST_MARKER_RE.match(last_line):
             continue
-        # Displaced sub/superscripts, not a sentence missing its period.
-        if all(_is_fragment_line(ln) for ln in lines):
+        # Displaced sub/superscripts, or two form rows read as one line —
+        # damaged text, not a sentence missing its period. A form row genuinely
+        # has no terminal punctuation and never should have.
+        if all(_is_fragment_line(ln) or _is_interleaved_line(ln) for ln in lines):
             continue
         if len(stripped.split()) < _MIN_PROSE_WORDS:
             continue
@@ -634,4 +695,33 @@ def find_mistakes(text: str, *, budget: Optional[dict] = None,
             + _unfinished_sentences(text))
     if whole_document:
         rows += _missing_references(text)
-    return rows
+    return _dedupe(rows)
+
+
+def _dedupe(rows: list[dict]) -> list[dict]:
+    """One finding, once.
+
+    A PI was shown FOUR "Space before punctuation" rows carrying the SAME quote:
+    four marks close enough together that each one's context window clipped to
+    the identical string. A mistake row has no line number (unlike a wording
+    row, which carries one from `proofread.locate_quote`), so two rows agreeing
+    on kind, label AND evidence are indistinguishable to the reader — they are
+    one finding shown twice, and four of them buried the three real errors.
+
+    EXACT match on ALL FOUR fields, deliberately — and `detail` is the one that
+    is easy to leave out and must not be. Dropping it silently deleted a real
+    error, caught by the existing suite rather than by anything written here:
+    "We will seperate the two fractions and recieve the data" is TWO
+    misspellings whose kind, label and quoted line are all identical, and only
+    `detail` names the word ("seperate" vs "recieve"). Collapsing by kind-per-
+    line would lose them the same way. This removes only rows a reader could not
+    tell apart. Order is preserved so the first occurrence keeps its place.
+    """
+    out, seen = [], set()
+    for row in rows:
+        key = (row["kind"], row["label"], row["detail"], row["evidence"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
