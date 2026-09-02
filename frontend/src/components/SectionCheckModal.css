@@ -849,6 +849,16 @@ body.dark .scm-modal {
   margin-top: 2px;
 }
 
+/* How many rules the percentage is over, and how many nobody judged. Same
+   tertiary ink as the caption: it qualifies the number rather than competing
+   with it, and it must be readable at a glance without opening the fold. */
+.scm-score-coverage {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* The split. Rendered only when there IS more than one authority — a single
    row reading "the PAPPG 100%" beside an identical headline number is noise. */
 .scm-score-split {

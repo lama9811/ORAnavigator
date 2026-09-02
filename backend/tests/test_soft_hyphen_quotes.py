@@ -215,3 +215,54 @@ def test_the_ligature_path_composes_with_list_noise():
     noisy = "(cid:127) detailed budget justications that demonstrate"
     assert quote_in(noisy, "detailed budget justifications that demonstrate",
                     drop_list_noise=True)
+
+
+# ── A FOURTH CHARACTER-LEVEL PDF ARTIFACT: TYPOGRAPHIC PUNCTUATION ──────────
+#
+# Measured 2026-09-01 on the AWARDED NSF EiR Project Description (15 pages,
+# 57,682 chars). Three rules came back "Not found" under notes that said the
+# opposite -- "The draft details a clear sustainability plan focusing on future
+# funding applications like NSF CAREER. (A supporting quote could not be
+# verified in your text, so this is reported as not found.)" TEN raw rows were
+# dropped by the gate in one run.
+#
+# Every one diverged at the same character. The typeset PDF carries a CURLY
+# apostrophe and the model returns a STRAIGHT one:
+#
+#     document:  builds the PI’s Super Representation Theory   (U+2019)
+#     model:     builds the PI's Super Representation Theory        (U+0027)
+#
+# That document holds 54 curly apostrophes and ZERO straight ones, and "the PI's"
+# is unavoidable in a proposal -- so this silently demoted whole rules on a
+# FUNDED package. Same family as the welded words, the dash line-breaks and the
+# lost ligatures already handled here, and the same fix shape: normalise BOTH
+# sides. Folding cannot manufacture a match -- it maps two spellings of one
+# character onto each other, exactly as the whitespace collapse does.
+
+def test_a_curly_apostrophe_in_the_draft_matches_a_straight_one_in_the_quote():
+    doc = "The proposed research builds the PI’s Super Representation Theory program."
+    assert quote_in(doc, "builds the PI's Super Representation Theory")
+
+
+def test_a_straight_apostrophe_in_the_draft_matches_a_curly_one_in_the_quote():
+    """Both directions: a PI who types in Word gets curly, one who pastes from a
+    terminal gets straight, and the model may return either."""
+    doc = "The proposed research builds the PI's Super Representation Theory program."
+    assert quote_in(doc, "builds the PI’s Super Representation Theory")
+
+
+def test_curly_double_quotes_fold_too():
+    doc = "NSF calls this “broader impacts” in the solicitation."
+    assert quote_in(doc, 'NSF calls this "broader impacts" in the solicitation.')
+
+
+def test_a_unicode_ellipsis_matches_three_dots():
+    doc = "Year 1: define the maps… Year 2: determine the generators."
+    assert quote_in(doc, "define the maps... Year 2")
+
+
+def test_folding_cannot_make_an_unrelated_quote_match():
+    """The safety property. Normalising two spellings of ONE character onto each
+    other cannot turn a sentence the draft never contained into a match."""
+    doc = "The proposed research builds the PI’s program."
+    assert not quote_in(doc, "The proposed research destroys the PI's program.")

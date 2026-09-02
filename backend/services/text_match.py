@@ -42,9 +42,38 @@ from typing import Optional
 _LIST_NOISE_RE = re.compile(r"\(cid:\d+\)|[•‣▪●·∙◦⁃]")
 
 
+# TYPOGRAPHIC PUNCTUATION, folded to its plain form on BOTH sides.
+#
+# A FOURTH character-level PDF artifact, and the costliest measured so far. A
+# typeset PDF carries a CURLY apostrophe; the model returns a STRAIGHT one:
+#
+#     document:  builds the PI’s Super Representation Theory   (U+2019)
+#     model:     builds the PI's Super Representation Theory        (U+0027)
+#
+# Measured 2026-09-01 on the awarded NSF EiR Project Description: 54 curly
+# apostrophes, ZERO straight ones, and TEN raw rows dropped by the gate in one
+# run -- three of them surfacing to the PI as "Not found" under a note saying
+# the draft covered it. "The PI's" is unavoidable in a proposal, so this
+# demoted real rules on a FUNDED package.
+#
+# This is a NORMALISATION, not a widening: it maps two spellings of one
+# character onto each other, exactly as the whitespace collapse does, so it
+# cannot make a sentence the draft never contained into a match (its own test).
+# Dashes are deliberately ABSENT -- they are handled by `_readings` below, where
+# a line-end dash is genuinely ambiguous and both readings are kept.
+_PUNCT_FOLD = str.maketrans({
+    "\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'", "\u2032": "'",
+    "\u201c": '"', "\u201d": '"', "\u201e": '"', "\u201f": '"', "\u2033": '"',
+    "\u00a0": " ", "\u2007": " ", "\u202f": " ", "\u200b": "",
+})
+
+
 def normalize(s: str, *, drop_list_noise: bool = False) -> str:
-    """Lowercase + collapse whitespace, optionally dropping PDF list noise."""
-    s = (s or "").lower()
+    """Lowercase + collapse whitespace + fold typographic punctuation.
+
+    Optionally drops PDF list noise (bullets, `(cid:N)`) for the one caller that
+    matches model output against pdfplumber text of a bulleted list."""
+    s = (s or "").lower().translate(_PUNCT_FOLD).replace("\u2026", "...")
     if drop_list_noise:
         s = _LIST_NOISE_RE.sub(" ", s)
     return " ".join(s.split())

@@ -51,11 +51,13 @@ from __future__ import annotations
 import math
 import os
 import re
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from services import delegated_rules
 from services import draft_scope
+from services import draft_scope as _ds
 from services import gemini_client
 from services import mechanical_checks
 from services import rulebook_baseline
@@ -120,6 +122,81 @@ THINKING_BUDGET = 1024
 # screen to say so. 15 keeps a batch comfortably inside the ceiling while leaving
 # a 3-rule section a single round-trip.
 REVIEW_BATCH = 15
+
+# How many of a section's batches may be in flight at once. Distinct from
+# `_MODEL_SLOTS`, which is the real ceiling: this only stops one huge section
+# from queueing fifty futures to contend for eight slots. Kept modest so a
+# 45-rule section cannot starve the other sections of the same package.
+_BATCH_WORKERS = 4
+
+# THE SPLIT IS BOUNDED BY BATCH COUNT, NOT BY BATCH SIZE, and the two costs this
+# balances scale with the same number in opposite directions.
+#
+# A rule judged ALONE is stable and a rule judged in a crowd is not: measured on
+# a real awarded Project Summary, ten uploads each, `pappg_ps_overview_methods`
+# split not_found 7 / partial 3 at REVIEW_BATCH=15 (scores 83% x7, 92% x3) and
+# came back **92% ten times out of ten with nothing moving** at batch=1.
+#
+# So why not batch=1 everywhere? Measured on a 45-rule section, the size of the
+# real Budget section: **batch=15 17.3s, batch=5 16.0s, batch=1 51.4s** — three
+# times the wall clock, on a tool ORA staff run in front of a PI.
+#
+# Both are the same variable. With N rules a single flipped rule is worth 100/N
+# of the score — **14 points at N=7, 2 points at N=45** — while isolating every
+# rule costs N round-trips. Isolation is worth most exactly where it is cheap.
+#
+# `ceil(N / MAX_BATCHES)` therefore gives a 5-rule section one rule per call
+# (5 batches) and a 45-rule section six per call (8 batches), so wall clock is
+# bounded by the batch COUNT whatever N is. REVIEW_BATCH stays the ceiling, and
+# it is a different guarantee: it exists so a batch cannot overflow
+# `max_output_tokens` and lose rows silently.
+_MAX_BATCHES = 8
+
+
+def _batch_size(n: int) -> int:
+    """Rules per model call for a section holding `n` of them."""
+    return max(1, min(REVIEW_BATCH, math.ceil(n / _MAX_BATCHES)))
+
+# ONE CEILING ON CONCURRENT MODEL CALLS FOR THE WHOLE REVIEW, and it is a
+# PREREQUISITE for the two changes below rather than a tuning knob.
+#
+# The pools in this module NEST and so their caps multiply. `review_draft` opens
+# a 6-wide `ThreadPoolExecutor` over sections; each of those workers reaches
+# `_voted_batch`, which opens ANOTHER pool `votes` wide; `proofread` opens a
+# third. With votes=1 the real ceiling was 6 and nobody noticed. Turning voting
+# on for the whole package takes it to 18, and a smaller REVIEW_BATCH multiplies
+# the number of batches on top of that -- so the two consistency fixes below
+# would each have bought stability by trading it for 429s.
+#
+# THIS IS NOT HYPOTHETICAL. `gemini_client.get_client()` had an unlocked lazy
+# init that a Section Check raced against ITSELF at 3 concurrent calls, and the
+# measured result was an uploaded Project Summary returning in 0.3s and scoring
+# 100% "No problems found" on a draft with real gaps. That race is fixed; the
+# thundering herd it exposed is not, because `gemini_client`'s backoffs are 1s
+# then 2s with NO JITTER, so a burst that trips the quota retries in lockstep
+# and trips it again.
+#
+# A MODULE-LEVEL SEMAPHORE, not a shared executor: the nesting is what makes the
+# work parallel in the first place (39s sequential -> ~15s), and the pools are
+# the right shape. What was missing is a single count of how many of those
+# threads may be TALKING to Vertex at once. 8 is the old effective ceiling plus
+# headroom, and one number is easier to reason about than three that multiply.
+_MODEL_SLOTS = threading.BoundedSemaphore(
+    int(os.environ.get("REVIEW_MAX_CONCURRENT_MODEL_CALLS", "8")))
+
+
+def _ask_model(fn, *args, **kwargs):
+    """Every Gemini call in this module goes through here, so the cap is real.
+
+    Blocking is deliberate and correct: the alternative to waiting for a slot is
+    a 429, and a 429 becomes an `unclear` row that silently leaves the score's
+    denominator. A slower review is a review; a rate-limited one is a wrong
+    number. `gemini_client` never raises, so nothing here needs a try/finally
+    beyond releasing the slot.
+    """
+    with _MODEL_SLOTS:
+        return fn(*args, **kwargs)
+
 
 # How many times Check a Section asks the reviewer the same question.
 #
@@ -258,6 +335,26 @@ _LOCATE_SYSTEM = (
     "2. Only report a section you actually found. Omit the rest. Never guess.\n"
     "3. A section heading may be numbered, upper-cased, or on its own line. Match the "
     "author's wording, not the canonical name.\n"
+    # RULE 4 IS ABOUT THE SCORE, NOT ABOUT TIDINESS. The score is a fraction —
+    # rules met over rules we could check — so a section found on one reading
+    # and skipped on the next moves its DENOMINATOR, and the same proposal comes
+    # back at a different percentage. Measured on one unchanged 56-page package:
+    # 6 sections on some runs, 9 on others, `assessed` swinging 45 <-> 49.
+    "4. READ THE WHOLE DOCUMENT TO THE LAST LINE, and look for EVERY section key "
+    "in the list before you answer. The sections do not appear in the order the list "
+    "gives them, a proposal's later attachments are as important as its first, and a "
+    "section you skip is not merely absent from your answer — every requirement under "
+    "it goes unchecked. Work through the list one key at a time rather than reporting "
+    "the ones that caught your eye.\n"
+    # AND RULE 5 IS THE COUNTERWEIGHT. "Do not miss any" pushes toward inventing
+    # one, and a section reported in the wrong place is worse than one reported
+    # missing: its requirements are then judged against text that is not it, so
+    # a PI is told they failed something they never wrote there. Rule 2 already
+    # says never guess; this says which way to err when the two rules pull.
+    "5. Thoroughness NEVER licenses a guess. A marker you return is verified against "
+    "the text, and a section placed at the wrong line has its requirements judged "
+    "against the wrong words — worse than reporting it not found. If you are unsure "
+    "whether a line begins a section, omit it.\n"
 )
 
 
@@ -421,7 +518,8 @@ def locate_sections(text: str, sections: dict, *, use_ai: bool = True) -> tuple[
             'Return JSON: {"sections": {"<section_key>": "<verbatim first line of '
             'that section>", ...}}. Omit any section you did not find.'
         )
-        ai = gemini_client.generate_json(
+        ai = _ask_model(
+            gemini_client.generate_json,
             prompt, temperature=0.0, max_output_tokens=2048, timeout_s=60,
             thinking_budget=THINKING_BUDGET,
             system_instruction=_LOCATE_SYSTEM, model=MODEL, location=MODEL_LOCATION,
@@ -529,6 +627,40 @@ def _review_system(solicitation_id: str) -> str:
         "wording, from the section's title, from other requirements in the list, or from "
         "what a proposal of this kind usually contains. Judge only the words in front of "
         "you.\n"
+        # 10-12: READ ALL OF IT. The text handed over is one section of a
+        # multi-page PDF and can run to thousands of words. A reviewer that
+        # skims the opening and answers from it produces exactly the same shape
+        # of output as one that read to the end, and the cheaper answer is the
+        # wrong one.
+        "10. THIS IS THE WHOLE SECTION, extracted from a multi-page PDF, and it may be "
+        "long. Read every line of it before you answer anything. Content near the end "
+        "counts exactly as much as content near the beginning, and a requirement is "
+        "often answered late — in a closing paragraph, a timeline, a table or a "
+        "numbered list.\n"
+        "11. DO NOT STOP AT THE FIRST MATCH. When you find text bearing on a "
+        "requirement, keep reading: a later passage may address it more fully, is the "
+        "better evidence, and may change 'partial' to 'addressed'.\n"
+        # 12 names the artifacts this repo has actually measured, because each
+        # one has previously made a reviewer read a sentence as ending where it
+        # does not, and quote across the break.
+        "12. THE TEXT CARRIES PDF EXTRACTION ARTIFACTS. Read THROUGH them; they are not "
+        "the author's words and they do not end a sentence. A stamp repeated on every "
+        "page ('Page 12 of 56', 'Submitted/PI: ...', a running title) can appear "
+        "MID-SENTENCE where the sentence crossed a page boundary, and the sentence "
+        "continues after it. A word split at a line end ('under- graduate') is ONE word. "
+        "When you quote for 'evidence', quote a contiguous run of the author's own words "
+        "and never across such a stamp.\n"
+        # 13 IS ABOUT THE SCORE. An omitted row becomes `unclear`, `unclear` is
+        # absent from _CREDIT, and the rule therefore leaves the score's
+        # DENOMINATOR — so skipping a row silently changes the percentage rather
+        # than showing up as a gap. With section location now deterministic,
+        # this is the last remaining way one unchanged draft can score two ways.
+        "13. COMPLETENESS IS PART OF THE ANSWER. Return EXACTLY one row per id in the "
+        "REQUIREMENTS list — the same count, no omissions, no extras — including ids you "
+        "are unsure about. An omitted row is recorded as 'nobody assessed this', which "
+        "is worse for the author than a considered judgement and changes their score. If "
+        "a requirement is genuinely unassessable from this text, still return its row "
+        "and say so in the note.\n"
     )
 
 
@@ -598,11 +730,31 @@ def _review_section(section_key: str, span: Optional[dict], reqs: list[dict],
                 for r in reqs]
 
     section_text = span["text"]
-    if len(reqs) > REVIEW_BATCH:
+    size = _batch_size(len(reqs))
+    if len(reqs) > size:
+        # CONCURRENT, and that is what makes a SMALL batch affordable. These ran
+        # serially, which was invisible at REVIEW_BATCH=15 because almost every
+        # section is one batch — and it is the whole cost of the change that
+        # fixed this module's last moving rule. Measured on a real Project
+        # Summary, ten uploads each: at batch=15 the score was 83% seven times
+        # and 92% three times with `pappg_ps_overview_methods` splitting
+        # not_found 7 / partial 3; at batch=1 it was **92% ten times out of ten
+        # with nothing moving**, because a rule judged alone is not collateral
+        # damage from the six others sharing its generation.
+        #
+        # Serially that would have cost one round-trip per rule. Concurrently it
+        # costs roughly one, and `_MODEL_SLOTS` is what keeps "roughly one" from
+        # being a burst of 50 — which is why the semaphore had to land first.
+        # Order is preserved (`futures` is walked in submission order), because
+        # `priorities()` and the section map both read the requirement order.
+        chunks = [reqs[i:i + size] for i in range(0, len(reqs), size)]
         out: list[dict] = []
-        for i in range(0, len(reqs), REVIEW_BATCH):
-            out.extend(_voted_batch(section_key, span, reqs[i:i + REVIEW_BATCH],
-                                    sections, solicitation_id, votes))
+        with ThreadPoolExecutor(max_workers=min(len(chunks), _BATCH_WORKERS)) as pool:
+            futures = [pool.submit(_voted_batch, section_key, span, chunk,
+                                   sections, solicitation_id, votes)
+                       for chunk in chunks]
+            for fut in futures:
+                out.extend(fut.result())
         return out
     return _voted_batch(section_key, span, reqs, sections, solicitation_id, votes)
 
@@ -615,6 +767,24 @@ def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
     three. A vote that raises is dropped rather than losing the round: two
     usable answers still decide, and only losing ALL of them falls back.
     """
+    # NOT CACHED. Removed 2026-09-02 by product decision, the third time this
+    # cache has been built and taken out.
+    #
+    # It was rebuilt yesterday to stop one unchanged draft reading two ways, and
+    # the causes of that have since been fixed at the source: section location
+    # is deterministic on the upload paths, a section the PDF cannot name is no
+    # longer guessed at, and rules are judged one or a few at a time instead of
+    # fifteen to a prompt. Measured after those, three cache-free runs of one
+    # awarded package gave 84/85/84% with the denominator FIXED at 48 and two
+    # rules of seventy-two moving.
+    #
+    # What the cache cost, against that: it FROZE whichever answer came first,
+    # so a borderline rule locked at a coin flip and the screen looked certain
+    # about something it was not. It also hid the very variance we were trying
+    # to measure -- ten uploads that looked identical were nine replays of one
+    # reading. Do not re-add it as a way of making the numbers look steady; if
+    # they move, that is the reviewer disagreeing with itself and the fix is
+    # upstream of here.
     if votes <= 1:
         return _review_batch(section_key, span, reqs, sections, solicitation_id)
     results = []
@@ -627,7 +797,7 @@ def _voted_batch(section_key: str, span: dict, reqs: list[dict], sections: dict,
             except Exception as exc:            # one vote lost, not the round
                 print(f"[REVIEW] a vote failed: {exc}")
     if not results:
-        return _semantic_fallback(reqs, span["text"])
+        return _semantic_fallback(reqs, span["text"])   # NOT cached, deliberately
     return merge_votes(results)
 
 
@@ -669,7 +839,8 @@ def _review_batch(section_key: str, span: dict, reqs: list[dict],
         'specific to THIS text. Do not praise the draft, do not restate the status, '
         'and do not write the sentence for the author.'
     )
-    ai = gemini_client.generate_json(
+    ai = _ask_model(
+        gemini_client.generate_json,
         prompt, temperature=0.0, max_output_tokens=8192, timeout_s=90,
         thinking_budget=THINKING_BUDGET,
         system_instruction=_review_system(solicitation_id),
@@ -752,7 +923,8 @@ def _reviewer_notes(spans: dict, profile: dict) -> list[dict]:
         '"note": "<how a panel would judge THIS draft on that criterion, and what would '
         'strengthen it>"}]}'
     )
-    ai = gemini_client.generate_json(
+    ai = _ask_model(
+        gemini_client.generate_json,
         prompt, temperature=0.3, max_output_tokens=2048, timeout_s=60,
         thinking_budget=THINKING_BUDGET,
         system_instruction=_NOTES_SYSTEM, model=MODEL, location=MODEL_LOCATION,
@@ -855,6 +1027,24 @@ def score(findings: list[dict], *, solicitation_id: str = "",
         "percent": pct,
         "band": band,
         "assessed": len(scored),
+        # HOW MANY RULES NOBODY JUDGED, stated as a number rather than left to be
+        # inferred. The caption already says the percentage covers "the
+        # requirements this reviewer COULD assess" — true, and it never said how
+        # many it could not, so a PI reading "92% of the 6 requirements" had no
+        # way to know whether 6 was the whole list or a sixth of it. The rows
+        # were always on screen (both modals group them under "Not checked
+        # here", with a count) but only behind a fold, and CLAUDE.md's own rule
+        # is that a fold must say how much it hides.
+        #
+        # `unclear`, `could_not_locate`, `not_checked`, `delegated` and
+        # `not_in_draft` all mean the same thing to a reader — nobody looked —
+        # and every one of them is deliberately absent from `_CREDIT` so it
+        # leaves the denominator. That is exactly the set counted here.
+        #
+        # ADVISORY rows are NOT counted as unassessed: a conditional the draft
+        # was never subject to was judged, it simply does not score. Counting it
+        # here would report the reviewer as having skipped work it did.
+        "not_assessed": sum(1 for f in findings if f["status"] not in _CREDIT),
         "earned": round(earned, 1),
         "counts": counts,
         "by_source": by_source,
@@ -1200,9 +1390,42 @@ def _basics_and_solicitation(profile: dict) -> dict:
     return {**profile, "requirements": rows, "sections": sections}
 
 
+def _coverage_warning(spans: dict, sections: dict) -> Optional[str]:
+    """A note when too little of the package could be placed to trust the score.
+
+    The test is the FRACTION, not a count: a proposal with two sections and one
+    located is not poorly covered, and a threshold in whole sections would flag
+    it. Below a third located, on a profile big enough for that to mean
+    something, the score is resting on so few rules that reporting it plainly
+    would mislead.
+    """
+    total = len(sections or {})
+    found = len([k for k in (spans or {}) if k in (sections or {})])
+    if total < 5 or found >= max(2, total / 3.0):
+        return None
+    return (f"Only {found} of {total} sections could be found in what you uploaded, "
+            "so most rules could not be checked and the score below rests on a "
+            "small part of your proposal. This usually means the file is one "
+            "combined PDF with no section headings in its text. Uploading your "
+            "sections as separate files lets each one be checked properly.")
+
+
+def _wholly_out_of_package(findings: list, section_key: str) -> bool:
+    """Every rule this section has was scoped out of a package review.
+
+    True only when the section HAS rules and all of them came back
+    `not_in_draft` — the status `draft_scope` gives an obligation no document
+    can carry. A section with no rules of its own returns False and is left
+    alone."""
+    rows = [f for f in findings if f.get("section") == section_key]
+    return bool(rows) and all(f["status"] == "not_in_draft" for f in rows)
+
+
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
                  budget: Optional[dict] = None, use_ai: bool = True,
-                 pages: Optional[dict] = None) -> dict:
+                 pages: Optional[dict] = None,
+                 file_spans: Optional[dict] = None,
+                 structural: bool = False) -> dict:
     """Review a pasted proposal against the solicitation `profile` describes.
 
     draft_text — the whole proposal, one blob.
@@ -1213,6 +1436,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     use_ai     — False forces the deterministic path (used by tests).
     pages      — section key -> REAL page count, from an upload. Absent it,
                  page rules report an estimate and never a verdict.
+    structural — the spans came from the PDF's own structure, so the model
+                 is NOT asked to name whatever is left. See below.
     """
     # THE SOLICITATION AND THE RULEBOOK'S BASICS — product decision 2026-08-26,
     # the same narrowing Check a Section took earlier that day. Measured on a
@@ -1247,7 +1472,49 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             "message": "Paste your proposal to get a completeness review.",
         }
 
-    spans, ai_located = locate_sections(text, sections, use_ai=use_ai)
+    # SECTIONS WE WERE GIVEN BEAT SECTIONS WE GUESSED. `file_spans` comes from the
+    # upload path, where the PI hands us one file per section and the filename
+    # names it -- so the seams are known, not inferred. Measured over five uploads
+    # of one awarded 11-file package, `locate_sections` found 6 sections on one run
+    # and ONE on another (reading all 45 pages as "References Cited"), which
+    # collapsed 48 assessable rules to 14 and scored a FUNDED proposal at 29%.
+    #
+    # Locate STILL RUNS, over the same full text, because only about 5 of 11 real
+    # filenames resolve and the rest must still be placed. Its results are merged
+    # with `setdefault`, so a guess can fill a gap but can never overwrite a
+    # section a file already identified.
+    # WHEN THE DOCUMENT'S OWN STRUCTURE NAMED THE SECTIONS, DO NOT ASK THE MODEL
+    # TO NAME THE REST. Product decision, and it buys a fixed denominator.
+    #
+    # The score is a fraction — rules met over rules we could check — so a
+    # section the model finds on one run and misses on the next changes the
+    # BOTTOM of that fraction, and the same proposal comes out at a different
+    # percentage. Measured on one unchanged 56-page package: 6 sections located
+    # on some runs and 9 on others, `assessed` swinging 45 <-> 49.
+    #
+    # `services.pdf_sections` reads the seams out of the PDF's object graph
+    # instead of guessing them, and it is exact — but it can only name a section
+    # the document names somewhere. Three here it cannot: the Data Management
+    # Plan, the Mentoring Plan and the letters each name THEMSELVES and never
+    # the NSF slot they were uploaded into. So the model was still guessing at
+    # those, and that guess was the whole of the remaining movement.
+    #
+    # Turning it off costs the occasional lucky find — a run where the model
+    # happened to be right placed a few more rules. That is a real loss, taken
+    # deliberately: for ORA staff running this in front of a PI, a number that
+    # is always the same is worth more than one that is sometimes more thorough,
+    # and "we could not identify this section" is honest where a section that
+    # appears and vanishes is not.
+    #
+    # The DETERMINISTIC half of `locate_sections` still runs — the alias scan is
+    # code, not a model, and gives the same answer every time.
+    locate_ai = use_ai and not structural
+    spans, ai_located = locate_sections(text, sections, use_ai=locate_ai)
+    if file_spans:
+        merged = dict(file_spans)
+        for key, span in spans.items():
+            merged.setdefault(key, span)
+        spans = merged
 
     findings = run_deterministic(text, spans, profile, title=title, budget=budget,
                                  pages=pages)
@@ -1259,19 +1526,28 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     # fetchOpportunity fan-out.
     pd_span = _project_description_span(spans, sections)
 
+    # VOTED, like Check a Section — and it was simply switched off here.
+    # `_review_section` defaults `votes=1` and this call site passed nothing, so
+    # the whole-package review took ONE reader's answer while the single-section
+    # review took the median of three. The same draft could therefore be graded
+    # two ways depending on which screen a PI opened, which is the one thing
+    # "one engine, two entry points" exists to prevent. Affordable only because
+    # `_MODEL_SLOTS` now bounds the fan-out; before that this was 6x3 concurrent
+    # calls with no ceiling.
     jobs = []
     for section_key in sections:
         reqs = [r for r in sp.requirements_for(profile, section_key)
                 if r["kind"] == "semantic"]
         if reqs:
             span = pd_span if section_key == "project_description" else spans.get(section_key)
-            jobs.append((section_key, span, reqs, sections, solicitation_id))
+            jobs.append((section_key, span, reqs, sections, solicitation_id,
+                         SEMANTIC_VOTES))
     # Whole-document semantic rows (no owning section) — assessed against the
     # Project Description if we have one, else the whole paste.
     loose = [r for r in sp.requirements_for(profile, None) if r["kind"] == "semantic"]
     if loose:
         jobs.append(("project_description", pd_span or {"text": text}, loose,
-                     sections, solicitation_id))
+                     sections, solicitation_id, SEMANTIC_VOTES))
 
     notes: list[dict] = []
     if jobs or use_ai:
@@ -1298,6 +1574,10 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     # AFTER delegation, so a delegated row keeps its stronger status, and before
     # score() so an out-of-scope row leaves the denominator.
     findings = apply_draft_scope(findings)
+    # PACKAGE-ONLY. A Letter of Intent has its own earlier deadline and is not
+    # part of the package; review_section deliberately does NOT do this, so a PI
+    # can still check the letter itself. See services/draft_scope.
+    findings = _ds.apply_package_scope(findings)
 
     order = {r["id"]: i for i, r in enumerate(requirements)}
     findings.sort(key=lambda f: (_source_rank(f), order.get(f["id"], 999)))
@@ -1317,9 +1597,47 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
              "word_count": len(v["text"].split())}
             for k, v in sorted(spans.items(), key=lambda kv: kv[1]["start"])
         ],
+        # A SECTION THAT IS NOT PART OF THE PACKAGE IS NOT "MISSING FROM IT".
+        #
+        # The Letter of Intent is the case that prompted this: NSF 23-598
+        # requires one, but as a SEPARATE submission with its own earlier
+        # deadline, filed by the AOR months before the proposal. `draft_scope`
+        # already gets the scoring right — its eight rules come back
+        # `not_in_draft`, out of the denominator, so a PI is not penalised. The
+        # SCREEN still listed it among the sections "not found in what you
+        # pasted", which teaches a PI something false about what a proposal
+        # contains, and invites them to go and add one.
+        #
+        # DERIVED, never a funder branch: a section is dropped only when it HAS
+        # rules and `apply_package_scope` put every one of them out of scope.
+        # Nothing here asks who the sponsor is, and the rule that decides is the
+        # one that already decided the score. A section with NO rules of its own
+        # is deliberately kept — a required attachment puts one in the universe
+        # with nothing attached to it, and hiding that would stop reporting a
+        # missing attachment, which is the compliance rejection this tool exists
+        # to prevent.
         "sections_missing": [
-            {"key": k, "label": v["label"]} for k, v in sections.items() if k not in spans
+            {"key": k, "label": v["label"]} for k, v in sections.items()
+            if k not in spans and not _wholly_out_of_package(findings, k)
         ],
+        # WHEN THE DOCUMENT COULD NOT BE SPLIT, SAY SO. Measured on the awarded
+        # proposal uploaded as ONE combined Research.gov PDF: 2 of 9 sections
+        # located on every run, 21 of 70 rules assessable, and a FUNDED proposal
+        # scored 48% -- consistently, which is worse than varying, because a
+        # steady number reads as a settled one.
+        #
+        # It is not a locate failure. That PDF has no boundaries in its text:
+        # "Project Summary" appears once in 56 pages and never on its own line,
+        # and its page furniture is identical throughout and never names the
+        # section. The same package as its 11 real section files scores 76% with
+        # 50 rules assessed, so the remedy is the INPUT and the review should say
+        # that rather than hand over a confident number built on a fifth of its
+        # rules. Same principle as the scraper: a silent stop reads as "we found
+        # everything" when it means "we stopped looking".
+        #
+        # ABSENT unless it bites -- a warning that renders on every review stops
+        # being read.
+        "coverage_warning": _coverage_warning(spans, sections),
         "word_count": len(text.split()),
         # A cap that is never reported is invisible however large it is. Same
         # contract as solicitation_extractor's `truncated` / `input_chars`:

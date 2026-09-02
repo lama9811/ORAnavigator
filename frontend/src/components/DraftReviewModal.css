@@ -409,6 +409,15 @@ body.dark .eir-modal {
   margin: 4px 0 8px;
 }
 
+/* See SectionCheckModal.css — the same line, the same reason: the basis says
+   the percentage covers what could be assessed and never how much could not. */
+.eir-score-coverage {
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+
 .eir-score-bar {
   height: 6px;
   border-radius: 3px;

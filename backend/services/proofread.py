@@ -486,7 +486,7 @@ def proofread(text: str, *, use_ai: bool = True,
     # A single vote can never clear a threshold of two, so votes=1 stays a plain
     # single call rather than silently reporting nothing at all.
     merged = _union(passes, text, PROOFREAD_MIN_VOTES if n > 1 else 1)
-    return [{
+    rows = [{
         "kind": c["kind"],
         "label": _LABELS.get(c["kind"], "Wording"),
         "detail": c["detail"],
@@ -499,3 +499,4 @@ def proofread(text: str, *, use_ai: bool = True,
         # never be shown alongside deterministic rows without saying so.
         "source": "ai",
     } for c in merged]
+    return rows

@@ -27,3 +27,4 @@ def _no_live_gemini(monkeypatch):
         monkeypatch.setattr(gemini_client, "get_client", lambda: None)
     except Exception:
         pass
+

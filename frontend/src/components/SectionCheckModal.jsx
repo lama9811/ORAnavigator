@@ -685,6 +685,18 @@ function SectionScorePanel({ score, length, verdict }) {
               still rendered in DraftReviewModal. Three words carry the same
               guardrail here: the number counts presence, never quality. */}
           <div className="scm-score-caption">presence, not quality</div>
+          {/* AND HOW MANY RULES THE NUMBER IS OVER. A percentage over 6 rules
+              and one over 60 read identically, and the denominator is only
+              rules that could be CHECKED — so a reader had no way to tell a
+              fully-checked section from one where half the rules were skipped
+              without opening the "Not checked here" fold. `not_assessed` counts
+              exactly the statuses absent from the denominator, each of which
+              means the same thing: nobody looked. */}
+          <div className="scm-score-coverage">
+            {score.not_assessed
+              ? `${score.assessed} rules checked · ${score.not_assessed} not checked`
+              : `all ${score.assessed} rules checked`}
+          </div>
         </div>
       </div>
       )}
