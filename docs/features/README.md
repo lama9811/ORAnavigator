@@ -34,7 +34,7 @@ Every feature page has these sections:
 ### AI agents (proposal workflow)
 - [Solicitation Ingestion](solicitation-ingestion.md) — sponsor PDF → submission + tasks.
 - [Draft Critic](draft-critic.md) — pre-submission check of a draft vs. the solicitation.
-- [Budget Helper](budget-helper.md) — deterministic grant-budget builder + AI justification.
+- [Budget Helper](budget-helper.md) — deterministic grant-budget builder + AI justification, with an NSF Form 1030 (sections A–M, multi-year, .xlsx export) template.
 - [Compliance Sentinel](compliance-sentinel.md) — deterministic "which approvals do I need?" checklist (IRB/IACUC/COI/RCR/Export).
 - [Deadline Watcher](deadline-watcher.md) — deadline reminder emails.
 
