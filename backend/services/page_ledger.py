@@ -387,47 +387,67 @@ def _page_offsets(page_texts: list) -> list:
 def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
     """{section key: span} covering the pages the ledger assigned to it.
 
-    A span runs from a key's FIRST assigned page and extends forward only
-    while the NEXT page is also assigned to it -- so a run of consecutive
-    pages becomes one span, exactly as `pdf_sections.split` produces one span
-    per contiguous block.
+    A span runs from a key's FIRST assigned page to its LAST, ABSORBING any
+    interior page that is `blank` or `unassigned` on the way -- but it STOPS
+    before an interior page the ledger gave to a DIFFERENT section. Edges are
+    excluded (a leading/trailing unassigned page never joins), interiors are
+    absorbed (a stray blank/unassigned page never splits a section in two).
 
-    It stops at the first gap rather than reaching across it. `start`/`end`
-    are the only thing `document_text.extract_upload` keeps -- it rebases them
-    and RE-SLICES `text` from `text[start:end]`, a single contiguous cut, so
-    there is no way to hand it "pages 2 and 4, not 3": any span whose `start`
-    and `end` bracket an unassigned page would silently hand that page's text
-    to a section the ledger never put it in. Stopping short under-covers the
-    document rather than mislabelling a page -- the same conservative
-    direction as `draft_scope`'s own caution about over-excluding.
+    Why absorb rather than stop at the first gap: `blank`/`unassigned` covers
+    a full-page figure, a chart, a scanned page -- ordinary content INSIDE a
+    real section. A Project Description running pages 6-20 with a figure on
+    page 10 must not silently become "pages 6-9" -- that reports real content
+    on pages 11-20 as `not_found`, the exact false accusation this whole
+    feature exists to prevent. Losing a few unattributed words on an absorbed
+    page costs far less than losing ten real pages.
+
+    Why still stop at a DIFFERENT section: `document_text.extract_upload`
+    keeps only `start`/`end` and RE-SLICES `text` from `text[start:end]`, a
+    single contiguous cut -- so a span can never legitimately claim a page the
+    ledger gave to someone else. Because nothing is skipped, the returned
+    `text` is always exactly `joined[start:end]` -- the offsets can never
+    disagree with the text they claim to address.
     """
     if not rows or not page_texts:
         return {}
     joined = "\n".join(page_texts)
     offsets = _page_offsets(page_texts)
+    page_section: dict = {}
     pages_of: dict = {}
     for row in rows:
+        try:
+            page = int(row["page"])
+        except (TypeError, ValueError, KeyError):
+            continue
         key = row.get("section")
-        if key and key in (sections or {}):
-            pages_of.setdefault(key, []).append(int(row["page"]))
+        key = key if key in (sections or {}) else None
+        page_section[page] = key
+        if key:
+            pages_of.setdefault(key, []).append(page)
 
     spans = {}
     for key, pages in pages_of.items():
-        assigned = set(pages)
-        first = min(pages)
-        last = first
-        while (last + 1) in assigned:
-            last += 1
+        first, last_assigned = min(pages), max(pages)
+        # Walk forward from the first assigned page, absorbing any interior
+        # page with NO section of its own; stop the instant a page belongs to
+        # someone else. Never walks past `last_assigned` -- there is no
+        # assigned page beyond it pulling the span any further.
+        end_page = first
+        for p in range(first, last_assigned + 1):
+            other = page_section.get(p)
+            if other is not None and other != key:
+                break
+            end_page = p
         start = offsets[first - 1][0]
-        end = offsets[last - 1][1]
+        end = offsets[end_page - 1][1]
         spans[key] = {
             "start": start, "end": end, "text": joined[start:end],
             "label": (sections.get(key) or {}).get("label") or key,
             # The heading a locate-stage span would carry. There is no marker
             # string here -- the page ledger IS the evidence -- so it names its
             # own provenance instead, and the modal can render it.
-            "marker": f"pages {first}-{last}" if last > first else f"page {first}",
-            "pages": last - first + 1,
+            "marker": f"pages {first}-{end_page}" if end_page > first else f"page {first}",
+            "pages": end_page - first + 1,
         }
     return spans
 
