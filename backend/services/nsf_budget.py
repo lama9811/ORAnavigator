@@ -409,3 +409,45 @@ def compute_document(doc):
         "years": years, "cumulative": cumulative,
         "cap": cap, "warnings": warnings, "flags": [],
     }
+
+
+def add_year(doc, escalation_pct=None):
+    """Append a new year by cloning the last one, escalating SALARY BASES only.
+
+    Escalating travel/supplies/participant support automatically was rejected
+    in design: it silently inflates a budget the PI may never re-check.
+    """
+    import copy
+
+    doc = copy.deepcopy(doc or blank_document())
+    years = doc.setdefault("years", [])
+    if not years:
+        years.append(blank_sheet(1))
+        return doc
+
+    if escalation_pct is None:
+        escalation_pct = (doc.get("settings") or {}).get(
+            "escalation_pct", DEFAULT_ESCALATION_PCT)
+    try:
+        factor = 1.0 + (float(escalation_pct) / 100.0)
+    except (TypeError, ValueError):
+        factor = 1.0 + (DEFAULT_ESCALATION_PCT / 100.0)
+
+    new = copy.deepcopy(years[-1])
+    new["year"] = len(years) + 1
+
+    for p in new.get("senior") or []:
+        if p.get("base_salary") not in (None, ""):
+            try:
+                p["base_salary"] = round(float(p["base_salary"]) * factor, 2)
+            except (TypeError, ValueError):
+                pass
+    for row in (new.get("other_personnel") or {}).values():
+        if row.get("amount") not in (None, ""):
+            try:
+                row["amount"] = round(float(row["amount"]) * factor, 2)
+            except (TypeError, ValueError):
+                pass
+
+    years.append(new)
+    return doc

@@ -331,3 +331,51 @@ def test_cap_over_is_reported_against_the_cumulative_total():
     r = nb.compute_document(doc)
     assert r["cap"]["status"] == "over"
     assert r["cap"]["overage"] == 5_400.0          # 15,400 total vs a 10,000 cap
+
+
+# ---------------------------------------------------------------------------
+# Add-year: escalate SALARY BASES ONLY
+# ---------------------------------------------------------------------------
+
+def test_add_year_escalates_salary_bases_by_three_percent():
+    doc = nb.blank_document()
+    doc["years"][0]["senior"][0].update(base_salary=100_000, acad=2)
+    out = nb.add_year(doc)
+    assert len(out["years"]) == 2
+    assert out["years"][1]["senior"][0]["base_salary"] == 103_000.0
+    assert out["years"][1]["senior"][0]["acad"] == 2          # months carry over
+
+
+def test_add_year_escalates_other_personnel_amounts():
+    doc = nb.blank_document()
+    doc["years"][0]["other_personnel"]["postdocs"]["amount"] = 60_000
+    out = nb.add_year(doc)
+    assert out["years"][1]["other_personnel"]["postdocs"]["amount"] == 61_800.0
+
+
+def test_add_year_does_not_escalate_equipment_or_travel_or_subawards():
+    doc = nb.blank_document()
+    y = doc["years"][0]
+    y["equipment"] = [{"description": "Rig", "amount": 40_000}]
+    y["travel"]["domestic"] = [{"description": "Conf", "amount": 3_000}]
+    y["other_direct"]["subawards"] = [{"organization": "Partner U", "amount": 50_000}]
+    out = nb.add_year(doc)
+    y2 = out["years"][1]
+    assert y2["equipment"][0]["amount"] == 40_000
+    assert y2["travel"]["domestic"][0]["amount"] == 3_000
+    assert y2["other_direct"]["subawards"][0]["amount"] == 50_000
+
+
+def test_add_year_does_not_mutate_the_original_document():
+    doc = nb.blank_document()
+    doc["years"][0]["senior"][0]["base_salary"] = 100_000
+    nb.add_year(doc)
+    assert len(doc["years"]) == 1
+    assert doc["years"][0]["senior"][0]["base_salary"] == 100_000
+
+
+def test_escalation_rate_is_overridable():
+    doc = nb.blank_document()
+    doc["years"][0]["senior"][0]["base_salary"] = 100_000
+    out = nb.add_year(doc, escalation_pct=0)
+    assert out["years"][1]["senior"][0]["base_salary"] == 100_000.0
