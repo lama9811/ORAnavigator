@@ -87,6 +87,17 @@ _TOC_LABEL = re.compile(r"^[A-Za-z][A-Za-z ,/&-]{3,}$")
 # parenthetical carries digits and instructions, and resolving the whole string
 # fails on every row that has one.
 _PARENTHETICAL = re.compile(r"\s*\(.*?\)\s*|\s*\(.*$")
+# A trailing page count inside an UNCLOSED parenthetical -- the second
+# alternative of _PARENTHETICAL, which runs to end of line because the aside
+# wraps onto the PDF's next physical line. Project Description carries NSF's
+# longest instructional parenthetical ("(Including Results from Prior NSF
+# Support) (not to exceed 15 pages) ...") and so wraps almost every time; a
+# bare `\(.*$` strip throws the count away with the rest of the aside and the
+# row vanishes from the roster entirely -- measured on the real awarded
+# package, page 5. The digit is not really PART of the aside; it is a
+# separate table column that PDF text extraction interleaves mid-sentence
+# because the label wrapped before the count was reached.
+_PAREN_TRAILING_COUNT = re.compile(r"(\d{1,3})\s*$")
 # A line the PDF stamps on most pages. It is not the author's text and, on this
 # document, it is the FIRST line of every page — so without dropping it the
 # probe never reaches the line that names the section.
@@ -157,6 +168,30 @@ def page_blocks(data: bytes) -> Optional[list]:
         return None
 
 
+def _strip_parenthetical(text: str, replacement: str = " ") -> str:
+    """Remove a parenthetical aside, but keep a trailing page count.
+
+    A CLOSED aside ("(not to exceed 1 page)") never ends in a bare digit --
+    its own regex always closes on ")" or on whitespace after it -- so this
+    only ever changes behaviour for the UNCLOSED alternative, which runs to
+    end of line because the aside wrapped onto the PDF's next physical line.
+    On the real awarded package, Project Description's row reads:
+
+        "Project Description (Including Results from Prior 15"
+        "NSF Support) (not to exceed 15 pages) (Exceed only if allowed by a"
+
+    and a bare strip-to-EOL throws the "15" away with the rest of the aside
+    -- the row never enters the roster at all. That digit is not really part
+    of the aside; it is a separate table column that PDF extraction
+    interleaves mid-sentence because the label wrapped before the count was
+    reached. `replacement` is used only when nothing survives.
+    """
+    def _sub(match: "re.Match") -> str:
+        tail = _PAREN_TRAILING_COUNT.search(match.group(0))
+        return f" {tail.group(1)} " if tail else replacement
+    return _PARENTHETICAL.sub(_sub, text)
+
+
 def toc_roster(page_text: str, sections: dict) -> list:
     """NSF's auto-generated Table of Contents as [(section key or None, pages, raw name)].
 
@@ -178,7 +213,7 @@ def toc_roster(page_text: str, sections: dict) -> list:
     for raw in (page_text or "").splitlines():
         # Parentheticals carry their own digits and instructions ("(not to
         # exceed 1 page)"), so a row is unparseable until they are gone.
-        line = " ".join(_PARENTHETICAL.sub(" ", raw).split())
+        line = " ".join(_strip_parenthetical(raw, " ").split())
         if not line:
             continue
         bare = _TOC_BARE_COUNT.match(line)
@@ -189,15 +224,15 @@ def toc_roster(page_text: str, sections: dict) -> list:
         if same:
             name, n = same.group("name"), int(same.group("n"))
             pending = None
-        elif pending is not None and _TOC_LABEL.match(_PARENTHETICAL.sub("", line).strip()):
+        elif pending is not None and _TOC_LABEL.match(_strip_parenthetical(line, "").strip()):
             name, n = line, pending
             pending = None
         else:
-            name = _PARENTHETICAL.sub("", line).strip()
+            name = _strip_parenthetical(line, "").strip()
             if not _TOC_LABEL.match(name):
                 pending = None
             continue
-        name = _PARENTHETICAL.sub("", name).strip(" .")
+        name = _strip_parenthetical(name, "").strip(" .")
         if len(name) < 4:
             continue
         rows.append((_sp.resolve_section_key(sections or {}, name), n, name))

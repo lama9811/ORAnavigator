@@ -122,9 +122,39 @@ def test_the_roster_reads_both_row_shapes():
 
 
 def test_a_parenthetical_never_swallows_the_count():
+    """The CLOSED-parenthetical case -- regression guard, must stay green."""
     sections = _sections("Project Summary")
     rows = ps.toc_roster("Project Summary (not to exceed 1 page) 1", sections)
     assert ("project_summary", 1) in [(k, n) for k, n, _ in rows]
+
+
+def test_a_wrapped_parenthetical_does_not_swallow_the_count():
+    """The measured real case, page 5 of the awarded NSF EiR package: NSF's
+    descriptive parenthetical for Project Description is long enough to wrap
+    onto the PDF's next physical line, so the aside never closes on the line
+    that carries the page count. A bare strip-to-end-of-line used to throw
+    the "15" away with the rest of the aside and the row vanished from the
+    roster entirely -- the section whose count matters most (it is the one
+    the false "16 pages, over the 15-page limit" finding came from) was
+    invisible to the one check meant to catch a wrong label there."""
+    sections = _sections("Project Description")
+    page = "\n".join([
+        "Project Description (Including Results from Prior 15",
+        "NSF Support) (not to exceed 15 pages) (Exceed only if allowed by a",
+    ])
+    rows = ps.toc_roster(page, sections)
+    assert ("project_description", 15) in [(k, n) for k, n, _ in rows]
+
+
+def test_an_unclosed_parenthetical_with_no_trailing_digit_still_strips_cleanly():
+    """The continuation half of the same wrapped aside carries no count of its
+    own and must not fabricate one -- it should simply disappear rather than
+    surface as a spurious roster row."""
+    sections = _sections("Project Description")
+    rows = ps.toc_roster(
+        "NSF Support) (not to exceed 15 pages) (Exceed only if allowed by a",
+        sections)
+    assert rows == []
 
 
 # ── labelling ───────────────────────────────────────────────────────────────
