@@ -4687,7 +4687,7 @@ async def draft_review_upload(
         return {
             "submission_id": submission_id, "sponsor": sub.sponsor, "result": None,
             "extraction": {"files": [{k: v for k, v in f.items()
-                                      if k not in ("text", "section_spans")}
+                                      if k not in ("text", "section_spans", "page_texts")}
                                      for f in extracted], "words": 0},
             "error": "Couldn't read any text from those files.",
         }
@@ -4717,7 +4717,7 @@ async def draft_review_upload(
         # extracted TEXT is deliberately not echoed back.
         "extraction": {
             "files": [{k: v for k, v in f.items()
-                       if k not in ("text", "section_spans")} for f in extracted],
+                       if k not in ("text", "section_spans", "page_texts")} for f in extracted],
             "words": len(draft_text.split()),
             # Which file was read as which section, so a mis-map is visible on
             # screen rather than silently shaping the score.

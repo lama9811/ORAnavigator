@@ -266,15 +266,6 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
             from services import page_ledger as _pl
 
             spans, report = _ps.split(data, page_texts, sections)
-            # ONLY a real structural split earns this. `structure` below is
-            # widened by the ledger's model WALK to fill pages `split()`
-            # could not name, but a caller deciding whether the AI locate
-            # stage can be skipped needs to know the PDF's own object graph
-            # named these sections deterministically -- not that SOMETHING
-            # (possibly a model call) named them. Set now, before anything
-            # below can fail, so a caller never has to infer it from
-            # `section_spans`' mere presence (which the ledger can also set).
-            out["spans_are_structural"] = bool(spans)
             shift = len(_raw) - len(_raw.lstrip()) if (_raw := "\n".join(page_texts)) else 0
 
             # STRUCTURE FIRST, and it wins. `pdf_sections` reads the seams out
@@ -317,6 +308,25 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
             if rebased:
                 out["section_spans"] = rebased
                 out["section_report"] = report
+
+            # ONLY a real structural split earns this. `structure` above is
+            # widened by the ledger's model WALK to fill pages `split()`
+            # could not name, but a caller deciding whether the AI locate
+            # stage can be skipped needs to know the PDF's own object graph
+            # named these sections deterministically -- not that SOMETHING
+            # (possibly a model call) named them. Set LAST, after everything
+            # in this block that can fail has already succeeded: setting it
+            # right after `split()` returned (as this used to) meant a later
+            # exception here left `spans_are_structural` stuck at whatever
+            # `bool(spans)` was, with `section_spans` never set for this file
+            # at all -- `review_draft`'s WHOLE-DOCUMENT `structural` flag
+            # would then disable the AI locate stage for every file in the
+            # review over a file that in fact has no spans. A caller never
+            # has to infer this from `section_spans`' mere presence (which
+            # the ledger can also set) -- and now, on any exception in this
+            # try, the key is simply absent, which `main.py` reads with
+            # `.get()` as falsy.
+            out["spans_are_structural"] = bool(spans)
         except Exception as exc:                # never break an upload over this
             print(f"[DOCUMENT-TEXT] structural split skipped: {exc}")
     return out
@@ -495,6 +505,13 @@ def map_files_to_sections(files: list[dict], sections: dict) -> tuple[str, dict,
                     "start": s0, "end": e0,
                     "marker": sec.get("marker") or sec_key,
                     "pages": sec.get("pages"), "filename": f.get("filename"),
+                    # A page the page-ledger walk gave this key but its own
+                    # contiguous reach could not include (it stopped at an
+                    # interior page belonging to a different section).
+                    # `spans_from_ledger` always sets this (possibly `[]`);
+                    # without it here the fact silently vanished at this
+                    # repack, the only consumer `review_draft` actually reads.
+                    "dropped_pages": sec.get("dropped_pages") or [],
                 }
                 placed.append(sec_key)
             if placed:

@@ -160,3 +160,33 @@ def test_ledger_rows_never_carry_the_pi_s_manuscript_quote():
     assert ledger, "expected a ledger to test against"
     assert all("quote" not in row for row in ledger)
     assert all("verified" in row for row in ledger)
+
+
+def test_a_late_exception_does_not_leave_structural_true_with_no_spans(monkeypatch):
+    """FINDING 3 (fix round 3): `spans_are_structural` used to be assigned
+    immediately after `pdf_sections.split()` returned -- BEFORE `build_ledger`,
+    `reconcile_toc`, `spans_from_ledger` and the rebase all ran inside the same
+    `try`. If any of those raised, the broad `except Exception` swallowed it,
+    `section_spans` was never set for this file, and `spans_are_structural`
+    stayed stuck at whatever `bool(spans)` was the instant `split()` returned --
+    True on a real split. `review_draft`'s `structural` flag is WHOLE-DOCUMENT
+    (`any(f.get("spans_are_structural") for f in extracted)`), so one file
+    failing here would silently disable the AI locate stage for an entire
+    multi-file review, including for this very file, which ended up with no
+    spans at all.
+
+    Forces `reconcile_toc` to raise after a real, successful split (the same
+    fixture `test_a_successful_structural_split_produces_a_full_ledger` uses)
+    and asserts the flag is not left True."""
+    from services import page_ledger as pl
+
+    def _boom(*a, **k):
+        raise RuntimeError("simulated failure after a successful split")
+
+    monkeypatch.setattr(pl, "reconcile_toc", _boom)
+
+    data = _successful_split_pdf()
+    out = dt.extract_upload("package.pdf", data, sections=SECTIONS)
+
+    assert not out.get("spans_are_structural")
+    assert "section_spans" not in out

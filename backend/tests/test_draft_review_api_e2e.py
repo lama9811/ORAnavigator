@@ -129,6 +129,40 @@ def test_an_unreadable_upload_is_reported_not_scored_as_missing(ctx):
     assert "couldn't read" in (body.get("error") or "").lower()
 
 
+def test_the_uploaded_manuscript_text_is_never_echoed_page_by_page(ctx):
+    """FINDING 2 (fix round 3): `document_text.extract_upload` sets
+    `out["page_texts"]` unconditionally on every PDF read (not just a
+    structurally-split one), and this endpoint's response-filter exclusion
+    tuple only stripped `("text", "section_spans")` -- so the complete
+    page-by-page text of the PI's UNPUBLISHED manuscript was going out on
+    every upload, the same exposure class as the ledger's per-page `quote`
+    field a previous round stripped. Uses a real PDF (reportlab) so
+    `_extract_pdf` actually populates `page_texts`, not an empty list."""
+    reportlab = pytest.importorskip("reportlab")
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    import io
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=letter)
+    c.drawString(72, 720, "Research Strategy")
+    c.drawString(72, 700, "Our specific aims are to synthesize three polymers.")
+    c.showPage()
+    c.save()
+    pdf_bytes = buf.getvalue()
+
+    client, _, withsol_id = ctx
+    r = client.post(f"/api/me/submissions/{withsol_id}/draft-review/upload",
+                    files=[("files", ("draft.pdf", pdf_bytes, "application/pdf"))])
+    assert r.status_code == 200
+    files = r.json()["extraction"]["files"]
+    assert files, "expected at least one extracted file in the response"
+    for f in files:
+        assert "page_texts" not in f, f
+        assert "text" not in f, f
+        assert "section_spans" not in f, f
+
+
 def test_another_users_proposal_is_not_reviewable(ctx):
     c, _, _ = ctx
     r = c.post("/api/me/submissions/99999/draft-review", json={"draft_text": DRAFT})

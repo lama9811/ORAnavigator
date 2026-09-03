@@ -144,6 +144,42 @@ def test_the_unmapped_files_text_is_still_reviewed():
     assert len(leftover) == 1
 
 
+def test_a_dropped_page_survives_the_pdf_structure_repack():
+    """FINDING 1 (fix round 3): `spans_from_ledger` (`services/page_ledger.py`)
+    computes `dropped_pages` on a span when its contiguous reach stops before
+    an interior page the ledger separately gave back to the SAME key -- and it
+    survives `document_text.extract_upload`'s rebase (`{**span, ...}`). But the
+    ONE FILE, MANY SECTIONS branch here -- a single combined PDF whose own
+    structural split named several sections -- repacks each into a fresh,
+    WHITELISTED dict (`text`/`start`/`end`/`marker`/`pages`/`filename` only),
+    and `dropped_pages` was silently absent from that whitelist. This is the
+    only place `review_draft`'s `file_spans` are built, so a page the ledger
+    could account for but not reach was reaching the UI panel and then, at
+    this repack, quietly vanishing."""
+    files = [_f("package.pdf", text="whole package text here", pages=8,
+                 section_spans={
+                     "project_description": {
+                         "start": 0, "end": 8, "marker": "pages 2-3",
+                         "pages": 2, "dropped_pages": [6],
+                     },
+                 })]
+    _, spans, _, _ = dt.map_files_to_sections(files, SECTIONS)
+    assert spans["project_description"]["dropped_pages"] == [6]
+
+
+def test_a_span_with_no_dropped_pages_reports_an_empty_list():
+    """Never absent, never `None` -- `spans_from_ledger` always sets the key,
+    so the repack must too, even when there's nothing to report."""
+    files = [_f("package.pdf", text="whole package text here", pages=8,
+                 section_spans={
+                     "project_description": {
+                         "start": 0, "end": 8, "marker": "pages 2-3", "pages": 2,
+                     },
+                 })]
+    _, spans, _, _ = dt.map_files_to_sections(files, SECTIONS)
+    assert spans["project_description"]["dropped_pages"] == []
+
+
 # ── the engine side ─────────────────────────────────────────────────────────
 
 def test_a_file_derived_span_is_never_overwritten_by_the_locate_guess(monkeypatch):
