@@ -36,7 +36,7 @@ def iso_utc(dt):
 import pypdf
 import docx
 
-from fastapi import FastAPI, HTTPException, Depends, status, Body, File, Form, UploadFile, Request
+from fastapi import FastAPI, HTTPException, Depends, status, Body, File, Form, UploadFile, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -3941,6 +3941,101 @@ async def budget_justification(payload: dict, user: dict = Depends(get_current_u
     return {"justification": template, "ai": False, "per_line": per_line}
 
 
+# ---------------------------------------------------------------------------
+# NSF Form 1030 budget template. Same contract as the generic Budget Helper:
+# every number is computed by services/nsf_budget.py, never by the LLM.
+# ---------------------------------------------------------------------------
+
+@app.get("/api/budget/nsf/template")
+async def nsf_budget_template(years: int = 1, user: dict = Depends(get_current_user)):
+    """A blank Form 1030 document so the frontend never hardcodes the structure."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.nsf_budget import blank_document
+    return {"document": blank_document(years=years)}
+
+
+@app.post("/api/budget/nsf/compute")
+async def nsf_budget_compute(payload: dict, user: dict = Depends(get_current_user)):
+    """Stateless: compute every year sheet, the cumulative rollup, and the flags."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.nsf_budget import compute_document
+    return compute_document(payload.get("inputs", payload) or {})
+
+
+@app.post("/api/budget/nsf/add-year")
+async def nsf_budget_add_year(payload: dict, user: dict = Depends(get_current_user)):
+    """Clone the last year, escalating salary bases only."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.nsf_budget import add_year
+    doc = payload.get("inputs", payload) or {}
+    return {"document": add_year(doc, escalation_pct=payload.get("escalation_pct"))}
+
+
+@app.post("/api/budget/nsf/justification")
+async def nsf_budget_justification(payload: dict, user: dict = Depends(get_current_user)):
+    """NSF budget justification: deterministic template, AI-polished, HARD fallback."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    from services.nsf_budget import compute_document, draft_justification
+    doc = payload.get("inputs", payload) or {}
+    computed = compute_document(doc)
+    template = draft_justification(doc, computed)
+    if not payload.get("use_ai", True):
+        return {"justification": template, "ai": False}
+    try:
+        from services import gemini_client
+        prompt = (
+            "You are a grants budget specialist at Morgan State University. Rewrite "
+            "the NSF budget justification below into clear, professional, "
+            "sponsor-ready prose. RULES: Do NOT change, add, or remove ANY dollar "
+            "figure, percentage, person-month count, name, or rate -- reproduce them "
+            "EXACTLY. Do not invent line items. Keep the year-by-year structure.\n\n"
+            f"{template}"
+        )
+        text_out = (gemini_client.generate_text(
+            prompt, temperature=0.2, max_output_tokens=1600) or "").strip()
+        if text_out:
+            return {"justification": text_out, "ai": True, "template": template}
+    except Exception as e:
+        print(f"[NSF-BUDGET] AI justification failed, using template: {e}")
+    return {"justification": template, "ai": False}
+
+
+@app.get("/api/me/submissions/{submission_id}/budget.xlsx")
+async def download_submission_budget_xlsx(
+    submission_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Stream the saved NSF budget as a Form 1030 workbook."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    sub = _proposals_service.get_submission(db, submission_id=submission_id,
+                                            user_id=user["user_id"])
+    if sub is None:
+        raise HTTPException(404, "Submission not found")
+    raw = getattr(sub, "budget_json", None)
+    try:
+        doc = json.loads(raw) if raw else {}
+    except (ValueError, TypeError):
+        doc = {}
+    from services.nsf_budget import SCHEMA as NSF_SCHEMA
+    if doc.get("schema") != NSF_SCHEMA:
+        raise HTTPException(400, "This proposal does not have an NSF Form 1030 budget.")
+    from services.nsf_budget_export import workbook_bytes
+    data = workbook_bytes(doc)
+    safe = "".join(ch for ch in (sub.title or "budget")
+                   if ch.isalnum() or ch in " -_").strip()[:60]
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{safe or "budget"}.xlsx"'},
+    )
+
+
 @app.get("/api/me/submissions/{submission_id}/budget")
 async def get_submission_budget(
     submission_id: int,
@@ -3954,6 +4049,7 @@ async def get_submission_budget(
     if sub is None:
         raise HTTPException(404, "Submission not found")
     from services.budget_helper import compute_budget
+    from services.nsf_budget import SCHEMA as NSF_SCHEMA, compute_document
     raw = getattr(sub, "budget_json", None)
     inputs = {}
     if raw:
@@ -3961,7 +4057,11 @@ async def get_submission_budget(
             inputs = json.loads(raw)
         except (ValueError, TypeError):
             inputs = {}
-    return {"inputs": inputs, "computed": compute_budget(inputs)}
+    # No "schema" key == a pre-existing generic budget. Behaviour unchanged.
+    if inputs.get("schema") == NSF_SCHEMA:
+        return {"schema": NSF_SCHEMA, "inputs": inputs,
+                "computed": compute_document(inputs)}
+    return {"schema": "generic", "inputs": inputs, "computed": compute_budget(inputs)}
 
 
 @app.put("/api/me/submissions/{submission_id}/budget")
@@ -3978,8 +4078,13 @@ async def save_submission_budget(
     if sub is None:
         raise HTTPException(404, "Submission not found")
     from services.budget_helper import compute_budget
+    from services.nsf_budget import SCHEMA as NSF_SCHEMA, compute_document
     inputs = payload.get("inputs", payload) or {}
-    computed = compute_budget(inputs)          # validate it computes cleanly
+    # Validate it computes cleanly before persisting, under whichever schema.
+    if inputs.get("schema") == NSF_SCHEMA:
+        computed = compute_document(inputs)
+    else:
+        computed = compute_budget(inputs)
     sub.budget_json = json.dumps(inputs)
     db.commit()
     db.refresh(sub)
@@ -4393,6 +4498,47 @@ async def extract_solicitation_from_url(
             "create the proposal manually.",
         )
     return {"extracted": extracted, "source_id": source_id}
+
+
+@app.post("/api/me/submissions/from-solicitation-url")
+async def extract_solicitation_from_url(
+    payload: dict,
+    user: dict = Depends(get_current_user),
+):
+    """Step 1 (URL variant): safely fetch a solicitation webpage (or a directly
+    linked PDF) and return the extracted JSON -- same shape as the PDF endpoint,
+    so the existing review/confirm flow is reused unchanged. Does NOT create a
+    Submission.
+
+    A static HTML funder page or a direct PDF link works; a JavaScript-app /
+    login-walled page is detected and the user is told to upload the PDF."""
+    if not user:
+        raise HTTPException(401, "Unauthorized")
+    url = (payload.get("url") or "").strip()
+    if not url:
+        raise HTTPException(400, "Please paste a solicitation URL.")
+
+    from services import url_fetcher as _uf
+    from services import solicitation_extractor as _sx
+    try:
+        source = _uf.fetch_solicitation_source(url)
+    except _uf.UrlFetchError as e:
+        raise HTTPException(e.status, e.public_message)
+
+    if source["kind"] == "pdf":
+        if len(source["pdf_bytes"]) > _MAX_SOLICITATION_PDF_BYTES:
+            raise HTTPException(413, "That linked PDF is larger than 25 MB.")
+        extracted = _sx.extract_from_pdf_bytes(source["pdf_bytes"])
+    else:
+        extracted = _sx.extract_from_text(source["text"])
+
+    if extracted is None:
+        raise HTTPException(
+            422,
+            "We fetched that page but couldn't pull out the solicitation "
+            "fields. Try downloading the PDF and using Upload PDF instead.",
+        )
+    return {"extracted": extracted}
 
 
 @app.post("/api/me/submissions/from-solicitation/confirm")
