@@ -1425,7 +1425,9 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
                  budget: Optional[dict] = None, use_ai: bool = True,
                  pages: Optional[dict] = None,
                  file_spans: Optional[dict] = None,
-                 structural: bool = False) -> dict:
+                 structural: bool = False,
+                 ledger: Optional[list] = None,
+                 toc_mismatch: Optional[list] = None) -> dict:
     """Review a pasted proposal against the solicitation `profile` describes.
 
     draft_text — the whole proposal, one blob.
@@ -1436,6 +1438,9 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     use_ai     — False forces the deterministic path (used by tests).
     pages      — section key -> REAL page count, from an upload. Absent it,
                  page rules report an estimate and never a verdict.
+    ledger     — services/page_ledger.build_ledger() rows, one per PDF page.
+                 An `unassigned` row means a page we could not confirm we read,
+                 and the score is WITHHELD rather than computed over it.
     structural — the spans came from the PDF's own structure, so the model
                  is NOT asked to name whatever is left. See below.
     """
@@ -1583,6 +1588,15 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     findings.sort(key=lambda f: (_source_rank(f), order.get(f["id"], 999)))
 
     ai_used = bool(ai_located or ai_reviewed)
+
+    # EVERY PAGE ACCOUNTED FOR, OR NO NUMBER. A page left `unassigned` is one we
+    # cannot confirm was read; a percentage computed over the rest would
+    # describe our reading rather than the draft. Same rule as the AI-outage
+    # path below, added after an outage rendered a section 100% and green.
+    # `blank` counts as accounted for -- an empty page was read and found empty.
+    from services.page_ledger import completeness as _completeness
+    pages_ok, unaccounted = _completeness(ledger or [])
+
     return {
         "solicitation": _solicitation_meta(profile),
         "ai": ai_used,
@@ -1590,8 +1604,19 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         "reviewer_notes": notes,
         # Suppressed on the offline path: a percentage computed without the
         # semantic half would read as a verdict on the draft rather than on our
-        # own availability.
-        "score": score(findings, solicitation_id=solicitation_id) if ai_used else None,
+        # own availability. Suppressed the same way when a page could not be
+        # accounted for -- see `pages_ok` above.
+        "score": (score(findings, solicitation_id=solicitation_id)
+                  if ai_used and pages_ok else None),
+        # The ledger and any pages it could not place. `ledger` is None for a
+        # pasted review (no pages exist to account for), so `pages_unaccounted`
+        # stays [] and nothing here is withheld on its account.
+        "page_ledger": ledger,
+        "pages_unaccounted": unaccounted,
+        # A mismatch between the ledger's page count for a section and the
+        # PDF's own Table of Contents, if one was found. Informational only --
+        # it rides on the result but never withholds the score by itself.
+        "toc_mismatch": toc_mismatch or [],
         "sections_located": [
             {"key": k, "label": _section_label(sections, k), "heading": v["marker"],
              "word_count": len(v["text"].split())}
@@ -1665,7 +1690,17 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
             covered=rulebook_baseline.covered_sections(
                 profile.get("requirements", []))),
         "eligibility_notes": profile.get("eligibility_notes") or [],
-        "message": None if ai_used else (
+        # A page-accounting gap is reported ahead of an AI outage when both are
+        # true at once -- it is the more specific and more actionable of the
+        # two (it names which pages), and a PI who sees it can re-upload rather
+        # than wait out an outage.
+        "message": (
+            f"{len(unaccounted)} page(s) of your upload could not be read and "
+            f"placed — page(s) {', '.join(str(p) for p in unaccounted)}. The "
+            "completeness score is withheld, because a percentage computed "
+            "over pages we could not confirm we read would describe our "
+            "reading and not your draft. Everything below is still accurate."
+        ) if not pages_ok else None if ai_used else (
             "The AI reviewer is unavailable, so only the rule-based checks ran and the "
             "completeness score is withheld. Everything below is still accurate."
         ),
