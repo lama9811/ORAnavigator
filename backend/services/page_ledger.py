@@ -73,7 +73,7 @@ def _words(s: str) -> list:
 
 
 def receipt_ok(page_body: str, quote: str) -> bool:
-    """True if `quote` is really on this page. The proof that the page was read.
+    """True if `quote` is really on THIS page's text. Content, not custody.
 
     Two readings, and the second is not slack for its own sake. Measured on the
     real document: the page carries a CURLY closing quote and the model returned
@@ -90,8 +90,19 @@ def receipt_ok(page_body: str, quote: str) -> bool:
     accepts when each fragment individually clears its length floor and
     appears on the page in order -- never across a gap it invented, and never
     across a PAGE boundary, because `page_body` is only ever this one page's
-    text. Verified over the whole 56-page document: 0 of 56 wrong-page quotes
-    accepted.
+    text.
+
+    WHAT THIS FUNCTION DOES NOT PROVE, ON ITS OWN: that the quote is not
+    ALSO true of some other page. On the real 56-page package, NSF's own
+    budget-form header ("PROPOSAL BUDGET FOR NSF USE ONLY") recurs verbatim
+    on several budget-year pages -- under 50% of the document, so
+    `document_furniture` never catches it -- and this function alone
+    happily accepted it against a page that never produced it. A receipt is
+    "content is on this page", not "content is ONLY on this page"; the
+    second, stronger claim is `_receipt_is_solid`, below, which this
+    function deliberately does not fold in -- it must keep working on one
+    page in isolation, with no notion of "the rest of the document" at all,
+    so its own tests stay meaningful standalone.
     """
     if not (quote or "").strip():
         return False
@@ -115,6 +126,38 @@ def receipt_ok(page_body: str, quote: str) -> bool:
     return any(pwords[i:i + n] == qwords for i in range(len(pwords) - n + 1))
 
 
+def _receipt_is_solid(bodies: list, page_idx: int, quote: str) -> bool:
+    """THE SECURITY GUARANTEE, made explicit. A receipt is valid only if
+    `quote` is on the page it claims AND ON NO OTHER PAGE.
+
+    `receipt_ok` alone answers "is this quote on this page" -- and NSF's own
+    budget-form header ("PROPOSAL BUDGET FOR NSF USE ONLY") is on FOUR
+    pages, so that question alone let a page-27 answer's quote pass as
+    proof of page-29, and a page-50 letter's opener pass as proof of
+    page-51's different letter. Measured: 3 of 3 wrong-page acceptances in
+    the live gate were exactly this -- boilerplate under the 50% share
+    `document_furniture` requires to be caught, or a near-identical letter
+    opener no threshold catches at all.
+
+    Deliberately NOT folded into `receipt_ok` -- that function takes one
+    page and must keep working standalone with its own tests; this one
+    needs every page's text in hand, which only exists once the ledger is
+    being built. One definition, called from both `build_ledger` (where a
+    row is actually verified) and `walk_pages` (to decide what still needs
+    asking) -- so the two can never disagree about what "solid" means.
+
+    Cheap over the whole document: `receipt_ok` is regex/string work, not a
+    model call, so checking a candidate against all ~55 other pages costs
+    nothing worth measuring.
+    """
+    if page_idx < 0 or page_idx >= len(bodies):
+        return False
+    if not receipt_ok(bodies[page_idx], quote):
+        return False
+    return not any(i != page_idx and receipt_ok(other, quote)
+                   for i, other in enumerate(bodies))
+
+
 # Four pages per call, MEASURED not chosen. Over the real 56-page package:
 # 4 -> 56/56 receipts in 22.8s (14 calls); 12 -> 55/56 in 41.6s; 28 -> 54/56.
 # Smaller is more accurate AND faster, because short calls run concurrently
@@ -128,8 +171,31 @@ PAGE_WINDOW = 4
 # line. Whole pages would multiply input tokens for no measured gain.
 _PAGE_CHARS = 2600
 
+# Single-page retry rounds beyond the first windowed pass, MEASURED not
+# chosen. On the real 56-page package a first pass typically leaves 10-16
+# pages shaky (no answer, or a quote that also receipts another page); each
+# targeted retry round -- with the SPECIFIC other-page(s) named -- clears
+# most of what remains, but a handful of pages (a garbled multi-field cover
+# form, several near-identical letter openers) keep reaching for the same
+# non-unique text even when told exactly which pages it also matches, so a
+# bounded THIRD round is worth the extra calls: it is cheap (one page, one
+# call) and it is the only lever left once the prompt has already been made
+# as specific as it can be without becoming a page-specific script.
+_MAX_RETRY_ROUNDS = 3
+
+# Nonzero ONLY for re-ask calls -- the first pass stays at temperature 0.0
+# for reproducibility. MEASURED: at 0.0, a retry given the same
+# `retry_notes` (naming the same other page(s)) returns the SAME wrong
+# quote, round after round, because nothing about the prompt actually
+# differs -- a deterministic model given an unchanged prompt has no reason
+# to answer differently. This is what a bounded `_MAX_RETRY_ROUNDS` alone
+# could not fix.
+_RETRY_TEMPERATURE = 0.4
+
 _WALK_SYSTEM = """You are reading ONE PAGE AT A TIME of an assembled grant proposal PDF.
 Read every line of each page you are given, top to bottom, before answering.
+Each page is shown RAW, including any running header, footer, or stamp --
+use that to help identify the page, but see the quote rule below.
 
 For EVERY page number listed in the input you MUST return exactly one object.
 Never omit a page. If you cannot tell what a page is, return "unsure" as the
@@ -139,7 +205,21 @@ Each object:
   page    : the page number, exactly as given
   section : one value from the allowed list, or "unsure"
   quote   : a VERBATIM span of at least 6 words copied character-for-character
-            from THAT page's text. It is your proof that you read the page.
+            from THAT page's own CONTENT. It is your proof that you read the
+            page, so it must be a line that could belong to NO OTHER page:
+              - NEVER a running header, footer, page-number stamp
+                ("Page N of M"), or "Submitted/PI: ..." line.
+              - NEVER a form label or boilerplate that recurs on other pages
+                of the same kind (e.g. a budget form's own printed heading,
+                which repeats on every budget year page).
+              - NEVER a short quoted title (a citation's article/book title
+                in quotation marks is usually too short on its own -- quote
+                the surrounding sentence instead, e.g. the author name plus
+                the title, so the quote is at least 6 words AND unique to
+                this page).
+              - Prefer a full sentence from the page's own paragraph, letter
+                body, or list content -- something no other page could
+                contain word-for-word.
             Never invent it, never take it from another page, never paraphrase.
 
 A page with a heading is named by its heading. A page with no heading -- a
@@ -147,13 +227,18 @@ letter, a form, a continuation of prose -- belongs to whatever it continues.
 Return ONLY {"pages":[...]}."""
 
 
-def _window_prompt(nums, bodies, section_keys, known):
-    # Reads the STRIPPED body, the same text `receipt_ok` verifies against --
-    # not the raw page. A quote lifted verbatim from a Research.gov stamp used
-    # to fail its own receipt because the model was reading one text and the
-    # check another; `furniture` earns its keep here (fix round 1, IMP-5).
+def _window_prompt(nums, page_texts, section_keys, known, retry_notes=None):
+    # RAW page text, not the furniture-stripped body (fix round 2). Round 1
+    # (IMP-5) showed the stripped body so a quote lifted verbatim from a
+    # Research.gov stamp could not be returned in the first place -- but it
+    # also removes whatever a page needs to be IDENTIFIED (a running header
+    # can carry the one clue a bare content page lacks), and receipts are
+    # still checked against the stripped body downstream regardless of what
+    # the model is shown. `_WALK_SYSTEM` is what now keeps the model from
+    # quoting the furniture it can see here -- the receipt gate is the
+    # backstop, not the only line of defense.
     body = "\n\n".join(
-        f"=== PAGE {n} ===\n{(bodies[n - 1] or '')[:_PAGE_CHARS]}" for n in nums)
+        f"=== PAGE {n} ===\n{(page_texts[n - 1] or '')[:_PAGE_CHARS]}" for n in nums)
     fixed = ""
     if known:
         named = "; ".join(f"page {p} is {k}" for p, k in sorted(known.items()) if k)
@@ -162,12 +247,38 @@ def _window_prompt(nums, bodies, section_keys, known):
             # structure already settled. Never a licence to overrule it --
             # `build_ledger` keeps the structural answer regardless.
             fixed = f"\nAlready established from the document's structure: {named}.\n"
-    return (f"Allowed section values: {', '.join(section_keys)}, unsure\n{fixed}\n"
+    retry = ""
+    if retry_notes:
+        # SPECIFIC feedback, not a repeat of the same static instruction
+        # (fix round 2). A generic "be unique" rule already sits in
+        # `_WALK_SYSTEM` and the model still picked a template opener three
+        # different collaboration letters share verbatim -- telling it
+        # EXACTLY which pages the last quote also matched is what a human
+        # reviewer would say next, and it is information only `walk_pages`
+        # has (it required reading every other page).
+        notes = "; ".join(f"page {p}: {retry_notes[p]}" for p in nums if retry_notes.get(p))
+        if notes:
+            retry = f"\nRETRY -- {notes}\n"
+    return (f"Allowed section values: {', '.join(section_keys)}, unsure\n{fixed}{retry}\n"
             f"Return exactly {len(nums)} objects, one for each of pages {list(nums)}.\n\n{body}")
 
 
-def _ask_window(nums, bodies, section_keys, known):
+def _ask_window(nums, page_texts, section_keys, known, retry_notes=None, temperature=0.0):
     """One model call for one window. Returns {page: {section, quote}}.
+
+    `page_texts` here is the RAW page text (fix round 2) -- see
+    `_window_prompt`. Whatever the model returns is unverified until
+    `walk_pages`/`build_ledger` check it against the stripped body; this
+    function only reconciles row SHAPE.
+
+    `temperature` defaults to 0.0 -- the first pass should be reproducible.
+    A RETRY is a different situation (fix round 2, measured): at 0.0 a
+    retry with the same `retry_notes` text produces the IDENTICAL wrong
+    quote every round, because the model is deterministic and nothing about
+    the prompt actually changed round to round. `walk_pages` passes a
+    nonzero temperature on re-ask calls for exactly this reason -- not for
+    quality, but so a second attempt can reach a DIFFERENT completion than
+    the one already known to be wrong.
 
     Defensive about row SHAPE (fix round 1, IMP-2): a non-dict row or a
     numeric `quote` used to raise `AttributeError` out of this function, which
@@ -180,10 +291,10 @@ def _ask_window(nums, bodies, section_keys, known):
 
     reply = _dr._ask_model(
         _gc.generate_json,
-        _window_prompt(nums, bodies, section_keys, known),
+        _window_prompt(nums, page_texts, section_keys, known, retry_notes=retry_notes),
         system_instruction=_WALK_SYSTEM,
         model=_dr.MODEL, location=_dr.MODEL_LOCATION,
-        temperature=0.0, max_output_tokens=8192,
+        temperature=temperature, max_output_tokens=8192,
         thinking_budget=_dr.THINKING_BUDGET,
         # A bare top-level array is an ANSWER, not a failure: commit 3553be5
         # records one costing 15 rules and rendering a false 100%.
@@ -219,7 +330,7 @@ def _ask_window(nums, bodies, section_keys, known):
     return out
 
 
-def _safe_ask_window(nums, bodies, section_keys, known):
+def _safe_ask_window(nums, page_texts, section_keys, known, retry_notes=None, temperature=0.0):
     """`_ask_window` wrapped so ONE bad window can never cost another its
     answers (fix round 1, IMP-1). `Executor.map` is a generator that raises at
     the first failing future and abandons every result queued behind it --
@@ -232,7 +343,8 @@ def _safe_ask_window(nums, bodies, section_keys, known):
     a malformed `known`), so no single window can ever take another down.
     """
     try:
-        return _ask_window(nums, bodies, section_keys, known)
+        return _ask_window(nums, page_texts, section_keys, known,
+                            retry_notes=retry_notes, temperature=temperature)
     except Exception as exc:                        # noqa: BLE001 -- golden rule 3
         print(f"[PAGE-LEDGER] window {nums} failed: {exc}")
         return {}
@@ -248,7 +360,12 @@ def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
     that, and it is a defect this must not copy).
 
     A page missing from its window's reply is RE-ASKED ON ITS OWN before being
-    given up on. Never raises: with no model this returns {}.
+    given up on. So is a page whose answer came back SHAKY -- receipted on no
+    page, or receipted on more than one (fix round 2) -- reusing the exact
+    same `_receipt_is_solid` check `build_ledger` uses to make its own final
+    call, so a first answer that cannot be trusted gets one more chance
+    before `build_ledger` ever sees it, the same courtesy IMP-1 already gives
+    a page with no answer at all. Never raises: with no model this returns {}.
     """
     from concurrent.futures import ThreadPoolExecutor
 
@@ -262,31 +379,81 @@ def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
     try:
         with ThreadPoolExecutor(max_workers=4) as pool:
             for part in pool.map(
-                    lambda w: _safe_ask_window(w, bodies, section_keys, known), windows):
+                    lambda w: _safe_ask_window(w, page_texts, section_keys, known), windows):
                 got.update(part or {})
     except Exception as exc:                       # noqa: BLE001 -- golden rule 3
         print(f"[PAGE-LEDGER] walk failed: {exc}")
 
-    missing = [p for p in range(1, n + 1) if p not in got]
-    if missing and got:
-        # Only when the first pass answered SOMETHING (IMP-4). With no model
-        # at all the first pass already returns {} for every window, so
-        # `missing` is every page -- re-asking each on its own would be full
-        # amplification (measured: 12 pages -> 15 calls, 56 pages -> 70) for
-        # zero benefit, since a dead model answers no better one page at a
-        # time. A real partial miss (a few pages out of a working pass) is
-        # still re-asked exactly as before.
-        print(f"[PAGE-LEDGER] re-asking {len(missing)} page(s): {missing}")
+    had_answers = bool(got)                        # IMP-4's signal, captured
+    # ONCE, before any round pops anything: with no model at all the first
+    # pass already returns {} for every window, so a page-by-page re-ask
+    # would be full amplification (measured: 12 pages -> 15 calls, 56 pages
+    # -> 70) for zero benefit, since a dead model answers no better one page
+    # at a time. A real partial/shaky miss is still re-asked below exactly
+    # as before.
+    if not had_answers:
+        missing = [p for p in range(1, n + 1) if p not in got]
+        if missing:
+            print(f"[PAGE-LEDGER] skipping re-ask -- first pass returned nothing "
+                  f"({len(missing)} page(s) would have amplified for no benefit)")
+        return got
+
+    for _round in range(1, _MAX_RETRY_ROUNDS + 1):
+        # SPECIFIC retry feedback (fix round 2), not just "try again": for a
+        # page whose quote receipted somewhere else too, name exactly which
+        # page(s) -- a generic re-ask repeats the same wording the model
+        # already ignored once (measured: three separate collaboration
+        # letters share one boilerplate opener, and a bare "be unique"
+        # instruction did not stop the model reaching for it three times
+        # running). Reuses `_receipt_is_solid`, the exact check
+        # `build_ledger` uses to make its own final call, so a first answer
+        # that cannot be trusted gets another chance before `build_ledger`
+        # ever sees it -- the same courtesy IMP-1 already gives a page with
+        # no answer at all.
+        retry_notes: dict = {}
+        for p, ans in list(got.items()):
+            if ans.get("section") not in section_keys or not ans.get("quote"):
+                continue
+            quote = ans["quote"]
+            if _receipt_is_solid(bodies, p - 1, quote):
+                continue
+            others = [i + 1 for i, b in enumerate(bodies)
+                      if i != p - 1 and receipt_ok(b, quote)]
+            if others:
+                retry_notes[p] = (
+                    "Your previous quote for this page also appears on page(s) "
+                    f"{', '.join(map(str, others))} -- it is not unique to this page. "
+                    "Give a DIFFERENT verbatim quote of at least 6 words that appears "
+                    "ONLY on this page. Avoid a shared template opener, a mandated "
+                    "certification paragraph, or any wording another similar page "
+                    "could also contain. The most reliable choices are a PERSONAL "
+                    "NAME, an email address, an institution name, a dollar figure, "
+                    "a date, or an ID/timestamp printed on this page and no other -- "
+                    "look for one of those, in a full sentence or line of at least "
+                    "6 words, before falling back to anything else.")
+            else:
+                retry_notes[p] = (
+                    "Your previous quote for this page could not be verified on "
+                    "this page's own text -- it may have been too short, "
+                    "paraphrased, or copied from a different page. Give a "
+                    "different verbatim quote of at least 6 words copied exactly "
+                    "from this page's own content.")
+            got.pop(p, None)
+
+        missing = [p for p in range(1, n + 1) if p not in got]
+        if not missing:
+            break
+        print(f"[PAGE-LEDGER] round {_round}: re-asking {len(missing)} page(s): {missing}")
         try:
             with ThreadPoolExecutor(max_workers=4) as pool:
                 for part in pool.map(
-                        lambda p: _safe_ask_window([p], bodies, section_keys, known), missing):
+                        lambda p: _safe_ask_window([p], page_texts, section_keys, known,
+                                                    retry_notes=retry_notes,
+                                                    temperature=_RETRY_TEMPERATURE), missing):
                     got.update(part or {})
         except Exception as exc:                   # noqa: BLE001
-            print(f"[PAGE-LEDGER] re-ask failed: {exc}")
-    elif missing:
-        print(f"[PAGE-LEDGER] skipping re-ask -- first pass returned nothing "
-              f"({len(missing)} page(s) would have amplified for no benefit)")
+            print(f"[PAGE-LEDGER] re-ask round {_round} failed: {exc}")
+            break
     return got
 
 
@@ -340,16 +507,39 @@ def build_ledger(page_texts: list, sections: dict, *,
                 row["disagreed_with_model"] = guess
         elif is_blank(body):
             row["source"] = "blank"
-        elif guess in sections and receipt_ok(body, quote):
-            # CONTIGUITY. A section that has already ended cannot reappear --
-            # page 47 is not the Project Summary. A label that breaks the order
-            # is refused in code rather than argued with.
+        elif guess in sections and _receipt_is_solid(bodies, page - 1, quote):
+            # THE LEDGER'S OWN VERIFICATION. `_receipt_is_solid` is where a
+            # row is actually decided verified -- not `receipt_ok` alone,
+            # which only proves the quote is ON this page, never that it is
+            # NOT also on another. A quote receipted here is on this page
+            # and this page only.
+            row.update(section=guess, source="model", quote=quote, verified=True)
+            # CONTIGUITY -- RECORDED, not refused (fix round 2). It used to
+            # discard the page outright: "page 47 is not the Project
+            # Summary" was a real risk when a receipt only proved the quote
+            # was SOMEWHERE on the page, so a coincidental match reappearing
+            # under a closed-out section was the model's best guess, not a
+            # verified fact. `_receipt_is_solid` is a STRONGER guarantee --
+            # unique to this page, document-wide -- so a reappearance is
+            # real content, not noise. Measured on a real 56-page package:
+            # NSF's own Supplementary Documents genuinely interleave one
+            # collaboration letter between two institutional-support pages
+            # (a PI concatenating individually-authored letters in whatever
+            # order they arrived), and refusing it threw away a page that
+            # was correctly read. `spans_from_ledger` already has a
+            # mechanism built for exactly this shape -- a key's pages that
+            # are not one contiguous run report the extra pages in
+            # `dropped_pages` rather than silently losing them -- so
+            # refusing here was fighting machinery this module already has.
+            # Still worth a reviewer's eye, so it is flagged rather than
+            # accepted silently.
             if guess in seen and (order and order[-1] != guess):
-                row["refused"] = guess
-            else:
-                row.update(section=guess, source="model", quote=quote, verified=True)
+                row["out_of_order"] = True
         elif guess in sections and quote:
             row["refused"] = guess               # answered, receipt did not hold
+                                                   # (on this page, or on this
+                                                   # page alone -- either way,
+                                                   # not solid enough to keep)
 
         if row["section"]:
             if not order or order[-1] != row["section"]:

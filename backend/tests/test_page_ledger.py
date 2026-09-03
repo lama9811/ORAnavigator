@@ -75,9 +75,26 @@ def test_structure_outranks_the_model(monkeypatch):
     assert row1["disagreed_with_model"] == "references_cited"
 
 
-def test_a_section_cannot_reappear_after_it_ended(monkeypatch):
-    """Sections in a proposal are contiguous. Page 6 cannot be Project Summary
-    once Project Description has started."""
+def test_a_reappearing_section_is_accepted_but_flagged_out_of_order(monkeypatch):
+    """FIX ROUND 2. Sections in a proposal are usually contiguous, and a
+    reappearance used to be refused outright -- discarded, unassigned, no
+    matter how solid the receipt. That rule predates `_receipt_is_solid`:
+    when a receipt only proved a quote was SOMEWHERE on the page, a
+    coincidental match reappearing under an already-closed section was the
+    model's best guess, not a verified fact, and refusing it was the right
+    caution. `_receipt_is_solid` is a STRONGER guarantee now -- the quote is
+    unique to this page, document-wide -- so a real, solidly-receipted
+    reappearance is real content, not noise, and throwing it away costs a
+    genuinely-read page for nothing but its position. Measured on a real
+    56-page awarded package: NSF's own Supplementary Documents interleave
+    one collaboration letter between two institutional-support pages (a PI
+    concatenating individually-authored letters in upload order), and the
+    old rule left that verified page unaccounted for every run.
+    `spans_from_ledger` already has `dropped_pages` for exactly this shape --
+    a key whose pages are not one contiguous run -- so refusing here was
+    fighting machinery this module already has. It is still recorded
+    (`out_of_order`), not silently accepted, so a reviewer can see the
+    document interleaved this section."""
     answers = {1: {"section": "project_summary", "quote": "Content of page 1 with plenty of real words here."}}
     for p in range(2, 6):
         answers[p] = {"section": "project_description",
@@ -86,8 +103,42 @@ def test_a_section_cannot_reappear_after_it_ended(monkeypatch):
     monkeypatch.setattr(pl, "walk_pages", _fake_walk(answers))
     rows = pl.build_ledger(PAGES, SECTIONS)
     row6 = next(r for r in rows if r["page"] == 6)
+    assert row6["source"] == "model"
+    assert row6["section"] == "project_summary"
+    assert row6["verified"] is True
+    assert row6["out_of_order"] is True
+    # An in-order page never carries the flag.
+    row2 = next(r for r in rows if r["page"] == 2)
+    assert "out_of_order" not in row2
+
+
+def test_a_reappearance_still_needs_a_SOLID_receipt(monkeypatch):
+    """Softening contiguity to `out_of_order` must not also soften the
+    security gate. A page whose quote also receipts elsewhere is refused
+    regardless of order -- reappearing is not a licence to skip
+    `_receipt_is_solid`."""
+    pages = list(PAGES)
+    # A sentence pasted onto BOTH page 1 and page 6 -- receipts on both, so
+    # it can never be solid, however page 6 is labelled. Each page keeps its
+    # own distinct "Content of page N..." line too, so page 1's own
+    # verification is untouched by this.
+    shared = "This exact sentence was pasted onto two different pages by mistake"
+    pages[0] = pages[0] + "\n" + shared
+    pages[5] = pages[5] + "\n" + shared
+    answers = {1: {"section": "project_summary", "quote": "Content of page 1 with plenty of real words here."}}
+    for p in range(2, 6):
+        answers[p] = {"section": "project_description",
+                      "quote": f"Content of page {p} with plenty of real words here."}
+    answers[6] = {"section": "project_summary", "quote": shared}
+    monkeypatch.setattr(pl, "walk_pages", _fake_walk(answers))
+    rows = pl.build_ledger(pages, SECTIONS)
+    row6 = next(r for r in rows if r["page"] == 6)
     assert row6["source"] == "unassigned"
     assert row6["section"] is None
+    # Page 1 is unaffected -- verified normally on its own distinct quote.
+    row1 = next(r for r in rows if r["page"] == 1)
+    assert row1["source"] == "model"
+    assert row1["section"] == "project_summary"
 
 
 def test_an_unknown_section_name_is_refused(monkeypatch):
