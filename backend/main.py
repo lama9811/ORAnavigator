@@ -3995,10 +3995,21 @@ async def nsf_budget_justification(payload: dict, user: dict = Depends(get_curre
             "EXACTLY. Do not invent line items. Keep the year-by-year structure.\n\n"
             f"{template}"
         )
+        # gemini-2.5-flash is a THINKING model: its internal reasoning is billed
+        # against max_output_tokens. A 1600 budget was almost entirely consumed
+        # by thinking (~1225 tokens on a trivial prompt), truncating the prose
+        # mid-sentence. Give it room for the reasoning AND a multi-year document.
         text_out = (gemini_client.generate_text(
-            prompt, temperature=0.2, max_output_tokens=1600) or "").strip()
-        if text_out:
+            prompt, temperature=0.2, max_output_tokens=6000) or "").strip()
+        # The deterministic template always ends with the final total. If the AI
+        # text is missing it, the answer was truncated or the bottom line was
+        # altered -- either way, fall back rather than ship a wrong figure.
+        final_total = f"${computed['cumulative']['lines']['L']:,.0f}"
+        if text_out and final_total in text_out:
             return {"justification": text_out, "ai": True, "template": template}
+        if text_out:
+            print(f"[NSF-BUDGET] AI justification missing the final total "
+                  f"{final_total}; using the deterministic template.")
     except Exception as e:
         print(f"[NSF-BUDGET] AI justification failed, using template: {e}")
     return {"justification": template, "ai": False}

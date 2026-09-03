@@ -455,3 +455,37 @@
 .bh-scroll {
   padding-inline: max(18px, calc((100% - 1600px) / 2));
 }
+
+/* Template selector — Generic vs the NSF Form 1030 sheet */
+.bh-template-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-bottom: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  flex-wrap: wrap;
+}
+.bh-template-row label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.bh-template-row select {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0B2545;
+  background: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+.bh-template-row select:focus { outline: none; border-color: #1B3A6B; }
+.bh-template-hint { font-size: 0.72rem; color: #94a3b8; }
+
+/* The NSF sheet is much wider than the generic form. */
+.bh-modal:has(.nsf-wrap) { max-width: 1180px; }

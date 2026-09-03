@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, Trash2, Calculator, FileText, Save, AlertTriangle, CheckCircle2, Lightbulb, Info, HelpCircle, Download } from "lucide-react";
 import { getApiBase } from "../lib/apiBase";
+import NsfBudgetSheet from "./NsfBudgetSheet";
 import "./BudgetHelperModal.css";
 
 const API_BASE = getApiBase();
@@ -54,6 +55,9 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
   const [justification, setJustification] = useState("");
   const [perLine, setPerLine] = useState([]);
   const [justifying, setJustifying] = useState(false);
+  // "generic" = today's simple 5-category view; "nsf_1030" = the Form 1030 sheet.
+  const [template, setTemplate] = useState("generic");
+  const [nsfDoc, setNsfDoc] = useState(null);
   const debounceRef = useRef(null);
 
   // Load rate tables + any previously-saved budget for this proposal.
@@ -70,7 +74,12 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
         if (!alive) return;
         setRates(ratesData);
         const saved = budgetData?.inputs && Object.keys(budgetData.inputs).length ? budgetData.inputs : null;
-        if (saved) {
+        if (saved?.schema === "nsf_1030") {
+          // A saved NSF budget reopens on the NSF template.
+          setTemplate("nsf_1030");
+          setNsfDoc(saved);
+          setComputed(budgetData.computed);
+        } else if (saved) {
           setInputs({ ...EMPTY, ...saved, people: saved.people?.length ? saved.people : EMPTY.people });
           setComputed(budgetData.computed);
         } else {
@@ -92,7 +101,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
 
   // Debounced live recompute whenever the inputs change.
   useEffect(() => {
-    if (loading) return;
+    if (loading || template !== "generic") return;
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
@@ -103,7 +112,7 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
       } catch { /* keep last good total */ }
     }, 300);
     return () => clearTimeout(debounceRef.current);
-  }, [inputs, loading]);
+  }, [inputs, loading, template]);
 
   const set = (patch) => { setInputs((p) => ({ ...p, ...patch })); setSavedMsg(""); };
   const setPerson = (i, patch) =>
@@ -118,6 +127,21 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
   const faOptions = rates?.fa_rates?.[inputs.fa_year] || [];
   const fringeOptions = rates?.fringe_rates || [];
   const categoryCaps = categoryCapsFromNotes(submission.notes);
+
+  // Switching to NSF fetches a blank Form 1030 skeleton, so the frontend
+  // never hardcodes the form's structure.
+  const switchTemplate = async (next) => {
+    setTemplate(next);
+    setSavedMsg("");
+    if (next === "nsf_1030" && !nsfDoc) {
+      try {
+        const r = await fetch(`${API_BASE}/api/budget/nsf/template?years=1`, {
+          headers: authHeaders(),
+        });
+        if (r.ok) setNsfDoc((await r.json()).document);
+      } catch { /* the sheet shows its own loading state */ }
+    }
+  };
 
   const save = async () => {
     setSaving(true); setSavedMsg("");
@@ -187,9 +211,26 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           <button className="bh-close" onClick={onClose} aria-label="Close"><X size={18} /></button>
         </header>
 
+        <div className="bh-template-row">
+          <label htmlFor="bh-template">Template</label>
+          <select id="bh-template" value={template}
+            onChange={(e) => switchTemplate(e.target.value)}>
+            <option value="generic">Generic budget</option>
+            <option value="nsf_1030">NSF (Form 1030)</option>
+          </select>
+          {template === "nsf_1030" && (
+            <span className="bh-template-hint">
+              Sections A–M, one sheet per year, with a computed cumulative.
+            </span>
+          )}
+        </div>
+
         <div className="bh-scroll">
         {loading ? (
           <div className="bh-loading">Loading rates…</div>
+        ) : template === "nsf_1030" ? (
+          <NsfBudgetSheet submission={submission} doc={nsfDoc}
+            onChange={setNsfDoc} onSaved={onSaved} />
         ) : (
           <div className="bh-body">
             {/* LEFT — line items */}
@@ -386,9 +427,11 @@ export default function BudgetHelperModal({ submission, onClose, onSaved }) {
           </div>
         )}
 
-        {computed?.table?.rows?.length > 0 && <BudgetTable table={computed.table} />}
+        {template === "generic" && computed?.table?.rows?.length > 0 && (
+          <BudgetTable table={computed.table} />
+        )}
 
-        {justification && (
+        {template === "generic" && justification && (
           <div className="bh-justification">
             <div className="bh-justification-head">
               <span>Budget justification (draft — review before use)</span>
