@@ -544,7 +544,8 @@ def locate_sections(text: str, sections: dict, *, use_ai: bool = True) -> tuple[
 def run_deterministic(text: str, spans: dict, profile: dict, *,
                       title: Optional[str] = None,
                       budget: Optional[dict] = None,
-                      pages: Optional[dict] = None) -> list[dict]:
+                      pages: Optional[dict] = None,
+                      layout: Optional[dict] = None) -> list[dict]:
     """Every code-decided requirement. No model involved, so these findings are
     identical whether or not Gemini is reachable (golden rule 1).
 
@@ -556,7 +557,12 @@ def run_deterministic(text: str, spans: dict, profile: dict, *,
 
     `pages` maps a section key to its REAL page count, and is populated only by
     the section-check upload path where one file is one section. Absent it, a
-    page rule reports an estimate and refuses to call it a pass or a fail."""
+    page rule reports an estimate and refuses to call it a pass or a fail.
+
+    `layout` is the uploaded PDF's measured geometry -- body font size, side
+    margins, page dimensions -- from `document_text`. Same contract as `pages`:
+    present only when a PDF was actually read, and absent it a formatting rule
+    keeps saying it cannot be judged from text rather than inventing a verdict."""
     rows = [r for r in profile.get("requirements", []) if r["kind"] == "deterministic"]
     if not rows:
         return []
@@ -565,7 +571,8 @@ def run_deterministic(text: str, spans: dict, profile: dict, *,
     from services import generic_checks
     from services import rulebook_checks
     ctx = {"text": text or "", "spans": spans or {}, "title": title,
-           "budget": budget, "profile": profile, "pages": pages or {}}
+           "budget": budget, "profile": profile, "pages": pages or {},
+           "layout": layout or {}}
     out = []
     for req in rows:
         name = req.get("check", "")
@@ -1424,6 +1431,7 @@ def _wholly_out_of_package(findings: list, section_key: str) -> bool:
 def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
                  budget: Optional[dict] = None, use_ai: bool = True,
                  pages: Optional[dict] = None,
+                 layout: Optional[dict] = None,
                  file_spans: Optional[dict] = None,
                  structural: bool = False) -> dict:
     """Review a pasted proposal against the solicitation `profile` describes.
@@ -1517,7 +1525,7 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         spans = merged
 
     findings = run_deterministic(text, spans, profile, title=title, budget=budget,
-                                 pages=pages)
+                                 pages=pages, layout=layout)
 
     # Every remaining model call is independent once the spans are known, so they
     # run CONCURRENTLY. Measured on a real draft: 39s sequential -> ~15s. Five
@@ -1675,6 +1683,7 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
 def review_section(text: str, *, section: str, rulebook: str,
                    profile: Optional[dict] = None,
                    pages: Optional[int] = None,
+                   layout: Optional[dict] = None,
                    budget: Optional[dict] = None,
                    use_ai: bool = True) -> dict:
     """Check ONE section against its rulebook's rules, while the PI writes it.
@@ -1760,7 +1769,8 @@ def review_section(text: str, *, section: str, rulebook: str,
             "sections": {section: {"label": label, "aliases": [label]}}}
 
     findings = run_deterministic(text, spans, mini, budget=budget,
-                                 pages={section: pages} if pages else None)
+                                 pages={section: pages} if pages else None,
+                                 layout=layout)
 
     semantic = [r for r in rows if r["kind"] == "semantic"]
     skipped_semantic = False

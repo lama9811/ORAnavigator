@@ -61,10 +61,22 @@ def test_the_basics_carry_every_deterministic_check():
     Section would silently turn a code-decided rule into no rule at all.
     """
     with_checks = [r for r in rb.rules_for(PAPPG) if r.get("check")
-                   and r["check"] != "rb_not_in_text"]
+                   and r["check"] not in ("rb_not_in_text", "rb_formatting")]
     assert with_checks
     assert all(r["tier"] == "basic" for r in with_checks), [
         r["id"] for r in with_checks if r["tier"] != "basic"]
+
+    # `rb_formatting` is exempt, and the hazard above cannot reach it. Its three
+    # rules live in Format of the Proposal, and that section is never offered by
+    # Check a Section's picker -- so narrowing to basics cannot turn them into
+    # "no rule at all", because they were never on that screen. They are checked
+    # in a full Draft Review, which reads extended rules too. Pinned here so the
+    # exemption stays tied to the fact that justifies it.
+    fmt = [r for r in rb.rules_for(PAPPG) if r.get("check") == "rb_formatting"]
+    assert fmt, "rb_formatting has no rules -- the exemption is stale"
+    assert {r["section"] for r in fmt} == {"format_of_the_proposal"}
+    assert "format_of_the_proposal" not in {s["key"] for s in
+                                            rb.sections_offered(PAPPG)}
 
 
 def test_rules_for_can_ask_for_the_basics_alone():

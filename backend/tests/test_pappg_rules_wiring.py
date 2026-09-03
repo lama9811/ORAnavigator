@@ -161,13 +161,32 @@ def test_every_unverifiable_rule_names_the_tool_that_does_handle_it():
 
 
 def test_the_whole_format_and_cover_sheet_sections_are_unverifiable():
-    """Not one rule in either section is a property of text. If a future
-    re-extraction adds one that IS scored, this goes red and a human looks."""
+    """Not one rule in either section is a property of TEXT. If a future
+    re-extraction adds one that IS scored against a paste, this goes red and a
+    human looks.
+
+    `rb_formatting` is the one allowed exception, and it does not weaken the
+    property this test exists to protect. Three format rules -- font size,
+    margins, paper size -- ARE properties of an uploaded PDF, and are measured
+    from its glyphs by services/document_text. Handed no geometry, which is
+    every pasted draft, `rb_formatting` delegates straight back to
+    `rb_not_in_text`; the assertion below pins that, so a paste still cannot be
+    scored on formatting. Cover Sheet keeps the absolute rule: those are
+    Research.gov form fields and no document carries them."""
     for section in ("format_of_the_proposal", "cover_sheet"):
         rows = rb.rules_for(PAPPG, section)
         assert rows, f"{section} has no rules"
-        assert all(r["check"] == "rb_not_in_text" for r in rows), \
+        allowed = ({"rb_not_in_text", "rb_formatting"}
+                   if section == "format_of_the_proposal" else {"rb_not_in_text"})
+        assert all(r["check"] in allowed for r in rows), \
             f"a {section} rule is being scored against pasted text"
+
+    # The property itself: with no measurement, formatting is never a verdict.
+    from services import rulebook_checks as _rc
+    ctx = {"text": "some pasted draft", "layout": {}}
+    for prop in ("font", "margins", "paper"):
+        status, _, _ = _rc.rb_formatting(ctx, {"check_args": {"property": prop}})
+        assert status == "not_checked"
 
 
 # ── the source upgrade ──────────────────────────────────────────────────────
