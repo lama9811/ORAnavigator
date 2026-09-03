@@ -1596,6 +1596,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
     # `blank` counts as accounted for -- an empty page was read and found empty.
     from services.page_ledger import completeness as _completeness
     pages_ok, unaccounted = _completeness(ledger or [])
+    _n_unaccounted = len(unaccounted)
+    _plural = "" if _n_unaccounted == 1 else "s"
 
     return {
         "solicitation": _solicitation_meta(profile),
@@ -1695,8 +1697,8 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
         # two (it names which pages), and a PI who sees it can re-upload rather
         # than wait out an outage.
         "message": (
-            f"{len(unaccounted)} page(s) of your upload could not be read and "
-            f"placed — page(s) {', '.join(str(p) for p in unaccounted)}. The "
+            f"{_n_unaccounted} page{_plural} of your upload could not be read and "
+            f"placed — page{_plural} {', '.join(str(p) for p in unaccounted)}. The "
             "completeness score is withheld, because a percentage computed "
             "over pages we could not confirm we read would describe our "
             "reading and not your draft. Everything below is still accurate."

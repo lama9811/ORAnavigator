@@ -117,6 +117,25 @@ def test_complete_reports_what_is_missing():
     assert unaccounted == []
 
 
+def test_completeness_never_raises_on_a_malformed_ledger():
+    """Golden rule 3, and it is load-bearing now: `review_draft` calls this
+    directly and must never raise out of a public function. An unassigned
+    row missing `page` is not skipped -- that IS the "we cannot confirm we
+    read this" case, so it counts as a gap (reported as `None`) rather than
+    silently passing."""
+    ok, unaccounted = pl.completeness([{"source": "unassigned"}])
+    assert ok is False
+    assert unaccounted == [None]
+
+    ok, unaccounted = pl.completeness(["not a dict"])
+    assert ok is True
+    assert unaccounted == []
+
+    ok, unaccounted = pl.completeness([None])
+    assert ok is True
+    assert unaccounted == []
+
+
 def test_the_walk_names_the_model_and_the_region(monkeypatch):
     """`gemini_client.DEFAULT_MODEL` is gemini-2.5-flash, so a call that forgets
     silently downgrades. And 3.6-flash 404s outside `global`."""

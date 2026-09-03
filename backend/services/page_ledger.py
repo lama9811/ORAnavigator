@@ -365,8 +365,16 @@ def completeness(rows: list) -> tuple:
     `blank` COUNTS as accounted for: a page with nothing on it was read and
     found empty, which is a fact about the document rather than a gap in our
     reading. Only `unassigned` is a gap.
+
+    Golden rule 3 -- this is called from `review_draft`, which must never
+    raise. A non-dict row is skipped (there is no page number to report and
+    no promise a caller ever wrote such a row); a dict row with no `page` is
+    NOT skipped -- it names the exact failure this function exists to catch
+    (a row we cannot even read the page number of), so it is reported as
+    unaccounted (as `None`) rather than silently passed over.
     """
-    unaccounted = [r["page"] for r in (rows or []) if r.get("source") == "unassigned"]
+    unaccounted = [r.get("page") for r in (rows or [])
+                   if isinstance(r, dict) and r.get("source") == "unassigned"]
     return (not unaccounted), unaccounted
 
 

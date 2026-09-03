@@ -1,8 +1,6 @@
 """A percentage computed over pages we cannot confirm we read describes our
 reading, not the draft. Same rule the AI-outage path already follows -- added
 after an outage rendered a section as 100%, green, "No problems found"."""
-import pytest
-
 from services import draft_review as dr
 from services import solicitation_profile as sp
 
@@ -59,3 +57,52 @@ def test_a_toc_mismatch_rides_along_but_does_not_withhold():
                           ledger=ledger, toc_mismatch=mismatch)
     assert out["toc_mismatch"] == mismatch
     assert out["pages_unaccounted"] == []
+
+
+def test_a_page_gap_withholds_a_REAL_ai_score(monkeypatch):
+    """The gate that matters, and the one every other test here misses: with
+    `use_ai=False` in every test above, `score = score(...) if ai_used and
+    pages_ok else None` is `None` for the trivial reason that `ai_used` is
+    already `False` -- the withholding itself is never exercised, and
+    `pages_ok` could be hard-coded `True` without a single assertion above
+    catching it.
+
+    This drives `review_draft` with `use_ai=True` and a stubbed model, so the
+    AI half is genuinely on and genuinely finds the requirement: with a
+    complete ledger the score is a real number, and with the SAME draft and
+    profile but one `unassigned` page, the score is withheld anyway. That
+    pairing is what actually pins the gate -- a working-looking answer with a
+    silently corrupted denominator is exactly the incident this feature
+    exists to prevent."""
+    from services import gemini_client
+
+    def stub(prompt, **kw):
+        # Answers whichever call this module makes -- locate_sections reads
+        # "sections", _review_batch reads "findings". One stub, because the
+        # module doesn't distinguish its calls by anything this test needs to
+        # key on.
+        return {
+            "sections": {"project_summary": "Project Summary"},
+            "findings": [{
+                "id": "r1", "status": "addressed",
+                "note": "The overview is present.",
+                "evidence": "This proposal provides an overview of the planned work.",
+                "suggestion": "Name the specific research questions.",
+            }],
+        }
+
+    monkeypatch.setattr(gemini_client, "generate_json", stub)
+
+    complete = [{"page": 1, "section": "project_summary", "source": "model"}]
+    ok = dr.review_draft(DRAFT, profile=_profile(), use_ai=True, ledger=complete)
+    assert ok["ai"] is True, "the stub was never reached; this test proves nothing"
+    assert ok["score"] is not None, "expected a real score with a complete ledger"
+    assert isinstance(ok["score"]["percent"], (int, float))
+    assert ok["score"]["percent"] == 100
+
+    gap = [{"page": 1, "section": "project_summary", "source": "model"},
+           {"page": 2, "section": None, "source": "unassigned"}]
+    withheld = dr.review_draft(DRAFT, profile=_profile(), use_ai=True, ledger=gap)
+    assert withheld["ai"] is True
+    assert withheld["score"] is None, (
+        "the AI produced a real answer and the page gap did not suppress it")
