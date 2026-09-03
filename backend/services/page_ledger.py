@@ -147,9 +147,13 @@ letter, a form, a continuation of prose -- belongs to whatever it continues.
 Return ONLY {"pages":[...]}."""
 
 
-def _window_prompt(nums, page_texts, section_keys, known):
+def _window_prompt(nums, bodies, section_keys, known):
+    # Reads the STRIPPED body, the same text `receipt_ok` verifies against --
+    # not the raw page. A quote lifted verbatim from a Research.gov stamp used
+    # to fail its own receipt because the model was reading one text and the
+    # check another; `furniture` earns its keep here (fix round 1, IMP-5).
     body = "\n\n".join(
-        f"=== PAGE {n} ===\n{(page_texts[n - 1] or '')[:_PAGE_CHARS]}" for n in nums)
+        f"=== PAGE {n} ===\n{(bodies[n - 1] or '')[:_PAGE_CHARS]}" for n in nums)
     fixed = ""
     if known:
         named = "; ".join(f"page {p} is {k}" for p, k in sorted(known.items()) if k)
@@ -162,14 +166,21 @@ def _window_prompt(nums, page_texts, section_keys, known):
             f"Return exactly {len(nums)} objects, one for each of pages {list(nums)}.\n\n{body}")
 
 
-def _ask_window(nums, page_texts, section_keys, known):
-    """One model call for one window. Returns {page: {section, quote}}."""
+def _ask_window(nums, bodies, section_keys, known):
+    """One model call for one window. Returns {page: {section, quote}}.
+
+    Defensive about row SHAPE (fix round 1, IMP-2): a non-dict row or a
+    numeric `quote` used to raise `AttributeError` out of this function, which
+    is exactly what made a single malformed reply cost every LATER window its
+    successful answers (IMP-1) -- `Executor.map`'s generator stops at the
+    first raising future.
+    """
     from services import draft_review as _dr
     from services import gemini_client as _gc
 
     reply = _dr._ask_model(
         _gc.generate_json,
-        _window_prompt(nums, page_texts, section_keys, known),
+        _window_prompt(nums, bodies, section_keys, known),
         system_instruction=_WALK_SYSTEM,
         model=_dr.MODEL, location=_dr.MODEL_LOCATION,
         temperature=0.0, max_output_tokens=8192,
@@ -178,18 +189,53 @@ def _ask_window(nums, page_texts, section_keys, known):
         # records one costing 15 rules and rendering a false 100%.
         list_key="pages",
     )
-    out = {}
+    out: dict = {}
+    dropped = set()
     for row in (reply or {}).get("pages") or []:
+        if not isinstance(row, dict):
+            continue
         try:
             page = int(row.get("page"))
         except (TypeError, ValueError):
             continue
         # Reconcile by ID, never by count. A row for a page we did not send is
         # dropped rather than trusted -- same rule as `_review_batch`.
-        if page in nums:
-            out[page] = {"section": row.get("section"),
-                         "quote": (row.get("quote") or "").strip()}
+        if page not in nums or page in dropped:
+            continue
+        section = row.get("section")
+        quote = str(row.get("quote") or "").strip()
+        prior = out.get(page)
+        if prior is not None and prior.get("section") != section:
+            # Answered twice with DIFFERENT sections (IMP-3). A wrong label is
+            # ~6x more damaging than a missing one, and here it would be
+            # decided by array position -- drop the page rather than trust
+            # either answer. The receipt binds a quote to a page, not a
+            # section, so this is the one place a section can go wrong for
+            # free; refuse it instead.
+            out.pop(page, None)
+            dropped.add(page)
+            continue
+        out[page] = {"section": section, "quote": quote}
     return out
+
+
+def _safe_ask_window(nums, bodies, section_keys, known):
+    """`_ask_window` wrapped so ONE bad window can never cost another its
+    answers (fix round 1, IMP-1). `Executor.map` is a generator that raises at
+    the first failing future and abandons every result queued behind it --
+    measured on a 12-page document with only window 2 malformed: pages 9-12
+    were lost in the first pass, then 6-12 lost AGAIN in the re-ask, because
+    the bad page sorts first in `missing`. On a real 56-page package one bad
+    row could leave ~50 pages unassigned -- the exact symptom this task exists
+    to remove. `_ask_window` is defensive about row shape now (IMP-2), but
+    this catches whatever else could still raise (a `_dr._ask_model` failure,
+    a malformed `known`), so no single window can ever take another down.
+    """
+    try:
+        return _ask_window(nums, bodies, section_keys, known)
+    except Exception as exc:                        # noqa: BLE001 -- golden rule 3
+        print(f"[PAGE-LEDGER] window {nums} failed: {exc}")
+        return {}
 
 
 def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
@@ -209,27 +255,38 @@ def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
     n = len(page_texts or [])
     if not n or not section_keys:
         return {}
+    bodies = [body_text(t, furniture) for t in page_texts]
     windows = [list(range(i, min(i + PAGE_WINDOW, n + 1)))
                for i in range(1, n + 1, PAGE_WINDOW)]
     got: dict = {}
     try:
         with ThreadPoolExecutor(max_workers=4) as pool:
             for part in pool.map(
-                    lambda w: _ask_window(w, page_texts, section_keys, known), windows):
+                    lambda w: _safe_ask_window(w, bodies, section_keys, known), windows):
                 got.update(part or {})
     except Exception as exc:                       # noqa: BLE001 -- golden rule 3
         print(f"[PAGE-LEDGER] walk failed: {exc}")
 
     missing = [p for p in range(1, n + 1) if p not in got]
-    if missing:
+    if missing and got:
+        # Only when the first pass answered SOMETHING (IMP-4). With no model
+        # at all the first pass already returns {} for every window, so
+        # `missing` is every page -- re-asking each on its own would be full
+        # amplification (measured: 12 pages -> 15 calls, 56 pages -> 70) for
+        # zero benefit, since a dead model answers no better one page at a
+        # time. A real partial miss (a few pages out of a working pass) is
+        # still re-asked exactly as before.
         print(f"[PAGE-LEDGER] re-asking {len(missing)} page(s): {missing}")
         try:
             with ThreadPoolExecutor(max_workers=4) as pool:
                 for part in pool.map(
-                        lambda p: _ask_window([p], page_texts, section_keys, known), missing):
+                        lambda p: _safe_ask_window([p], bodies, section_keys, known), missing):
                     got.update(part or {})
         except Exception as exc:                   # noqa: BLE001
             print(f"[PAGE-LEDGER] re-ask failed: {exc}")
+    elif missing:
+        print(f"[PAGE-LEDGER] skipping re-ask -- first pass returned nothing "
+              f"({len(missing)} page(s) would have amplified for no benefit)")
     return got
 
 
@@ -244,13 +301,27 @@ def build_ledger(page_texts: list, sections: dict, *,
     gaps and never overrules it; a disagreement is RECORDED, not resolved.
     """
     n = len(page_texts or [])
-    structure = {int(k): v for k, v in (structure or {}).items()}
+    _structure = {}
+    for k, v in (structure or {}).items():
+        try:
+            _structure[int(k)] = v
+        except (TypeError, ValueError):                # golden rule 3 (IMP-7):
+            continue                                    # a bad key is dropped,
+    structure = _structure                              # never a raise
     furniture = document_furniture(page_texts or [])
     bodies = [body_text(t, furniture) for t in (page_texts or [])]
     keys = list(sections or {})
 
-    answers = walk_pages(page_texts, keys, furniture=furniture,
-                         known=structure) if keys else {}
+    answers = {}
+    if keys:
+        try:
+            # `walk_pages` documents "never raises", but this is the roll
+            # call's own guarantee (golden rule 3), not a promise borrowed
+            # from a callee -- a bug in the walk must not become a bug here.
+            answers = walk_pages(page_texts, keys, furniture=furniture, known=structure) or {}
+        except Exception as exc:                        # noqa: BLE001
+            print(f"[PAGE-LEDGER] walk_pages raised unexpectedly: {exc}")
+            answers = {}
 
     rows, order, seen = [], [], set()
     for page in range(1, n + 1):

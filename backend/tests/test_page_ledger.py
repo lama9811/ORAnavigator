@@ -133,3 +133,129 @@ def test_the_walk_names_the_model_and_the_region(monkeypatch):
     assert seen.get("location") == "global"
     assert seen.get("thinking_budget") == 1024
     assert seen.get("list_key") == "pages"
+
+
+# ---------------------------------------------------------------------------
+# Fix round 1: the guarantee is only real if it survives a badly-behaved
+# model, not just a well-behaved fake. Every test above monkeypatches
+# `walk_pages` itself, so none of them exercise `_ask_window`, `walk_pages`'s
+# own error handling, or `build_ledger`'s guard around `structure`/`walk_pages`.
+# ---------------------------------------------------------------------------
+
+def test_build_ledger_still_returns_n_rows_when_walk_pages_raises(monkeypatch):
+    """IMP-8(a). `walk_pages` documents 'never raises' -- this is the roll
+    call's OWN guarantee (golden rule 3), not a promise borrowed from a
+    callee. A bug in the walk must not become a bug in build_ledger."""
+    def boom(*a, **kw):
+        raise RuntimeError("the walk blew up")
+    monkeypatch.setattr(pl, "walk_pages", boom)
+    rows = pl.build_ledger(PAGES, SECTIONS)
+    assert len(rows) == 6
+    assert {r["source"] for r in rows} <= {"blank", "unassigned"}
+
+
+def test_a_malformed_window_costs_only_its_own_pages(monkeypatch):
+    """IMP-8(b) / IMP-1. `Executor.map` abandons every result queued behind a
+    raising future -- a single malformed window used to take down every
+    LATER window's successful answers too. 12 pages, 3 windows of 4; only
+    the window carrying page 5 is malformed."""
+    import re
+    pages = [f"Content of page {i} with plenty of real words here." for i in range(1, 13)]
+    section_keys = ["project_description"]
+
+    def fake_generate_json(prompt, **kw):
+        nums = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        if 5 in nums:
+            # A non-dict row and a numeric quote -- exactly what escaped the
+            # old narrow `except (TypeError, ValueError)`.
+            return {"pages": ["not-a-dict", {"page": 5, "section": "x", "quote": 1}]}
+        return {"pages": [
+            {"page": n, "section": "project_description",
+             "quote": f"Content of page {n} with plenty of real words here."}
+            for n in nums
+        ]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    got = pl.walk_pages(pages, section_keys, furniture=frozenset())
+    # Every page outside the bad window's own pages must still be answered --
+    # window 3 (pages 9-12) must not be collateral damage of window 2's bug.
+    assert set(range(9, 13)) <= set(got.keys())
+    assert set(range(1, 5)) <= set(got.keys())
+
+
+def test_a_non_numeric_structure_key_does_not_raise():
+    """IMP-8(c) / IMP-7."""
+    rows = pl.build_ledger(PAGES, SECTIONS, structure={"not-a-page-number": "project_summary"})
+    assert len(rows) == 6
+
+
+def test_the_re_ask_asks_exactly_the_missing_pages(monkeypatch):
+    """IMP-8(d). A partial miss (a few pages out of an otherwise-working
+    pass) must re-ask precisely those pages -- not the whole document, and
+    not skip the re-ask (that guard is only for a TOTAL first-pass miss,
+    IMP-4)."""
+    pages = [f"Content of page {i} with plenty of real words here." for i in range(1, 9)]
+    section_keys = ["project_description"]
+    reasked = []
+
+    def fake_generate_json(prompt, **kw):
+        import re
+        nums = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        if nums == [3]:
+            reasked.append(3)
+            return {"pages": [{"page": 3, "section": "project_description",
+                               "quote": "Content of page 3 with plenty of real words here."}]}
+        if 3 in nums:
+            # page 3's WINDOW omits page 3 from the reply -- a partial miss.
+            return {"pages": [
+                {"page": n, "section": "project_description",
+                 "quote": f"Content of page {n} with plenty of real words here."}
+                for n in nums if n != 3
+            ]}
+        return {"pages": [
+            {"page": n, "section": "project_description",
+             "quote": f"Content of page {n} with plenty of real words here."}
+            for n in nums
+        ]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    got = pl.walk_pages(pages, section_keys, furniture=frozenset())
+    assert reasked == [3]
+    assert 3 in got
+
+
+def test_an_out_of_window_page_id_is_dropped(monkeypatch):
+    """IMP-8(e). A row claiming a page number outside the window it was asked
+    about is not trusted -- reconciliation is by id, never by count."""
+    pages = ["Content of page 1 with plenty of real words here.",
+             "Content of page 2 with plenty of real words here."]
+
+    def fake_generate_json(prompt, **kw):
+        return {"pages": [{"page": 99, "section": "project_description",
+                           "quote": "Content of page 1 with plenty of real words here."}]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    got = pl.walk_pages(pages, ["project_description"], furniture=frozenset())
+    assert 99 not in got
+
+
+def test_a_page_answered_twice_with_different_sections_ends_unassigned(monkeypatch):
+    """IMP-8(f) / IMP-3. A wrong label is ~6x more damaging than a missing
+    one, and here it would be decided by array position -- refuse it."""
+    pages = ["Content of page 1 with plenty of real words here."]
+
+    def fake_generate_json(prompt, **kw):
+        return {"pages": [
+            {"page": 1, "section": "project_summary",
+             "quote": "Content of page 1 with plenty of real words here."},
+            {"page": 1, "section": "references_cited",
+             "quote": "Content of page 1 with plenty of real words here."},
+        ]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    got = pl.walk_pages(pages, ["project_summary", "references_cited"], furniture=frozenset())
+    assert 1 not in got
