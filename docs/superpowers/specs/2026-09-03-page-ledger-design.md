@@ -118,14 +118,40 @@ be *unanswered*, which is a row with `source: "unassigned"` and therefore visibl
 
 ### 3.2 Check 1 — the roll call
 
-The walk sends pages in windows (measured at 12/window, 5 calls for 56 pages) and
-requires exactly one object per page number sent. Code reconciles the returned page
-numbers against the window — **by id, not by count**, the same pattern
-`_review_batch` already uses (`by_id.get(req["id"])` → explicit `unclear` row). Any page
-not returned is re-asked **individually**; still missing after that becomes `unassigned`.
+The walk sends pages in windows and requires exactly one object per page number sent.
+Code reconciles the returned page numbers against the window — **by id, not by count**,
+the same pattern `_review_batch` already uses (`by_id.get(req["id"])` → explicit
+`unclear` row). Any page not returned is re-asked **individually**; still missing after
+that becomes `unassigned`.
 
-*Measured, two independent runs of the real document:* **56/56 answers both times, zero
-re-asks needed.**
+**`PAGE_WINDOW = 4`, and the size was measured rather than chosen.** Four runs over the
+real 56-page document at three window sizes:
+
+| window | pages answered | receipts verified | wall clock | calls |
+|---|---|---|---|---|
+| **4** | 56/56 | **56/56** | **22.8s** | 14 |
+| 12 | 56/56, 56/56 | 55/56, 56/56 | 41.6s, 30.2s | 5 |
+| 28 | 56/56 | 54/56 | 23.5s | 2 |
+
+Smaller windows are **more accurate and faster** — short calls run concurrently under
+`_MODEL_SLOTS`, so 14 small calls beat 5 large ones on wall clock. Labels were identical
+across all four runs except p49, the blank page (§3.3).
+
+This agrees with the published direction. arXiv:2301.08721 §4.1 measures accuracy
+falling as batch size rises, *"with a significant drop at b=6 across four out of five
+datasets"* (AddSub 86.6 → 68.1 at b=6). BatchPrompt (arXiv:2309.00384, ICLR 2024) states
+in its abstract that batching in longer contexts *"will inevitably lead to worse
+performance"* and that results correlate with **position within the batch**. It also
+agrees with this repo's own strongest measurement — one rule per call gave 92% ten times
+out of ten where batch=15 split 83%/92% (`draft_review.py:126-158`).
+
+**Two prompt requirements are load-bearing and come from BatchPrompt's Appendix D**,
+which names this exact failure — *"15 generated answers when input batch size is 16"*:
+every page is tagged with its **number**, never a bare delimiter, and the prompt states
+the **expected count** explicitly. Both were present in the measured probe. Neither is
+the guarantee; the reconciliation is.
+
+*Measured across all four runs:* **56/56 answers every time, zero re-asks needed.**
 
 ### 3.3 Check 2 — the receipt
 
@@ -266,6 +292,18 @@ The existing `_furniture`, block detection and all other bails are untouched.
 `temperature=0`, `max_output_tokens=8192`, `list_key` set so a bare top-level array is
 not discarded (commit `3553be5`: a bare array cost 15 rules and rendered a false 100%).
 
+**`response_schema` is deliberately NOT used, even though `google-genai==1.14.0`
+supports it** (verified on the installed package; it is not plumbed through
+`gemini_client._build_config` today). Two documented failure modes make it the wrong
+instrument here. Constrained decoding drops optional fields — *"silently omitted under
+strict modes because the constrained decoder treats them as zero-cost to skip"*
+(arXiv:2606.09395) — so any schema used later must mark **every** field required. Worse,
+a schema that enforces `minItems` to guarantee one row per page removes the model's
+option to omit, leaving **fabrication** as the remaining exit. **A fabricated page-and-quote
+is strictly worse than an omission**: an omission is caught by set difference, a
+fabrication is caught only by the receipt. Reconciliation plus receipt already gives the
+guarantee without inviting that failure.
+
 **Thinking is CAPPED, not disabled** (`THINKING_BUDGET = 1024`, matching `draft_review`).
 Disabling it in `draft_review` was measured to drop `assessed` 38.7 → 35.3 with one run
 collapsing to 27, because **the reviewer omits rows when it cannot think** — the exact
@@ -360,7 +398,19 @@ apply.
 **Latency roughly doubles** on a whole-package review. Accepted explicitly by the product
 owner over the two cheaper options.
 
-**Cost.** 5 extra model calls per upload.
+**Cost.** 14 extra model calls per 56-page upload (`ceil(pages / 4)`), bounded by
+`_MODEL_SLOTS`.
+
+**An API cannot tell us a page was omitted.** `finish_reason == STOP` does not mean
+complete — commit `96b4a2d` records a reply that ended one character short at
+`STOP` with 1,932 of 8,192 tokens used, costing fifteen rules. There is no
+`system_fingerprint` on Vertex Gemini (grepped the SDK: zero occurrences), so a caller
+cannot detect a backend change that invalidates a seed, and `seed` is Pre-GA. There is
+also an open, unanswered report that `candidateCount` returns fewer candidates than
+requested at `FinishReason.STOP` (googleapis/python-genai#1888) — the same
+"silently returned fewer than asked, with a clean finish reason" shape, one level up.
+**Every completeness guarantee in this design is therefore code-side by necessity, not
+by preference.**
 
 ---
 
@@ -381,6 +431,19 @@ rather than silently shaping the score"* — and `DraftReviewModal`'s `Extractio
 reads only `extraction.files`, and only when a file errored. `filename_narrowed`, the tier
 the code names as its one confident-wrong-verdict path, reaches no screen and no log.
 Rendering it is included above because the ledger panel is the natural home.
+
+**UNVERIFIED, AND BIGGER THAN THIS SPEC IF TRUE: `gemini-3.6-flash` may ignore
+`temperature` entirely.** Raised by the API research pass from Google's own model card;
+not confirmed against the live endpoint. Every review path in this repo passes
+`temperature=0.0` — `draft_review`, `solicitation_requirements`, `solicitation_extractor`,
+`proofread`, and the page walk above. If the parameter is ignored, all of them have been
+sampling at the model's default, which would be a larger fact about output stability than
+anything in this design, and it would partly explain measurements this repo has already
+recorded as "non-deterministic at temperature 0" (43 vs 47 requirements on identical
+input; 3 vs 5 required attachments). **Check it before drawing further conclusions about
+run-to-run variance** — two calls at `temperature=0` and `temperature=2` on a
+deliberately open-ended prompt will settle it. Independent of the ledger; recorded here
+because this spec cites temperature-0 measurements.
 
 **The LOI attachment row.** `generic_checks` files "Letters of Intent included" at
 `section: None`, so `apply_package_scope` (which keys on `section`) cannot reach it and
