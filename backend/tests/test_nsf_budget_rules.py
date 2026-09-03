@@ -83,3 +83,101 @@ def test_a_violating_budget_still_computes():
     doc = _doc_with_senior(base_salary=90_000, appointment_basis="academic_9", sumr=6)
     out = nb.compute_document(doc)
     assert out["years"][0]["lines"]["L"] > 0        # a warning never stops the math
+
+
+# --- D: equipment ---------------------------------------------------------
+
+def test_equipment_under_the_capitalization_level_warns():
+    doc = nb.blank_document()
+    doc["years"][0]["equipment"] = [{"description": "Laptop", "amount": 2_500}]
+    assert "nsf.equipment.below_capitalization" in _ids(doc)
+
+
+def test_equipment_above_the_capitalization_level_does_not_warn():
+    doc = nb.blank_document()
+    doc["years"][0]["equipment"] = [{"description": "Confocal", "amount": 60_000}]
+    assert "nsf.equipment.below_capitalization" not in _ids(doc)
+
+
+def test_the_capitalization_level_is_configurable():
+    doc = nb.blank_document()
+    doc["settings"]["capitalization_level"] = 1_000
+    doc["years"][0]["equipment"] = [{"description": "Laptop", "amount": 2_500}]
+    assert "nsf.equipment.below_capitalization" not in _ids(doc)
+
+
+def test_equipment_over_10k_with_no_description_warns():
+    doc = nb.blank_document()
+    doc["years"][0]["equipment"] = [{"description": "", "amount": 60_000}]
+    assert "nsf.equipment.unitemised" in _ids(doc)
+
+
+def test_described_equipment_over_10k_does_not_warn():
+    doc = nb.blank_document()
+    doc["years"][0]["equipment"] = [{"description": "Confocal microscope", "amount": 60_000}]
+    assert "nsf.equipment.unitemised" not in _ids(doc)
+
+
+# --- E: travel ------------------------------------------------------------
+
+def test_international_travel_raises_an_info_flag():
+    doc = nb.blank_document()
+    doc["years"][0]["travel"]["international"] = [{"description": "Collab", "amount": 4_000}]
+    flags = {f["id"]: f for f in _flags(doc)}
+    assert flags["nsf.travel.international"]["severity"] == "info"
+
+
+def test_domestic_only_travel_raises_no_travel_flag():
+    doc = nb.blank_document()
+    doc["years"][0]["travel"]["domestic"] = [{"description": "Conf", "amount": 3_000}]
+    assert "nsf.travel.international" not in _ids(doc)
+
+
+# --- F: participant support ----------------------------------------------
+
+def test_participant_dollars_with_a_zero_count_warns():
+    doc = nb.blank_document()
+    doc["years"][0]["participant_support"] = {
+        "count": 0, "stipends": 10_000, "travel": None,
+        "subsistence": None, "other": None}
+    assert "nsf.participants.no_count" in _ids(doc)
+
+
+def test_participant_dollars_with_a_count_does_not_warn():
+    doc = nb.blank_document()
+    doc["years"][0]["participant_support"] = {
+        "count": 20, "stipends": 10_000, "travel": None,
+        "subsistence": None, "other": None}
+    assert "nsf.participants.no_count" not in _ids(doc)
+
+
+def test_participant_support_raises_the_employees_info_flag():
+    doc = nb.blank_document()
+    doc["years"][0]["participant_support"] = {
+        "count": 20, "stipends": 10_000, "travel": None,
+        "subsistence": None, "other": None}
+    assert "nsf.participants.not_employees" in _ids(doc)
+
+
+# --- G.5: subawards -------------------------------------------------------
+
+def test_a_subaward_raises_the_separate_budget_info_flag():
+    doc = nb.blank_document()
+    doc["years"][0]["other_direct"]["subawards"] = [
+        {"organization": "Partner U", "amount": 20_000}]
+    assert "nsf.subaward.separate_budget" in _ids(doc)
+
+
+def test_a_subaward_over_25k_reports_the_excluded_amount():
+    doc = nb.blank_document()
+    doc["years"][0]["other_direct"]["subawards"] = [
+        {"organization": "Partner U", "amount": 50_000}]
+    flag = next(f for f in _flags(doc) if f["id"] == "nsf.subaward.over_25k")
+    assert "25,000" in flag["detail"]
+
+
+def test_a_subaward_under_25k_does_not_report_an_exclusion():
+    doc = nb.blank_document()
+    doc["years"][0]["other_direct"]["subawards"] = [
+        {"organization": "Partner U", "amount": 20_000}]
+    assert "nsf.subaward.over_25k" not in _ids(doc)
