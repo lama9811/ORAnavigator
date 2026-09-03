@@ -4614,6 +4614,16 @@ _DRAFT_MAX_FILE_BYTES = 25 * 1024 * 1024      # 25 MB per file
 _DRAFT_MAX_TOTAL_BYTES = 60 * 1024 * 1024     # 60 MB per request
 _DRAFT_MAX_FILES = 12
 
+# Keys `document_text.extract_upload` may attach to a per-file dict that must
+# NEVER ride back to the browser: `text`/`section_spans`/`page_texts` are the
+# PI's unpublished manuscript (whole, sectioned, or page-by-page), and
+# `page_ledger`/`ledger_page_counts`/`ledger_toc_mismatch` are the ledger's own
+# internal keys -- the ledger and its mismatch ARE returned, but once, at the
+# top level of `result` (see `services.draft_review.review_draft`'s return),
+# never duplicated inside a per-file extraction entry.
+_EXTRACTION_FILE_STRIP = ("text", "section_spans", "page_texts",
+                          "page_ledger", "ledger_page_counts", "ledger_toc_mismatch")
+
 
 @app.post("/api/me/submissions/{submission_id}/draft-review/upload")
 async def draft_review_upload(
@@ -4670,6 +4680,17 @@ async def draft_review_upload(
             upload.filename or "file", data,
             sections=(profile or {}).get("sections")))
 
+    # The ledger belongs to the ONE file that carried a structural split -- a
+    # combined Research.gov package. A multi-file upload has no single page
+    # numbering, so there is nothing to account for across files: take the
+    # first file that has one.
+    _ledger, _toc_mismatch = None, []
+    for f in extracted:
+        if f.get("page_ledger"):
+            _ledger = f["page_ledger"]
+            _toc_mismatch = f.get("ledger_toc_mismatch") or []
+            break
+
     # ONE FILE IS ONE SECTION, when the filename says so. This replaces
     # `_dt.combine`: it produces the same document, and additionally hands back
     # which file IS which section and each one's REAL page count -- both of which
@@ -4679,7 +4700,12 @@ async def draft_review_upload(
         extracted, (profile or {}).get("sections") or {})
     # Section key -> real page count, the shape run_deterministic wants. Without
     # it every page rule runs on a word-count estimate even though we hold the
-    # exact count from the PDF.
+    # exact count from the PDF. Deliberately NOT `ledger_page_counts`: that is
+    # ATTRIBUTION (pages the ledger could assign to a section by name), not a
+    # section's real page REACH -- see `page_ledger.page_counts_from_ledger`'s
+    # own docstring, which says in so many words not to feed it to a page-limit
+    # rule. `span["pages"]` (from `map_files_to_sections`/`spans_from_ledger`)
+    # already carries the real reach, absorbed interior pages included.
     page_counts = {k: v["pages"] for k, v in file_spans.items() if v.get("pages")}
     if not draft_text.strip():
         # Nothing readable. Return the per-file errors rather than a review that
@@ -4687,7 +4713,7 @@ async def draft_review_upload(
         return {
             "submission_id": submission_id, "sponsor": sub.sponsor, "result": None,
             "extraction": {"files": [{k: v for k, v in f.items()
-                                      if k not in ("text", "section_spans", "page_texts")}
+                                      if k not in _EXTRACTION_FILE_STRIP}
                                      for f in extracted], "words": 0},
             "error": "Couldn't read any text from those files.",
         }
@@ -4708,16 +4734,19 @@ async def draft_review_upload(
     result = _dr.review_draft(draft_text, profile=profile, title=sub.title,
                               budget=budget, pages=page_counts or None,
                               file_spans=file_spans or None,
-                              structural=structural)
+                              structural=structural,
+                              ledger=_ledger, toc_mismatch=_toc_mismatch)
     return {
         "submission_id": submission_id,
         "sponsor": sub.sponsor,
         "result": result,
         # Per-file report so the UI can show what was read and what wasn't. The
-        # extracted TEXT is deliberately not echoed back.
+        # extracted TEXT is deliberately not echoed back -- nor is the ledger's
+        # per-page attribution (it rides once, at the top level, inside
+        # `result`, not per file).
         "extraction": {
             "files": [{k: v for k, v in f.items()
-                       if k not in ("text", "section_spans", "page_texts")} for f in extracted],
+                       if k not in _EXTRACTION_FILE_STRIP} for f in extracted],
             "words": len(draft_text.split()),
             # Which file was read as which section, so a mis-map is visible on
             # screen rather than silently shaping the score.
@@ -4879,7 +4908,7 @@ async def section_check_upload(
     read = _dt.extract_upload(file.filename or "file", data)
     if not (read.get("text") or "").strip():
         return {"submission_id": submission_id, "result": None,
-                "extraction": {k: v for k, v in read.items() if k != "text"},
+                "extraction": {k: v for k, v in read.items() if k not in _EXTRACTION_FILE_STRIP},
                 "error": read.get("error") or "Couldn't read any text from that file."}
 
     result = _dr.review_section(read["text"], section=section, rulebook=rulebook,
@@ -4887,8 +4916,11 @@ async def section_check_upload(
     return {
         "submission_id": submission_id,
         "result": result,
-        # The extracted TEXT is deliberately not echoed back.
-        "extraction": {k: v for k, v in read.items() if k != "text"},
+        # The extracted TEXT is deliberately not echoed back -- and neither is
+        # `page_texts`, which `extract_upload` sets unconditionally on every
+        # PDF read (this endpoint passes no `sections=`, so the ledger keys
+        # never populate here, but `page_texts` still would without this).
+        "extraction": {k: v for k, v in read.items() if k not in _EXTRACTION_FILE_STRIP},
     }
 
 

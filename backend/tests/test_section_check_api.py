@@ -211,6 +211,40 @@ def test_upload_never_echoes_the_extracted_text_back(ctx):
     assert FIVE_LINE not in json.dumps(body)
 
 
+def test_upload_never_echoes_the_manuscript_page_by_page(ctx):
+    """`document_text.extract_upload` sets `out["page_texts"]` UNCONDITIONALLY
+    on every PDF read, not only a structurally-split one -- and this endpoint
+    passes no `sections=`, so `section_spans`/`page_ledger` never populate
+    here, but `page_texts` (the PI's complete page-by-page manuscript) still
+    would without an explicit strip. Same exposure class, same fix, as
+    `test_the_uploaded_manuscript_text_is_never_echoed_page_by_page` in
+    test_draft_review_api_e2e.py -- and a real PDF (reportlab) so
+    `_extract_pdf` actually populates `page_texts`, not an empty list."""
+    reportlab = pytest.importorskip("reportlab")
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    import io
+
+    buf = io.BytesIO()
+    canv = canvas.Canvas(buf, pagesize=letter)
+    canv.drawString(72, 720, "Project Summary")
+    canv.drawString(72, 700, FIVE_LINE)
+    canv.showPage()
+    canv.save()
+    pdf_bytes = buf.getvalue()
+
+    c, sub_id, _, _ = ctx
+    r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
+               data={"section": "project_summary", "rulebook": "the PAPPG"},
+               files={"file": ("x.pdf", pdf_bytes, "application/pdf")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["result"] is not None
+    assert "page_texts" not in body["extraction"], body["extraction"]
+    assert "text" not in body["extraction"]
+    assert FIVE_LINE not in json.dumps(body)
+
+
 def test_upload_unknown_section_is_400(ctx):
     c, sub_id, _, _ = ctx
     r = c.post(f"/api/me/submissions/{sub_id}/section-check/upload",
