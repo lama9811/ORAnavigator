@@ -190,6 +190,74 @@ def _budget_table(year_results: list, multi: bool) -> dict:
     return {"columns": columns, "rows": rows}
 
 
+def _months(v, warnings, field):
+    """Coerce person-months to 0-12. Junk -> 0 with a warning."""
+    if v in (None, ""):
+        return 0.0
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        warnings.append(f"Could not read {field} '{v}'; using 0.")
+        return 0.0
+    if x < 0:
+        warnings.append(f"{field.capitalize()} was negative; using 0.")
+        return 0.0
+    if x > 12:
+        warnings.append(f"{field.capitalize()} over 12; clamped to 12.")
+        return 12.0
+    return x
+
+
+# ── the one MTDC + F&A calculation, shared by every budget template ────────
+def mtdc_and_fa(direct_total, equipment, participant_support, subawards,
+                extra_exempt=0.0, fa_year=None, fa_rate_key=None, warnings=None):
+    """MTDC base + F&A, used by BOTH the generic and the NSF Form 1030 templates.
+
+    MTDC (2 CFR 200.1) = total direct costs MINUS equipment, participant
+    support, the portion of EACH subaward over $25,000, and any separately
+    exempt items (tuition remission, scholarships, rent, patient care).
+
+    This lives in one place on purpose: F&A-on-MTDC is the number a PI has to
+    be able to trust, and two implementations would eventually disagree.
+    """
+    warnings = warnings if warnings is not None else []
+
+    year = fa_year or DEFAULT_FA_YEAR
+    if year not in FA_RATES:
+        warnings.append(f"Unknown F&A year '{year}'; using {DEFAULT_FA_YEAR}.")
+        year = DEFAULT_FA_YEAR
+    year_rates = FA_RATES[year]
+    key = fa_rate_key or DEFAULT_FA_KEY
+    if key not in year_rates:
+        warnings.append(f"Unknown F&A rate '{key}'; using {DEFAULT_FA_KEY}.")
+        key = DEFAULT_FA_KEY
+    label, rate = year_rates[key]
+
+    sub_over = round(sum(float(s or 0) - SUBAWARD_MTDC_CAP
+                         for s in (subawards or [])
+                         if float(s or 0) > SUBAWARD_MTDC_CAP), 2)
+    exempt = round(float(extra_exempt or 0), 2)
+    base = round(float(direct_total or 0) - float(equipment or 0)
+                 - float(participant_support or 0) - sub_over - exempt, 2)
+    if base < 0:
+        base = 0.0
+
+    return {
+        "mtdc_base": base,
+        "exclusions": {
+            "equipment": round(float(equipment or 0), 2),
+            "participant_support": round(float(participant_support or 0), 2),
+            "subaward_over_25k": sub_over,
+            "mtdc_exempt": exempt,
+        },
+        "fa_year": year,
+        "fa_rate_key": key,
+        "fa_rate": rate,
+        "fa_rate_label": label,
+        "fa_amount": round(base * rate, 2),
+    }
+
+
 def compute_budget(inputs: dict) -> dict:
     """Compute a grant budget. Single-year by default; when `project_years` > 1,
     project the Year-1 line items across the project with `escalation_pct`
@@ -345,18 +413,6 @@ def _compute_single(inputs: dict) -> dict:
     inputs = inputs or {}
     warnings: list[str] = []
 
-    # F&A rate selection
-    year = inputs.get("fa_year") or DEFAULT_FA_YEAR
-    if year not in FA_RATES:
-        warnings.append(f"Unknown F&A year '{year}'; using {DEFAULT_FA_YEAR}.")
-        year = DEFAULT_FA_YEAR
-    year_rates = FA_RATES[year]
-    fa_key = inputs.get("fa_rate_key") or DEFAULT_FA_KEY
-    if fa_key not in year_rates:
-        warnings.append(f"Unknown F&A rate '{fa_key}'; using {DEFAULT_FA_KEY}.")
-        fa_key = DEFAULT_FA_KEY
-    fa_label, fa_rate = year_rates[fa_key]
-
     # Personnel
     personnel = []
     for p in inputs.get("people") or []:
@@ -397,13 +453,19 @@ def _compute_single(inputs: dict) -> dict:
         personnel_total + equipment + travel + supplies + participant + other + subawards_total, 2
     )
 
-    # Modified Total Direct Costs (MTDC) — the base F&A is charged on
-    sub_over_25k = round(sum(max(0.0, s - SUBAWARD_MTDC_CAP) for s in subawards), 2)
-    mtdc = round(direct - equipment - participant - sub_over_25k, 2)
-    if mtdc < 0:
-        mtdc = 0.0
-
-    fa_amount = round(mtdc * fa_rate, 2)
+    # Modified Total Direct Costs (MTDC) + F&A — the shared engine, so this
+    # template and the NSF Form 1030 one can never disagree.
+    eng = mtdc_and_fa(
+        direct_total=direct, equipment=equipment,
+        participant_support=participant, subawards=subawards,
+        fa_year=inputs.get("fa_year"), fa_rate_key=inputs.get("fa_rate_key"),
+        warnings=warnings,
+    )
+    year, fa_key = eng["fa_year"], eng["fa_rate_key"]
+    fa_rate, fa_label = eng["fa_rate"], eng["fa_rate_label"]
+    mtdc = eng["mtdc_base"]
+    sub_over_25k = eng["exclusions"]["subaward_over_25k"]
+    fa_amount = eng["fa_amount"]
     total = round(direct + fa_amount, 2)
 
     # Sponsor cap check
