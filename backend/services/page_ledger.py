@@ -83,12 +83,28 @@ def receipt_ok(page_body: str, quote: str) -> bool:
     precision of a claim -- a weaker job than golden rule 2's evidence gate, and
     deliberately a weaker test.
 
-    What is NOT given up is adjacency: the words must appear as a contiguous run
-    in the page's own order, so a quote assembled from scattered phrases fails.
-    Verified over the whole 56-page document: 0 of 56 wrong-page quotes accepted.
+    Adjacency holds for an ordinary quote: the words must appear as a
+    contiguous run in the page's own order, so a quote assembled from
+    scattered phrases fails. The one exception is an ELLIPSIS-abridged quote
+    ("fragment ... fragment"), which `quote_in`'s own abridgement fallback
+    accepts when each fragment individually clears its length floor and
+    appears on the page in order -- never across a gap it invented, and never
+    across a PAGE boundary, because `page_body` is only ever this one page's
+    text. Verified over the whole 56-page document: 0 of 56 wrong-page quotes
+    accepted.
     """
     if not (quote or "").strip():
         return False
+    # SELF-CLEANING, NOT A CONVENTION. `page_body` used to be a bare parameter
+    # name trusting the caller had already run it through `body_text` -- a RAW
+    # page handed in directly re-opens the exact furniture-widening hole this
+    # module exists to close, because `quote_in`'s degenerate single-page path
+    # only goes inert once the page marker is gone. Measured: a caller who
+    # skips `body_text` and hands `receipt_ok` a raw page gets the hole back,
+    # verbatim. Idempotent -- an already-cleaned body has no marker left to
+    # strip and comes back unchanged -- so this costs nothing on the path every
+    # caller was already meant to take, and closes it for the one that forgets.
+    page_body = body_text(page_body)
     qwords = _words(quote)
     if len(qwords) < RECEIPT_MIN_WORDS:
         return False

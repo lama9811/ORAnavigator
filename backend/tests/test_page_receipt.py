@@ -105,9 +105,38 @@ def test_the_quote_in_furniture_hole_is_closed():
     # real caller does before calling receipt_ok), the same forgery is rejected.
     assert not pl.receipt_ok(pl.body_text(RAW_PAGE, FURNITURE), forged)
 
+    # receipt_ok MUST enforce this itself, not merely reward a caller who
+    # remembers to pre-clean. Handed the RAW page directly -- no body_text
+    # call at all -- it must still reject the forgery.
+    assert not pl.receipt_ok(RAW_PAGE, forged)
+
+
+def test_an_ellipsis_can_span_non_adjacent_lines_on_ONE_page():
+    """The adjacency claim in `receipt_ok`'s docstring has a named exception:
+    `quote_in`'s own abridgement fallback accepts two fragments joined by an
+    ellipsis when each fragment, on its own, is present on the page in order --
+    even with real prose between them. Both fragments here are lines 1 and 4 of
+    PAGE's body (two lines apart, never merged by furniture-stripping), each
+    well over the fragment floor, so this pins the behaviour as real rather
+    than assumed from reading `text_match`. It cannot reach across a page: a
+    fragment from OTHER would still fail, because page_body is one page only.
+    """
+    quote = ("The research yields journal articles with manuscripts hosted"
+              " ... "
+              "The research may also produce quantitative data on video hits")
+    assert pl.receipt_ok(_body(PAGE), quote)
+    cross_page = ("The research yields journal articles with manuscripts hosted"
+                  " ... "
+                  "Details of my undergraduate and graduate mentoring are")
+    assert not pl.receipt_ok(_body(PAGE), cross_page)
+
 
 def test_a_quote_shorter_than_the_floor_is_rejected():
-    assert not pl.receipt_ok(_body(PAGE), "The research yields")
+    # 5 words -- one short of RECEIPT_MIN_WORDS -- and a REAL, in-order
+    # substring of the page otherwise, so this pins the floor at exactly 6
+    # rather than merely proving some floor >= 4 exists. Lower RECEIPT_MIN_WORDS
+    # to 5 and this quote would verify; the test would then fail to catch it.
+    assert not pl.receipt_ok(_body(PAGE), "The research yields journal articles")
 
 
 def test_an_empty_quote_never_verifies():
@@ -135,6 +164,13 @@ def test_furniture_is_found_by_repetition_not_by_wording():
 def test_a_page_with_no_body_text_is_blank():
     assert pl.is_blank(_body("Submitted/PI: Dwight A Williams Ii /Proposal No: 2503008\nPage 49 of 56"))
     assert not pl.is_blank(_body(PAGE))
+
+
+def test_the_blank_threshold_is_exactly_40_chars():
+    # 300+ chars vs 0 chars (the case above) passes for any BLANK_CHARS in
+    # 1..300 -- not a pin. 39 vs 40 is the actual boundary.
+    assert pl.is_blank("x" * (pl.BLANK_CHARS - 1))
+    assert not pl.is_blank("x" * pl.BLANK_CHARS)
 
 
 def test_the_page_marker_is_stripped_even_when_it_is_not_repeated():
