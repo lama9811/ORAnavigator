@@ -420,6 +420,17 @@ def split(data: bytes, page_texts: list, sections: dict):
                     merged[key][0] = min(merged[key][0], pending_forward[0])
                     pending_forward = []
                 current = key
+            elif _TOC_RE.search(page_texts[first] or ""):
+                # NSF's own Table of Contents page is never part of any
+                # proposal section. It must not fold BACKWARD into a "full"
+                # predecessor (Project Summary, typically) and must not be
+                # deferred FORWARD into whatever section happens to come
+                # next (Project Description, typically) -- that forward
+                # defer is exactly how it entered project_description. Left
+                # unassigned here; the page-ledger's model walk labels it
+                # `table_of_contents` (or leaves it unassigned, which is
+                # harmless: one page, and the section holds no rules).
+                continue
             elif current is not None and not _full(current):
                 merged[current][1] = max(merged[current][1], last)
             elif current is not None:

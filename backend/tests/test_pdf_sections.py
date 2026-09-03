@@ -318,3 +318,104 @@ def test_without_a_structural_split_the_model_is_still_asked():
         locate_calls = [c for c in gj.call_args_list
                         if "Segment this grant proposal" in str(c)]
     assert locate_calls, "the locate call was lost for the paste path"
+
+
+# ── the table of contents page is not a section ─────────────────────────────
+
+_TOC_HEADER = [
+    "TABLE OF CONTENTS",
+    "Total No. of Page No.*",
+    "Cover Sheet for Proposal to the National Science Foundation",
+]
+
+
+def test_the_toc_page_is_not_folded_into_the_section_that_follows_it():
+    """The measured real-document bug: NSF's own Table of Contents page names
+    no section, so it is unlabelled -- and an unlabelled block between a FULL
+    predecessor and the next labelled section used to be deferred FORWARD
+    into that next section (`pending_forward`, meant for budget-form pages
+    with no name of their own). On the awarded package that pulled the TOC
+    page into `project_description`, turning its correct 15-page span into
+    16 and, worse, making the page-ledger's structural pin refuse the
+    model's correct `table_of_contents` answer for that page.
+
+    Shape: a short roster-corroborated section (Project Summary, 1 page,
+    "full" the moment its own page is seen) immediately followed by the TOC
+    page, immediately followed by a longer section (Project Description).
+    """
+    sections = _sections("Project Summary", "Project Description", "References Cited")
+    toc_text = "\n".join(_TOC_HEADER + [
+        "Project Summary 1",
+        "Project Description 6",
+        "References Cited 1",
+    ])
+    page_texts = [
+        "Project Summary\nOverview text for the summary.",          # 0
+        toc_text,                                                    # 1 -- TOC
+        "Project Description\nNarrative page 1.",                    # 2
+        "continuation narrative page 2",                             # 3
+        "continuation narrative page 3",                             # 4
+        "continuation narrative page 4",                             # 5
+        "continuation narrative page 5",                             # 6
+        "continuation narrative page 6",                             # 7
+        "References Cited\n[1] Some Citation, 2020.",                # 8
+    ]
+    data = _merged_pdf([
+        (1, "Helvetica", "Project Summary"),
+        (1, "Times-Roman", "Table of Contents"),
+        (6, "Courier", "Project Description"),
+        (1, "Helvetica-Bold", "References Cited"),
+    ])
+
+    spans, report = ps.split(data, page_texts, sections)
+
+    assert report["reason"] is None, report
+    assert "project_description" in spans, spans
+    assert spans["project_description"]["pages"] == 6, spans["project_description"]
+    assert "TABLE OF CONTENTS" not in spans["project_description"]["text"], \
+        "the table of contents page leaked into project_description"
+
+
+def test_budget_form_pages_still_fold_forward_into_the_section_they_belong_to():
+    """The mirror, and what must NOT regress: an unlabelled block that does
+    NOT match the table-of-contents pattern -- NSF's own budget SUMMARY form
+    pages, which name no section -- sits between a section that has already
+    met its stated page count (References Cited) and the next labelled
+    section (Budget). It must still defer FORWARD and be absorbed into
+    Budget, exactly as `pending_forward` was built to do. Without this, a
+    backward-only fold gave References Cited 10 pages against its stated 6
+    and destroyed the whole split.
+    """
+    sections = _sections("Project Summary", "References Cited", "Budget")
+    toc_text = "\n".join(_TOC_HEADER + [
+        "Project Summary 1",
+        "References Cited 1",
+        "Budget 5",
+    ])
+    page_texts = [
+        "Project Summary\nOverview text.",                                  # 0
+        toc_text,                                                            # 1 -- TOC
+        "References Cited\n[1] Some Citation, 2020.",                       # 2
+        "SUPPLEMENTAL FORM PAGE\nTotal direct costs by category.",          # 3 -- unnamed form
+        "SUPPLEMENTAL FORM PAGE TWO\nIndirect cost summary.",               # 4 -- unnamed form
+        "Budget\nPersonnel costs itemized below.",                          # 5
+        "continuation budget detail page two",                              # 6
+        "continuation budget detail page three",                            # 7
+    ]
+    data = _merged_pdf([
+        (1, "Helvetica", "Project Summary"),
+        (1, "Times-Roman", "Table of Contents"),
+        (1, "Courier", "References Cited"),
+        (2, "Helvetica-Bold", "Supplemental form"),
+        (3, "Times-BoldItalic", "Budget"),
+    ])
+
+    spans, report = ps.split(data, page_texts, sections)
+
+    assert report["reason"] is None, report
+    assert "references_cited" in spans and "budget" in spans, spans
+    assert spans["references_cited"]["pages"] == 1, spans["references_cited"]
+    assert spans["budget"]["pages"] == 5, spans["budget"]
+    assert "SUPPLEMENTAL FORM PAGE" in spans["budget"]["text"], \
+        "the unnamed budget form pages were not folded forward into Budget"
+    assert "SUPPLEMENTAL FORM PAGE" not in spans["references_cited"]["text"]
