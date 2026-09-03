@@ -464,3 +464,131 @@ def add_year(doc, escalation_pct=None):
 
     years.append(new)
     return doc
+
+
+# ── Budget justification (deterministic; AI polish is layered at the endpoint)
+def _fmt(amount):
+    return f"${amount:,.0f}"
+
+
+def _months_phrase(row):
+    parts = []
+    for key, label in (("cal", "calendar"), ("acad", "academic"), ("sumr", "summer")):
+        if row.get(key):
+            parts.append(f"{row[key]:g} {label} months")
+    return ", ".join(parts) or "no person-months"
+
+
+def draft_justification(doc, computed=None):
+    """Deterministic NSF budget justification. Figures come ONLY from `computed`.
+
+    The AI polish is layered at the endpoint with a hard fallback to this text,
+    so a justification always returns even when Gemini is unavailable.
+    """
+    computed = computed or compute_document(doc)
+    lines = ["BUDGET JUSTIFICATION", ""]
+
+    for yc in computed["years"]:
+        L = yc["lines"]
+        lines.append(f"Year {yc['year']}")
+        lines.append("")
+
+        paid_a = [r for r in L["A"]["rows"] if r["salary"] > 0]
+        if paid_a:
+            lines.append("A. Senior/Key Personnel")
+            for row in paid_a:
+                role = f" ({row['role']})" if row["role"] else ""
+                lines.append(
+                    f"  - {row['name']}{role}: {_months_phrase(row)} at a base "
+                    f"salary of {_fmt(row['base_salary'])} = {_fmt(row['salary'])}, "
+                    f"plus {row['fringe_label']} fringe at "
+                    f"{row['fringe_rate'] * 100:.0f}% = {_fmt(row['fringe'])}.")
+            lines.append("")
+
+        paid_b = [r for r in L["B"]["rows"] if r["amount"] > 0]
+        if paid_b:
+            lines.append("B. Other Personnel")
+            for row in paid_b:
+                # Counts go in brackets after the label, as on the form itself
+                # ("3.( 1 ) GRADUATE STUDENTS") -- avoids "1 Graduate Students".
+                count = f" ({row['count']})" if row["count"] else ""
+                lines.append(f"  - {row['label']}{count}: {_fmt(row['amount'])}, plus "
+                             f"fringe at {row['fringe_rate'] * 100:.0f}% "
+                             f"= {_fmt(row['fringe'])}.")
+            lines.append("")
+
+        if L["C"]:
+            lines.append(f"C. Fringe Benefits: {_fmt(L['C'])} total, applied per "
+                         f"employee category at Morgan State's negotiated rates.")
+            lines.append("")
+
+        if L["D"]["total"]:
+            lines.append("D. Equipment")
+            for row in L["D"]["rows"]:
+                if row["amount"] > 0:
+                    lines.append(f"  - {row['description'] or 'Unnamed item'}: "
+                                 f"{_fmt(row['amount'])}.")
+            lines.append(f"  Total equipment: {_fmt(L['D']['total'])}.")
+            lines.append("")
+
+        if L["E"]["total"]:
+            lines.append("E. Travel")
+            if L["E"]["domestic"]:
+                detail = "; ".join(r["description"] for r in L["E"]["domestic_rows"]
+                                   if r["description"])
+                lines.append(f"  - Domestic: {_fmt(L['E']['domestic'])}."
+                             + (f" {detail}." if detail else ""))
+            if L["E"]["international"]:
+                detail = "; ".join(r["description"] for r in L["E"]["international_rows"]
+                                   if r["description"])
+                lines.append(f"  - International: {_fmt(L['E']['international'])}."
+                             + (f" {detail}." if detail else "")
+                             + " Foreign travel will use U.S.-flag air carriers as "
+                               "required by the Fly America Act.")
+            lines.append("")
+
+        if L["F"]["total"]:
+            parts = ", ".join(f"{k} {_fmt(L['F'][k])}"
+                              for k in ("stipends", "travel", "subsistence", "other")
+                              if L["F"][k])
+            lines.append(f"F. Participant Support: {_fmt(L['F']['total'])} for "
+                         f"{L['F']['count']} participants - {parts}. No F&A is "
+                         f"charged on participant support costs.")
+            lines.append("")
+
+        if L["G"]["total"]:
+            lines.append("G. Other Direct Costs")
+            for key, label in G_ITEM_LINES:
+                if L["G"][key]:
+                    lines.append(f"  - {label}: {_fmt(L['G'][key])}.")
+            for s in L["G"]["subawards"]["rows"]:
+                if s["amount"] > 0:
+                    note = ""
+                    if s["amount"] > SUBAWARD_MTDC_CAP:
+                        note = (f" Only the first {_fmt(SUBAWARD_MTDC_CAP)} is "
+                                f"included in the F&A base.")
+                    lines.append(f"  - Subaward to {s['organization'] or 'a subrecipient'}: "
+                                 f"{_fmt(s['amount'])}.{note}")
+            for it in L["G"]["other_rows"]:
+                if it["amount"] > 0:
+                    note = " (excluded from the F&A base)" if it["mtdc_exempt"] else ""
+                    lines.append(f"  - {it['description'] or 'Other'}: "
+                                 f"{_fmt(it['amount'])}{note}.")
+            lines.append("")
+
+        lines.append(
+            f"Total direct costs for Year {yc['year']} are {_fmt(L['H'])}. "
+            f"Facilities & Administrative costs are applied at the "
+            f"{yc['fa']['label']} rate of {yc['fa']['rate'] * 100:.0f}% on the "
+            f"modified total direct cost base of {_fmt(yc['mtdc']['base'])}, "
+            f"yielding {_fmt(L['I'])}. Total for Year {yc['year']}: {_fmt(L['J'])}.")
+        lines.append("")
+
+    if len(computed["years"]) > 1:
+        c = computed["cumulative"]["lines"]
+        lines.append(
+            f"Cumulative: total direct costs of {_fmt(c['H'])} and F&A of "
+            f"{_fmt(c['I'])} across {len(computed['years'])} years, for a total "
+            f"request of {_fmt(c['L'])}.")
+
+    return "\n".join(lines).strip()

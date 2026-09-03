@@ -379,3 +379,58 @@ def test_escalation_rate_is_overridable():
     doc["years"][0]["senior"][0]["base_salary"] = 100_000
     out = nb.add_year(doc, escalation_pct=0)
     assert out["years"][1]["senior"][0]["base_salary"] == 100_000.0
+
+
+# ---------------------------------------------------------------------------
+# The budget justification (deterministic; figures come only from `computed`)
+# ---------------------------------------------------------------------------
+
+def _worked_doc():
+    doc = nb.blank_document()
+    s = doc["years"][0]
+    s["senior"][0].update(name="Dr. Oladunni", role="PI", base_salary=90_000,
+                          appointment_basis="academic_9", acad=2, fringe_key="faculty_ay")
+    s["equipment"] = [{"description": "Confocal microscope", "amount": 40_000}]
+    s["travel"]["international"] = [{"description": "Collaborator visit", "amount": 2_000}]
+    s["participant_support"] = {"count": 15, "stipends": 10_000, "travel": None,
+                                "subsistence": None, "other": None}
+    s["other_direct"]["subawards"] = [{"organization": "Partner U", "amount": 50_000}]
+    return doc
+
+
+def test_justification_names_each_senior_person_with_months_and_fringe():
+    text = nb.draft_justification(_worked_doc())
+    assert "Dr. Oladunni" in text
+    assert "2 academic months" in text
+    assert "42%" in text
+
+
+def test_justification_lists_each_equipment_item():
+    assert "Confocal microscope" in nb.draft_justification(_worked_doc())
+
+
+def test_justification_reports_the_participant_count():
+    assert "15 participants" in nb.draft_justification(_worked_doc())
+
+
+def test_justification_names_each_subaward_and_its_mtdc_note():
+    text = nb.draft_justification(_worked_doc())
+    assert "Partner U" in text
+    assert "$25,000" in text
+
+
+def test_justification_states_the_fa_rate_and_base():
+    text = nb.draft_justification(_worked_doc())
+    assert "54%" in text
+    assert "modified total direct cost" in text.lower()
+
+
+def test_justification_of_a_blank_budget_does_not_crash():
+    assert nb.draft_justification(nb.blank_document())
+
+
+def test_multi_year_justification_has_a_cumulative_paragraph():
+    doc = nb.add_year(_worked_doc())
+    text = nb.draft_justification(doc)
+    assert "Year 1" in text and "Year 2" in text
+    assert "cumulative" in text.lower()
