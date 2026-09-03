@@ -27,13 +27,42 @@ def test_a_complete_ledger_leaves_the_score_alone():
     assert out["pages_unaccounted"] == []
 
 
-def test_an_unaccounted_page_withholds_the_score():
+def test_enough_unaccounted_pages_withholds_the_score():
+    """Above the threshold (`max(2, 5% of the pages)`), unchanged: the score
+    is withheld and the message names the pages. Was
+    `test_an_unaccounted_page_withholds_the_score`, updated 2026-09-03 for
+    the fraction test below -- a single page out of two used to trip this;
+    on a 4-page ledger the threshold is `max(2, 0.2) == 2`, so it now takes
+    3 unaccounted pages to cross it."""
     ledger = [{"page": 1, "section": "project_summary", "source": "model"},
-              {"page": 2, "section": None, "source": "unassigned"}]
+              {"page": 2, "section": None, "source": "unassigned"},
+              {"page": 3, "section": None, "source": "unassigned"},
+              {"page": 4, "section": None, "source": "unassigned"}]
     out = dr.review_draft(DRAFT, profile=_profile(), use_ai=False, ledger=ledger)
     assert out["score"] is None
-    assert out["pages_unaccounted"] == [2]
-    assert "2" in (out["message"] or "")
+    assert out["pages_unaccounted"] == [2, 3, 4]
+    assert "could not be read and placed" in (out["message"] or "")
+    assert "2, 3, 4" in (out["message"] or "")
+
+
+def test_a_small_page_gap_does_not_force_the_page_gap_message():
+    """A PI uploaded a real 56-page package with ONE page unassigned and was
+    told the score was withheld -- disproportionate, and it contradicted the
+    live gate, which tolerates `<= 2` unaccounted as the ordinary residue of
+    a hard document. Below the threshold (`max(2, 5% of the pages)`) a lone
+    unaccounted page must not itself withhold the score -- see
+    `test_a_page_gap_withholds_a_REAL_ai_score` for the AI-on proof that a
+    real number survives. Here, with `use_ai=False`, the score is None for
+    the AI-outage reason, not the pages one, and the message says so: it is
+    the outage text, never the page-gap text, which is the tell that
+    `pages_ok` was True."""
+    ledger = ([{"page": 1, "section": "project_summary", "source": "model"}]
+              + [{"page": p, "section": None, "source": "blank"} for p in range(2, 56)]
+              + [{"page": 56, "section": None, "source": "unassigned"}])
+    out = dr.review_draft(DRAFT, profile=_profile(), use_ai=False, ledger=ledger)
+    assert out["pages_unaccounted"] == [56]
+    assert "could not be read and placed" not in (out["message"] or "")
+    assert "AI reviewer is unavailable" in (out["message"] or "")
 
 
 def test_the_ledger_rides_on_the_result():
@@ -100,8 +129,27 @@ def test_a_page_gap_withholds_a_REAL_ai_score(monkeypatch):
     assert isinstance(ok["score"]["percent"], (int, float))
     assert ok["score"]["percent"] == 100
 
+    # BELOW the threshold: one unaccounted page out of ten must not withhold
+    # a REAL score -- the fraction test, not a bare count. This is the case
+    # a real PI hit (one page out of a 56-page upload) and is the highest-
+    # value assertion in this file: a working AI answer surviving a small,
+    # ordinary gap rather than being thrown away over it.
+    small_gap = ([{"page": 1, "section": "project_summary", "source": "model"}]
+                 + [{"page": p, "section": None, "source": "blank"} for p in range(2, 10)]
+                 + [{"page": 10, "section": None, "source": "unassigned"}])
+    shown = dr.review_draft(DRAFT, profile=_profile(), use_ai=True, ledger=small_gap)
+    assert shown["ai"] is True
+    assert shown["score"] is not None, (
+        "one unaccounted page out of ten should not withhold a real score")
+    assert shown["score"]["percent"] == 100
+    assert shown["pages_unaccounted"] == [10]
+
+    # ABOVE the threshold: enough unaccounted pages still withholds, even
+    # with a genuine AI answer in hand.
     gap = [{"page": 1, "section": "project_summary", "source": "model"},
-           {"page": 2, "section": None, "source": "unassigned"}]
+           {"page": 2, "section": None, "source": "unassigned"},
+           {"page": 3, "section": None, "source": "unassigned"},
+           {"page": 4, "section": None, "source": "unassigned"}]
     withheld = dr.review_draft(DRAFT, profile=_profile(), use_ai=True, ledger=gap)
     assert withheld["ai"] is True
     assert withheld["score"] is None, (

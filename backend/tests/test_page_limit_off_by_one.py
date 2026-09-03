@@ -32,3 +32,17 @@ def test_the_contents_page_is_not_counted_in_the_project_description(monkeypatch
     rows = pl.build_ledger(PAGES, SECTIONS)
     assert pl.page_counts_from_ledger(rows)["project_description"] == 3
     assert next(r for r in rows if r["page"] == 2)["section"] is None
+
+    # THE COST OF LEAVING IT THERE, made explicit (fixed at the layer above,
+    # 2026-09-03): this test calls `build_ledger` directly, bypassing
+    # `pdf_sections.split()`, so no `NOT_A_SECTION` pin ever reaches it and
+    # page 2 falls all the way to `unassigned` -- which withholds the score.
+    # `document_text.extract_upload`'s real path (`test_document_text_ledger_
+    # wiring.py`) pins a TOC page it recognises to `excluded` instead, which
+    # `completeness()` counts as accounted for. This fixture is intentionally
+    # narrower (it only proves the page count, not the pin), so the gap below
+    # is expected here, not a regression.
+    ok, unaccounted = pl.completeness(rows)
+    assert ok is False and unaccounted == [2], (
+        "expected here -- this fixture bypasses pdf_sections.split(), which "
+        "is what pins the TOC page to `excluded` in the real ingestion path")

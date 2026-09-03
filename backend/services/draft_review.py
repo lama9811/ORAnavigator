@@ -1410,6 +1410,27 @@ def _coverage_warning(spans: dict, sections: dict) -> Optional[str]:
             "sections as separate files lets each one be checked properly.")
 
 
+def _too_many_unaccounted(unaccounted: list, total_pages: int) -> bool:
+    """True only when enough of the upload is unplaced that the score could
+    actually be wrong -- a FRACTION test, not a bare count.
+
+    Withholding on ANY unaccounted page contradicted our own live gate, which
+    tolerates `<= 2` on a real 56-page package as the ordinary residue of a
+    hard document (a garbled cover form, a handful of near-identical letter
+    openers) rather than a sign the number is untrustworthy. One page missing
+    out of 56 is not that; a proposal where a THIRD of the pages could not be
+    placed is. Same pattern as `_coverage_warning` above, for the same
+    reason: a threshold in a bare count would flag a big document too
+    eagerly and a small one not eagerly enough.
+
+    `max(2, 5% of the pages)` reproduces the gate's own tolerance on a
+    document that size (56 pages -> 2.8, so 1-2 unaccounted clears it and 3
+    trips it) while scaling up for a much longer package and down for a
+    short one, where even one unaccounted page is a larger share of the
+    whole."""
+    return len(unaccounted or []) > max(2, 0.05 * (total_pages or 0))
+
+
 def _wholly_out_of_package(findings: list, section_key: str) -> bool:
     """Every rule this section has was scoped out of a package review.
 
@@ -1589,15 +1610,24 @@ def review_draft(draft_text: str, *, profile: dict, title: Optional[str] = None,
 
     ai_used = bool(ai_located or ai_reviewed)
 
-    # EVERY PAGE ACCOUNTED FOR, OR NO NUMBER. A page left `unassigned` is one we
-    # cannot confirm was read; a percentage computed over the rest would
-    # describe our reading rather than the draft. Same rule as the AI-outage
-    # path below, added after an outage rendered a section 100% and green.
-    # `blank` counts as accounted for -- an empty page was read and found empty.
+    # MOST OF THE PAGES ACCOUNTED FOR, OR NO NUMBER. A page left `unassigned`
+    # is one we cannot confirm was read, and every one of them is reported --
+    # but withholding the score on ANY single gap was disproportionate on a
+    # real 56-page upload with one unplaced page, and it contradicted our own
+    # live gate, which tolerates `<= 2` unaccounted as acceptable. Both could
+    # not be right, so this is a FRACTION test now (`_too_many_unaccounted`),
+    # not a bare count -- the same move `_coverage_warning` above already
+    # makes for the same reason. Below the threshold the score is SHOWN and
+    # the warning still names the pages above it; that warning, not the
+    # number's absence, is what keeps the score honest. Same rule as the
+    # AI-outage path below, added after an outage rendered a section 100% and
+    # green. `blank` counts as accounted for -- an empty page was read and
+    # found empty.
     from services.page_ledger import completeness as _completeness
-    pages_ok, unaccounted = _completeness(ledger or [])
+    _pages_fully_ok, unaccounted = _completeness(ledger or [])
     _n_unaccounted = len(unaccounted)
     _plural = "" if _n_unaccounted == 1 else "s"
+    pages_ok = not _too_many_unaccounted(unaccounted, len(ledger or []))
 
     return {
         "solicitation": _solicitation_meta(profile),

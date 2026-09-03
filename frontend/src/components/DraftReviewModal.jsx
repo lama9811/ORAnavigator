@@ -560,12 +560,37 @@ function ExtractionReport({ extraction }) {
       )}
       {/* Which file was read as which section, so a mis-map is visible on
           screen rather than silently shaping the score. The backend has sent
-          this since it built the section map; this is the first render of it. */}
+          this since it built the section map; this is the first render of it.
+
+          "read as nothing" used to be the fallback for EVERY file whose
+          FILENAME matched no section — including a combined Research.gov PDF
+          whose own object-graph structure named several sections (`source:
+          "pdf_structure"`), which is the opposite of nothing: it is the
+          correct, deterministic outcome for exactly the file this feature
+          exists to handle. That reads like the upload failed when it did not
+          (fixed 2026-09-03 — a real user's package split cleanly into
+          several sections and this line still said "read as nothing").
+          `source: "unreadable"` is a genuine failure and already has its own
+          row above with the real error; a file that matched neither a
+          filename nor the PDF's own structure is not lost either — it is
+          still in the text the locate stage reads, so its sections are found
+          from content rather than from its name. */}
       {extraction.sections?.length > 0 && (
         <ul className="eir-extract-map">
           {extraction.sections.map((s) => (
             <li key={s.filename}>
-              <code>{s.filename}</code> read as <strong>{s.label || s.section || "nothing"}</strong>
+              <code>{s.filename}</code>{" "}
+              {s.source === "pdf_structure" && s.sections?.length > 0 ? (
+                <>split by the PDF's own structure into{" "}
+                  <strong>{s.sections.length}</strong> section
+                  {s.sections.length === 1 ? "" : "s"}</>
+              ) : s.source === "unreadable" ? (
+                <>could not be read — see above</>
+              ) : s.label || s.section ? (
+                <>read as <strong>{s.label || s.section}</strong></>
+              ) : (
+                <>matched no section by name — its sections are found from its text</>
+              )}
               {s.source === "filename_narrowed" && (
                 <span className="eir-extract-guess"> — matched on a shorter name; check this is right</span>
               )}
@@ -1085,7 +1110,8 @@ function FindingGroup({ label, words, items, solicitationId, forced }) {
 function collapseLedger(rows) {
   const out = [];
   for (const r of rows) {
-    const label = r.section || (r.source === "blank" ? "no readable text" : "not placed");
+    const label = r.section || (r.source === "blank" ? "no readable text"
+      : r.source === "excluded" ? "not part of any section" : "not placed");
     const outOfOrder = !!r.out_of_order;
     const last = out[out.length - 1];
     if (last && last.label === label && last.source === r.source &&
@@ -1228,11 +1254,22 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
               to quote itself back. Finding a page is not a judgement of what is on it.
             </span>
           </div>
+          {/* A page below the withhold threshold still gets named here, even
+              though the score IS showing — the warning, not the number's
+              absence, is what keeps the score honest. Whether it actually
+              held the score back depends on `result.score`, never on the
+              mere presence of an unaccounted page (fixed 2026-09-03 — this
+              used to claim "so the score is withheld" unconditionally, which
+              was false the moment one page out of a large upload could not
+              be placed and the score showed anyway). */}
           {result.pages_unaccounted?.length > 0 && (
             <p className="eir-ledger-warn">
               Page{result.pages_unaccounted.length > 1 ? "s" : ""}{" "}
-              {result.pages_unaccounted.join(", ")} could not be placed, so the score is
-              withheld. These pages were read — they were not judged.
+              {result.pages_unaccounted.join(", ")} could not be placed.{" "}
+              {result.score == null
+                ? "The completeness score is withheld until they can be confirmed."
+                : "The completeness score below still reflects the rest of your upload."}
+              {" "}These pages were read — they were not judged.
             </p>
           )}
           {result.toc_mismatch?.map((m) => (
@@ -1250,7 +1287,9 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
                 {r.from === r.to ? `p${r.from}` : `p${r.from}–${r.to}`}{" "}
                 {r.label}
                 <em>
-                  {{ structure: "from the PDF", model: "read", blank: "no text", unassigned: "not placed" }[r.source]}
+                  {{ structure: "from the PDF", model: "read", blank: "no text",
+                     excluded: "not a section (e.g. table of contents)",
+                     unassigned: "not placed" }[r.source]}
                   {/* Neutral, not a verdict -- this page's own receipt was
                       solid (it really is on this page and no other), it just
                       showed up after this section had already closed

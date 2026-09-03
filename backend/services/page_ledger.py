@@ -40,6 +40,19 @@ _PAGE_MARK = re.compile(r"^\s*page\s+\d+\s+of\s+\d+\s*$", re.I)
 
 _WORD = re.compile(r"[^a-z0-9]+")
 
+# A `structure` pin meaning "this page is not part of ANY proposal section,
+# and we know that deterministically" -- NSF's own Table of Contents page,
+# from `pdf_sections.split()`. Distinct from a real section key so
+# `build_ledger` can tell "pinned to a section" from "pinned to NOT a
+# section" -- conflating them either mislabels the page as a section it does
+# not belong to, or (the bug this constant fixes) leaves it `unassigned`,
+# which withholds the completeness score for pages that were never wrong to
+# begin with. `table_of_contents` is never a real key in a solicitation's
+# section universe (no rulebook rule is ever filed under it), so the model
+# walk could never answer it either -- the page was GUARANTEED unassigned on
+# every combined Research.gov package.
+NOT_A_SECTION = "__not_a_section__"
+
 
 def document_furniture(page_texts: list) -> frozenset:
     """Lines the PDF stamps on most pages -- never the author's words.
@@ -252,6 +265,26 @@ Each object:
 
 A page with a heading is named by its heading. A page with no heading -- a
 letter, a form, a continuation of prose -- belongs to whatever it continues.
+
+LETTERS ARE THE HARD CASE. Tell them apart by WHO is writing and WHAT they
+are committing to, never by tone or boilerplate phrasing alone:
+  - A letter of INTENT is filed as its own SEPARATE submission, usually months
+    before the proposal, by an authorized official on the applicant's behalf.
+    If a section value for it is offered, it names ONLY that separate
+    document -- never a letter that is part of THIS package.
+  - A letter of COLLABORATION is written by an outside person at ANOTHER
+    institution, committing THEMSELVES -- their own time, data, or
+    resources -- to the project ("I intend to collaborate...", "I agree to
+    provide...").
+  - A letter of INSTITUTIONAL SUPPORT is written by an official of the
+    APPLICANT'S OWN institution (a chair, dean, provost, or vice president
+    for research), on the institution's behalf, expressing support for the
+    PI or committing institutional resources ("I wish to express my support
+    of your proposal...", "the University commits to..."). If a section
+    value names institutional support, use it. If none does, such a letter
+    is a supporting/supplementary document, not a collaboration letter -- it
+    was not written by a collaborator, so do not file it there just because
+    no better label is offered.
 Return ONLY {"pages":[...]}."""
 
 
@@ -558,7 +591,13 @@ def build_ledger(page_texts: list, sections: dict, *,
         guess = answer.get("section")
         quote = answer.get("quote") or ""
 
-        if fixed:
+        if fixed == NOT_A_SECTION:
+            # ACCOUNTED FOR, not a gap -- `pdf_sections` determined this page
+            # deterministically (the TOC page) and it belongs to no section
+            # in this universe. `completeness()` only flags `unassigned`, so
+            # this source is enough on its own; nothing there needs to change.
+            row["source"] = "excluded"
+        elif fixed:
             row.update(section=fixed, source="structure")
             if guess and guess != fixed and guess in sections:
                 row["disagreed_with_model"] = guess
@@ -611,7 +650,10 @@ def completeness(rows: list) -> tuple:
 
     `blank` COUNTS as accounted for: a page with nothing on it was read and
     found empty, which is a fact about the document rather than a gap in our
-    reading. Only `unassigned` is a gap.
+    reading. So does `excluded` -- `pdf_sections` determined deterministically
+    that the page (NSF's own Table of Contents) belongs to no section in this
+    universe, which is a fact about the document too, not a failure to read
+    it. Only `unassigned` is a gap.
 
     Golden rule 3 -- this is called from `review_draft`, which must never
     raise. A non-dict row is skipped (there is no page number to report and

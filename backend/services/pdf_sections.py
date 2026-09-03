@@ -416,6 +416,11 @@ def split(data: bytes, page_texts: list, sections: dict):
         order: list = []
         current = None
         pending_forward: list = []
+        # Blocks this function itself decided are not part of ANY proposal
+        # section (the TOC page, below) -- tracked so the caller can mark
+        # them ACCOUNTED FOR without pretending they belong to a section.
+        # 0-based block boundaries, converted to 1-based page numbers below.
+        excluded_blocks: list = []
 
         def _full(key):
             want = toc_pages_for.get(key)
@@ -443,10 +448,20 @@ def split(data: bytes, page_texts: list, sections: dict):
                 # predecessor (Project Summary, typically) and must not be
                 # deferred FORWARD into whatever section happens to come
                 # next (Project Description, typically) -- that forward
-                # defer is exactly how it entered project_description. Left
-                # unassigned here; the page-ledger's model walk labels it
-                # `table_of_contents` (or leaves it unassigned, which is
-                # harmless: one page, and the section holds no rules).
+                # defer is exactly how it entered project_description.
+                #
+                # NOT harmless if left merely unassigned (corrected 2026-09-03):
+                # `table_of_contents` is never a real key in `profile["sections"]`
+                # -- `rulebook_baseline` has no rules under it, so nothing ever
+                # creates it -- so the page-ledger's model walk CANNOT label it
+                # that; `build_ledger` requires `guess in sections`. The page
+                # fell through to `unassigned` every time, which withheld the
+                # completeness score for the WHOLE review on every combined
+                # Research.gov package, deterministically -- not a rare gap, a
+                # guaranteed one. Recorded here instead, so the caller can mark
+                # it ACCOUNTED FOR (like a blank page) without inventing a
+                # section it does not belong to.
+                excluded_blocks.append((first, last))
                 continue
             elif current is not None and not _full(current):
                 merged[current][1] = max(merged[current][1], last)
@@ -558,6 +573,11 @@ def split(data: bytes, page_texts: list, sections: dict):
             spans[key] = {"text": full[s:e], "start": s, "end": e,
                           "pages": last - first + 1,
                           "marker": (page_texts[first].strip().splitlines() or [key])[0][:120]}
+        # 1-based page numbers, for `document_text` to pin into the ledger's
+        # `structure` map -- deliberately excluded, never section content.
+        if excluded_blocks:
+            report["excluded_pages"] = sorted(
+                p for f, l in excluded_blocks for p in range(f + 1, l + 2))
         return spans, report
     except Exception as exc:                     # golden rule 3
         print(f"[PDF-SECTIONS] split failed: {exc}")

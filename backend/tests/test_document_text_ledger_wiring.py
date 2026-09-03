@@ -113,8 +113,8 @@ def test_a_successful_structural_split_produces_a_full_ledger():
     # presence of `section_spans`.
     assert out.get("spans_are_structural") is True
 
-    # The TOC page (page 1) named nothing itself and stays unassigned; the
-    # three self-naming attachments are pinned to their OWN pages, not
+    # The TOC page (page 1) named nothing itself and belongs to no section;
+    # the three self-naming attachments are pinned to their OWN pages, not
     # smeared across the document by the structural split.
     by_page = {r["page"]: r["section"] for r in ledger}
     assert by_page[1] is None
@@ -122,6 +122,22 @@ def test_a_successful_structural_split_produces_a_full_ledger():
     assert by_page[4] == by_page[5] == "references_cited"
     assert by_page[6] == by_page[7] == by_page[8] == "facilities"
     assert all(r["source"] == "structure" for r in ledger if r["page"] != 1)
+
+    # THE TOC PAGE MUST BE ACCOUNTED FOR, NOT `unassigned` (fixed 2026-09-03).
+    # `table_of_contents` is never a real key in a real solicitation's section
+    # universe -- no rulebook rule is ever filed under it -- so the model
+    # walk could NEVER answer this page correctly, and it fell to
+    # `unassigned` every time. That withheld the completeness score for the
+    # WHOLE review on every combined Research.gov package, deterministically.
+    # `pdf_sections` now reports the page it deliberately excluded, and
+    # `document_text` pins it so `build_ledger` marks it `excluded` instead --
+    # accounted for, same as `blank`, without pretending it is a section.
+    by_page_row = {r["page"]: r for r in ledger}
+    assert by_page_row[1]["source"] == "excluded"
+    from services import page_ledger as pl
+    ok, unaccounted = pl.completeness(ledger)
+    assert ok is True
+    assert unaccounted == []
 
     spans = out.get("section_spans") or {}
     assert set(spans) == {"project_summary", "references_cited", "facilities"}

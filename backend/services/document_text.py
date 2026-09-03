@@ -276,6 +276,16 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
                 for page, (p0, p1) in enumerate(_pl._page_offsets(page_texts), start=1):
                     if span["start"] <= p0 and p1 <= span["end"]:
                         structure[page] = key
+            # Pages `pdf_sections` determined belong to NO section (the TOC
+            # page) -- pinned so `build_ledger` can mark them ACCOUNTED FOR
+            # rather than leaving them `unassigned`. `table_of_contents` is
+            # never a real key in `sections`, so the model walk could never
+            # answer it correctly either; every one of these pages was
+            # guaranteed to withhold the completeness score before this pin
+            # existed. Only ever widens what counts as accounted for -- a
+            # real section pin above always wins (this loop runs after).
+            for page in (report or {}).get("excluded_pages") or []:
+                structure.setdefault(page, _pl.NOT_A_SECTION)
 
             ledger = _pl.build_ledger(page_texts, sections, structure=structure)
             # `quote` is the PI's own manuscript text, copied verbatim from
