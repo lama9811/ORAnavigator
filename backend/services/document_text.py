@@ -507,10 +507,14 @@ def map_files_to_sections(files: list[dict], sections: dict) -> tuple[str, dict,
                     "pages": sec.get("pages"), "filename": f.get("filename"),
                     # A page the page-ledger walk gave this key but its own
                     # contiguous reach could not include (it stopped at an
-                    # interior page belonging to a different section).
-                    # `spans_from_ledger` always sets this (possibly `[]`);
-                    # without it here the fact silently vanished at this
-                    # repack, the only consumer `review_draft` actually reads.
+                    # interior page a DIFFERENT, in-order section genuinely
+                    # owns -- an `out_of_order` page never stops it; see
+                    # `page_ledger.spans_from_ledger`). `spans_from_ledger`
+                    # always sets this (possibly `[]`); without it here the
+                    # fact would silently vanish at this repack. NOBODY reads
+                    # it today -- checked directly, `review_draft` does not --
+                    # so this is provenance carried forward for whoever wires
+                    # a consumer next, not a claim that one exists yet.
                     "dropped_pages": sec.get("dropped_pages") or [],
                 }
                 placed.append(sec_key)

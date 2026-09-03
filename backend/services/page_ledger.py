@@ -158,6 +158,28 @@ def _receipt_is_solid(bodies: list, page_idx: int, quote: str) -> bool:
                    for i, other in enumerate(bodies))
 
 
+def _receipt_is_solid_safe(bodies: list, page_idx: int, quote: str) -> bool:
+    """`_receipt_is_solid`, guarded per page (golden rule 3).
+
+    `build_ledger`'s row loop called `_receipt_is_solid` directly with no
+    try/except, so a bug in the security check for ONE page would raise out
+    of the whole `for page in range(1, n + 1)` loop and lose EVERY row, not
+    just that page's -- the opposite of the per-page containment the rest of
+    this module goes out of its way to guarantee (`walk_pages`'s own window
+    map is wrapped in `_safe_ask_window` for exactly this reason, and
+    `build_ledger` already guards `walk_pages` itself, one level up). A false
+    refusal here at worst demotes one page's answer to `unassigned`, which
+    the modal already renders honestly; a raised exception losing every
+    row is strictly worse and is the exact failure this module exists to
+    prevent. Does NOT change what "solid" means -- `_receipt_is_solid`'s own
+    logic is untouched; this only decides what happens if it breaks."""
+    try:
+        return _receipt_is_solid(bodies, page_idx, quote)
+    except Exception as exc:                            # noqa: BLE001
+        print(f"[PAGE-LEDGER] _receipt_is_solid raised on page {page_idx + 1}: {exc}")
+        return False
+
+
 # Four pages per call, MEASURED not chosen. Over the real 56-page package:
 # 4 -> 56/56 receipts in 22.8s (14 calls); 12 -> 55/56 in 41.6s; 28 -> 54/56.
 # Smaller is more accurate AND faster, because short calls run concurrently
@@ -183,13 +205,19 @@ _PAGE_CHARS = 2600
 # as specific as it can be without becoming a page-specific script.
 _MAX_RETRY_ROUNDS = 3
 
-# Nonzero ONLY for re-ask calls -- the first pass stays at temperature 0.0
-# for reproducibility. MEASURED: at 0.0, a retry given the same
-# `retry_notes` (naming the same other page(s)) returns the SAME wrong
-# quote, round after round, because nothing about the prompt actually
-# differs -- a deterministic model given an unchanged prompt has no reason
-# to answer differently. This is what a bounded `_MAX_RETRY_ROUNDS` alone
-# could not fix.
+# Nonzero only for retry ROUNDS 2 AND 3 (`walk_pages` escalates by round --
+# see the comment at its retry-round temperature line). The FIRST pass and
+# retry ROUND 1 both stay at temperature 0.0: round 1's prompt already
+# differs from the first pass -- a single-page window plus a brand-new
+# `retry_notes` line -- so it already reaches a different completion for
+# free, and MEASURED, round 1 clears most of what the first pass left shaky.
+# The evidence for a nonzero temperature is rounds 2 and 3 specifically:
+# at 0.0, a retry given the same `retry_notes` text (naming the same other
+# page(s), because nothing changed since the last round) returns the SAME
+# wrong quote, round after round -- a deterministic model given an
+# unchanged prompt has no reason to answer differently. This is what a
+# bounded `_MAX_RETRY_ROUNDS` alone could not fix, and it is not needed
+# where the prompt already changed on its own.
 _RETRY_TEMPERATURE = 0.4
 
 _WALK_SYSTEM = """You are reading ONE PAGE AT A TIME of an assembled grant proposal PDF.
@@ -412,6 +440,23 @@ def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
         # no answer at all.
         retry_notes: dict = {}
         for p, ans in list(got.items()):
+            if ans.get("section") == "unsure":
+                # `_WALK_SYSTEM` explicitly invites "unsure" for a page the
+                # model genuinely cannot place -- it is not an omission, so it
+                # never fails the `not ans.get("quote")` check below and was
+                # never routed into `missing` for a second look. That left it
+                # permanently `unassigned` in `build_ledger` with only ONE
+                # attempt ever made, unlike every other shaky answer here.
+                # Give it the same second chance, once, before giving up.
+                retry_notes[p] = (
+                    "You answered \"unsure\" for this page last time. Look "
+                    "again at its own content, not just headers or stamps, "
+                    "and give your best section guess plus a verbatim quote "
+                    "of at least 6 words unique to this page -- only answer "
+                    "\"unsure\" again if the page truly has no identifiable "
+                    "content at all.")
+                got.pop(p, None)
+                continue
             if ans.get("section") not in section_keys or not ans.get("quote"):
                 continue
             quote = ans["quote"]
@@ -443,13 +488,25 @@ def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
         missing = [p for p in range(1, n + 1) if p not in got]
         if not missing:
             break
+        # ESCALATE BY ROUND, don't start nondeterministic. Round 1's prompt
+        # already differs from the first windowed pass -- a single-page
+        # window plus a brand-new `retry_notes` line naming the specific
+        # colliding page(s) -- so at temperature 0.0 it is already asking a
+        # materially different question and reaches a different completion
+        # for free; measured, round 1 clears most of what the first pass
+        # left shaky. `_RETRY_TEMPERATURE` was measured necessary only for
+        # rounds 2 and 3, where the retry note repeats VERBATIM round over
+        # round and a deterministic model given an unchanged prompt has no
+        # reason to answer differently. Reproducibility is free where the
+        # prompt has already changed; only pay for it where it hasn't.
+        temperature = 0.0 if _round == 1 else _RETRY_TEMPERATURE
         print(f"[PAGE-LEDGER] round {_round}: re-asking {len(missing)} page(s): {missing}")
         try:
             with ThreadPoolExecutor(max_workers=4) as pool:
                 for part in pool.map(
                         lambda p: _safe_ask_window([p], page_texts, section_keys, known,
                                                     retry_notes=retry_notes,
-                                                    temperature=_RETRY_TEMPERATURE), missing):
+                                                    temperature=temperature), missing):
                     got.update(part or {})
         except Exception as exc:                   # noqa: BLE001
             print(f"[PAGE-LEDGER] re-ask round {_round} failed: {exc}")
@@ -507,7 +564,7 @@ def build_ledger(page_texts: list, sections: dict, *,
                 row["disagreed_with_model"] = guess
         elif is_blank(body):
             row["source"] = "blank"
-        elif guess in sections and _receipt_is_solid(bodies, page - 1, quote):
+        elif guess in sections and _receipt_is_solid_safe(bodies, page - 1, quote):
             # THE LEDGER'S OWN VERIFICATION. `_receipt_is_solid` is where a
             # row is actually decided verified -- not `receipt_ok` alone,
             # which only proves the quote is ON this page, never that it is
@@ -606,6 +663,25 @@ def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
     `text` is always exactly `joined[start:end]` -- the offsets can never
     disagree with the text they claim to address.
 
+    AN `out_of_order` PAGE IS NEVER A BARRIER, EVEN THOUGH IT NAMES A
+    DIFFERENT SECTION. `build_ledger` records that flag on a page whose
+    receipt is SOLID -- unique to that page, document-wide -- but which
+    reappears after its section had already closed out. Letting it stop a
+    span turns the softening in `build_ledger` (refuse -> flag) into a
+    silent section-truncation bug: a solitary out-of-order page mislabelled
+    into the MIDDLE of a real run used to sever everything past it (measured:
+    an 8-page section fell to 3, and the 5 real pages behind the intruder
+    were dropped from BOTH the span's text and its page count, so the
+    review judged 3 pages of content against an 8-page requirement and
+    reported real coverage `not_found`). An out-of-order page is absorbed
+    exactly like a `blank`/`unassigned` interior -- it does not join the
+    span it interrupts (see `page_counts_from_ledger`, which likewise never
+    credits it to the section it claims), but it also does not sever the
+    span running through it. The intruder's OWN section still gets its own
+    (shorter, correctly-dropped) span from the ordinary rule above --
+    nothing here changes what it reports for the section that page actually
+    claims to be.
+
     A key can have pages ASSIGNED to it beyond where its own span stops --
     `[A, B, A]` gives A a span over its first run only, but a later page the
     ledger separately gave back to A is real and must not vanish silently.
@@ -620,6 +696,7 @@ def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
     offsets = _page_offsets(page_texts)
     page_section: dict = {}
     pages_of: dict = {}
+    out_of_order: set = set()
     for row in rows:
         try:
             page = int(row["page"])
@@ -630,18 +707,22 @@ def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
         page_section[page] = key
         if key:
             pages_of.setdefault(key, []).append(page)
+        if row.get("out_of_order"):
+            out_of_order.add(page)
 
     spans = {}
     for key, pages in pages_of.items():
         first, last_assigned = min(pages), max(pages)
         # Walk forward from the first assigned page, absorbing any interior
-        # page with NO section of its own; stop the instant a page belongs to
-        # someone else. Never walks past `last_assigned` -- there is no
-        # assigned page beyond it pulling the span any further.
+        # page with NO section of its own -- or one flagged `out_of_order`,
+        # which is not a real barrier either (see the docstring) -- and stop
+        # the instant a page belongs to someone else FOR REAL. Never walks
+        # past `last_assigned` -- there is no assigned page beyond it pulling
+        # the span any further.
         end_page = first
         for p in range(first, last_assigned + 1):
             other = page_section.get(p)
-            if other is not None and other != key:
+            if other is not None and other != key and p not in out_of_order:
                 break
             end_page = p
         start = offsets[first - 1][0]
@@ -677,9 +758,19 @@ def page_counts_from_ledger(rows: list) -> dict:
     The number a page-limit rule wants is `span["pages"]` from
     `spans_from_ledger`'s output (the span's real reach, absorbed pages
     included) -- this function exists for the different question of how many
-    pages the ledger could actually attribute to a section by name."""
+    pages the ledger could actually attribute to a section by name.
+
+    AN `out_of_order` PAGE IS NEVER COUNTED, even though it carries a real,
+    solidly-receipted section label. Attribution is exactly what is in doubt
+    for such a page -- it is real content, but content the ledger found in
+    the wrong place, mixed in with a run of some other section's pages -- and
+    crediting it here would let it silently pad or shrink a page-limit check
+    for either section (`spans_from_ledger` already excludes it from the span
+    it interrupts, for the same reason)."""
     counts: dict = {}
     for row in rows or []:
+        if row.get("out_of_order"):
+            continue
         key = row.get("section")
         if key:
             counts[key] = counts.get(key, 0) + 1

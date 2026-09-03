@@ -1070,6 +1070,10 @@ a.eir-delegation-name svg { vertical-align: -1px; }
 .eir-ledger-pill em { font-style: normal; color: var(--text-tertiary); font-size: 0.72rem; }
 .eir-src-unassigned { border-color: var(--eir-warn); }
 .eir-src-blank { opacity: 0.65; }
+/* An out-of-order page passed its own security check (a solid, unique
+   receipt) -- it is not `--eir-warn`, which would read as "this page
+   failed". Dashed instead of colored: worth a second look, not a verdict. */
+.eir-ooo { border-style: dashed; }
 
 .eir-extract-map { margin: 0.5rem 0 0; padding-left: 1rem; font-size: 0.8rem; }
 .eir-extract-guess { color: var(--eir-warn); }

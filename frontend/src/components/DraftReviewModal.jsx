@@ -1077,15 +1077,22 @@ function FindingGroup({ label, words, items, solicitationId, forced }) {
 
 // Consecutive pages with the same answer collapse to one row: 56 pills is a
 // wall, "p6–20 Project Description" is a fact a PI can check at a glance.
+// An `out_of_order` page never merges with its neighbors, even when they
+// share its label and source -- it is a single page the backend flagged as
+// solidly read but reappearing after its section had already closed, and
+// folding it into an ordinary run would hide the one thing about it worth
+// a reviewer's eye.
 function collapseLedger(rows) {
   const out = [];
   for (const r of rows) {
     const label = r.section || (r.source === "blank" ? "no readable text" : "not placed");
+    const outOfOrder = !!r.out_of_order;
     const last = out[out.length - 1];
-    if (last && last.label === label && last.source === r.source && r.page === last.to + 1) {
+    if (last && last.label === label && last.source === r.source &&
+        last.outOfOrder === outOfOrder && !outOfOrder && r.page === last.to + 1) {
       last.to = r.page;
     } else {
-      out.push({ from: r.page, to: r.page, label, source: r.source });
+      out.push({ from: r.page, to: r.page, label, source: r.source, outOfOrder });
     }
   }
   return out;
@@ -1236,10 +1243,21 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
           ))}
           <div className="eir-ledger-rows">
             {collapseLedger(result.page_ledger).map((r) => (
-              <span key={r.from} className={`eir-ledger-pill eir-src-${r.source}`}>
+              <span
+                key={r.from}
+                className={`eir-ledger-pill eir-src-${r.source}${r.outOfOrder ? " eir-ooo" : ""}`}
+              >
                 {r.from === r.to ? `p${r.from}` : `p${r.from}–${r.to}`}{" "}
                 {r.label}
-                <em>{{ structure: "from the PDF", model: "read", blank: "no text", unassigned: "not placed" }[r.source]}</em>
+                <em>
+                  {{ structure: "from the PDF", model: "read", blank: "no text", unassigned: "not placed" }[r.source]}
+                  {/* Neutral, not a verdict -- this page's own receipt was
+                      solid (it really is on this page and no other), it just
+                      showed up after this section had already closed
+                      elsewhere in the upload. Worth a reviewer's eye, not a
+                      finding in itself. */}
+                  {r.outOfOrder ? " · order unclear" : ""}
+                </em>
               </span>
             ))}
           </div>

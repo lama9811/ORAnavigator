@@ -329,3 +329,209 @@ def test_a_page_answered_twice_with_different_sections_ends_unassigned(monkeypat
     monkeypatch.setattr(gc, "generate_json", fake_generate_json)
     got = pl.walk_pages(pages, ["project_summary", "references_cited"], furniture=frozenset())
     assert 1 not in got
+
+
+# ---------------------------------------------------------------------------
+# Determinism: the FIRST pass must never move off temperature 0.0. Nothing
+# short of a test stops a future edit from making the whole ledger
+# nondeterministic with a fully green suite -- this repo's own recorded goal
+# is "same file = same answer".
+# ---------------------------------------------------------------------------
+
+def test_the_first_pass_uses_temperature_zero(monkeypatch):
+    pages = ["Content of page 1 with plenty of real words here.",
+             "Content of page 2 with plenty of real words here."]
+    seen = []
+
+    def spy(prompt, **kw):
+        seen.append(kw.get("temperature"))
+        return {"pages": [
+            {"page": 1, "section": "project_description",
+             "quote": "Content of page 1 with plenty of real words here."},
+            {"page": 2, "section": "project_description",
+             "quote": "Content of page 2 with plenty of real words here."},
+        ]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", spy)
+    pl.walk_pages(pages, ["project_description"], furniture=frozenset())
+    assert seen == [0.0]
+
+
+# ---------------------------------------------------------------------------
+# The retry path itself -- ~90 lines that only the opt-in live gate ever
+# exercised. These drive it with a fake model, deterministically, in CI.
+# ---------------------------------------------------------------------------
+
+def test_a_colliding_receipt_resolves_within_one_retry_round(monkeypatch):
+    """A model that returns the SAME quote for two pages must be corrected --
+    `_receipt_is_solid` refuses both until each is re-asked with the specific
+    colliding page named. Uses 6 pages (not 4) so the shared sentence -- on
+    exactly 2 of them -- stays under `document_furniture`'s repetition floor
+    (`max(2, int(0.5 * n))`, which would otherwise strip it as boilerplate
+    before it could ever collide)."""
+    import re
+
+    pages = [f"Stamp\nPage {i} of 6\nUnique real content for page {i} right here."
+             for i in range(1, 7)]
+    shared = "This paragraph appears identically on two separate pages by mistake"
+    pages[1] = pages[1] + "\n" + shared     # page 2
+    pages[2] = pages[2] + "\n" + shared     # page 3
+    calls = {"n": 0}
+
+    def fake_generate_json(prompt, **kw):
+        calls["n"] += 1
+        asked = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        if asked == [1, 2, 3, 4]:
+            return {"pages": [
+                {"page": 1, "section": "project_summary",
+                 "quote": "Unique real content for page 1 right here."},
+                {"page": 2, "section": "project_description", "quote": shared},
+                {"page": 3, "section": "project_description", "quote": shared},
+                {"page": 4, "section": "project_description",
+                 "quote": "Unique real content for page 4 right here."},
+            ]}
+        if asked == [5, 6]:
+            return {"pages": [
+                {"page": 5, "section": "project_description",
+                 "quote": "Unique real content for page 5 right here."},
+                {"page": 6, "section": "project_description",
+                 "quote": "Unique real content for page 6 right here."},
+            ]}
+        # A single-page re-ask -- give that page its own real, unique line.
+        (p,) = asked
+        return {"pages": [{"page": p, "section": "project_description",
+                           "quote": f"Unique real content for page {p} right here."}]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    result = pl.walk_pages(pages, ["project_summary", "project_description"],
+                           furniture=frozenset())
+    assert result[2]["quote"] != shared
+    assert result[3]["quote"] != shared
+    assert result[2]["quote"] == "Unique real content for page 2 right here."
+    assert result[3]["quote"] == "Unique real content for page 3 right here."
+    # 2 initial-pass windows ([1-4], [5-6]) + one re-ask each for pages 2 and
+    # 3 = 4 calls total. A SECOND retry round would add 2 more -- its absence
+    # is what proves the collision resolved within round 1.
+    assert calls["n"] == 4
+
+
+def test_the_retry_loop_gives_up_after_max_retry_rounds(monkeypatch):
+    """A page that can never be verified must not loop forever. The walk
+    exhausts `_MAX_RETRY_ROUNDS` and stops calling the model -- it does not
+    keep re-asking indefinitely, and it does not silently invent a verified
+    answer."""
+    import re
+
+    pages = [f"Stamp\nPage {i} of 2\nUnique real content for page {i} right here."
+             for i in range(1, 3)]
+    calls = {"n": 0}
+    bad_quote = "This exact sentence does not appear on any page of the document"
+
+    def always_unverifiable(prompt, **kw):
+        calls["n"] += 1
+        asked = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        return {"pages": [{"page": p, "section": "project_description",
+                           "quote": bad_quote} for p in asked]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", always_unverifiable)
+    result = pl.walk_pages(pages, ["project_description"], furniture=frozenset())
+    # Still carries the (unverifiable) last answer -- `build_ledger` is what
+    # turns this into `unassigned`, not `walk_pages` itself.
+    assert result[1]["quote"] == bad_quote
+    assert result[2]["quote"] == bad_quote
+    # 1 initial window call ([1, 2]) + `_MAX_RETRY_ROUNDS` rounds of 2
+    # single-page re-asks each. If the loop failed to stop, this would keep
+    # growing without bound.
+    assert calls["n"] == 1 + pl._MAX_RETRY_ROUNDS * 2
+
+    rows = pl.build_ledger(pages, SECTIONS)
+    assert all(r["source"] == "unassigned" for r in rows)
+
+
+# ---------------------------------------------------------------------------
+# `_receipt_is_solid`'s uniqueness semantics, tested directly -- previously
+# reachable only through `build_ledger`.
+# ---------------------------------------------------------------------------
+
+def test_receipt_is_solid_requires_uniqueness_across_the_whole_document():
+    bodies = [
+        "This project addresses distinct challenges in coastal water quality management",
+        "A completely different discussion of estuarine chemistry appears here as well",
+        "This project addresses distinct challenges in coastal water quality management",
+    ]
+    shared = "This project addresses distinct challenges in coastal water quality management"
+    unique = "A completely different discussion of estuarine chemistry appears here as well"
+
+    # On the page it claims, but the SAME quote also receipts another page --
+    # not solid, symmetrically, for either page carrying it.
+    assert pl._receipt_is_solid(bodies, 0, shared) is False
+    assert pl._receipt_is_solid(bodies, 2, shared) is False
+    # Unique to its one page -- solid.
+    assert pl._receipt_is_solid(bodies, 1, unique) is True
+    # Not even on the page it claims -- not solid, no other-page check needed.
+    assert pl._receipt_is_solid(bodies, 1, "Nothing like this appears anywhere in this document") is False
+    # Out-of-range page index refuses rather than raising.
+    assert pl._receipt_is_solid(bodies, 99, shared) is False
+    assert pl._receipt_is_solid(bodies, -1, shared) is False
+
+
+def test_receipt_is_solid_safe_never_raises_and_never_loses_other_rows(monkeypatch):
+    """The minor fix: `_receipt_is_solid` sits in `build_ledger`'s per-page
+    loop with no guard of its own, so a raise there used to lose EVERY row,
+    not just the one page that triggered it -- the opposite of the per-page
+    containment the rest of this module already guarantees. Forcing a raise
+    here must demote only the one page to `unassigned`, and every other page
+    must still get its normal row."""
+    def boom(bodies, page_idx, quote):
+        if page_idx == 2:          # page 3
+            raise RuntimeError("boom")
+        return True                 # every other page "verified"
+
+    monkeypatch.setattr(pl, "_receipt_is_solid", boom)
+    monkeypatch.setattr(pl, "walk_pages", _fake_walk({
+        p: {"section": "project_description",
+            "quote": f"Content of page {p} with plenty of real words here."}
+        for p in range(1, 7)}))
+    rows = pl.build_ledger(PAGES, SECTIONS)
+    assert len(rows) == 6
+    row3 = next(r for r in rows if r["page"] == 3)
+    assert row3["source"] == "unassigned"
+    for r in rows:
+        if r["page"] != 3:
+            assert r["source"] == "model"
+            assert r["verified"] is True
+
+
+# ---------------------------------------------------------------------------
+# Minor fix: an "unsure" page (the exact escape hatch `_WALK_SYSTEM` invites)
+# used to be skipped by the retry check entirely, so it was never re-asked.
+# ---------------------------------------------------------------------------
+
+def test_an_unsure_page_is_re_asked_not_stranded(monkeypatch):
+    import re
+
+    pages = ["Content of page 1 with plenty of real words here.",
+             "Content of page 2 with plenty of real words here."]
+    calls = {"n": 0}
+
+    def fake_generate_json(prompt, **kw):
+        calls["n"] += 1
+        asked = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        if asked == [1, 2]:
+            return {"pages": [
+                {"page": 1, "section": "project_description",
+                 "quote": "Content of page 1 with plenty of real words here."},
+                {"page": 2, "section": "unsure", "quote": ""},
+            ]}
+        # the re-ask for page 2 alone
+        return {"pages": [{"page": 2, "section": "project_description",
+                           "quote": "Content of page 2 with plenty of real words here."}]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    result = pl.walk_pages(pages, ["project_description"], furniture=frozenset())
+    assert result[2]["section"] == "project_description"
+    assert calls["n"] == 2       # the initial pass, plus exactly one re-ask

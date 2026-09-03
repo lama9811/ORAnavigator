@@ -142,6 +142,64 @@ def test_an_interior_page_of_a_different_section_stops_the_span():
     assert spans["project_description"]["pages"] == 2
 
 
+def test_an_out_of_order_interior_page_never_breaks_the_span_it_interrupts():
+    """THE CRITICAL FIX. `build_ledger`'s contiguity rule was softened from
+    refuse (`unassigned`) to accept-and-flag (`out_of_order`) -- correctly,
+    per its own docstring, because a genuinely interleaved page (one letter
+    dropped between two others) deserves to be counted rather than thrown
+    away. But `spans_from_ledger` still treated ANY differently-labelled
+    interior page as a hard stop, so the flag alone turned a fail-safe into
+    a fail-open: a single solidly-receipted-but-out-of-order page mislabelled
+    into the MIDDLE of a real run silently truncated that section's span,
+    dropping every real page behind the intruder from both its text and its
+    page count -- exactly the false "not_found" this whole feature exists to
+    prevent.
+
+    Ten pages: pp1-2 = project_summary, pp3-10 = project_description, except
+    page 6 -- solidly receipted, but labelled project_summary and flagged
+    `out_of_order` (it reappears after project_summary had already closed
+    out on page 2). project_description must still come back pages 3-10,
+    losing nothing -- matching the pre-softening behaviour for the section
+    the intruder interrupts, while the intruder's OWN section (project_summary)
+    still only gets its real, contiguous reach."""
+    pages = [f"Page {i} carries its own distinct real content right here" for i in range(1, 11)]
+    rows = [{"page": 1, "section": "project_summary", "source": "model"},
+            {"page": 2, "section": "project_summary", "source": "model"},
+            {"page": 3, "section": "project_description", "source": "model"},
+            {"page": 4, "section": "project_description", "source": "model"},
+            {"page": 5, "section": "project_description", "source": "model"},
+            {"page": 6, "section": "project_summary", "source": "model", "out_of_order": True},
+            {"page": 7, "section": "project_description", "source": "model"},
+            {"page": 8, "section": "project_description", "source": "model"},
+            {"page": 9, "section": "project_description", "source": "model"},
+            {"page": 10, "section": "project_description", "source": "model"}]
+
+    spans = pl.spans_from_ledger(rows, pages, SECTIONS)
+
+    pd = spans["project_description"]
+    assert pd["pages"] == 8
+    assert pd["dropped_pages"] == []
+    assert "Page 3 carries" in pd["text"]
+    assert "Page 10 carries" in pd["text"]
+    joined = "\n".join(pages)
+    assert joined[pd["start"]:pd["end"]] == pd["text"]
+
+    # The intruder's own section is unaffected by this fix -- it still only
+    # gets its real, contiguous reach (pages 1-2), and page 6 is recorded as
+    # dropped for it rather than silently folded in (it would reopen the
+    # single-contiguous-slice problem `spans_from_ledger` exists to avoid).
+    ps = spans["project_summary"]
+    assert ps["pages"] == 2
+    assert ps["dropped_pages"] == [6]
+
+    # Attribution never credits the intruder to the section it claims --
+    # page 6 is real content, but content whose placement is exactly what is
+    # in doubt.
+    counts = pl.page_counts_from_ledger(rows)
+    assert counts["project_description"] == 7   # pages 3,4,5,7,8,9,10 -- never 6
+    assert counts["project_summary"] == 2        # pages 1,2 -- never 6
+
+
 def test_page_counts_still_count_only_assigned_pages_despite_absorption():
     """Absorption widens the SPAN's reach but must not widen the COUNT --
     page rules compare against a real page limit and must not credit a page
