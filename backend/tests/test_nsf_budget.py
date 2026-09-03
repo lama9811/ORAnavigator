@@ -230,3 +230,104 @@ def test_mtdc_exempt_g6_items_are_tallied_separately():
 def test_blank_sheet_computes_all_zeros_without_crashing():
     r = nb.compute_direct_lines(nb.blank_sheet(), _settings(), [])
     assert r["D"]["total"] == 0.0 and r["G"]["total"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# The rollup: H through M, MTDC, and the cumulative sheet
+# ---------------------------------------------------------------------------
+
+def test_line_h_is_the_sum_of_a_through_g():
+    s = nb.blank_sheet()
+    s["senior"][0].update(base_salary=90_000, appointment_basis="academic_9", acad=2)
+    s["equipment"] = [{"description": "Rig", "amount": 40_000}]
+    s["travel"]["domestic"] = [{"description": "Conf", "amount": 3_000}]
+    c = nb.compute_sheet(s, _settings(), [])
+    # A 20,000 + C 8,400 + D 40,000 + E 3,000
+    assert c["lines"]["H"] == 71_400.0
+
+
+def test_line_i_is_fa_on_mtdc_not_on_total_direct():
+    s = nb.blank_sheet()
+    s["equipment"] = [{"description": "Rig", "amount": 40_000}]
+    s["other_direct"]["materials_supplies"] = [{"description": "Reagents", "amount": 10_000}]
+    c = nb.compute_sheet(s, _settings(), [])
+    assert c["lines"]["H"] == 50_000.0
+    assert c["mtdc"]["base"] == 10_000.0          # equipment is out of the base
+    assert c["lines"]["I"] == 5_400.0             # 54% of 10k, not of 50k
+
+
+def test_line_j_is_h_plus_i_and_l_equals_j_without_a_fee():
+    s = nb.blank_sheet()
+    s["other_direct"]["materials_supplies"] = [{"description": "Reagents", "amount": 10_000}]
+    c = nb.compute_sheet(s, _settings(), [])
+    assert c["lines"]["J"] == 15_400.0
+    assert c["lines"]["L"] == 15_400.0
+
+
+def test_a_fee_is_subtracted_on_line_l():
+    s = nb.blank_sheet()
+    s["other_direct"]["materials_supplies"] = [{"description": "Reagents", "amount": 10_000}]
+    s["fee"] = 1_000
+    c = nb.compute_sheet(s, _settings(), [])
+    assert c["lines"]["K"] == 1_000.0
+    assert c["lines"]["L"] == 14_400.0            # J - K
+
+
+def test_cumulative_sums_every_line_across_years():
+    doc = nb.blank_document(years=2)
+    for y in doc["years"]:
+        y["other_direct"]["materials_supplies"] = [{"description": "Reagents", "amount": 10_000}]
+    r = nb.compute_document(doc)
+    assert r["cumulative"]["lines"]["H"] == 20_000.0
+    assert r["cumulative"]["lines"]["I"] == 10_800.0
+    assert r["cumulative"]["lines"]["J"] == 30_800.0
+
+
+def test_worked_example_totals_exactly():
+    """Hand-checked end-to-end figure, like the generic $161,556 case.
+
+    A: PI 90,000/9 x 2 acad months            =  20,000
+    B: 1 grad student                         =  30,000
+    C: 42% of 20,000 + 9% of 30,000           =  11,100
+    D: equipment                              =  40,000
+    E: 3,000 domestic + 2,000 international   =   5,000
+    F: participant support                    =  10,000
+    G: 5,000 supplies + 50,000 subaward
+       + 25,000 tuition (F&A-exempt)          =  80,000
+    H                                         = 196,100
+    MTDC = 196,100 - 40,000 - 10,000
+           - 25,000 (sub tail) - 25,000 (tuition) = 96,100
+    I    = 54% of 96,100                      =  51,894
+    J = L                                     = 247,994
+    """
+    doc = nb.blank_document()
+    s = doc["years"][0]
+    s["senior"][0].update(base_salary=90_000, appointment_basis="academic_9",
+                          acad=2, fringe_key="faculty_ay")
+    s["other_personnel"]["grad_students"] = {
+        "count": 1, "amount": 30_000, "fringe_key": "contractual"}
+    s["equipment"] = [{"description": "Confocal", "amount": 40_000}]
+    s["travel"]["domestic"] = [{"description": "Conf", "amount": 3_000}]
+    s["travel"]["international"] = [{"description": "Collab", "amount": 2_000}]
+    s["participant_support"] = {"count": 15, "stipends": 10_000, "travel": None,
+                                "subsistence": None, "other": None}
+    s["other_direct"]["materials_supplies"] = [{"description": "Reagents", "amount": 5_000}]
+    s["other_direct"]["subawards"] = [{"organization": "Partner U", "amount": 50_000}]
+    s["other_direct"]["other"] = [
+        {"description": "Grad tuition remission", "amount": 25_000, "mtdc_exempt": True}]
+
+    c = nb.compute_document(doc)["years"][0]
+    assert c["lines"]["H"] == 196_100.0
+    assert c["mtdc"]["base"] == 96_100.0
+    assert c["lines"]["I"] == 51_894.0
+    assert c["lines"]["L"] == 247_994.0
+
+
+def test_cap_over_is_reported_against_the_cumulative_total():
+    doc = nb.blank_document()
+    doc["settings"]["cap"] = 10_000
+    doc["years"][0]["other_direct"]["materials_supplies"] = [
+        {"description": "Reagents", "amount": 10_000}]
+    r = nb.compute_document(doc)
+    assert r["cap"]["status"] == "over"
+    assert r["cap"]["overage"] == 5_400.0          # 15,400 total vs a 10,000 cap

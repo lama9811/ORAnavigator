@@ -276,3 +276,136 @@ def compute_direct_lines(sheet, settings, warnings):
         "mtdc_exempt_total": round(exempt_total, 2),
         "subaward_amounts": [s["amount"] for s in subs],
     }
+
+
+# ── The rollup: H through M, and the cumulative sheet ──────────────────────
+def compute_sheet(sheet, settings, warnings):
+    """One year: lines A-M, the MTDC base, and the F&A figure."""
+    settings = settings or {}
+    people = compute_personnel(sheet, warnings)
+    direct = compute_direct_lines(sheet, settings, warnings)
+
+    h = round(people["A"]["total"] + people["B"]["total"] + people["C"]
+              + direct["D"]["total"] + direct["E"]["total"]
+              + direct["F"]["total"] + direct["G"]["total"], 2)
+
+    eng = mtdc_and_fa(
+        direct_total=h,
+        equipment=direct["D"]["total"],
+        participant_support=direct["F"]["total"],
+        subawards=direct["subaward_amounts"],
+        extra_exempt=direct["mtdc_exempt_total"],
+        fa_year=settings.get("fa_year"),
+        fa_rate_key=settings.get("fa_rate_key"),
+        warnings=warnings,
+    )
+
+    # An explicit manual rate. NSF treats a rate BELOW the negotiated one as a
+    # cost-sharing violation -- the rules engine flags that; the math obeys.
+    override = settings.get("fa_rate_override")
+    if override not in (None, ""):
+        try:
+            rate = float(override)
+            eng["fa_rate"] = rate
+            eng["fa_rate_label"] = f"Manual rate ({rate * 100:.1f}%)"
+            eng["fa_amount"] = round(eng["mtdc_base"] * rate, 2)
+        except (TypeError, ValueError):
+            warnings.append(
+                f"Could not read F&A override '{override}'; using the negotiated rate.")
+
+    i = eng["fa_amount"]
+    j = round(h + i, 2)
+    k = _money(sheet.get("fee"), warnings, "fee")
+    l = round(j - k, 2)
+    cs = sheet.get("cost_sharing") or {}
+    m = _money(cs.get("proposed"), warnings, "cost sharing")
+
+    return {
+        "year": sheet.get("year", 1),
+        "lines": {
+            "A": people["A"], "B": people["B"], "C": people["C"],
+            "salaries_and_wages": people["salaries_and_wages"],
+            "salaries_wages_fringe": round(people["salaries_and_wages"] + people["C"], 2),
+            "D": direct["D"], "E": direct["E"], "F": direct["F"], "G": direct["G"],
+            "H": h, "I": i, "J": j, "K": k, "L": l, "M": m,
+        },
+        "mtdc": {"base": eng["mtdc_base"], "exclusions": eng["exclusions"]},
+        "fa": {"year": eng["fa_year"], "rate_key": eng["fa_rate_key"],
+               "rate": eng["fa_rate"], "label": eng["fa_rate_label"]},
+        "fringe_rows": people["fringe_rows"],
+        "flags": [],
+    }
+
+
+_SUMMABLE = ("C", "H", "I", "J", "K", "L", "M")
+
+
+def _sum_cumulative(year_results):
+    """Cumulative sheet: every line summed across years. Never stored."""
+    lines = {k: round(sum(y["lines"][k] for y in year_results), 2) for k in _SUMMABLE}
+    for key in ("A", "B", "D"):
+        lines[key] = {"rows": [], "total": round(
+            sum(y["lines"][key]["total"] for y in year_results), 2)}
+    lines["E"] = {
+        "domestic": round(sum(y["lines"]["E"]["domestic"] for y in year_results), 2),
+        "international": round(sum(y["lines"]["E"]["international"] for y in year_results), 2),
+        "domestic_rows": [], "international_rows": [],
+        "total": round(sum(y["lines"]["E"]["total"] for y in year_results), 2),
+    }
+    lines["F"] = {
+        "count": max((y["lines"]["F"]["count"] for y in year_results), default=0),
+        **{k: round(sum(y["lines"]["F"][k] for y in year_results), 2)
+           for k in ("stipends", "travel", "subsistence", "other")},
+        "total": round(sum(y["lines"]["F"]["total"] for y in year_results), 2),
+    }
+    g = {k: round(sum(y["lines"]["G"][k] for y in year_results), 2)
+         for k, _ in G_ITEM_LINES}
+    g["other"] = round(sum(y["lines"]["G"]["other"] for y in year_results), 2)
+    g["other_rows"] = []
+    g["rows"] = {}
+    g["subawards"] = {"rows": [], "total": round(
+        sum(y["lines"]["G"]["subawards"]["total"] for y in year_results), 2)}
+    g["total"] = round(sum(y["lines"]["G"]["total"] for y in year_results), 2)
+    lines["G"] = g
+    lines["salaries_and_wages"] = round(
+        sum(y["lines"]["salaries_and_wages"] for y in year_results), 2)
+    lines["salaries_wages_fringe"] = round(
+        sum(y["lines"]["salaries_wages_fringe"] for y in year_results), 2)
+
+    mtdc = {
+        "base": round(sum(y["mtdc"]["base"] for y in year_results), 2),
+        "exclusions": {k: round(sum(y["mtdc"]["exclusions"][k] for y in year_results), 2)
+                       for k in ("equipment", "participant_support",
+                                 "subaward_over_25k", "mtdc_exempt")},
+    }
+    return {"lines": lines, "mtdc": mtdc, "flags": []}
+
+
+def compute_document(doc):
+    """Compute every year sheet plus the cumulative rollup and the cap check."""
+    doc = doc or {}
+    warnings: list[str] = []
+    settings = doc.get("settings") or blank_document()["settings"]
+    sheets = doc.get("years") or [blank_sheet(1)]
+
+    years = [compute_sheet(s or {}, settings, warnings) for s in sheets]
+    cumulative = _sum_cumulative(years)
+
+    raw_cap = settings.get("cap")
+    total = cumulative["lines"]["L"]
+    if raw_cap in (None, ""):
+        cap = {"value": None, "status": "none", "overage": 0.0}
+    else:
+        cap_val = _money(raw_cap, warnings, "cap")
+        over = round(total - cap_val, 2)
+        cap = {"value": cap_val,
+               "status": "over" if over > 0 else "ok",
+               "overage": over if over > 0 else 0.0}
+
+    return {
+        "schema": SCHEMA, "version": VERSION,
+        "meta": doc.get("meta") or blank_document()["meta"],
+        "settings": settings,
+        "years": years, "cumulative": cumulative,
+        "cap": cap, "warnings": warnings, "flags": [],
+    }
