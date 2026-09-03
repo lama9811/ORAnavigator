@@ -59,3 +59,51 @@ def test_months_coerces_junk_to_zero():
     w = []
     assert _months("abc", w, "academic months") == 0.0
     assert w
+
+
+# ---------------------------------------------------------------------------
+# The blank Form 1030 skeleton
+# ---------------------------------------------------------------------------
+
+from services import nsf_budget as nb
+
+
+def test_blank_document_has_the_schema_discriminator():
+    doc = nb.blank_document(years=2)
+    assert doc["schema"] == "nsf_1030"
+    assert doc["version"] == 1
+    assert len(doc["years"]) == 2
+    assert [y["year"] for y in doc["years"]] == [1, 2]
+
+
+def test_blank_sheet_uses_null_placeholders_not_zero():
+    # A blank box must be distinguishable from a deliberate zero.
+    s = nb.blank_sheet()
+    assert s["senior"][0]["base_salary"] is None
+    assert s["equipment"][0]["amount"] is None
+
+
+def test_blank_sheet_has_all_six_other_personnel_rows():
+    s = nb.blank_sheet()
+    assert set(s["other_personnel"]) == {
+        "postdocs", "other_professionals", "grad_students",
+        "undergrads", "clerical", "other"}
+
+
+def test_blank_sheet_has_all_six_g_lines_including_subawards():
+    s = nb.blank_sheet()
+    assert set(s["other_direct"]) == {
+        "materials_supplies", "publication", "consultant",
+        "computer_services", "subawards", "other"}
+
+
+def test_g6_other_items_carry_the_mtdc_exempt_flag():
+    s = nb.blank_sheet()
+    assert s["other_direct"]["other"][0]["mtdc_exempt"] is False
+
+
+def test_blank_document_defaults_to_morgan_rates_and_5000_capitalization():
+    doc = nb.blank_document()
+    assert doc["settings"]["fa_rate_key"] == "organized_research_on_campus"
+    assert doc["settings"]["capitalization_level"] == 5000.0
+    assert doc["settings"]["escalation_pct"] == 3.0
