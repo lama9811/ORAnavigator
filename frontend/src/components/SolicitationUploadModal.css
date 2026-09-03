@@ -103,6 +103,52 @@
   margin: 0 0 18px;
 }
 
+/* ============================================================
+   PDF / URL mode toggle (PickStep)
+   ============================================================ */
+
+.solicitation-mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 16px;
+  background: rgba(66, 133, 244, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.solicitation-mode-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.solicitation-mode-tab:hover {
+  color: var(--text-primary);
+}
+
+.solicitation-mode-tab.active {
+  background: var(--msu-blue);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(66, 133, 244, 0.35);
+}
+
+.solicitation-fetch-btn {
+  margin-top: 4px;
+}
+
 .solicitation-drop {
   display: flex;
   flex-direction: column;
@@ -502,3 +548,192 @@ body.dark .solicitation-quote {
   flex-shrink: 0;
   cursor: pointer;
 }
+
+/* ============================================================
+   Full-coverage extraction UI (2026-09-03)
+   The extractor now reads every page of the solicitation and reports
+   back what it actually processed, which page each value came from,
+   and the rules that apply only to special proposal types.
+   ============================================================ */
+
+/* Loading copy: a 200-page agency guide legitimately takes ~a minute. */
+.solicitation-extracting-time {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+}
+
+/* "Read all 216 pages" -- a measurement, not a reassurance. */
+.solicitation-coverage {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.78rem;
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 7px;
+  padding: 8px 11px;
+  margin-bottom: 14px;
+}
+
+.solicitation-coverage-partial {
+  color: #b45309;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+body.dark .solicitation-coverage {
+  background: rgba(22, 101, 52, 0.14);
+  border-color: rgba(34, 197, 94, 0.28);
+  color: #86efac;
+}
+
+body.dark .solicitation-coverage-partial {
+  background: rgba(180, 83, 9, 0.14);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+/* Special-proposal-type variants (RAPID, EAGER, Ideas Lab...). */
+.solicitation-variant-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.solicitation-variant-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.78rem;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.dark .solicitation-variant-list li {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.solicitation-variant-applies {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.solicitation-variant-value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.solicitation-variant-page {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  margin-left: 6px;
+}
+
+/* Font / margin / spacing rules pulled from the solicitation. */
+.solicitation-formatting {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.78rem;
+}
+
+.solicitation-formatting > div {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.solicitation-formatting dt {
+  flex-shrink: 0;
+  width: 92px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.solicitation-formatting dd {
+  margin: 0;
+  color: var(--text-tertiary);
+}
+
+/* Source quotes can now be one quote per entry, plus a page number. */
+.solicitation-quote-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.solicitation-quote-key {
+  color: var(--text-secondary);
+}
+
+.solicitation-quote-page {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  font-style: italic;
+}
+
+/* Partly-verified: the field IS grounded, but named entries need a look.
+   Amber, not red -- red is reserved for "no evidence at all", so the
+   strong warning keeps its meaning. */
+.solicitation-field-partial {
+  border-left: 3px solid #f59e0b;
+  padding-left: 11px;
+  margin-left: -14px;
+}
+
+.solicitation-partial-note {
+  display: block;
+  color: #b45309;
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+
+body.dark .solicitation-partial-note {
+  color: #fcd34d;
+}
+
+/* Catch-all requirements list (2026-09-03). Everything the proposer MUST or
+   MUST NOT do that fits none of the structured fields. */
+.solicitation-req-group { margin-bottom: 8px; }
+
+.solicitation-req-cat {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin-bottom: 3px;
+}
+
+.solicitation-req-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.solicitation-req-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.78rem;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.03);
+  cursor: help;
+}
+
+.solicitation-req-list li > span:first-child { flex: 1; }
+
+body.dark .solicitation-req-list li { background: rgba(255, 255, 255, 0.04); }

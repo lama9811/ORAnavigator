@@ -7,6 +7,7 @@ level so a user can never see or mutate another user's submission, even
 if they construct the URL by hand.
 """
 
+import json as _json
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -155,6 +156,20 @@ def create_submission_from_solicitation(
         notes_lines.append(f"Required attachments: {'; '.join(req_atts)}")
     notes = "\n".join(notes_lines) if notes_lines else None
 
+    # Keep the receipt. The notes blob above is a lossy, human-editable
+    # summary; this stores the extraction exactly as the user confirmed it --
+    # every source quote, the page each value came from, the special-type
+    # variants, the formatting rules, and the coverage audit. Without it the
+    # provenance is visible for one screen and then gone forever.
+    solicitation_json = None
+    try:
+        solicitation_json = _json.dumps(extracted, ensure_ascii=False)
+    except (TypeError, ValueError) as e:
+        # Never block creating the proposal over a non-serializable extra
+        # field -- the notes summary is already built and is what the rest
+        # of the app reads.
+        print(f"   [PROPOSALS] could not serialize solicitation_json: {e}")
+
     sub = Submission(
         user_id=user_id,
         title=title,
@@ -162,6 +177,7 @@ def create_submission_from_solicitation(
         deadline=deadline,
         status="active",
         notes=notes,
+        solicitation_json=solicitation_json,
     )
     db.add(sub)
     db.flush()
@@ -406,6 +422,14 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
         "budget_cap": None,
         "page_limits": {},
         "required_attachments": [],
+        # --- additive (2026-09-03), from solicitation_json when present ---
+        "formatting": {"font": None, "margins": None, "line_spacing": None},
+        "page_limit_variants": [],
+        "budget_cap_variants": [],
+        "other_requirements": [],
+        "source_quotes": {},
+        "source_pages": {},
+        "coverage": None,
     }
 
     notes = sub.notes or ""
@@ -458,5 +482,37 @@ def reconstruct_solicitation_context(sub: Submission) -> dict:
                 seen_lc.add(att.lower())
                 ordered.append(att)
     out["required_attachments"] = ordered
+
+    # Layer on the detail that only the stored receipt has. The three fields
+    # above are deliberately still read from notes/tasks: those are what the
+    # user can edit in the UI, and a user edit must win over the original
+    # extraction. These extras have no notes representation, so the receipt
+    # is their only source. Submissions created before this column existed
+    # (or manually) simply keep the empty defaults.
+    raw = getattr(sub, "solicitation_json", None)
+    if raw:
+        try:
+            saved = _json.loads(raw)
+        except (TypeError, ValueError):
+            saved = None
+        if isinstance(saved, dict):
+            fmt = saved.get("formatting")
+            if isinstance(fmt, dict):
+                for k in ("font", "margins", "line_spacing"):
+                    v = fmt.get(k)
+                    if isinstance(v, str) and v.strip():
+                        out["formatting"][k] = v.strip()
+            for key in ("page_limit_variants", "budget_cap_variants",
+                        "other_requirements"):
+                v = saved.get(key)
+                if isinstance(v, list):
+                    out[key] = [x for x in v if isinstance(x, dict)]
+            for key in ("source_quotes", "source_pages"):
+                v = saved.get(key)
+                if isinstance(v, dict):
+                    out[key] = v
+            cov = saved.get("coverage")
+            if isinstance(cov, dict):
+                out["coverage"] = cov
 
     return out

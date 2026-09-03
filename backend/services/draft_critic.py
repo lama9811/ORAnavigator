@@ -1089,6 +1089,209 @@ def _ai_review(
         return None
 
 
+# ===========================================================================
+# Formatting check (font size + margins)
+# ===========================================================================
+# Sponsors reject proposals for these. NSF PAPPG: "Adherence to font size and
+# line spacing requirements is necessary ... proposals that violate these
+# may be returned without review." The rules are extracted from the
+# solicitation (services/solicitation_extractor.py -> formatting) and measured
+# here from the draft's own glyph geometry, so the check is deterministic.
+#
+# This check WARNS and never fails. Two honest reasons: a legitimate figure,
+# table or caption may use smaller type (sponsors allow it), and a stated rule
+# like "Arial at 10pt or larger; Times New Roman at 11pt or larger" is
+# font-conditional in a way the measurement can't fully resolve. A false
+# failure would teach the user to ignore the panel -- the exact failure mode
+# this whole pass set out to remove.
+
+_PT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:points?|pts?\b)", re.IGNORECASE)
+_MARGIN_NUM_RE = re.compile(
+    r"(?:(\d+(?:\.\d+)?)|\b(an?|one|half|quarter)\b)\s*(?:-|\s)?\s*(?:inch|inches|\")",
+    re.IGNORECASE,
+)
+_WORD_INCHES = {"a": 1.0, "an": 1.0, "one": 1.0, "half": 0.5, "quarter": 0.25}
+
+# Only look at this many pages when measuring geometry -- enough to be
+# representative, bounded so a 200-page packet doesn't stall the request.
+_LAYOUT_MAX_PAGES = 40
+
+
+def _required_font_pt(formatting: Optional[dict]) -> Optional[float]:
+    """Smallest type size the solicitation permits anywhere, in points.
+
+    Deliberately the SMALLEST of the stated sizes. A rule like "Arial at 10
+    points or larger; Times New Roman at 11 points or larger" permits 10pt
+    for some fonts, so only text below 10pt is unambiguously wrong. Taking
+    the largest would false-flag a compliant Arial-10 draft."""
+    if not isinstance(formatting, dict):
+        return None
+    raw = formatting.get("font")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    sizes = [float(m) for m in _PT_RE.findall(raw)]
+    sizes = [s for s in sizes if 4.0 <= s <= 24.0]   # discard stray numbers
+    return min(sizes) if sizes else None
+
+
+def _required_margin_in(formatting: Optional[dict]) -> Optional[float]:
+    """Smallest margin the solicitation permits, in inches."""
+    if not isinstance(formatting, dict):
+        return None
+    raw = formatting.get("margins")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    vals = []
+    for num, word in _MARGIN_NUM_RE.findall(raw):
+        if num:
+            vals.append(float(num))
+        elif word:
+            vals.append(_WORD_INCHES.get(word.lower(), 0.0))
+    vals = [v for v in vals if 0.1 <= v <= 3.0]
+    return min(vals) if vals else None
+
+
+def _measure_layout(pdf_bytes: bytes) -> dict:
+    """Measure the draft's dominant body font size and smallest page margin.
+
+    Returns {"font_pt": float|None, "margin_in": float|None}; either may be
+    None when the PDF can't be measured (image-only, unparseable), in which
+    case the check reports "couldn't measure" rather than guessing.
+
+    font_pt is the MOST COMMON size by character count -- the body text --
+    not the smallest, so subscripts, footnotes and figure labels don't drag
+    it down.
+
+    margin_in measures the LEFT/RIGHT margins only, and is the MEDIAN across
+    pages so one full-bleed figure page can't condemn the document. Top and
+    bottom are deliberately excluded: running headers, footers and page
+    numbers legitimately sit in that band, and including them is measurably
+    wrong. On NSF 24-1 -- a professionally typeset 1-inch-margin document --
+    including the vertical edges reported 0.49" (the footer), while the side
+    margins correctly measured 0.96". Checking all four edges would have
+    warned on a compliant document, which is the false alarm this pass
+    exists to eliminate."""
+    out: dict = {"font_pt": None, "margin_in": None}
+    if not pdf_bytes:
+        return out
+    try:
+        pdfp = _get_pdfplumber()
+    except ImportError:
+        return out
+
+    size_counts: dict = {}
+    per_page_margin: list = []
+    try:
+        with pdfp.open(BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages[:_LAYOUT_MAX_PAGES]:
+                chars = page.chars or []
+                if not chars:
+                    continue
+                xs0, xs1 = [], []
+                for ch in chars:
+                    size = ch.get("size")
+                    if isinstance(size, (int, float)) and size > 0:
+                        # Round to 0.5pt: the same nominal size varies by
+                        # hundredths across a PDF, which would shatter the
+                        # mode into dozens of near-identical buckets.
+                        key = round(float(size) * 2) / 2
+                        size_counts[key] = size_counts.get(key, 0) + 1
+                    x0, x1 = ch.get("x0"), ch.get("x1")
+                    if isinstance(x0, (int, float)):
+                        xs0.append(float(x0))
+                    if isinstance(x1, (int, float)):
+                        xs1.append(float(x1))
+                if not (xs0 and xs1):
+                    continue
+                w = float(page.width or 0)
+                if w <= 0:
+                    continue
+                per_page_margin.append(max(0.0, min(min(xs0), w - max(xs1))))
+    except Exception as e:
+        print(f"   [DRAFT_CRITIC] layout measure failed: {e}")
+        return out
+
+    if size_counts:
+        out["font_pt"] = max(size_counts.items(), key=lambda kv: kv[1])[0]
+    if per_page_margin:
+        s = sorted(per_page_margin)
+        median_pt = s[len(s) // 2]
+        out["margin_in"] = round(median_pt / 72.0, 2)   # 72 PDF points = 1 inch
+    return out
+
+
+def check_formatting(layout: Optional[dict], formatting: Optional[dict]) -> Optional[dict]:
+    """Compare measured geometry against the solicitation's stated rules.
+
+    Returns None when the solicitation states no font/margin rule at all --
+    the panel then has no formatting row rather than a permanently 'skipped'
+    one. Never returns 'fail' (see the module note above)."""
+    req_pt = _required_font_pt(formatting)
+    req_in = _required_margin_in(formatting)
+    if req_pt is None and req_in is None:
+        return None
+
+    stated = []
+    if req_pt is not None:
+        stated.append(f"{_fmt_num(req_pt)}pt min")
+    if req_in is not None:
+        stated.append(f"{_fmt_num(req_in)}\" margins")
+    stated_str = ", ".join(stated)
+
+    layout = layout or {}
+    got_pt = layout.get("font_pt")
+    got_in = layout.get("margin_in")
+    if got_pt is None and got_in is None:
+        return {
+            "name": "Formatting (font & margins)",
+            "status": "skipped",
+            "value": stated_str,
+            "detail": (f"The solicitation requires {stated_str}, but this PDF's "
+                       "text geometry couldn't be measured (it may be scanned "
+                       "or image-only). Check the formatting by hand."),
+        }
+
+    problems, measured = [], []
+    if got_pt is not None:
+        measured.append(f"body text {_fmt_num(got_pt)}pt")
+        # 0.2pt tolerance: PDF writers routinely emit 9.96pt for 10pt type.
+        if req_pt is not None and got_pt < req_pt - 0.2:
+            problems.append(
+                f"body text measures {_fmt_num(got_pt)}pt but the solicitation "
+                f"requires at least {_fmt_num(req_pt)}pt")
+    if got_in is not None:
+        measured.append(f"side margins {_fmt_num(got_in)}\"")
+        # 0.1" tolerance: a glyph's x0 includes its side bearing, so a nominal
+        # 1" margin measures ~0.96". Still catches a real 0.5" squeeze.
+        if req_in is not None and got_in < req_in - 0.1:
+            problems.append(
+                f"side margins measure about {_fmt_num(got_in)}\" but the "
+                f"solicitation requires at least {_fmt_num(req_in)}\"")
+    measured_str = ", ".join(measured)
+
+    if problems:
+        return {
+            "name": "Formatting (font & margins)",
+            "status": "warn",
+            "value": f"{measured_str} / {stated_str}",
+            "detail": ("Sponsors return proposals without review over this: "
+                       + "; ".join(problems)
+                       + ". Figures and tables may legitimately use smaller "
+                         "type, so confirm the body text before resubmitting."),
+        }
+    return {
+        "name": "Formatting (font & margins)",
+        "status": "ok",
+        "value": measured_str,
+        "detail": f"Measured {measured_str}; the solicitation requires {stated_str}.",
+    }
+
+
+def _fmt_num(v: float) -> str:
+    """3.0 -> '3', 1.5 -> '1.5' (no trailing '.0' in user-facing text)."""
+    return str(int(v)) if float(v).is_integer() else str(v)
+
+
 def critique_pdf(
     pdf_bytes: bytes,
     sponsor: Optional[str],
@@ -1149,6 +1352,13 @@ def critique_pdf(
 
     # 6. Budget
     checks.append(check_budget_cap(text, sol.get("budget_cap")))
+
+    # 7. Font size + margins, measured from the draft's own glyph geometry.
+    #    Only runs when the solicitation actually stated a formatting rule,
+    #    so proposals without one gain no empty row.
+    fmt_check = check_formatting(_measure_layout(pdf_bytes), sol.get("formatting"))
+    if fmt_check is not None:
+        checks.append(fmt_check)
 
     # Roll-up counts for the headline strip.
     counts = {"ok": 0, "warn": 0, "fail": 0, "skipped": 0}

@@ -194,6 +194,14 @@ class Submission(Base):
     # ({"answers": {...}}). The checklist is recomputed deterministically on
     # load. Nullable — most submissions have no compliance check yet.
     compliance_json = Column(Text, nullable=True)
+    # Solicitation extraction: JSON string of the FULL extracted contract as
+    # confirmed by the user -- including every source quote, the page each
+    # value came from, the special-proposal-type variants, and the coverage
+    # audit ("read 216 of 216 pages"). The notes blob carries a lossy,
+    # human-editable summary of the same thing; this column is the receipt,
+    # so months later "where did 15 pages come from?" still has an answer.
+    # Nullable -- manually-created submissions have none.
+    solicitation_json = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 

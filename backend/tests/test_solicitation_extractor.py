@@ -18,6 +18,30 @@ import pytest
 from services import solicitation_extractor as sx
 
 
+def _two_stage_fake(contract: dict, sweep: dict | None = None):
+    """Fake `_call_gemini` for the two-stage pipeline (2026-09-03).
+
+    Extraction now calls Gemini twice: once per page-slice to SWEEP out raw
+    findings, then once to CONSOLIDATE those findings into the contract. A
+    fake that returns the finished contract to both stages leaves the sweep
+    empty, and the consolidator correctly declines to run on nothing -- so
+    the fake has to answer each stage in its own shape. Dispatch on the
+    system prompt the pipeline passed in."""
+    sweep_json = json.dumps(sweep if sweep is not None else {
+        # Minimal non-empty sweep: enough for the consolidator to be invoked.
+        "identity": {"sponsor": contract.get("sponsor")},
+        "page_limits": [], "required_attachments": [], "deadlines": [],
+        "budget_caps": [], "eligibility": [], "formatting": [],
+    })
+    contract_json = json.dumps(contract)
+
+    def _fake(text, **kw):
+        if kw.get("system_instruction") is sx._SWEEP_SYSTEM:
+            return sweep_json
+        return contract_json
+    return _fake
+
+
 # ---------- _parse_response -------------------------------------------------
 
 def test_parse_response_plain_json():
@@ -115,7 +139,7 @@ def test_extract_from_text_returns_full_contract(monkeypatch):
         },
     }
     monkeypatch.setattr(sx, "_call_gemini",
-                        lambda text, **kw: json.dumps(fake_json))
+                        _two_stage_fake(fake_json))
 
     out = sx.extract_from_text("any pdf text would go here")
     assert out is not None
@@ -243,7 +267,7 @@ def test_extract_from_text_flags_fabricated_value_keeps_it(monkeypatch):
             "budget_cap": "total program budget is approximately $8,000,000",  # NOT in _PDF_TEXT
         },
     }
-    monkeypatch.setattr(sx, "_call_gemini", lambda text, **kw: json.dumps(fake))
+    monkeypatch.setattr(sx, "_call_gemini", _two_stage_fake(fake))
     out = sx.extract_from_text(_PDF_TEXT)
     assert out["budget_cap"] == 8000000          # value preserved (flag, not drop)
     assert "budget_cap" in out["unverified_fields"]
