@@ -297,3 +297,39 @@ def completeness(rows: list) -> tuple:
     """
     unaccounted = [r["page"] for r in (rows or []) if r.get("source") == "unassigned"]
     return (not unaccounted), unaccounted
+
+
+def reconcile_toc(rows: list, page_texts: list, sections: dict) -> list:
+    """Where the ledger and NSF's own table of contents disagree about a length.
+
+    AN EXTERNAL CHECK -- the funder wrote these counts, not us and not the
+    model. It is the strongest defence available against a WRONG label, which is
+    ~6x more damaging than a missing one (12 points against 2 on a 50-rule
+    review) and can report an absent required attachment as present.
+
+    It REPORTS, it never overrides, and it tolerates a legitimate exception --
+    the same discipline as `pappg_ingest`'s `suspicious_yield`. Measured on the
+    real package, the one standing mismatch is CORRECT: an auto-generated NSF
+    "Data Not Available" filler page makes the biographical-sketch count 3 where
+    the table of contents says 2. The document and its own table of contents
+    genuinely disagree, and showing that beats picking a side.
+
+    Returns [] when there is no NSF table of contents, so a package from any
+    other source simply gets no third check.
+    """
+    from services import pdf_sections as _ps
+    from collections import Counter
+
+    roster = _ps._find_toc(page_texts or [], sections or {})
+    if not roster:
+        return []
+    want = {k: n for k, n, _ in roster if k}
+    counted = Counter(r["section"] for r in (rows or []) if r.get("section"))
+    out = []
+    for key, expected in want.items():
+        got = counted.get(key, 0)
+        if got and got != expected:
+            out.append({"section": key,
+                        "label": (sections.get(key) or {}).get("label") or key,
+                        "ledger_pages": got, "toc_pages": expected})
+    return out

@@ -158,7 +158,7 @@ def page_blocks(data: bytes) -> Optional[list]:
 
 
 def toc_roster(page_text: str, sections: dict) -> list:
-    """NSF's auto-generated Table of Contents as [(section key or None, pages)].
+    """NSF's auto-generated Table of Contents as [(section key or None, pages, raw name)].
 
     A ROSTER AND A VALIDATOR, NEVER A MAP. It lists sections in NSF's canonical
     order, which is not the physical order of the assembled PDF (Budget
@@ -166,6 +166,12 @@ def toc_roster(page_text: str, sections: dict) -> list:
     these counts does NOT give start pages. What it does give is which sections
     should be present and how long each should be — 8 of 10 counts exact on the
     measured document.
+
+    The RAW NAME is kept even for a row that resolves to None. The count used to
+    survive while the identity was thrown away, so a row reading
+    "Special Information/Supplementary Documents 9" became (None, 9) and nothing
+    could report WHICH nine pages the funder expected. Reporting only -- no
+    consumer matches on it.
     """
     rows = []
     pending: Optional[int] = None
@@ -194,7 +200,7 @@ def toc_roster(page_text: str, sections: dict) -> list:
         name = _PARENTHETICAL.sub("", name).strip(" .")
         if len(name) < 4:
             continue
-        rows.append((_sp.resolve_section_key(sections or {}, name), n))
+        rows.append((_sp.resolve_section_key(sections or {}, name), n, name))
     return rows
 
 
@@ -288,7 +294,7 @@ def split(data: bytes, page_texts: list, sections: dict):
         # down to 2 labelled and folded 16 pages into References Cited. Blocks
         # are labelled against the section universe; the roster is consulted
         # afterwards, for page counts and for what is missing.
-        wanted = {k for k, _ in roster if k}
+        wanted = {k for k, _, _ in roster if k}
 
         furniture = _furniture(page_texts)
         labelled = []
@@ -328,7 +334,7 @@ def split(data: bytes, page_texts: list, sections: dict):
                 if key not in (sections or {}) or key in {k for k, _f, _l in labelled}:
                     continue
                 _k, first, last = labelled[i]
-                want = next((n for rk, n in roster if rk == key), None)
+                want = next((n for rk, n, _ in roster if rk == key), None)
                 if want is None or abs((last - first + 1) - want) <= _PAGE_SLOP:
                     labelled[i] = (key, first, last)
             report["labelled"] = sum(1 for k, _f, _l in labelled if k)
@@ -348,7 +354,7 @@ def split(data: bytes, page_texts: list, sections: dict):
         # states. The roster is what settles it — References Cited is complete
         # at 6, so the forms belong forward, to Budget, whose stated 10 pages
         # they then complete exactly.
-        toc_pages_for = {k: n for k, n in roster if k}
+        toc_pages_for = {k: n for k, n, _ in roster if k}
         merged: dict = {}
         order: list = []
         current = None
@@ -413,7 +419,7 @@ def split(data: bytes, page_texts: list, sections: dict):
             # guessing between them is not worth a wrong verdict.
             tail_start = (max(e for _s, e in merged.values()) + 1) if merged else 0
             last_page = blocks[-1][1]
-            want_pages = next((n for k, n in roster if k in missing), None)
+            want_pages = next((n for k, n, _ in roster if k in missing), None)
             anchors = [f for f, _l in blocks
                        if f >= tail_start
                        and want_pages is not None
@@ -444,7 +450,7 @@ def split(data: bytes, page_texts: list, sections: dict):
                 report["unplaced"] = sorted(missing)
                 print(f"[PDF-SECTIONS] left to the locate stage: {sorted(missing)}")
 
-        toc_pages = {k: n for k, n in roster if k}
+        toc_pages = {k: n for k, n, _ in roster if k}
         for key, (first, last) in merged.items():
             want = toc_pages.get(key)
             if want is not None and abs((last - first + 1) - want) > _PAGE_SLOP:

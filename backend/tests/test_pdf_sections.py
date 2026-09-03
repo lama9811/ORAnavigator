@@ -114,7 +114,7 @@ def test_the_roster_reads_both_row_shapes():
     sections = _sections("Project Summary", "References Cited",
                          "Facilities, Equipment and Other Resources")
     rows = ps.toc_roster(TOC_PAGE, sections)
-    got = {k: n for k, n in rows if k}
+    got = {k: n for k, n, _ in rows if k}
 
     assert got.get("project_summary") == 1, rows          # same-line, parenthetical
     assert got.get("references_cited") == 6, rows         # same-line, plain
@@ -123,8 +123,8 @@ def test_the_roster_reads_both_row_shapes():
 
 def test_a_parenthetical_never_swallows_the_count():
     sections = _sections("Project Summary")
-    assert ("project_summary", 1) in ps.toc_roster(
-        "Project Summary (not to exceed 1 page) 1", sections)
+    rows = ps.toc_roster("Project Summary (not to exceed 1 page) 1", sections)
+    assert ("project_summary", 1) in [(k, n) for k, n, _ in rows]
 
 
 # ── labelling ───────────────────────────────────────────────────────────────
