@@ -69,8 +69,12 @@ _REGRESS_TOLERANCE = 0.10
 # slop is expected. More than that means the fold put the wrong blocks together.
 _PAGE_SLOP = 1
 MIN_SECTIONS = 3
-# No longer a bail -- see the `report["covered"]` comment in `split()`. Kept as
-# the documented threshold a caller can compare `report["covered"]` against.
+# No longer a bail -- see the `report["covered"]` comment in `split()`. Kept
+# ONLY as a documented reference point for anyone reading `report["covered"]"
+# by hand; nothing in this module or its callers reads this constant. The
+# actual coverage GUARANTEE now lives in `services.page_ledger.completeness`,
+# which accounts for every page after `split()` runs, so this is not a gate
+# and must not become one.
 MIN_COVERAGE = 0.60
 # How many lines at the top of a block may name it. The section name sits in the
 # first line or two of an NSF form attachment; reading further starts matching
@@ -372,10 +376,23 @@ def split(data: bytes, page_texts: list, sections: dict):
                     continue
                 _k, first, last = labelled[i]
                 want = next((n for rk, n, _ in roster if rk == key), None)
-                # An anchor with NOTHING to check it against is how the Table of
-                # Contents page entered `project_description`. A block the
-                # roster cannot corroborate is left for the ledger.
-                if want is not None and abs((last - first + 1) - want) <= _PAGE_SLOP:
+                # Guarded by the roster WHEN the roster has a row to check
+                # against -- but the roster having no row for this key is not
+                # a reason to decline the anchor. (It was diagnosed as the
+                # entry point for the Table of Contents page landing in
+                # `project_description`; it was not -- that happened via the
+                # FOLD's forward defer, fixed separately below by the
+                # `_TOC_RE` branch. Tightening this to require a roster row
+                # instead opened a WORSE hole: an un-anchored, unlabelled
+                # Project Description block with no roster row of its own
+                # falls through to the fold's `pending_forward` and gets
+                # prepended onto whichever labelled section follows it --
+                # inflating that span and dropping `project_description`
+                # from `spans` entirely, with `reason: None` whenever the
+                # following section also has no roster row to catch the
+                # mismatch. A confidently wrong split is exactly what this
+                # feature exists to prevent.)
+                if want is None or abs((last - first + 1) - want) <= _PAGE_SLOP:
                     labelled[i] = (key, first, last)
             report["labelled"] = sum(1 for k, _f, _l in labelled if k)
 
@@ -517,9 +534,13 @@ def split(data: bytes, page_texts: list, sections: dict):
         # page load-bearing: on a real awarded package the five spans covered 34
         # of 56 pages against a 33.6 floor, and returning the wrongly-folded TOC
         # page to its own section dropped that to 33 and discarded a good split.
-        # `services.page_ledger` now accounts for every page AFTER this runs and
-        # reports what it could not place, so a partial split is a useful input
-        # rather than an unsafe one. The other nine bails are unchanged.
+        # `services.page_ledger.completeness` now accounts for every page AFTER
+        # this runs and reports what it could not place, so a partial split is
+        # a useful input rather than an unsafe one. The other nine bails are
+        # unchanged. `report["covered"]` below is REPORTED FOR DIAGNOSIS ONLY --
+        # nothing in this module, `main.py`, or `document_text.py` reads it back,
+        # and it must not be wired into a gate here; the coverage guarantee is
+        # `page_ledger.completeness`'s job now, not this function's.
         report["covered"] = sum(l - f + 1 for f, l in merged.values())
 
         # Offsets into "\n".join(page_texts), computed the same way the caller

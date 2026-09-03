@@ -419,3 +419,62 @@ def test_budget_form_pages_still_fold_forward_into_the_section_they_belong_to():
     assert "SUPPLEMENTAL FORM PAGE" in spans["budget"]["text"], \
         "the unnamed budget form pages were not folded forward into Budget"
     assert "SUPPLEMENTAL FORM PAGE" not in spans["references_cited"]["text"]
+
+
+def test_a_missing_roster_row_does_not_corrupt_the_section_that_follows_it():
+    """Project Description and Project Summary are the two sections that never
+    state their own name (both carry the author's running title, not the
+    section), so `project_description` is recovered ONLY by the positional
+    anchor: the block right after NSF's own Table of Contents page. The
+    anchor is guarded by the roster when the roster HAS a row to check
+    against -- but the roster having no row for `project_description` must
+    NOT decline the anchor, because that leaves the block genuinely
+    unlabelled, and an unlabelled block that is not the TOC page itself
+    falls straight into the FOLD's `pending_forward`: it gets prepended onto
+    whichever labelled section follows it. If THAT section also has no
+    roster row of its own, the per-key mismatch check never fires either,
+    and `split()` returns a corrupted span -- References Cited swollen to
+    include the whole of Project Description -- with `reason: None`, i.e. a
+    confidently successful split that is wrong.
+
+    Reproduces the exact shape: a roster with rows for Project Summary and
+    two unrelated, unresolvable sections (enough to clear the len>=3 floor)
+    but NO row for `project_description` and NO row for `references_cited`
+    -- its immediate successor.
+    """
+    sections = _sections("Project Summary", "Project Description",
+                         "References Cited", "Budget")
+    toc_text = "\n".join(_TOC_HEADER + [
+        "Project Summary 1",
+        "Cover Sheet 2",
+        "Certification 1",
+    ])
+    page_texts = [
+        "Project Summary\nOverview text for the summary.",           # 0
+        toc_text,                                                     # 1 -- TOC
+        "Narrative research plan begins here.",                       # 2 -- Project Description,
+        "continuation narrative page 2",                              # 3    states no name of
+        "continuation narrative page 3",                              # 4    its own -- recovered
+        "continuation narrative page 4",                              # 5    ONLY by the positional
+        "continuation narrative page 5",                              # 6    anchor after the TOC.
+        "continuation narrative page 6",                              # 7
+        "References Cited\n[1] Some Citation, 2020.",                 # 8
+        "Budget\nPersonnel costs itemized below.",                    # 9
+    ]
+    data = _merged_pdf([
+        (1, "Helvetica", "Project Summary"),
+        (1, "Times-Roman", "Table of Contents"),
+        (6, "Courier", "Narrative"),
+        (1, "Helvetica-Bold", "References Cited"),
+        (1, "Times-BoldItalic", "Budget"),
+    ])
+
+    spans, report = ps.split(data, page_texts, sections)
+
+    assert report["reason"] is None, report
+    assert "project_description" in spans, \
+        "the anchor declined a section the roster simply never mentioned"
+    assert spans["project_description"]["pages"] == 6, spans["project_description"]
+    assert spans["references_cited"]["pages"] == 1, spans["references_cited"]
+    assert "Narrative research plan" not in spans["references_cited"]["text"], \
+        "project_description was swallowed into references_cited"
