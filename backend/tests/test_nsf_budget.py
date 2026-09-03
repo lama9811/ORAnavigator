@@ -170,3 +170,63 @@ def test_line_b_totals_the_other_personnel_amounts():
 def test_zero_base_salary_yields_zero_not_a_crash():
     s = _sheet_with_senior(base_salary=None, acad=2)
     assert nb.compute_personnel(s, [])["A"]["total"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Lines D, E, F, G
+# ---------------------------------------------------------------------------
+
+def _settings():
+    return nb.blank_document()["settings"]
+
+
+def test_equipment_total_sums_the_line_items():
+    s = nb.blank_sheet()
+    s["equipment"] = [{"description": "Confocal", "amount": 60_000},
+                      {"description": "Freezer", "amount": 12_000}]
+    r = nb.compute_direct_lines(s, _settings(), [])
+    assert r["D"]["total"] == 72_000.0
+
+
+def test_travel_splits_domestic_and_international():
+    s = nb.blank_sheet()
+    s["travel"]["domestic"] = [{"description": "PI to conf", "amount": 3_000}]
+    s["travel"]["international"] = [{"description": "Collab visit", "amount": 4_500}]
+    r = nb.compute_direct_lines(s, _settings(), [])
+    assert r["E"]["domestic"] == 3_000.0
+    assert r["E"]["international"] == 4_500.0
+    assert r["E"]["total"] == 7_500.0
+
+
+def test_participant_support_totals_all_four_sublines():
+    s = nb.blank_sheet()
+    s["participant_support"] = {"count": 20, "stipends": 10_000, "travel": 4_000,
+                                "subsistence": 3_000, "other": 1_000}
+    r = nb.compute_direct_lines(s, _settings(), [])
+    assert r["F"]["total"] == 18_000.0
+    assert r["F"]["count"] == 20
+
+
+def test_g_total_includes_subawards():
+    s = nb.blank_sheet()
+    s["other_direct"]["materials_supplies"] = [{"description": "Reagents", "amount": 5_000}]
+    s["other_direct"]["subawards"] = [{"organization": "Partner U", "amount": 50_000}]
+    r = nb.compute_direct_lines(s, _settings(), [])
+    assert r["G"]["subawards"]["total"] == 50_000.0
+    assert r["G"]["total"] == 55_000.0
+
+
+def test_mtdc_exempt_g6_items_are_tallied_separately():
+    s = nb.blank_sheet()
+    s["other_direct"]["other"] = [
+        {"description": "Grad tuition remission", "amount": 40_000, "mtdc_exempt": True},
+        {"description": "Lab fees", "amount": 5_000, "mtdc_exempt": False},
+    ]
+    r = nb.compute_direct_lines(s, _settings(), [])
+    assert r["G"]["other"] == 45_000.0          # both are still direct costs
+    assert r["mtdc_exempt_total"] == 40_000.0   # but only tuition leaves the F&A base
+
+
+def test_blank_sheet_computes_all_zeros_without_crashing():
+    r = nb.compute_direct_lines(nb.blank_sheet(), _settings(), [])
+    assert r["D"]["total"] == 0.0 and r["G"]["total"] == 0.0

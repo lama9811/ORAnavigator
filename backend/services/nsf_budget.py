@@ -198,3 +198,81 @@ def compute_personnel(sheet, warnings):
         "fringe_rows": fringe_rows,
         "salaries_and_wages": round(a_total + b_total, 2),
     }
+
+
+# ── Lines D, E, F, G ───────────────────────────────────────────────────────
+def _items(raw, warnings, field):
+    """Normalise a list of {description, amount} line items."""
+    out = []
+    for it in raw or []:
+        it = it or {}
+        out.append({
+            "description": (it.get("description") or "").strip(),
+            "amount": _money(it.get("amount"), warnings, field),
+        })
+    return out
+
+
+def compute_direct_lines(sheet, settings, warnings):
+    """Lines D, E, F and G, plus the G.6 items exempted from the F&A base.
+
+    NSF's form has no tuition line and Morgan books graduate tuition remission
+    in G.6 alongside items that DO bear F&A, so the exemption is an explicit
+    per-item flag the PI sets -- never a guess from the description text.
+    """
+    equipment = _items(sheet.get("equipment"), warnings, "equipment")
+    d_total = round(sum(i["amount"] for i in equipment), 2)
+
+    travel = sheet.get("travel") or {}
+    dom = _items(travel.get("domestic"), warnings, "domestic travel")
+    intl = _items(travel.get("international"), warnings, "international travel")
+    dom_total = round(sum(i["amount"] for i in dom), 2)
+    intl_total = round(sum(i["amount"] for i in intl), 2)
+
+    ps = sheet.get("participant_support") or {}
+    f_parts = {k: _money(ps.get(k), warnings, f"participant {k}")
+               for k in ("stipends", "travel", "subsistence", "other")}
+    f_total = round(sum(f_parts.values()), 2)
+
+    od = sheet.get("other_direct") or {}
+    g, g_rows = {}, {}
+    for key, label in G_ITEM_LINES:
+        rows = _items(od.get(key), warnings, label.lower())
+        g_rows[key] = rows
+        g[key] = round(sum(i["amount"] for i in rows), 2)
+
+    subs = []
+    for s in od.get("subawards") or []:
+        s = s or {}
+        subs.append({
+            "organization": (s.get("organization") or "").strip(),
+            "amount": _money(s.get("amount"), warnings, "subaward"),
+        })
+    subs_total = round(sum(s["amount"] for s in subs), 2)
+
+    others, exempt_total = [], 0.0
+    for it in od.get("other") or []:
+        it = it or {}
+        amt = _money(it.get("amount"), warnings, "other direct cost")
+        exempt = bool(it.get("mtdc_exempt"))
+        others.append({"description": (it.get("description") or "").strip(),
+                       "amount": amt, "mtdc_exempt": exempt})
+        if exempt:
+            exempt_total += amt
+    other_total = round(sum(i["amount"] for i in others), 2)
+
+    g_total = round(sum(g.values()) + subs_total + other_total, 2)
+
+    return {
+        "D": {"rows": equipment, "total": d_total},
+        "E": {"domestic": dom_total, "international": intl_total,
+              "domestic_rows": dom, "international_rows": intl,
+              "total": round(dom_total + intl_total, 2)},
+        "F": {"count": int(ps.get("count") or 0), **f_parts, "total": f_total},
+        "G": {**g, "rows": g_rows,
+              "subawards": {"rows": subs, "total": subs_total},
+              "other": other_total, "other_rows": others,
+              "total": g_total},
+        "mtdc_exempt_total": round(exempt_total, 2),
+        "subaward_amounts": [s["amount"] for s in subs],
+    }
