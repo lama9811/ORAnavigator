@@ -69,6 +69,8 @@ _REGRESS_TOLERANCE = 0.10
 # slop is expected. More than that means the fold put the wrong blocks together.
 _PAGE_SLOP = 1
 MIN_SECTIONS = 3
+# No longer a bail -- see the `report["covered"]` comment in `split()`. Kept as
+# the documented threshold a caller can compare `report["covered"]` against.
 MIN_COVERAGE = 0.60
 # How many lines at the top of a block may name it. The section name sits in the
 # first line or two of an NSF form attachment; reading further starts matching
@@ -370,7 +372,10 @@ def split(data: bytes, page_texts: list, sections: dict):
                     continue
                 _k, first, last = labelled[i]
                 want = next((n for rk, n, _ in roster if rk == key), None)
-                if want is None or abs((last - first + 1) - want) <= _PAGE_SLOP:
+                # An anchor with NOTHING to check it against is how the Table of
+                # Contents page entered `project_description`. A block the
+                # roster cannot corroborate is left for the ledger.
+                if want is not None and abs((last - first + 1) - want) <= _PAGE_SLOP:
                     labelled[i] = (key, first, last)
             report["labelled"] = sum(1 for k, _f, _l in labelled if k)
 
@@ -496,10 +501,15 @@ def split(data: bytes, page_texts: list, sections: dict):
         if len(merged) < MIN_SECTIONS:
             report["reason"] = f"only {len(merged)} sections survived"
             return {}, report
-        covered = sum(l - f + 1 for f, l in merged.values())
-        if covered < MIN_COVERAGE * len(page_texts):
-            report["reason"] = f"only {covered} of {len(page_texts)} pages assigned"
-            return {}, report
+        # PAGE COVERAGE IS NO LONGER A BAIL, and the reason is that it moved.
+        # It ran BEFORE any model involvement, which made the Table-of-Contents
+        # page load-bearing: on a real awarded package the five spans covered 34
+        # of 56 pages against a 33.6 floor, and returning the wrongly-folded TOC
+        # page to its own section dropped that to 33 and discarded a good split.
+        # `services.page_ledger` now accounts for every page AFTER this runs and
+        # reports what it could not place, so a partial split is a useful input
+        # rather than an unsafe one. The other nine bails are unchanged.
+        report["covered"] = sum(l - f + 1 for f, l in merged.values())
 
         # Offsets into "\n".join(page_texts), computed the same way the caller
         # builds that string so the two cannot drift.
