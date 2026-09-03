@@ -113,3 +113,187 @@ def receipt_ok(page_body: str, quote: str) -> bool:
     pwords = _words(page_body)
     n = len(qwords)
     return any(pwords[i:i + n] == qwords for i in range(len(pwords) - n + 1))
+
+
+# Four pages per call, MEASURED not chosen. Over the real 56-page package:
+# 4 -> 56/56 receipts in 22.8s (14 calls); 12 -> 55/56 in 41.6s; 28 -> 54/56.
+# Smaller is more accurate AND faster, because short calls run concurrently
+# under `_MODEL_SLOTS`. Agrees with the published direction (arXiv:2301.08721
+# measures a significant accuracy drop at batch size 6) and with this repo's own
+# strongest measurement -- one rule per call gave 92% ten times out of ten where
+# batch=15 split 83%/92%.
+PAGE_WINDOW = 4
+
+# Enough of a page for the model to name it; the receipt only needs one real
+# line. Whole pages would multiply input tokens for no measured gain.
+_PAGE_CHARS = 2600
+
+_WALK_SYSTEM = """You are reading ONE PAGE AT A TIME of an assembled grant proposal PDF.
+Read every line of each page you are given, top to bottom, before answering.
+
+For EVERY page number listed in the input you MUST return exactly one object.
+Never omit a page. If you cannot tell what a page is, return "unsure" as the
+section -- never leave the page out.
+
+Each object:
+  page    : the page number, exactly as given
+  section : one value from the allowed list, or "unsure"
+  quote   : a VERBATIM span of at least 6 words copied character-for-character
+            from THAT page's text. It is your proof that you read the page.
+            Never invent it, never take it from another page, never paraphrase.
+
+A page with a heading is named by its heading. A page with no heading -- a
+letter, a form, a continuation of prose -- belongs to whatever it continues.
+Return ONLY {"pages":[...]}."""
+
+
+def _window_prompt(nums, page_texts, section_keys, known):
+    body = "\n\n".join(
+        f"=== PAGE {n} ===\n{(page_texts[n - 1] or '')[:_PAGE_CHARS]}" for n in nums)
+    fixed = ""
+    if known:
+        named = "; ".join(f"page {p} is {k}" for p, k in sorted(known.items()) if k)
+        if named:
+            # Anchors, so the walk labels CONSISTENTLY around what the PDF's own
+            # structure already settled. Never a licence to overrule it --
+            # `build_ledger` keeps the structural answer regardless.
+            fixed = f"\nAlready established from the document's structure: {named}.\n"
+    return (f"Allowed section values: {', '.join(section_keys)}, unsure\n{fixed}\n"
+            f"Return exactly {len(nums)} objects, one for each of pages {list(nums)}.\n\n{body}")
+
+
+def _ask_window(nums, page_texts, section_keys, known):
+    """One model call for one window. Returns {page: {section, quote}}."""
+    from services import draft_review as _dr
+    from services import gemini_client as _gc
+
+    reply = _dr._ask_model(
+        _gc.generate_json,
+        _window_prompt(nums, page_texts, section_keys, known),
+        system_instruction=_WALK_SYSTEM,
+        model=_dr.MODEL, location=_dr.MODEL_LOCATION,
+        temperature=0.0, max_output_tokens=8192,
+        thinking_budget=_dr.THINKING_BUDGET,
+        # A bare top-level array is an ANSWER, not a failure: commit 3553be5
+        # records one costing 15 rules and rendering a false 100%.
+        list_key="pages",
+    )
+    out = {}
+    for row in (reply or {}).get("pages") or []:
+        try:
+            page = int(row.get("page"))
+        except (TypeError, ValueError):
+            continue
+        # Reconcile by ID, never by count. A row for a page we did not send is
+        # dropped rather than trusted -- same rule as `_review_batch`.
+        if page in nums:
+            out[page] = {"section": row.get("section"),
+                         "quote": (row.get("quote") or "").strip()}
+    return out
+
+
+def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
+               known: Optional[dict] = None) -> dict:
+    """Ask the model what each page is. {page number: {section, quote}}.
+
+    Windows run CONCURRENTLY but every call passes through
+    `draft_review._ask_model`, so this contends for the existing semaphore
+    rather than opening a fourth uncapped pool (`services/proofread.py` does
+    that, and it is a defect this must not copy).
+
+    A page missing from its window's reply is RE-ASKED ON ITS OWN before being
+    given up on. Never raises: with no model this returns {}.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    n = len(page_texts or [])
+    if not n or not section_keys:
+        return {}
+    windows = [list(range(i, min(i + PAGE_WINDOW, n + 1)))
+               for i in range(1, n + 1, PAGE_WINDOW)]
+    got: dict = {}
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for part in pool.map(
+                    lambda w: _ask_window(w, page_texts, section_keys, known), windows):
+                got.update(part or {})
+    except Exception as exc:                       # noqa: BLE001 -- golden rule 3
+        print(f"[PAGE-LEDGER] walk failed: {exc}")
+
+    missing = [p for p in range(1, n + 1) if p not in got]
+    if missing:
+        print(f"[PAGE-LEDGER] re-asking {len(missing)} page(s): {missing}")
+        try:
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                for part in pool.map(
+                        lambda p: _ask_window([p], page_texts, section_keys, known), missing):
+                    got.update(part or {})
+        except Exception as exc:                   # noqa: BLE001
+            print(f"[PAGE-LEDGER] re-ask failed: {exc}")
+    return got
+
+
+def build_ledger(page_texts: list, sections: dict, *,
+                 structure: Optional[dict] = None) -> list:
+    """One row per page, built by CODE before anything else runs.
+
+    The loop below is the whole guarantee: a page cannot be skipped, only left
+    unanswered, and an unanswered page is a row reading `unassigned` that the
+    modal renders. Precedence is structure > model > blank > unassigned --
+    `pdf_sections` is deterministic and identical every run, so the walk fills
+    gaps and never overrules it; a disagreement is RECORDED, not resolved.
+    """
+    n = len(page_texts or [])
+    structure = {int(k): v for k, v in (structure or {}).items()}
+    furniture = document_furniture(page_texts or [])
+    bodies = [body_text(t, furniture) for t in (page_texts or [])]
+    keys = list(sections or {})
+
+    answers = walk_pages(page_texts, keys, furniture=furniture,
+                         known=structure) if keys else {}
+
+    rows, order, seen = [], [], set()
+    for page in range(1, n + 1):
+        body = bodies[page - 1]
+        row = {"page": page, "section": None, "source": "unassigned",
+               "quote": "", "verified": False, "chars": len(body.strip())}
+
+        fixed = structure.get(page)
+        answer = answers.get(page) or {}
+        guess = answer.get("section")
+        quote = answer.get("quote") or ""
+
+        if fixed:
+            row.update(section=fixed, source="structure")
+            if guess and guess != fixed and guess in sections:
+                row["disagreed_with_model"] = guess
+        elif is_blank(body):
+            row["source"] = "blank"
+        elif guess in sections and receipt_ok(body, quote):
+            # CONTIGUITY. A section that has already ended cannot reappear --
+            # page 47 is not the Project Summary. A label that breaks the order
+            # is refused in code rather than argued with.
+            if guess in seen and (order and order[-1] != guess):
+                row["refused"] = guess
+            else:
+                row.update(section=guess, source="model", quote=quote, verified=True)
+        elif guess in sections and quote:
+            row["refused"] = guess               # answered, receipt did not hold
+
+        if row["section"]:
+            if not order or order[-1] != row["section"]:
+                order.append(row["section"])
+            seen.add(row["section"])
+        rows.append(row)
+    return rows
+
+
+def completeness(rows: list) -> tuple:
+    """(every page accounted for?, the page numbers that are not).
+
+    `blank` COUNTS as accounted for: a page with nothing on it was read and
+    found empty, which is a fact about the document rather than a gap in our
+    reading. Only `unassigned` is a gap.
+    """
+    unaccounted = [r["page"] for r in (rows or []) if r.get("source") == "unassigned"]
+    return (not unaccounted), unaccounted
