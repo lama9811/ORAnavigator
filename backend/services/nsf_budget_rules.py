@@ -12,6 +12,7 @@ Design: docs/superpowers/specs/2026-09-03-nsf-form-1030-budget-design.md
 """
 from __future__ import annotations
 
+from services.budget_helper import DEFAULT_FA_KEY, DEFAULT_FA_YEAR, FA_RATES
 from services.nsf_budget import (
     DEFAULT_CAPITALIZATION, FORM_ITEMISE_THRESHOLD, MAX_SENIOR_MONTHS,
     SUBAWARD_MTDC_CAP,
@@ -112,6 +113,67 @@ def _check_subaward_over_25k(ctx):
     return out
 
 
+# ── line I / K / M and proposal-scope predicates ──────────────────────────
+
+def _negotiated_rate(settings):
+    year = settings.get("fa_year") or DEFAULT_FA_YEAR
+    key = settings.get("fa_rate_key") or DEFAULT_FA_KEY
+    entry = (FA_RATES.get(year) or {}).get(key)
+    return entry[1] if entry else None
+
+
+def _check_fa_below_negotiated(ctx):
+    negotiated = _negotiated_rate(ctx["settings"])
+    applied = ctx["computed"]["fa"]["rate"]
+    if negotiated is None or applied >= negotiated:
+        return []
+    return [f"{applied * 100:.1f}% applied against a negotiated rate of "
+            f"{negotiated * 100:.0f}%."]
+
+
+def _check_fa_unknown_rate(ctx):
+    return (["A manual F&A rate is in use rather than one of Morgan's "
+             "negotiated rates."]
+            if ctx["settings"].get("fa_rate_override") not in (None, "") else [])
+
+
+def _check_fee_restricted(ctx):
+    program = (ctx["meta"].get("sponsor_program") or "standard").lower()
+    if ctx["computed"]["lines"]["K"] > 0 and program not in ("sbir_sttr", "major_facility"):
+        return [f"A fee of ${ctx['computed']['lines']['K']:,.0f} is budgeted on a "
+                f"'{program}' proposal."]
+    return []
+
+
+def _check_voluntary_cost_sharing(ctx):
+    if ctx["computed"]["lines"]["M"] > 0 and not ctx["meta"].get("mandatory_cost_sharing"):
+        return [f"${ctx['computed']['lines']['M']:,.0f} of cost sharing is proposed."]
+    return []
+
+
+def _check_missing_years(ctx):
+    months = int(ctx["meta"].get("duration_months") or 0)
+    if not months:
+        return []
+    expected = -(-months // 12)                     # ceiling division
+    actual = len(ctx["computed"].get("years") or [])
+    if actual < expected:
+        return [f"{actual} year sheet(s) for a {months}-month project "
+                f"({expected} expected)."]
+    return []
+
+
+def _check_cap_exceeded(ctx):
+    cap = ctx["computed"].get("cap") or {}
+    if cap.get("status") == "over":
+        return [f"The cumulative request exceeds the cap by ${cap['overage']:,.0f}."]
+    return []
+
+
+def _check_five_page_justification(ctx):
+    return ["The budget justification may be no more than five pages."]
+
+
 RULES = [
     {"id": "nsf.senior.two_month_cap", "line": "A", "severity": "warn", "scope": "year",
      "title": "Senior salary over two months",
@@ -192,6 +254,48 @@ RULES = [
      "message": ("Only the first $25,000 of each subaward is included in the "
                  "modified total direct cost base that F&A is charged on."),
      "citation": "2 CFR 200.1", "check": _check_subaward_over_25k},
+
+    {"id": "nsf.fa.below_negotiated", "line": "I", "severity": "warn", "scope": "year",
+     "title": "F&A rate below the negotiated rate",
+     "message": ("NSF requires the applicable federally negotiated indirect cost "
+                 "rate. Using a lower rate is itself a violation of NSF's cost "
+                 "sharing policy -- it is not a way to fit under a budget cap."),
+     "citation": f"{PAPPG} II.D.2.f(viii)", "check": _check_fa_below_negotiated},
+
+    {"id": "nsf.fa.unknown_rate", "line": "I", "severity": "warn", "scope": "year",
+     "title": "Manual F&A rate",
+     "message": ("The rate in use is not one of Morgan's negotiated rates from the "
+                 "knowledge base. Confirm it against ORA's current rate agreement."),
+     "citation": f"{PAPPG} II.D.2.f(viii)", "check": _check_fa_unknown_rate},
+
+    {"id": "nsf.fee.restricted", "line": "K", "severity": "warn", "scope": "year",
+     "title": "Fee outside SBIR/STTR or Major Facilities",
+     "message": ("Line K is available only to the SBIR/STTR programs and Major "
+                 "Facilities programs, and only when the solicitation specifies it."),
+     "citation": f"{PAPPG} II.D.2.f(x)", "check": _check_fee_restricted},
+
+    {"id": "nsf.cost_sharing.voluntary", "line": "M", "severity": "warn", "scope": "year",
+     "title": "Voluntary committed cost sharing",
+     "message": ("Voluntary committed cost sharing is prohibited. Line M is used "
+                 "only when the program solicitation mandates cost sharing -- mark "
+                 "the proposal accordingly if it does."),
+     "citation": f"{PAPPG} II.D.2.f(xii)", "check": _check_voluntary_cost_sharing},
+
+    {"id": "nsf.structure.missing_years", "line": "-", "severity": "warn",
+     "scope": "proposal", "title": "Fewer year sheets than the project duration",
+     "message": "A budget is required for each year of support requested.",
+     "citation": f"{PAPPG} II.D.2.f", "check": _check_missing_years},
+
+    {"id": "nsf.cap.exceeded", "line": "-", "severity": "warn", "scope": "proposal",
+     "title": "Over the solicitation's budget cap",
+     "message": "The cumulative request exceeds the cap recorded for this proposal.",
+     "citation": "solicitation", "check": _check_cap_exceeded},
+
+    {"id": "nsf.justification.five_pages", "line": "-", "severity": "info",
+     "scope": "proposal", "title": "Budget justification page limit",
+     "message": ("The budget justification is limited to five pages per proposal, "
+                 "plus up to five pages for each subrecipient."),
+     "citation": f"{PAPPG} II.D.2.f", "check": _check_five_page_justification},
 ]
 
 

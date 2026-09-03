@@ -181,3 +181,96 @@ def test_a_subaward_under_25k_does_not_report_an_exclusion():
     doc["years"][0]["other_direct"]["subawards"] = [
         {"organization": "Partner U", "amount": 20_000}]
     assert "nsf.subaward.over_25k" not in _ids(doc)
+
+
+# --- I: indirect costs ----------------------------------------------------
+
+def test_an_fa_rate_below_the_negotiated_rate_warns():
+    doc = nb.blank_document()
+    doc["settings"]["fa_rate_override"] = 0.20
+    assert "nsf.fa.below_negotiated" in _ids(doc)
+
+
+def test_the_full_negotiated_rate_does_not_warn():
+    doc = nb.blank_document()          # 54% organized research, the negotiated rate
+    assert "nsf.fa.below_negotiated" not in _ids(doc)
+
+
+def test_the_below_rate_flag_says_it_is_a_cost_sharing_violation():
+    doc = nb.blank_document()
+    doc["settings"]["fa_rate_override"] = 0.20
+    flag = next(f for f in _flags(doc) if f["id"] == "nsf.fa.below_negotiated")
+    assert "cost sharing" in flag["message"].lower()
+
+
+# --- K: fee ---------------------------------------------------------------
+
+def test_a_fee_on_a_standard_proposal_warns():
+    doc = nb.blank_document()
+    doc["years"][0]["fee"] = 5_000
+    assert "nsf.fee.restricted" in _ids(doc)
+
+
+def test_a_fee_on_an_sbir_proposal_does_not_warn():
+    doc = nb.blank_document()
+    doc["meta"]["sponsor_program"] = "sbir_sttr"
+    doc["years"][0]["fee"] = 5_000
+    assert "nsf.fee.restricted" not in _ids(doc)
+
+
+# --- M: cost sharing ------------------------------------------------------
+
+def test_voluntary_cost_sharing_warns():
+    doc = nb.blank_document()
+    doc["years"][0]["cost_sharing"] = {"proposed": 20_000, "agreed": None}
+    assert "nsf.cost_sharing.voluntary" in _ids(doc)
+
+
+def test_mandated_cost_sharing_does_not_warn():
+    doc = nb.blank_document()
+    doc["meta"]["mandatory_cost_sharing"] = True
+    doc["years"][0]["cost_sharing"] = {"proposed": 20_000, "agreed": None}
+    assert "nsf.cost_sharing.voluntary" not in _ids(doc)
+
+
+# --- proposal scope -------------------------------------------------------
+
+def test_fewer_year_sheets_than_the_duration_warns():
+    doc = nb.blank_document(years=1)
+    doc["meta"]["duration_months"] = 36
+    assert "nsf.structure.missing_years" in _ids(doc)
+
+
+def test_matching_years_and_duration_does_not_warn():
+    doc = nb.blank_document(years=3)
+    doc["meta"]["duration_months"] = 36
+    assert "nsf.structure.missing_years" not in _ids(doc)
+
+
+def test_exceeding_the_cap_warns():
+    doc = nb.blank_document()
+    doc["settings"]["cap"] = 10_000
+    doc["years"][0]["other_direct"]["materials_supplies"] = [
+        {"description": "Reagents", "amount": 10_000}]
+    assert "nsf.cap.exceeded" in _ids(doc)
+
+
+def test_the_five_page_justification_note_is_always_present():
+    assert "nsf.justification.five_pages" in _ids(nb.blank_document())
+
+
+# --- wiring ---------------------------------------------------------------
+
+def test_compute_document_attaches_flags():
+    doc = nb.blank_document()
+    doc["years"][0]["fee"] = 5_000
+    out = nb.compute_document(doc)
+    assert any(f["id"] == "nsf.fee.restricted" for f in out["flags"])
+
+
+def test_year_scoped_flags_are_attached_to_their_year():
+    doc = nb.blank_document(years=2)
+    doc["years"][1]["fee"] = 5_000
+    out = nb.compute_document(doc)
+    assert [f["id"] for f in out["years"][0]["flags"]].count("nsf.fee.restricted") == 0
+    assert [f["id"] for f in out["years"][1]["flags"]].count("nsf.fee.restricted") == 1

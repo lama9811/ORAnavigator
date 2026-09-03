@@ -402,13 +402,26 @@ def compute_document(doc):
                "status": "over" if over > 0 else "ok",
                "overage": over if over > 0 else 0.0}
 
-    return {
+    result = {
         "schema": SCHEMA, "version": VERSION,
         "meta": doc.get("meta") or blank_document()["meta"],
         "settings": settings,
         "years": years, "cumulative": cumulative,
         "cap": cap, "warnings": warnings, "flags": [],
     }
+
+    # Imported late: nsf_budget_rules imports from this module.
+    from services import nsf_budget_rules
+
+    all_flags = nsf_budget_rules.evaluate(doc, result)
+    result["flags"] = all_flags
+    by_year = {}
+    for f in all_flags:
+        if f.get("year"):
+            by_year.setdefault(f["year"], []).append(f)
+    for y in years:
+        y["flags"] = by_year.get(y["year"], [])
+    return result
 
 
 def add_year(doc, escalation_pct=None):
