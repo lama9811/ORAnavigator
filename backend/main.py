@@ -4695,7 +4695,16 @@ async def draft_review_upload(
     # Did the PDF's OWN structure name these sections? If so the model is not
     # asked to name whatever is left, so the score's denominator is fixed rather
     # than depending on a guess that lands on some runs and not others.
-    structural = any(f.get("section_spans") for f in extracted)
+    #
+    # MUST read `spans_are_structural`, never `bool(section_spans)`.
+    # `section_spans` is now also set when the page-ledger WALK named a
+    # section `pdf_sections.split()` could not -- a model call, not a
+    # deterministic read. Reading presence alone would silently disable the
+    # AI locate stage the moment `split()` bails (the common case for
+    # anything but a Research.gov-assembled combined PDF), leaving any
+    # section neither a filename nor the walk named permanently
+    # `could_not_locate` with nothing on screen saying why.
+    structural = any(f.get("spans_are_structural") for f in extracted)
     result = _dr.review_draft(draft_text, profile=profile, title=sub.title,
                               budget=budget, pages=page_counts or None,
                               file_spans=file_spans or None,

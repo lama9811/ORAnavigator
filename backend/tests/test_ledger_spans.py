@@ -131,6 +131,15 @@ def test_an_interior_page_of_a_different_section_stops_the_span():
     assert spans["project_description"]["text"] == "\n".join(pages[:2])
     assert "part B" not in spans["project_description"]["text"]
     assert spans["project_summary"]["text"] == pages[2]
+    # I-3: page 4 was assigned to project_description by the ledger but is
+    # in NEITHER span (the section's stop-before-B rule means the span's
+    # own reach cannot include it). It must be RECORDED, never silently
+    # dropped -- and it's real: page_counts (3) and the span's own "pages"
+    # (2) are allowed to disagree, precisely because one page is dropped.
+    assert spans["project_description"]["dropped_pages"] == [4]
+    assert spans["project_summary"]["dropped_pages"] == []
+    assert pl.page_counts_from_ledger(rows)["project_description"] == 3
+    assert spans["project_description"]["pages"] == 2
 
 
 def test_page_counts_still_count_only_assigned_pages_despite_absorption():

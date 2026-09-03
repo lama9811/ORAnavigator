@@ -407,6 +407,14 @@ def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
     ledger gave to someone else. Because nothing is skipped, the returned
     `text` is always exactly `joined[start:end]` -- the offsets can never
     disagree with the text they claim to address.
+
+    A key can have pages ASSIGNED to it beyond where its own span stops --
+    `[A, B, A]` gives A a span over its first run only, but a later page the
+    ledger separately gave back to A is real and must not vanish silently.
+    Those are reported in `dropped_pages` on the span rather than folded in
+    (folding would reopen the exact single-contiguous-slice problem above).
+    A caller that needs those pages' text has `page_texts` to read them
+    directly by number.
     """
     if not rows or not page_texts:
         return {}
@@ -440,6 +448,10 @@ def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
             end_page = p
         start = offsets[first - 1][0]
         end = offsets[end_page - 1][1]
+        # Pages the ledger gave to this key but that the span above could not
+        # reach without reopening the single-contiguous-slice problem -- see
+        # the docstring. Reported, never silently dropped.
+        dropped = sorted(p for p in pages if p > end_page)
         spans[key] = {
             "start": start, "end": end, "text": joined[start:end],
             "label": (sections.get(key) or {}).get("label") or key,
@@ -448,13 +460,26 @@ def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
             # own provenance instead, and the modal can render it.
             "marker": f"pages {first}-{end_page}" if end_page > first else f"page {first}",
             "pages": end_page - first + 1,
+            "dropped_pages": dropped,
         }
     return spans
 
 
 def page_counts_from_ledger(rows: list) -> dict:
-    """{section key: REAL page count}. Real, not a word-count estimate, so page
-    rules can return a verdict rather than an estimate."""
+    """{section key: number of pages the ledger ASSIGNED to it}.
+
+    ATTRIBUTION, NOT REACH -- DO NOT feed this to a page-limit rule. A span's
+    absorbed blank/unassigned interior pages (`spans_from_ledger`) count
+    against a section's real page total -- a full-page figure inside a
+    15-page Project Description still counts as one of the 15 to NSF -- but
+    they were never ASSIGNED to the section, so this function does not count
+    them. A 16-page section with 2 absorbed blanks reports 14 here and would
+    silently PASS a 15-page limit it actually violates.
+
+    The number a page-limit rule wants is `span["pages"]` from
+    `spans_from_ledger`'s output (the span's real reach, absorbed pages
+    included) -- this function exists for the different question of how many
+    pages the ledger could actually attribute to a section by name."""
     counts: dict = {}
     for row in rows or []:
         key = row.get("section")

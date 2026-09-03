@@ -186,7 +186,20 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
     be an assembled multi-attachment package (a Research.gov submission), the
     result also carries `section_spans`, offsets into this file's own `text`.
     Absent, unsplittable, or unsafe to split, the key is simply not there and
-    nothing downstream changes — see services/pdf_sections for the fail-safes."""
+    nothing downstream changes — see services/pdf_sections for the fail-safes.
+
+    Also carries, when `sections` and `page_texts` are both present:
+    `page_ledger` (one row per page — see `services.page_ledger`),
+    `ledger_toc_mismatch`, `ledger_page_counts` (attribution counts, NOT a
+    page-limit input — see `page_ledger.page_counts_from_ledger`), and
+    `spans_are_structural`: True ONLY when `pdf_sections.split()` itself
+    returned spans from the PDF's own object-graph structure, False whenever
+    the split bailed and `section_spans` (if present at all) came from the
+    page-ledger WALK instead — a model call, not a deterministic read. A
+    caller deciding whether locate can be skipped (`review_draft`'s
+    `structural` flag) MUST use this, never `bool(section_spans)`: the ledger
+    fills gaps the split could not name, which is intended, but that must
+    never be mistaken for the determinism only a real structural split has."""
     name = filename or "file"
     ext = os.path.splitext(name)[1].lower()
     out = {"filename": name, "text": "", "pages": 0, "chars": 0,
@@ -253,6 +266,15 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
             from services import page_ledger as _pl
 
             spans, report = _ps.split(data, page_texts, sections)
+            # ONLY a real structural split earns this. `structure` below is
+            # widened by the ledger's model WALK to fill pages `split()`
+            # could not name, but a caller deciding whether the AI locate
+            # stage can be skipped needs to know the PDF's own object graph
+            # named these sections deterministically -- not that SOMETHING
+            # (possibly a model call) named them. Set now, before anything
+            # below can fail, so a caller never has to infer it from
+            # `section_spans`' mere presence (which the ledger can also set).
+            out["spans_are_structural"] = bool(spans)
             shift = len(_raw) - len(_raw.lstrip()) if (_raw := "\n".join(page_texts)) else 0
 
             # STRUCTURE FIRST, and it wins. `pdf_sections` reads the seams out
@@ -265,10 +287,20 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
                         structure[page] = key
 
             ledger = _pl.build_ledger(page_texts, sections, structure=structure)
-            out["page_ledger"] = ledger
+            # `quote` is the PI's own manuscript text, copied verbatim from
+            # their draft as the model's receipt for a page. The ledger panel
+            # never renders it and this response is an API payload, not an
+            # internal handoff -- strip it before it leaves this function so
+            # no caller has to remember to. `verified` (whether the receipt
+            # held) is kept; that's a fact about our read, not the PI's prose.
+            out["page_ledger"] = [{k: v for k, v in row.items() if k != "quote"}
+                                  for row in ledger]
             out["ledger_toc_mismatch"] = _pl.reconcile_toc(ledger, page_texts, sections)
 
             merged = _pl.spans_from_ledger(ledger, page_texts, sections)
+            # ATTRIBUTION, not reach -- see `page_counts_from_ledger`'s own
+            # docstring. Do NOT feed this to a page-limit rule; that rule
+            # wants `section_spans[key]["pages"]` below.
             out["ledger_page_counts"] = _pl.page_counts_from_ledger(ledger)
 
             # `text` was stripped after joining, so every offset shifts by
