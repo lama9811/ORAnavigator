@@ -487,5 +487,3 @@
 .bh-template-row select:focus { outline: none; border-color: #1B3A6B; }
 .bh-template-hint { font-size: 0.72rem; color: #94a3b8; }
 
-/* The NSF sheet is much wider than the generic form. */
-.bh-modal:has(.nsf-wrap) { max-width: 1180px; }
