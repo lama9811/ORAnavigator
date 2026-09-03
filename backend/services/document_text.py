@@ -250,23 +250,41 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
     if sections and page_texts and not truncated:
         try:
             from services import pdf_sections as _ps
+            from services import page_ledger as _pl
+
             spans, report = _ps.split(data, page_texts, sections)
-            if spans:
-                # `text` was stripped after joining, so every offset shifts by
-                # the leading whitespace that removal took out. Clamped, and the
-                # slice is re-read from the FINAL text so a caller can never be
-                # handed an offset that does not address what it claims to.
-                shift = len(_raw) - len(_raw.lstrip()) if (_raw := "\n".join(page_texts)) else 0
-                rebased = {}
-                for key, span in spans.items():
-                    s0 = max(0, span["start"] - shift)
-                    e0 = max(s0, min(len(text), span["end"] - shift))
-                    if e0 > s0:
-                        rebased[key] = {**span, "start": s0, "end": e0,
-                                        "text": text[s0:e0]}
-                if rebased:
-                    out["section_spans"] = rebased
-                    out["section_report"] = report
+            shift = len(_raw) - len(_raw.lstrip()) if (_raw := "\n".join(page_texts)) else 0
+
+            # STRUCTURE FIRST, and it wins. `pdf_sections` reads the seams out
+            # of the PDF's object graph and returns the same answer every run;
+            # the walk fills the pages it could not name and never overrules it.
+            structure = {}
+            for key, span in (spans or {}).items():
+                for page, (p0, p1) in enumerate(_pl._page_offsets(page_texts), start=1):
+                    if span["start"] <= p0 and p1 <= span["end"]:
+                        structure[page] = key
+
+            ledger = _pl.build_ledger(page_texts, sections, structure=structure)
+            out["page_ledger"] = ledger
+            out["ledger_toc_mismatch"] = _pl.reconcile_toc(ledger, page_texts, sections)
+
+            merged = _pl.spans_from_ledger(ledger, page_texts, sections)
+            out["ledger_page_counts"] = _pl.page_counts_from_ledger(ledger)
+
+            # `text` was stripped after joining, so every offset shifts by
+            # the leading whitespace that removal took out. Clamped, and the
+            # slice is re-read from the FINAL text so a caller can never be
+            # handed an offset that does not address what it claims to.
+            rebased = {}
+            for key, span in merged.items():
+                s0 = max(0, span["start"] - shift)
+                e0 = max(s0, min(len(text), span["end"] - shift))
+                if e0 > s0:
+                    rebased[key] = {**span, "start": s0, "end": e0,
+                                    "text": text[s0:e0]}
+            if rebased:
+                out["section_spans"] = rebased
+                out["section_report"] = report
         except Exception as exc:                # never break an upload over this
             print(f"[DOCUMENT-TEXT] structural split skipped: {exc}")
     return out

@@ -370,6 +370,79 @@ def completeness(rows: list) -> tuple:
     return (not unaccounted), unaccounted
 
 
+def _page_offsets(page_texts: list) -> list:
+    """(start, end) of each page in `"\\n".join(page_texts)`.
+
+    Built on exactly the join `document_text._extract_pdf` uses, because
+    `pdf_sections` computes its offsets on the same string and the two must not
+    disagree about where a page begins.
+    """
+    offsets, cursor = [], 0
+    for text in page_texts or []:
+        offsets.append((cursor, cursor + len(text or "")))
+        cursor += len(text or "") + 1               # the "\n" the join inserts
+    return offsets
+
+
+def spans_from_ledger(rows: list, page_texts: list, sections: dict) -> dict:
+    """{section key: span} covering the pages the ledger assigned to it.
+
+    A span runs from a key's FIRST assigned page and extends forward only
+    while the NEXT page is also assigned to it -- so a run of consecutive
+    pages becomes one span, exactly as `pdf_sections.split` produces one span
+    per contiguous block.
+
+    It stops at the first gap rather than reaching across it. `start`/`end`
+    are the only thing `document_text.extract_upload` keeps -- it rebases them
+    and RE-SLICES `text` from `text[start:end]`, a single contiguous cut, so
+    there is no way to hand it "pages 2 and 4, not 3": any span whose `start`
+    and `end` bracket an unassigned page would silently hand that page's text
+    to a section the ledger never put it in. Stopping short under-covers the
+    document rather than mislabelling a page -- the same conservative
+    direction as `draft_scope`'s own caution about over-excluding.
+    """
+    if not rows or not page_texts:
+        return {}
+    joined = "\n".join(page_texts)
+    offsets = _page_offsets(page_texts)
+    pages_of: dict = {}
+    for row in rows:
+        key = row.get("section")
+        if key and key in (sections or {}):
+            pages_of.setdefault(key, []).append(int(row["page"]))
+
+    spans = {}
+    for key, pages in pages_of.items():
+        assigned = set(pages)
+        first = min(pages)
+        last = first
+        while (last + 1) in assigned:
+            last += 1
+        start = offsets[first - 1][0]
+        end = offsets[last - 1][1]
+        spans[key] = {
+            "start": start, "end": end, "text": joined[start:end],
+            "label": (sections.get(key) or {}).get("label") or key,
+            # The heading a locate-stage span would carry. There is no marker
+            # string here -- the page ledger IS the evidence -- so it names its
+            # own provenance instead, and the modal can render it.
+            "marker": f"pages {first}-{last}" if last > first else f"page {first}",
+            "pages": last - first + 1,
+        }
+    return spans
+
+
+def page_counts_from_ledger(rows: list) -> dict:
+    """{section key: REAL page count}. Real, not a word-count estimate, so page
+    rules can return a verdict rather than an estimate."""
+    counts: dict = {}
+    for row in rows or []:
+        key = row.get("section")
+        if key:
+            counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
 def reconcile_toc(rows: list, page_texts: list, sections: dict) -> list:
     """Where the ledger and NSF's own table of contents disagree about a length.
 
