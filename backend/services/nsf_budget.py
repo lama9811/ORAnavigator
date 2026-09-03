@@ -109,3 +109,92 @@ def blank_document(years: int = 1, **meta) -> dict:
         },
         "years": [blank_sheet(i + 1) for i in range(years)],
     }
+
+
+# ── Lines A, B, C ──────────────────────────────────────────────────────────
+def _fringe_for(key, warnings):
+    """Resolve a fringe category to (key, label, rate), defaulting safely."""
+    if key not in FRINGE_RATES:
+        if key:
+            warnings.append(f"Unknown fringe category '{key}'; using faculty_ay.")
+        key = "faculty_ay"
+    label, rate = FRINGE_RATES[key]
+    return key, label, rate
+
+
+def compute_personnel(sheet, warnings):
+    """Lines A, B and C.
+
+    Salary comes from person-months: the monthly rate is the base salary
+    divided by 9 (academic appointment) or 12 (calendar). Fringe is computed
+    per row at that row's own category rate, and line C is their sum -- the
+    form shows one number, but Morgan's rates differ by category (42% vs 9%),
+    and mixing them by hand is where fringe errors come from.
+    """
+    a_rows, fringe_rows = [], []
+
+    for p in sheet.get("senior") or []:
+        p = p or {}
+        basis = p.get("appointment_basis") or "academic_9"
+        if basis not in MONTHS_PER_BASIS:
+            warnings.append(f"Unknown appointment basis '{basis}'; using academic_9.")
+            basis = "academic_9"
+        divisor = MONTHS_PER_BASIS[basis]
+
+        base = _money(p.get("base_salary"), warnings, "base salary")
+        cal = _months(p.get("cal"), warnings, "calendar months")
+        acad = _months(p.get("acad"), warnings, "academic months")
+        sumr = _months(p.get("sumr"), warnings, "summer months")
+        months = round(cal + acad + sumr, 2)
+
+        monthly = round(base / divisor, 2) if base else 0.0
+        salary = round(monthly * months, 2)
+        fkey, flabel, frate = _fringe_for(p.get("fringe_key"), warnings)
+        fringe = round(salary * frate, 2)
+
+        row = {
+            "name": (p.get("name") or "").strip() or "Unnamed",
+            "role": (p.get("role") or "").strip(),
+            "appointment_basis": basis, "base_salary": base,
+            "cal": cal, "acad": acad, "sumr": sumr, "months_total": months,
+            "monthly_rate": monthly,
+            "effort_pct": round(months / divisor * 100.0, 2) if divisor else 0.0,
+            "salary": salary,
+            "fringe_key": fkey, "fringe_label": flabel,
+            "fringe_rate": frate, "fringe": fringe,
+        }
+        a_rows.append(row)
+        if fringe:
+            fringe_rows.append({"label": row["name"], "rate": frate, "amount": fringe})
+
+    b_rows = []
+    for key, label, has_months in OTHER_PERSONNEL_ROWS:
+        raw = (sheet.get("other_personnel") or {}).get(key) or {}
+        amount = _money(raw.get("amount"), warnings, label.lower())
+        fkey, flabel, frate = _fringe_for(raw.get("fringe_key"), warnings)
+        fringe = round(amount * frate, 2)
+        row = {
+            "key": key, "label": label,
+            "count": int(raw.get("count") or 0),
+            "amount": amount,
+            "fringe_key": fkey, "fringe_label": flabel,
+            "fringe_rate": frate, "fringe": fringe,
+        }
+        if has_months:
+            row["months"] = _months(raw.get("months"), warnings, f"{label} months")
+        b_rows.append(row)
+        if fringe:
+            fringe_rows.append({"label": label, "rate": frate, "amount": fringe})
+
+    a_total = round(sum(r["salary"] for r in a_rows), 2)
+    b_total = round(sum(r["amount"] for r in b_rows), 2)
+    c_total = round(sum(r["fringe"] for r in a_rows)
+                    + sum(r["fringe"] for r in b_rows), 2)
+
+    return {
+        "A": {"rows": a_rows, "total": a_total},
+        "B": {"rows": b_rows, "total": b_total},
+        "C": c_total,
+        "fringe_rows": fringe_rows,
+        "salaries_and_wages": round(a_total + b_total, 2),
+    }

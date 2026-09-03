@@ -107,3 +107,66 @@ def test_blank_document_defaults_to_morgan_rates_and_5000_capitalization():
     assert doc["settings"]["fa_rate_key"] == "organized_research_on_campus"
     assert doc["settings"]["capitalization_level"] == 5000.0
     assert doc["settings"]["escalation_pct"] == 3.0
+
+
+# ---------------------------------------------------------------------------
+# Lines A, B, C — person-months, salaries, per-row fringe
+# ---------------------------------------------------------------------------
+
+def _sheet_with_senior(**over):
+    s = nb.blank_sheet()
+    s["senior"][0].update(over)
+    return s
+
+
+def test_academic_nine_month_salary_is_base_over_nine_per_month():
+    s = _sheet_with_senior(base_salary=90_000, appointment_basis="academic_9", sumr=2)
+    r = nb.compute_personnel(s, [])
+    assert r["A"]["rows"][0]["salary"] == 20_000.0        # 90k/9 = 10k/mo x 2
+
+
+def test_calendar_twelve_month_salary_is_base_over_twelve_per_month():
+    s = _sheet_with_senior(base_salary=120_000, appointment_basis="calendar_12", cal=3)
+    r = nb.compute_personnel(s, [])
+    assert r["A"]["rows"][0]["salary"] == 30_000.0        # 120k/12 = 10k/mo x 3
+
+
+def test_months_across_all_three_columns_are_summed():
+    s = _sheet_with_senior(base_salary=120_000, appointment_basis="calendar_12",
+                           cal=1, acad=1, sumr=1)
+    assert nb.compute_personnel(s, [])["A"]["rows"][0]["months_total"] == 3.0
+
+
+def test_effort_percent_is_derived_from_months():
+    s = _sheet_with_senior(base_salary=90_000, appointment_basis="academic_9", acad=4.5)
+    assert nb.compute_personnel(s, [])["A"]["rows"][0]["effort_pct"] == 50.0
+
+
+def test_senior_fringe_uses_the_rows_own_rate():
+    s = _sheet_with_senior(base_salary=90_000, appointment_basis="academic_9",
+                           acad=2, fringe_key="faculty_ay")
+    row = nb.compute_personnel(s, [])["A"]["rows"][0]
+    assert row["salary"] == 20_000.0
+    assert row["fringe"] == 8_400.0                       # 42% of 20k
+
+
+def test_line_c_sums_fringe_across_mixed_rate_categories():
+    # Faculty at 42% and a grad student at 9% must not share one rate.
+    s = _sheet_with_senior(base_salary=90_000, appointment_basis="academic_9",
+                           acad=2, fringe_key="faculty_ay")
+    s["other_personnel"]["grad_students"] = {
+        "count": 1, "amount": 30_000, "fringe_key": "contractual"}
+    r = nb.compute_personnel(s, [])
+    assert r["C"] == 8_400.0 + 2_700.0                    # 42% of 20k + 9% of 30k
+
+
+def test_line_b_totals_the_other_personnel_amounts():
+    s = nb.blank_sheet()
+    s["other_personnel"]["postdocs"]["amount"] = 55_000
+    s["other_personnel"]["undergrads"]["amount"] = 5_000
+    assert nb.compute_personnel(s, [])["B"]["total"] == 60_000.0
+
+
+def test_zero_base_salary_yields_zero_not_a_crash():
+    s = _sheet_with_senior(base_salary=None, acad=2)
+    assert nb.compute_personnel(s, [])["A"]["total"] == 0.0
