@@ -4680,16 +4680,42 @@ async def draft_review_upload(
             upload.filename or "file", data,
             sections=(profile or {}).get("sections")))
 
-    # The ledger belongs to the ONE file that carried a structural split -- a
-    # combined Research.gov package. A multi-file upload has no single page
-    # numbering, so there is nothing to account for across files: take the
-    # first file that has one.
+    # `document_text.extract_upload` builds a `page_ledger` for EVERY PDF with
+    # extractable text whenever `sections` is non-empty -- not only the one
+    # that turned out to be a structurally-split combined package. This loop
+    # passes the same `sections` to every file, so on the "one PDF per
+    # section" pattern this repo otherwise expects, EVERY file gets its own
+    # ledger. Picking "the first one with a ledger" would silently pick
+    # whichever file happens to sort first, describe only ITS pages as "the
+    # upload's" pages, and -- if that file's true content maps to no key in
+    # this profile and every row comes back `unassigned` -- withhold the
+    # score for the WHOLE review over a file that isn't even the real
+    # package. So the selection is keyed on how many files were uploaded:
+    #
+    #   ONE file  -> use its ledger unconditionally. Its pages ARE the
+    #                upload's pages, whether or not `pdf_sections.split()`
+    #                found real structure -- and a single combined PDF whose
+    #                split BAILS is exactly the case that needs the page
+    #                accounting most.
+    #   2+ files  -> use a ledger ONLY from a file whose `spans_are_structural`
+    #                is True -- the flag that distinguishes a real
+    #                object-graph split from "the model's page-ledger WALK
+    #                also produced something for this ordinary file". If no
+    #                file has one, there is no meaningful single page
+    #                numbering across files: set no ledger, and the panel
+    #                simply does not render rather than reporting a lie.
     _ledger, _toc_mismatch = None, []
-    for f in extracted:
-        if f.get("page_ledger"):
-            _ledger = f["page_ledger"]
-            _toc_mismatch = f.get("ledger_toc_mismatch") or []
-            break
+    if len(extracted) == 1:
+        _only = extracted[0]
+        if _only.get("page_ledger"):
+            _ledger = _only["page_ledger"]
+            _toc_mismatch = _only.get("ledger_toc_mismatch") or []
+    else:
+        for f in extracted:
+            if f.get("spans_are_structural") and f.get("page_ledger"):
+                _ledger = f["page_ledger"]
+                _toc_mismatch = f.get("ledger_toc_mismatch") or []
+                break
 
     # ONE FILE IS ONE SECTION, when the filename says so. This replaces
     # `_dt.combine`: it produces the same document, and additionally hands back

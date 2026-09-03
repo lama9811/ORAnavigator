@@ -185,3 +185,132 @@ def test_a_paste_review_carries_no_ledger_and_withholds_nothing_on_its_account(c
     assert result["page_ledger"] is None
     assert result["pages_unaccounted"] == []
     assert result["toc_mismatch"] == []
+
+
+# ── ledger SELECTION across a multi-file upload (fix round 1 finding) ──────
+#
+# `document_text.extract_upload` builds a `page_ledger` for EVERY PDF with
+# extractable text whenever `sections` is non-empty -- not only the one file
+# that turned out to be a real structurally-split combined package. `main.py`
+# passes the same `sections` to every file in a multi-file upload, so on the
+# "one PDF per section" pattern this repo documents at length, EVERY file
+# gets its own ledger. Picking "the first file with a ledger" (the original
+# implementation of this task) silently picked whichever file sorted first
+# by upload order, described only ITS pages as "the upload's" pages, and --
+# if that file's true content maps to no key in the profile, so every row
+# comes back `unassigned` -- could withhold the score for the WHOLE review
+# over a file that isn't even the real combined package.
+#
+# These tests capture the `ledger=`/`toc_mismatch=` kwargs `review_draft` is
+# actually called with, rather than depending on the AI layer being live
+# (conftest pins it off process-wide, so `score` is None in every case here
+# regardless of the ledger -- that would make a bare `score is None`
+# assertion pass for the wrong reason and hide exactly the bug this section
+# guards against).
+
+def _wrap_review_draft_capture(monkeypatch):
+    """Patch `services.draft_review.review_draft` to record the kwargs it was
+    called with while still running the real function, and return the dict
+    those kwargs land in."""
+    from services import draft_review as _dr
+    captured = {}
+    real = _dr.review_draft
+
+    def _capture(*args, **kwargs):
+        captured.update(kwargs)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(_dr, "review_draft", _capture)
+    return captured
+
+
+def _file_with_ledger(filename, ledger, *, structural, toc_mismatch=None):
+    return {
+        "filename": filename, "text": f"{filename} has some body text in it.",
+        "pages": 1, "chars": 30, "truncated": False, "error": None,
+        "page_texts": [f"{filename} has some body text in it."],
+        "page_ledger": ledger,
+        "ledger_toc_mismatch": toc_mismatch or [],
+        "ledger_page_counts": {},
+        "spans_are_structural": structural,
+    }
+
+
+_UNASSIGNED_ROW = [{"page": 1, "section": None, "source": "unassigned",
+                    "verified": False, "chars": 5}]
+_STRUCTURAL_ROW = [{"page": 1, "section": "research_strategy", "source": "structure",
+                    "verified": True, "chars": 40}]
+
+
+def test_a_single_non_structural_files_ledger_is_still_used(ctx, monkeypatch):
+    """(c) ONE file uploaded: its ledger is used unconditionally, whether or
+    not `spans_are_structural` is True -- its pages ARE the upload's pages,
+    and a single combined PDF whose split BAILS is exactly the case that
+    needs the accounting most."""
+    from services import document_text as _dt
+    monkeypatch.setattr(
+        _dt, "extract_upload",
+        lambda filename, data, **kw: _file_with_ledger(filename, _UNASSIGNED_ROW,
+                                                        structural=False))
+    captured = _wrap_review_draft_capture(monkeypatch)
+
+    c, withsol_id = ctx
+    r = c.post(f"/api/me/submissions/{withsol_id}/draft-review/upload",
+              files=[("files", ("only.pdf", b"%PDF-1.4 a", "application/pdf"))])
+    assert r.status_code == 200, r.text
+    assert captured.get("ledger") == _UNASSIGNED_ROW
+    assert r.json()["result"]["page_ledger"] == _UNASSIGNED_ROW
+
+
+def test_multi_file_upload_with_no_structural_file_carries_no_ledger(ctx, monkeypatch):
+    """(a) Two files, each carrying its OWN (non-structural) ledger. Before
+    the fix this picked whichever sorted first and could withhold the whole
+    review's score over an irrelevant file's page count. With no file
+    structurally split there is no single page numbering that means anything
+    across files: no ledger at all, and the score must not be withheld on
+    the ledger's account."""
+    from services import document_text as _dt
+    monkeypatch.setattr(
+        _dt, "extract_upload",
+        lambda filename, data, **kw: _file_with_ledger(filename, _UNASSIGNED_ROW,
+                                                        structural=False))
+    captured = _wrap_review_draft_capture(monkeypatch)
+
+    c, withsol_id = ctx
+    r = c.post(f"/api/me/submissions/{withsol_id}/draft-review/upload",
+              files=[("files", ("a.pdf", b"%PDF-1.4 a", "application/pdf")),
+                    ("files", ("b.pdf", b"%PDF-1.4 b", "application/pdf"))])
+    assert r.status_code == 200, r.text
+    assert captured.get("ledger") is None
+    assert captured.get("toc_mismatch") == []
+    result = r.json()["result"]
+    assert result["page_ledger"] is None
+    assert result["pages_unaccounted"] == []
+
+
+def test_multi_file_upload_uses_the_structural_files_ledger_not_the_first(ctx, monkeypatch):
+    """(b) Two files, only the SECOND is `spans_are_structural`. The first
+    file's ledger (which would have won under "first file with a ledger")
+    must be ignored; the structural file's ledger must be used."""
+    from services import document_text as _dt
+
+    mismatch = [{"section": "research_strategy", "label": "Research Strategy",
+                "ledger_pages": 1, "toc_pages": 3}]
+
+    def _fake(filename, data, **kw):
+        if filename == "a.pdf":
+            return _file_with_ledger(filename, _UNASSIGNED_ROW, structural=False)
+        return _file_with_ledger(filename, _STRUCTURAL_ROW, structural=True,
+                                 toc_mismatch=mismatch)
+
+    monkeypatch.setattr(_dt, "extract_upload", _fake)
+    captured = _wrap_review_draft_capture(monkeypatch)
+
+    c, withsol_id = ctx
+    r = c.post(f"/api/me/submissions/{withsol_id}/draft-review/upload",
+              files=[("files", ("a.pdf", b"%PDF-1.4 a", "application/pdf")),
+                    ("files", ("b.pdf", b"%PDF-1.4 b", "application/pdf"))])
+    assert r.status_code == 200, r.text
+    assert captured.get("ledger") == _STRUCTURAL_ROW
+    assert captured.get("toc_mismatch") == mismatch
+    assert r.json()["result"]["page_ledger"] == _STRUCTURAL_ROW
