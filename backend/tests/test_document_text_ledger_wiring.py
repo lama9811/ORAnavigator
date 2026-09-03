@@ -206,3 +206,112 @@ def test_a_late_exception_does_not_leave_structural_true_with_no_spans(monkeypat
 
     assert not out.get("spans_are_structural")
     assert "section_spans" not in out
+    # A raise AFTER the ledger is already in `out` is the well-handled
+    # partial case (I-3) -- only the mismatch report is lost, and the
+    # ledger itself must not be flagged as if it had never been built.
+    assert "page_ledger_error" not in out
+
+
+# ── I-1 / I-2: a MULTI-file upload must not pay for, or trust, a walk on a
+# file that main.py will never select -- see extract_upload's own docstring.
+
+def test_a_multi_file_bailed_split_skips_the_walk_entirely(monkeypatch):
+    """I-2: in a multi-file upload, `single_file=False` and a bailed split
+    (no real structure) must not even CALL `build_ledger` -- that is the
+    expensive, model-calling part this task exists to stop paying for on a
+    file that can never be selected. I-1 falls out of the same fix: with no
+    call, there is no `section_spans` for `map_files_to_sections` to trust
+    ahead of the locate stage either."""
+    from services import page_ledger as pl
+
+    calls = []
+    real_build_ledger = pl.build_ledger
+
+    def _spy(*a, **k):
+        calls.append(1)
+        return real_build_ledger(*a, **k)
+
+    monkeypatch.setattr(pl, "build_ledger", _spy)
+
+    data = _single_source_pdf()
+    out = dt.extract_upload("data-management-plan.pdf", data,
+                            sections=SECTIONS, single_file=False)
+
+    assert not out["error"], out["error"]
+    assert calls == [], "build_ledger must not run for a non-structural file in a multi-file upload"
+    assert out.get("spans_are_structural") is False
+    assert "page_ledger" not in out
+    assert "section_spans" not in out
+    assert "page_ledger_error" not in out       # a deliberate skip, not a failure
+
+
+def test_a_multi_file_successful_split_still_gets_its_full_ledger(monkeypatch):
+    """The other half of the same gate: a file whose OWN split() succeeds
+    must be treated exactly as it would in a single-file upload -- main.py
+    WILL select this ledger (`spans_are_structural` True), so building it is
+    not wasted, and the TOC-page pin and every other guarantee must survive
+    `single_file=False`."""
+    from services import page_ledger as pl
+
+    calls = []
+    real_build_ledger = pl.build_ledger
+
+    def _spy(*a, **k):
+        calls.append(1)
+        return real_build_ledger(*a, **k)
+
+    monkeypatch.setattr(pl, "build_ledger", _spy)
+
+    data = _successful_split_pdf()
+    out = dt.extract_upload("package.pdf", data, sections=SECTIONS, single_file=False)
+
+    assert not out["error"], out["error"]
+    assert calls == [1], "the structural file's ledger must still be built"
+    assert out.get("spans_are_structural") is True
+    ledger = out.get("page_ledger")
+    assert ledger is not None
+    assert sorted(r["page"] for r in ledger) == list(range(1, out["pages"] + 1))
+    spans = out.get("section_spans") or {}
+    assert set(spans) == {"project_summary", "references_cited", "facilities"}
+
+
+def test_a_walk_derived_label_never_reaches_map_files_to_sections_when_skipped():
+    """I-1, exercised through the actual downstream consumer. Before the fix,
+    a non-structural file's WALK-derived `section_spans` filed a section via
+    `map_files_to_sections`'s `pdf_structure` path even though main.py would
+    never select that file's ledger -- a confident, unverified label beating
+    the locate stage with none of the ledger's guarantees behind it. With the
+    walk skipped for this file (I-2), there is nothing for `map_files_to_sections`
+    to file: the file's text stays available to the ordinary locate stage
+    instead (via `leftover`), which is the honest outcome."""
+    data = _single_source_pdf()
+    out = dt.extract_upload("data-management-plan.pdf", data,
+                            sections=SECTIONS, single_file=False)
+    assert "section_spans" not in out
+
+    text, spans, leftover, mapping = dt.map_files_to_sections([out], SECTIONS)
+    assert spans == {}
+    assert leftover, "the file's text must still reach the locate stage"
+    row = mapping[0]
+    assert row["source"] is None, row["source"]     # never filed by a walk it never ran
+
+
+def test_a_ledger_that_never_gets_built_is_flagged_not_silent(monkeypatch):
+    """I-3: a raise INSIDE (or before) `build_ledger` must not vanish
+    silently. `main.py` selects no ledger, the score is computed exactly as
+    if the feature did not exist, and the modal renders no panel -- so the
+    only way to tell "we accounted for every page" from "we never tried"
+    apart is this flag."""
+    from services import page_ledger as pl
+
+    def _boom(*a, **k):
+        raise RuntimeError("simulated build_ledger failure")
+
+    monkeypatch.setattr(pl, "build_ledger", _boom)
+
+    data = _successful_split_pdf()          # a real structural split, so the
+    out = dt.extract_upload("package.pdf", data, sections=SECTIONS)  # walk is reached
+
+    assert "page_ledger" not in out
+    assert "section_spans" not in out
+    assert out.get("page_ledger_error") is True

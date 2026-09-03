@@ -4661,6 +4661,14 @@ async def draft_review_upload(
     # Before reading a single byte: no solicitation, no review.
     profile, budget = _require_profile_and_budget(sub)
 
+    # Known BEFORE a single byte is read, and it is what `extract_upload`
+    # needs to decide whether the page-ledger WALK is worth paying for at
+    # all (see I-1/I-2 in its own docstring): a multi-file upload only ever
+    # selects a ledger from a file whose split() found real structure, so
+    # building the walk for every ordinary one-section file would be pure
+    # cost with no reachable output.
+    single_file = len(files) == 1
+
     extracted, total_bytes = [], 0
     for upload in files:
         data = await upload.read()
@@ -4678,19 +4686,24 @@ async def draft_review_upload(
         # Research.gov handed them instead of eleven separate ones.
         extracted.append(_dt.extract_upload(
             upload.filename or "file", data,
-            sections=(profile or {}).get("sections")))
+            sections=(profile or {}).get("sections"),
+            single_file=single_file))
 
-    # `document_text.extract_upload` builds a `page_ledger` for EVERY PDF with
-    # extractable text whenever `sections` is non-empty -- not only the one
-    # that turned out to be a structurally-split combined package. This loop
-    # passes the same `sections` to every file, so on the "one PDF per
-    # section" pattern this repo otherwise expects, EVERY file gets its own
-    # ledger. Picking "the first one with a ledger" would silently pick
-    # whichever file happens to sort first, describe only ITS pages as "the
-    # upload's" pages, and -- if that file's true content maps to no key in
-    # this profile and every row comes back `unassigned` -- withhold the
+    # `document_text.extract_upload` builds a `page_ledger` for a SINGLE
+    # uploaded file unconditionally, and for a file in a MULTI-file upload
+    # only when that file's OWN `pdf_sections.split()` found real structure
+    # (see `single_file=` above and the I-1/I-2 comment in its docstring) --
+    # so an ordinary one-section file in a multi-file upload never gets one
+    # at all, and never gets a model-walk-derived `section_spans` either.
+    # This loop still passes the same `sections` to every file (a file that
+    # DOES turn out to be a structurally-split combined package can appear
+    # anywhere in the upload), so the selection below is still keyed on how
+    # many files were uploaded, guarding against picking whichever file
+    # happens to sort first, describing only ITS pages as "the upload's"
+    # pages, and -- if that file's true content maps to no key in this
+    # profile and every row comes back `unassigned` -- withholding the
     # score for the WHOLE review over a file that isn't even the real
-    # package. So the selection is keyed on how many files were uploaded:
+    # package:
     #
     #   ONE file  -> use its ledger unconditionally. Its pages ARE the
     #                upload's pages, whether or not `pdf_sections.split()`

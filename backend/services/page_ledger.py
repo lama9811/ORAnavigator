@@ -155,9 +155,12 @@ def _receipt_is_solid(bodies: list, page_idx: int, quote: str) -> bool:
     Deliberately NOT folded into `receipt_ok` -- that function takes one
     page and must keep working standalone with its own tests; this one
     needs every page's text in hand, which only exists once the ledger is
-    being built. One definition, called from both `build_ledger` (where a
-    row is actually verified) and `walk_pages` (to decide what still needs
-    asking) -- so the two can never disagree about what "solid" means.
+    being built. One definition, reached from both `build_ledger` (where a
+    row is actually verified) and `walk_pages`'s retry loop (to decide what
+    still needs asking) -- always through `_receipt_is_solid_safe`, below,
+    never called directly -- so the two can never disagree about what
+    "solid" means, and a bug in this check can cost at most one page rather
+    than the whole roll call.
 
     Cheap over the whole document: `receipt_ok` is regex/string work, not a
     model call, so checking a candidate against all ~55 other pages costs
@@ -490,10 +493,30 @@ def walk_pages(page_texts: list, section_keys: list, *, furniture=frozenset(),
                     "content at all.")
                 got.pop(p, None)
                 continue
-            if ans.get("section") not in section_keys or not ans.get("quote"):
+            section = ans.get("section")
+            if section not in section_keys:
+                # A HALLUCINATED SECTION NAME -- the commonest shaky answer,
+                # and until this fix the only one with no second chance.
+                # "unsure" gets a retry above; a page that answered with
+                # something not even in the allowed list was silently
+                # `continue`d past instead -- never re-asked, no breadcrumb,
+                # and it still reaches `build_ledger` carrying the bad value,
+                # which fails `guess in sections` there and falls to
+                # `unassigned` anyway. So this was paying for a call and
+                # getting the SAME outcome "unsure" gets, minus the retry.
+                # Give it the identical second chance.
+                retry_notes[p] = (
+                    f"You answered \"{section}\" for this page, which is not "
+                    "one of the allowed section values. Choose one from the "
+                    "allowed list, or answer \"unsure\" if the page truly "
+                    "matches none of them, and give a verbatim quote of at "
+                    "least 6 words unique to this page.")
+                got.pop(p, None)
+                continue
+            if not ans.get("quote"):
                 continue
             quote = ans["quote"]
-            if _receipt_is_solid(bodies, p - 1, quote):
+            if _receipt_is_solid_safe(bodies, p - 1, quote):
                 continue
             others = [i + 1 for i, b in enumerate(bodies)
                       if i != p - 1 and receipt_ok(b, quote)]

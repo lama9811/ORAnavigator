@@ -175,7 +175,8 @@ def _looks_like_zip(data: bytes) -> bool:
     return data[:2] == b"PK"
 
 
-def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict:
+def extract_upload(filename: str, data: bytes, *, sections: dict = None,
+                   single_file: bool = True) -> dict:
     """Read one uploaded file.
 
     Returns {filename, text, pages, chars, truncated, error}. NEVER raises —
@@ -188,7 +189,19 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
     Absent, unsplittable, or unsafe to split, the key is simply not there and
     nothing downstream changes — see services/pdf_sections for the fail-safes.
 
-    Also carries, when `sections` and `page_texts` are both present:
+    `single_file` — pass `len(files) == 1` from the caller's own upload list
+    (default True, matching a caller that only ever reads one file). When
+    False (a multi-file upload) AND `pdf_sections.split()` finds no real
+    structure for THIS file, the page-ledger walk is skipped entirely: it is
+    a bounded but real run of model calls, and it produces `section_spans`
+    only a file main.py will never select can carry — pure cost (I-2), and a
+    walk-derived label that could beat the locate stage while earning none of
+    the ledger's own guarantees (I-1). A single-file upload always gets its
+    walk, split() succeeding or not — it is used unconditionally, and a
+    combined PDF whose split bails is exactly the case that needs it most.
+
+    Also carries, when `sections` and `page_texts` are both present AND the
+    walk was not skipped by the rule above:
     `page_ledger` (one row per page — see `services.page_ledger`),
     `ledger_toc_mismatch`, `ledger_page_counts` (attribution counts, NOT a
     page-limit input — see `page_ledger.page_counts_from_ledger`), and
@@ -199,7 +212,12 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
     caller deciding whether locate can be skipped (`review_draft`'s
     `structural` flag) MUST use this, never `bool(section_spans)`: the ledger
     fills gaps the split could not name, which is intended, but that must
-    never be mistaken for the determinism only a real structural split has."""
+    never be mistaken for the determinism only a real structural split has.
+
+    `page_ledger_error` (True) — set instead of `page_ledger` when the walk
+    was attempted but raised before the ledger could be built. Degrading is
+    right (golden rule 3); being unable to tell "we accounted for every page"
+    from "we never tried" is not (I-3)."""
     name = filename or "file"
     ext = os.path.splitext(name)[1].lower()
     out = {"filename": name, "text": "", "pages": 0, "chars": 0,
@@ -266,6 +284,44 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
             from services import page_ledger as _pl
 
             spans, report = _ps.split(data, page_texts, sections)
+
+            # I-1 and I-2, solved together rather than twice. main.py's
+            # selection rule is: ONE file uploaded -> use its ledger
+            # unconditionally; 2+ files -> use a ledger ONLY from a file
+            # whose split() itself found real structure (`spans_are_structural`).
+            # `map_files_to_sections` obeys the SAME distinction when filing a
+            # file's `section_spans` ahead of the locate stage -- or it did
+            # not, before this: it read `section_spans` off ANY file, model-
+            # walk-derived or not, so on a real multi-file upload (one PDF per
+            # section, the documented common case) every ordinary file's
+            # single-page WALK could file a label that beats locate, while
+            # main.py picked NO ledger at all (no file has real structure) --
+            # so none of the walk's own guarantees (the roll call, the
+            # receipt gate, the TOC cross-check, the withholding) ever
+            # applied to the label shaping the score. Concretely: a Data
+            # Management Plan that no filename resolves gets a confident
+            # one-page walk answer of `mentoring_plan`, which is then judged
+            # as the Mentoring Plan while the DMP itself is reported missing.
+            #
+            # So: in a MULTI-FILE upload, only pay for the walk (and only let
+            # it produce `section_spans`) for a file whose split() already
+            # succeeded -- exactly the file main.py will go on to select and
+            # the walk will go on to fill GAPS in, never invent one alone.
+            # For every other file, the walk was never reachable output in
+            # the first place (I-1), so building it was pure cost with none
+            # (I-2) -- CLAUDE.md measures an estimated 70-120s of it, added
+            # sequentially, on a request that already runs 50-60s.
+            #
+            # A SINGLE-FILE upload is exempt from this gate entirely: its
+            # ledger is used UNCONDITIONALLY regardless of whether split()
+            # found structure, because its pages ARE the upload's pages, and
+            # a single combined PDF whose split BAILS is exactly the case
+            # that needs the accounting most -- the motivating case for this
+            # whole feature, and it must be unaffected.
+            if not single_file and not spans:
+                out["spans_are_structural"] = False
+                return out
+
             shift = len(_raw) - len(_raw.lstrip()) if (_raw := "\n".join(page_texts)) else 0
 
             # STRUCTURE FIRST, and it wins. `pdf_sections` reads the seams out
@@ -339,6 +395,18 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
             out["spans_are_structural"] = bool(spans)
         except Exception as exc:                # never break an upload over this
             print(f"[DOCUMENT-TEXT] structural split skipped: {exc}")
+            # I-3: degrading here is right (golden rule 3) -- being unable to
+            # TELL is not. `reconcile_toc` / `spans_from_ledger` / the rebase
+            # all run AFTER `out["page_ledger"]` is already set, so a raise
+            # there is the partial case this file already handles well (the
+            # ledger stays; only the mismatch report is lost). A raise at or
+            # before `build_ledger` is different: `page_ledger` is never set,
+            # `main.py` selects no ledger, the score is computed exactly as
+            # if this feature did not exist, and the modal renders no panel
+            # -- "we accounted for every page" and "we never tried" become
+            # the identical picture. Recorded here so a caller can say so.
+            if "page_ledger" not in out:
+                out["page_ledger_error"] = True
     return out
 
 

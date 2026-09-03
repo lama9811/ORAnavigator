@@ -129,7 +129,7 @@ _FAKE_MISMATCH = [{"section": "research_strategy", "label": "Research Strategy",
                    "ledger_pages": 1, "toc_pages": 3}]
 
 
-def _fake_extract_upload(filename, data, *, sections=None):
+def _fake_extract_upload(filename, data, *, sections=None, single_file=True):
     return {
         "filename": filename,
         "text": "Research Strategy\nOur specific aims are to synthesize three polymers.",

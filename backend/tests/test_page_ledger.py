@@ -535,3 +535,91 @@ def test_an_unsure_page_is_re_asked_not_stranded(monkeypatch):
     result = pl.walk_pages(pages, ["project_description"], furniture=frozenset())
     assert result[2]["section"] == "project_description"
     assert calls["n"] == 2       # the initial pass, plus exactly one re-ask
+
+
+# ---------------------------------------------------------------------------
+# Two more findings from the final whole-branch review, same shape as the
+# "unsure" fix above: a hallucinated section name is the COMMONEST shaky
+# answer and was the only one with no second chance, and the retry loop's
+# own uniqueness check must not be able to lose every OTHER page's answer.
+# ---------------------------------------------------------------------------
+
+def test_a_section_not_in_the_allowed_list_is_re_asked_not_stranded(monkeypatch):
+    """Before this fix, `ans.get("section") not in section_keys` was simply
+    `continue`d past in the retry loop -- never popped, never given a
+    breadcrumb, and the wrong value rode all the way into `build_ledger`,
+    which discards it there too (`guess in sections` fails) and reports the
+    page `unassigned`. So the page paid for a call and still lost the
+    ledger's own second-chance courtesy that "unsure" already gets."""
+    import re
+
+    pages = ["Content of page 1 with plenty of real words here.",
+             "Content of page 2 with plenty of real words here."]
+    calls = {"n": 0}
+
+    def fake_generate_json(prompt, **kw):
+        calls["n"] += 1
+        asked = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        if asked == [1, 2]:
+            return {"pages": [
+                {"page": 1, "section": "project_description",
+                 "quote": "Content of page 1 with plenty of real words here."},
+                # a section name NOT in the allowed list -- the commonest
+                # hallucination
+                {"page": 2, "section": "budget_narrative", "quote": ""},
+            ]}
+        # the re-ask for page 2 alone
+        return {"pages": [{"page": 2, "section": "project_description",
+                           "quote": "Content of page 2 with plenty of real words here."}]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_generate_json)
+    result = pl.walk_pages(pages, ["project_description"], furniture=frozenset())
+    assert result[2]["section"] == "project_description"
+    assert calls["n"] == 2       # the initial pass, plus exactly one re-ask
+
+
+def test_a_bad_page_in_the_retry_loops_own_check_cannot_lose_every_other_page(monkeypatch):
+    """`build_ledger` wraps its `walk_pages` call in a try/except SPECIFICALLY
+    so a bug in the walk cannot cost the whole roll call -- but the retry
+    loop used to call `_receipt_is_solid` UNGUARDED, so a raise there escaped
+    `walk_pages` entirely (nothing inside it catches this call) and was only
+    caught one level up, in `build_ledger`'s wrapper -- which then set
+    `answers = {}`, unassigning EVERY page, not just the one whose check
+    failed. Same containment argument as `_receipt_is_solid_safe`'s own
+    docstring, exercised end to end through `build_ledger` rather than
+    assumed from reading the code."""
+    pages = ["Content of page 1 with plenty of real words here.",
+             "Content of page 2 with plenty of real words here."]
+
+    def fake_walk_generate_json(prompt, **kw):
+        import re
+        asked = [int(x) for x in re.findall(r"=== PAGE (\d+) ===", prompt)]
+        return {"pages": [
+            {"page": p, "section": "project_description",
+             "quote": f"Content of page {p} with plenty of real words here."}
+            for p in asked]}
+
+    from services import gemini_client as gc
+    monkeypatch.setattr(gc, "generate_json", fake_walk_generate_json)
+
+    def _boom(*a, **k):
+        raise RuntimeError("simulated failure inside the retry loop's own check")
+
+    monkeypatch.setattr(pl, "_receipt_is_solid", _boom)
+
+    rows = pl.build_ledger(pages, {"project_description": {"label": "Project Description", "aliases": []}})
+    # `_receipt_is_solid` always raising also makes `build_ledger`'s OWN final
+    # verification (`_receipt_is_solid_safe`, unaffected by this fix and
+    # already guarded) return False for every row -- so neither page can
+    # reach `source == "model"` in this test, by construction. The
+    # discriminator is `refused`: it is only ever set for a page the model
+    # DID answer (a valid section plus a quote) whose receipt did not hold.
+    # Pre-fix, the retry loop's unguarded call raises OUT of `walk_pages`
+    # entirely, `build_ledger`'s wrapper around that call catches it and
+    # resets `answers = {}` -- so BOTH pages' real answers are lost and
+    # neither row ever reaches the `refused` branch at all. Post-fix,
+    # `walk_pages` returns the model's real answers despite the retry loop's
+    # own check failing on every one of them, and both rows are marked
+    # `refused` rather than silently emptied.
+    assert [r.get("refused") for r in rows] == ["project_description", "project_description"], rows

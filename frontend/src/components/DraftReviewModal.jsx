@@ -1303,6 +1303,23 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
         </div>
       )}
 
+      {/* I-3: a raise inside `build_ledger` degrades on purpose (golden rule 3
+          -- the review still runs) but must not vanish INDISTINGUISHABLY.
+          Without this, "we accounted for every page" and "we never tried"
+          are the identical picture: no panel either way. One neutral line,
+          only when the panel above did NOT render -- this must never sit
+          beside the real ledger, and it must never read as a verdict on the
+          draft (the same reason the panel above carries no green, no
+          checkmarks, no progress bar). */}
+      {!(result.page_ledger?.length > 0) &&
+        extraction?.files?.some((f) => f.page_ledger_error) && (
+        <div className="eir-banner eir-banner-warn">
+          <AlertTriangle size={14} /> We couldn't confirm every page of your
+          upload was read. The completeness score below does not account
+          for that.
+        </div>
+      )}
+
       <ScorePanel score={result.score} solicitationId={solId} />
 
       <DelegationNotice books={result.delegated} />
