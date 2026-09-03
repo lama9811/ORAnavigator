@@ -1,0 +1,87 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Budget Rules Reference</title><style>
+@page { size: Letter; margin: 0.7in 0.75in; }
+* { box-sizing: border-box; }
+body { font: 10.5pt/1.55 "Charter","Georgia",serif; color: #1b1b1f; margin: 0; }
+h1 { font: 700 22pt/1.2 "Helvetica Neue",Arial,sans-serif; margin: 0 0 4pt;
+     color: #0b2f5e; letter-spacing: -0.01em; }
+h2 { font: 700 14pt/1.25 "Helvetica Neue",Arial,sans-serif; margin: 22pt 0 7pt;
+     color: #0b2f5e; padding-bottom: 4pt; border-bottom: 1.5px solid #d6dee8;
+     page-break-after: avoid; }
+h3 { font: 700 11.5pt/1.3 "Helvetica Neue",Arial,sans-serif; margin: 15pt 0 5pt;
+     color: #24405f; page-break-after: avoid; }
+p { margin: 0 0 8pt; }
+ul { margin: 0 0 9pt; padding-left: 20pt; }
+li { margin-bottom: 3.5pt; }
+hr { border: 0; border-top: 1px solid #e2e7ee; margin: 16pt 0; }
+code { font: 9pt "SF Mono",Menlo,Consolas,monospace; background: #eef2f7;
+       padding: 1px 4px; border-radius: 3px; color: #10375f; }
+pre { background: #f6f8fb; border: 1px solid #dfe6ef; border-left: 3px solid #0b2f5e;
+      border-radius: 4px; padding: 9pt 11pt; margin: 0 0 10pt;
+      page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 8.6pt; line-height: 1.5; color: #24303f; }
+table { border-collapse: collapse; width: 100%; margin: 0 0 11pt; font-size: 9pt;
+        page-break-inside: avoid; }
+th { background: #0b2f5e; color: #fff; text-align: left; padding: 5pt 7pt;
+     font: 700 8.8pt "Helvetica Neue",Arial,sans-serif; }
+td { padding: 4.5pt 7pt; border-bottom: 1px solid #e4e9f0; vertical-align: top; }
+tbody tr:nth-child(even) { background: #f7f9fc; }
+strong { color: #10375f; }
+</style></head><body><h1>Budget Rules Reference</h1>
+<p><strong>ORA Navigator — NSF Form 1030 budget template</strong></p>
+<p>Generated 2026-09-03 directly from the running code (<code>services/budget_helper.py</code>, <code>services/nsf_budget.py</code>, <code>services/nsf_budget_rules.py</code>). Every figure below is the value the tool actually uses — this page cannot drift from the software.</p>
+<hr>
+<h2>How to read this</h2>
+<p>The tool separates two very different things.</p>
+<p><strong>Math</strong> is what the tool computes for you. You supply the facts — a salary, a number of months, a dollar amount — and every total, the F&amp;A calculation, and the year-by-year rollup are worked out by code. No AI touches a number.</p>
+<p><strong>Checks</strong> are advice. The tool reads your finished budget and flags things NSF is likely to question. There are two levels, and <strong>neither one blocks you</strong> — you can always keep typing, save, and export:</p>
+<ul><li><strong>Warning</strong> — a rule looks broken. Shown in red.</li><li><strong>Notice</strong> — a requirement you have to satisfy somewhere else, usually in the written justification or a separate document. Shown in grey.</li></ul>
+<hr>
+<h2>Part 1 — The numbers built in</h2>
+<h3>Morgan State F&amp;A (indirect cost) rates</h3>
+<p>From the knowledge base file <code>pre_award_fanda_cost_rates</code>. <strong>Organized Research (On-Campus) for FY 2025–2026 is the default.</strong></p>
+<table><thead><tr><th>Rate type</th><th>FY 2025–2026</th><th>FY 2024–2025</th></tr></thead><tbody><tr><td>Organized Research (On-Campus) <em>(default)</em></td><td><strong>54%</strong></td><td>53%</td></tr><tr><td>Instruction (On-Campus)</td><td><strong>64%</strong></td><td>64%</td></tr><tr><td>Other Sponsored Activity (On-Campus)</td><td><strong>42%</strong></td><td>42%</td></tr><tr><td>All Programs (Off-Campus)</td><td><strong>26%</strong></td><td>26%</td></tr></tbody></table>
+<h3>Morgan State fringe benefit rates</h3>
+<p>From <code>pre_award_fringe_benefit_rate</code>. The NSF form has only one fringe box, but these rates differ — so the tool applies the right rate to each person and adds them up.</p>
+<table><thead><tr><th>Category</th><th>Rate</th></tr></thead><tbody><tr><td>Faculty (Academic Year)</td><td><strong>42%</strong></td></tr><tr><td>Faculty (Summer)</td><td><strong>9%</strong></td></tr><tr><td>Full-Time / Non-Contractual</td><td><strong>42%</strong></td></tr><tr><td>Contractual (&lt;6 mo or &lt;30 hr/wk)</td><td><strong>9%</strong></td></tr></tbody></table>
+<h3>Thresholds and defaults</h3>
+<table><thead><tr><th>What</th><th>Value</th><th>Why</th></tr></thead><tbody><tr><td>Subaward F&amp;A limit</td><td><strong>$25,000</strong></td><td>Only the first $25,000 of <em>each</em> subaward carries F&amp;A (2 CFR 200.1)</td></tr><tr><td>Equipment capitalization level</td><td><strong>$5,000</strong></td><td>Below this it is supplies, not equipment — and supplies <em>do</em> carry F&amp;A (PAPPG II.D.2.f(iii))</td></tr><tr><td>Equipment itemisation</td><td><strong>$10,000</strong></td><td>Form 1030 line D asks you to list each item above this by name</td></tr><tr><td>Senior salary limit</td><td><strong>2 months/year</strong></td><td>NSF&#x27;s cap per senior person (PAPPG II.D.2.f(i)(a))</td></tr><tr><td>Salary escalation</td><td><strong>3%</strong> per year</td><td>Applied to salaries only when you add a year; editable</td></tr><tr><td>9-month appointment</td><td>salary ÷ <strong>9</strong></td><td>Monthly rate for academic-year faculty</td></tr><tr><td>12-month appointment</td><td>salary ÷ <strong>12</strong></td><td>Monthly rate for calendar-year staff</td></tr></tbody></table>
+<hr>
+<h2>Part 2 — How the totals are worked out</h2>
+<h3>Salary from person-months</h3>
+<p>NSF budgets effort in months, not percentages.</p>
+<pre><code>monthly rate = base salary / 9    (9-month academic appointment)
+monthly rate = base salary / 12   (12-month calendar appointment)
+
+salary = (CAL months + ACAD months + SUMR months) x monthly rate</code></pre>
+<p><em>Example:</em> a $90,000 academic-year salary is $10,000/month. Two summer months = <strong>$20,000</strong>, which is 22% effort.</p>
+<h3>Fringe</h3>
+<p>Each person&#x27;s fringe is their own rate times their own salary. Line C is the sum. A faculty member at 42% and a graduate student at 9% never share a rate.</p>
+<h3>The line rollup</h3>
+<pre><code>H = A + B + C + D + E + F + G        total direct costs
+I = MTDC x F&amp;A rate                  indirect costs
+J = H + I
+K = fee                              (SBIR/STTR and Major Facilities only)
+L = J - K                            the amount you are requesting</code></pre>
+<h3>MTDC — the part most budgets get wrong</h3>
+<p>F&amp;A is <strong>not</strong> charged on your whole budget. It is charged on the <em>modified</em> total direct costs:</p>
+<pre><code>MTDC = H
+     - all equipment (line D)
+     - all participant support (line F)
+     - the part of EACH subaward over $25,000
+     - any G-line item you tick as &#x27;no F&amp;A&#x27;</code></pre>
+<p>That last line is the tuition case. NSF&#x27;s form has no tuition box, and Morgan books graduate tuition remission in <strong>G.6 Other</strong>, sitting right next to items that <em>do</em> carry F&amp;A. The tool cannot tell $40,000 of tuition from $40,000 of lab fees by looking at them — and guessing wrong moves your total by about $21,600 at the 54% rate. So <strong>you tick a box, and the math follows.</strong> The same box covers scholarships, fellowships, rent, and patient care.</p>
+<h3>Multiple years</h3>
+<p>Each year is its own sheet. <strong>Add year</strong> copies the previous year and raises <strong>salaries only</strong> by 3% — equipment, travel and subawards carry over unchanged, because quietly inflating those is how a budget grows without anyone noticing. The Cumulative sheet is added up fresh every time you look at it and is never stored, so it cannot fall out of step with the years.</p>
+<hr>
+<h2>Part 3 — The checks</h2>
+<p>12 warnings and 6 notices. Each one names the NSF rule it comes from, and the citation is shown next to the flag in the app so you can look it up.</p>
+<h3>Warnings</h3>
+<table><thead><tr><th>Line</th><th>Check</th><th>What it means</th><th>Source</th></tr></thead><tbody><tr><td>A</td><td><strong>Senior salary over two months</strong></td><td>NSF limits each senior/key person to no more than two months of salary in any one year, counted across ALL NSF awards. This tool sees only this proposal, so it cannot check the PI&#x27;s other NSF grants. Anything over two months must be disclosed in the budget justification.</td><td>PAPPG 24-1 II.D.2.f(i)(a)</td></tr><tr><td>A</td><td><strong>Person-months do not match the appointment</strong></td><td>A 9-month academic appointment is budgeted in academic and summer months; a 12-month appointment in calendar months. Check the appointment basis, or confirm this is an unusual appointment.</td><td>PAPPG 24-1 II.D.2.f(i)</td></tr><tr><td>A</td><td><strong>Incomplete personnel row</strong></td><td>A personnel row has months without a salary, a salary without months, or a headcount without dollars. It will contribute $0.</td><td>PAPPG 24-1 II.D.2.f(i)</td></tr><tr><td>D</td><td><strong>Equipment below the capitalization level</strong></td><td>NSF defines equipment as having a useful life over one year and a per-unit cost of at least the lesser of the organization&#x27;s capitalization level or $5,000. Cheaper items belong in G.1 Materials and Supplies -- and unlike equipment, they DO bear F&amp;A.</td><td>PAPPG 24-1 II.D.2.f(iii)</td></tr><tr><td>D</td><td><strong>Equipment over $10,000 with no description</strong></td><td>Form 1030 line D requires each item over $10,000 to be listed individually by description and estimated cost.</td><td>NSF Form 1030 line D</td></tr><tr><td>F</td><td><strong>No participant count</strong></td><td>Form 1030 requires the total number of participants in the parentheses on line F, and the costs must be itemised and justified in the budget justification.</td><td>PAPPG 24-1 II.D.2.f(v)</td></tr><tr><td>I</td><td><strong>F&amp;A rate below the negotiated rate</strong></td><td>NSF requires the applicable federally negotiated indirect cost rate. Using a lower rate is itself a violation of NSF&#x27;s cost sharing policy -- it is not a way to fit under a budget cap.</td><td>PAPPG 24-1 II.D.2.f(viii)</td></tr><tr><td>I</td><td><strong>Manual F&amp;A rate</strong></td><td>The rate in use is not one of Morgan&#x27;s negotiated rates from the knowledge base. Confirm it against ORA&#x27;s current rate agreement.</td><td>PAPPG 24-1 II.D.2.f(viii)</td></tr><tr><td>K</td><td><strong>Fee outside SBIR/STTR or Major Facilities</strong></td><td>Line K is available only to the SBIR/STTR programs and Major Facilities programs, and only when the solicitation specifies it.</td><td>PAPPG 24-1 II.D.2.f(x)</td></tr><tr><td>M</td><td><strong>Voluntary committed cost sharing</strong></td><td>Voluntary committed cost sharing is prohibited. Line M is used only when the program solicitation mandates cost sharing -- mark the proposal accordingly if it does.</td><td>PAPPG 24-1 II.D.2.f(xii)</td></tr><tr><td>whole budget</td><td><strong>Fewer year sheets than the project duration</strong></td><td>A budget is required for each year of support requested.</td><td>PAPPG 24-1 II.D.2.f</td></tr><tr><td>whole budget</td><td><strong>Over the solicitation&#x27;s budget cap</strong></td><td>The cumulative request exceeds the cap recorded for this proposal.</td><td>solicitation</td></tr></tbody></table>
+<h3>Notices</h3>
+<table><thead><tr><th>Line</th><th>Check</th><th>What it means</th><th>Source</th></tr></thead><tbody><tr><td>D</td><td><strong>General-purpose equipment is normally unallowable</strong></td><td>Office equipment, furnishings, and general IT are typically not eligible for direct-cost support. Special-purpose or scientific computers may be requested when justified.</td><td>PAPPG 24-1 II.D.2.f(iii)</td></tr><tr><td>E</td><td><strong>International travel</strong></td><td>Foreign travel must be listed separately and justified, and is subject to the Fly America Act&#x27;s U.S.-flag air carrier requirement.</td><td>PAPPG 24-1 II.D.2.f(iv)(c)</td></tr><tr><td>F</td><td><strong>Participants may not be employees</strong></td><td>Participant support is for participants and trainees, not employees. Speakers and trainers are generally not participants. Human-subject incentive payments belong on line G.6, not here. No F&amp;A is charged on participant support.</td><td>PAPPG 24-1 II.D.2.f(v)</td></tr><tr><td>G.5</td><td><strong>Each subaward needs its own budget</strong></td><td>A separate budget and a justification of no more than five pages is required for each identified subrecipient, using that subrecipient&#x27;s own federally negotiated indirect cost rate.</td><td>PAPPG 24-1 II.D.2.f(vi)(e)</td></tr><tr><td>G.5</td><td><strong>Subaward over $25,000</strong></td><td>Only the first $25,000 of each subaward is included in the modified total direct cost base that F&amp;A is charged on.</td><td>2 CFR 200.1</td></tr><tr><td>whole budget</td><td><strong>Budget justification page limit</strong></td><td>The budget justification is limited to five pages per proposal, plus up to five pages for each subrecipient.</td><td>PAPPG 24-1 II.D.2.f</td></tr></tbody></table>
+<hr>
+<h2>Part 4 — What the tool does not know</h2>
+<p>Two limits worth stating plainly, because a tool that hides them is worse than one that admits them.</p>
+<p><strong>1. The two-month cap counts across every NSF award you hold.</strong> This tool only sees the proposal in front of it. It will catch you budgeting three summer months here, but it has no idea what you have committed on your other NSF grants. That total is yours to track.</p>
+<p><strong>2. Morgan&#x27;s equipment capitalization level is unconfirmed.</strong> The tool defaults to $5,000, which is what PAPPG specifies when an organization&#x27;s own level is not lower. If ORA capitalizes at a different figure, changing that one setting reclassifies equipment correctly everywhere. Note that Form 1030&#x27;s line D says $10,000 — that is only about which items you list by name on the form, and is a different thing from the definition that decides whether F&amp;A applies.</p>
+<p><strong>Also worth confirming:</strong> the F&amp;A and fringe rates above are read from the knowledge base, not from ORA&#x27;s live rate agreement. Worth a sanity check against ORA&#x27;s current rate sheet before any of this goes on a real submission.</p></body></html>

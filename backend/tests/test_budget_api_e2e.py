@@ -154,3 +154,95 @@ def test_budget_for_other_users_submission_is_404(ctx):
     c, _ = ctx
     r = c.get("/api/me/submissions/99999/budget")
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# NSF Form 1030 template endpoints
+# ---------------------------------------------------------------------------
+
+def test_nsf_template_endpoint_returns_a_blank_document(ctx):
+    c, _ = ctx
+    r = c.get("/api/budget/nsf/template?years=3")
+    assert r.status_code == 200
+    doc = r.json()["document"]
+    assert doc["schema"] == "nsf_1030"
+    assert len(doc["years"]) == 3
+
+
+def test_nsf_compute_endpoint_returns_years_cumulative_and_flags(ctx):
+    c, _ = ctx
+    doc = c.get("/api/budget/nsf/template").json()["document"]
+    doc["years"][0]["other_direct"]["materials_supplies"] = [
+        {"description": "Reagents", "amount": 10_000}]
+    r = c.post("/api/budget/nsf/compute", json=doc)
+    assert r.status_code == 200
+    body = r.json()
+    assert body["years"][0]["lines"]["I"] == 5_400.0
+    assert "cumulative" in body and "flags" in body
+
+
+def test_nsf_add_year_endpoint_escalates_salaries(ctx):
+    c, _ = ctx
+    doc = c.get("/api/budget/nsf/template").json()["document"]
+    doc["years"][0]["senior"][0]["base_salary"] = 100_000
+    r = c.post("/api/budget/nsf/add-year", json={"inputs": doc})
+    assert r.status_code == 200
+    out = r.json()["document"]
+    assert len(out["years"]) == 2
+    assert out["years"][1]["senior"][0]["base_salary"] == 103_000.0
+
+
+def test_nsf_justification_endpoint_returns_text(ctx):
+    c, _ = ctx
+    doc = c.get("/api/budget/nsf/template").json()["document"]
+    doc["years"][0]["senior"][0].update(name="Dr. Oladunni", base_salary=90_000,
+                                        appointment_basis="academic_9", acad=2)
+    r = c.post("/api/budget/nsf/justification", json={"inputs": doc, "use_ai": False})
+    assert r.status_code == 200
+    assert "Dr. Oladunni" in r.json()["justification"]
+
+
+# --- persistence ----------------------------------------------------------
+
+def test_saving_and_loading_an_nsf_budget_round_trips(ctx):
+    c, sub_id = ctx
+    doc = c.get("/api/budget/nsf/template").json()["document"]
+    doc["years"][0]["equipment"] = [{"description": "Confocal", "amount": 40_000}]
+    assert c.put(f"/api/me/submissions/{sub_id}/budget",
+                 json={"inputs": doc}).status_code == 200
+    body = c.get(f"/api/me/submissions/{sub_id}/budget").json()
+    assert body["schema"] == "nsf_1030"
+    assert body["inputs"]["years"][0]["equipment"][0]["amount"] == 40_000
+    assert body["computed"]["years"][0]["lines"]["D"]["total"] == 40_000.0
+
+
+def test_a_generic_budget_with_no_schema_key_still_loads(ctx):
+    """THE regression guard. Existing saved budgets must not change behaviour."""
+    c, sub_id = ctx
+    assert c.put(f"/api/me/submissions/{sub_id}/budget",
+                 json={"inputs": WORKED}).status_code == 200
+    body = c.get(f"/api/me/submissions/{sub_id}/budget").json()
+    assert body.get("schema") in (None, "generic")
+    assert body["computed"]["total"] > 0          # the generic response shape
+    assert "personnel" in body["computed"]
+
+
+# --- export ---------------------------------------------------------------
+
+def test_xlsx_download_returns_a_workbook(ctx):
+    c, sub_id = ctx
+    doc = c.get("/api/budget/nsf/template").json()["document"]
+    c.put(f"/api/me/submissions/{sub_id}/budget", json={"inputs": doc})
+    r = c.get(f"/api/me/submissions/{sub_id}/budget.xlsx")
+    assert r.status_code == 200
+    assert r.content[:2] == b"PK"                 # a zip container, i.e. xlsx
+    assert "spreadsheetml" in r.headers["content-type"]
+    assert "attachment" in r.headers["content-disposition"]
+
+
+def test_xlsx_download_refuses_a_generic_budget(ctx):
+    """There is no Form 1030 to export from a generic budget -- say so, don't 500."""
+    c, sub_id = ctx
+    c.put(f"/api/me/submissions/{sub_id}/budget", json={"inputs": WORKED})
+    r = c.get(f"/api/me/submissions/{sub_id}/budget.xlsx")
+    assert r.status_code == 400
