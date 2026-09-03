@@ -222,7 +222,7 @@ def test_a_paste_estimate_is_excluded_from_the_score():
 
 
 def test_every_check_is_registered():
-    assert set(rc.CHECKS) == {"rb_not_in_text",
+    assert set(rc.CHECKS) == {"rb_not_in_text", "rb_formatting",
                               "rb_headings", "rb_no_urls", "rb_no_financials",
                               "rb_et_al", "rb_narrative", "rb_page_limit",
                               # 2026-09-01: References Cited's first

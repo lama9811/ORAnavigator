@@ -4681,6 +4681,16 @@ async def draft_review_upload(
     # it every page rule runs on a word-count estimate even though we hold the
     # exact count from the PDF.
     page_counts = {k: v["pages"] for k, v in file_spans.items() if v.get("pages")}
+    # Measured PDF geometry for the formatting rules (font size, side margins,
+    # paper size). Taken from the LONGEST file that yielded a measurement --
+    # in a multi-attachment package that is the narrative, which is what NSF's
+    # font and margin rules are about, and a one-page cover letter should not
+    # decide the verdict for the whole submission. Empty when nothing was
+    # measurable (a pasted draft, or an image-only scan), which is exactly when
+    # the formatting rules must keep reporting that they cannot be judged.
+    _measured = [f for f in extracted if (f.get("layout") or {}).get("font_pt")]
+    draft_layout = (max(_measured, key=lambda f: f.get("chars") or 0)["layout"]
+                    if _measured else None)
     if not draft_text.strip():
         # Nothing readable. Return the per-file errors rather than a review that
         # would report every requirement as missing.
@@ -4698,6 +4708,7 @@ async def draft_review_upload(
     structural = any(f.get("section_spans") for f in extracted)
     result = _dr.review_draft(draft_text, profile=profile, title=sub.title,
                               budget=budget, pages=page_counts or None,
+                              layout=draft_layout,
                               file_spans=file_spans or None,
                               structural=structural)
     return {
@@ -4874,7 +4885,8 @@ async def section_check_upload(
                 "error": read.get("error") or "Couldn't read any text from that file."}
 
     result = _dr.review_section(read["text"], section=section, rulebook=rulebook,
-                                profile=profile, pages=read.get("pages") or None)
+                                profile=profile, pages=read.get("pages") or None,
+                                layout=read.get("layout") or None)
     return {
         "submission_id": submission_id,
         "result": result,

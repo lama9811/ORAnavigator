@@ -106,16 +106,96 @@ KNOWN_UNSUPPORTED = {
 }
 
 
+# How many pages to measure geometry over. Enough to be representative of the
+# body, bounded so a long package does not slow the upload.
+LAYOUT_MAX_PAGES = 40
+
+# A nominal 1-inch margin measures ~0.96" because a glyph's x0 includes its
+# side bearing. 72 PDF points = 1 inch.
+POINTS_PER_INCH = 72.0
+
+
+def _measure_layout(pdf) -> dict:
+    """Body font size and side margins, measured from the glyphs themselves.
+
+    Measured on an OPEN pdfplumber document, deliberately: this module's own
+    rule is that two readers must not extract the same file twice and disagree
+    about it, and that applies to geometry as much as to text.
+
+    `font_pt` is the MOST COMMON character size, not the smallest, so figure
+    captions and subscripts cannot drag it below the body text.
+
+    `margin_in` measures the LEFT and RIGHT margins only, and takes the MEDIAN
+    across pages so one full-bleed figure page cannot condemn a document. Top
+    and bottom are excluded on purpose: running headers, footers and page
+    numbers legitimately sit in that band. Measured on NSF's own PAPPG — a
+    professionally typeset 1-inch-margin document — including the vertical
+    edges reported 0.49", while the side margins correctly measured 0.96".
+    Checking all four edges would flag compliant drafts, which is the cry-wolf
+    failure this codebase keeps unshipping.
+
+    Every value is optional: an image-only PDF has no glyphs, and the caller
+    must report "not checked" rather than invent a verdict."""
+    size_counts: dict = {}
+    per_page_margin: list[float] = []
+    widths: list[float] = []
+    heights: list[float] = []
+
+    for page in pdf.pages[:LAYOUT_MAX_PAGES]:
+        w, h = float(page.width or 0), float(page.height or 0)
+        if w > 0 and h > 0:
+            widths.append(w)
+            heights.append(h)
+        chars = page.chars or []
+        if not chars or w <= 0:
+            continue
+        xs0, xs1 = [], []
+        for ch in chars:
+            size = ch.get("size")
+            if isinstance(size, (int, float)) and size > 0:
+                # Round to 0.5pt: one nominal size varies by hundredths across
+                # a file, which would shatter the mode into dozens of buckets.
+                key = round(float(size) * 2) / 2
+                size_counts[key] = size_counts.get(key, 0) + 1
+            x0, x1 = ch.get("x0"), ch.get("x1")
+            if isinstance(x0, (int, float)):
+                xs0.append(float(x0))
+            if isinstance(x1, (int, float)):
+                xs1.append(float(x1))
+        if xs0 and xs1:
+            per_page_margin.append(max(0.0, min(min(xs0), w - max(xs1))))
+
+    def _median(vals):
+        return sorted(vals)[len(vals) // 2] if vals else None
+
+    margin_pt = _median(per_page_margin)
+    page_w = _median(widths)
+    page_h = _median(heights)
+    return {
+        "font_pt": (max(size_counts.items(), key=lambda kv: kv[1])[0]
+                    if size_counts else None),
+        "margin_in": (round(margin_pt / POINTS_PER_INCH, 2)
+                      if margin_pt is not None else None),
+        "page_w_in": (round(page_w / POINTS_PER_INCH, 2)
+                      if page_w is not None else None),
+        "page_h_in": (round(page_h / POINTS_PER_INCH, 2)
+                      if page_h is not None else None),
+    }
+
+
 def _extract_pdf(data: bytes):
-    """(text, page_count, truncated, page_texts). Raises on an unparseable PDF.
+    """(text, page_count, truncated, page_texts, layout). Raises on an
+    unparseable PDF.
 
     `page_texts` is returned rather than discarded so `services.pdf_sections`
     can map page ranges onto the very string built here — the two must not
-    extract the document twice and disagree about it."""
+    extract the document twice and disagree about it. `layout` is measured in
+    the same pass, for the same reason."""
     import pdfplumber
 
     pages: list[str] = []
     truncated = False
+    layout: dict = {}
     with pdfplumber.open(io.BytesIO(data)) as pdf:
         total = len(pdf.pages)
         for i, page in enumerate(pdf.pages):
@@ -125,11 +205,17 @@ def _extract_pdf(data: bytes):
             pages.append(
                 page.extract_text(x_tolerance_ratio=PDF_X_TOLERANCE_RATIO,
                                   y_tolerance=PDF_Y_TOLERANCE) or "")
+        try:
+            layout = _measure_layout(pdf)
+        except Exception:
+            # Geometry is a bonus on top of the text. A PDF whose glyph table
+            # we cannot read must still be REVIEWED, so this never propagates.
+            layout = {}
     text = "\n".join(pages)
     if len(text) > MAX_CHARS:
         text = text[:MAX_CHARS]
         truncated = True
-    return text, total, truncated, pages
+    return text, total, truncated, pages, layout
 
 
 def _extract_docx(data: bytes) -> tuple[str, int, bool]:
@@ -178,7 +264,8 @@ def _looks_like_zip(data: bytes) -> bool:
 def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict:
     """Read one uploaded file.
 
-    Returns {filename, text, pages, chars, truncated, error}. NEVER raises —
+    Returns {filename, text, pages, chars, truncated, error, layout}. NEVER
+    raises —
     an unreadable file comes back with `error` set and `text` empty, so one bad
     file in a multi-file upload cannot take down the whole review.
 
@@ -190,7 +277,7 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
     name = filename or "file"
     ext = os.path.splitext(name)[1].lower()
     out = {"filename": name, "text": "", "pages": 0, "chars": 0,
-           "truncated": False, "error": None}
+           "truncated": False, "error": None, "layout": {}}
 
     if not data:
         out["error"] = "The file is empty."
@@ -205,7 +292,8 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
         # Sniff content first: a mislabelled extension is common when files come
         # off a shared drive, and the bytes are authoritative.
         if _looks_like_pdf(data):
-            text, pages, truncated, page_texts = _extract_pdf(data)
+            text, pages, truncated, page_texts, layout = _extract_pdf(data)
+            out["layout"] = layout
         elif ext in DOCX_EXTS and _looks_like_zip(data):
             text, pages, truncated = _extract_docx(data)
             page_texts = []

@@ -364,6 +364,83 @@ def rb_not_in_text(ctx: dict, req: dict) -> tuple:
     return "not_checked", detail, ""
 
 
+def rb_formatting(ctx: dict, req: dict) -> tuple:
+    """A formatting rule, judged against the uploaded PDF's own geometry.
+
+    These rules used to route to `rb_not_in_text`, whose `handled_by` read "the
+    formatting of the PDF you upload — check it there, not in the text". That
+    is correct about pasted text and was the honest answer while nothing
+    measured the PDF. It is no longer the only answer: when a PDF was uploaded,
+    `document_text` measures the glyphs in the same pass that reads the text,
+    and the rule becomes checkable.
+
+    So this mirrors `rb_page_limit` exactly: a real measurement gives a real
+    verdict; no measurement keeps the old `not_checked` row, its quote, and its
+    address. A pasted draft is never flagged for formatting it cannot carry.
+
+    `property` in check_args selects what to compare -- font | margins | paper.
+    An unknown property falls through to `not_checked` rather than guessing,
+    because a fabricated verdict on a rule we cannot evaluate is worse than
+    silence."""
+    layout = ctx.get("layout") or {}
+    prop = (req.get("check_args") or {}).get("property") or ""
+
+    if prop == "font":
+        got = layout.get("font_pt")
+        if not isinstance(got, (int, float)):
+            return rb_not_in_text(ctx, req)
+        # 10pt is the SMALLEST size the PAPPG permits for any approved face
+        # (Arial/Courier/Palatino); Times and Computer Modern require 11.
+        # Comparing against the smallest is what makes a flag unambiguous --
+        # 10pt Arial is compliant and must not be reported as an error.
+        # 0.2pt of slack: writers routinely emit 9.96pt for nominal 10pt.
+        if got < 10.0 - 0.2:
+            return "flagged", (
+                f"Body text measures about {_num(got)}pt. The smallest size NSF "
+                "permits is 10pt (11pt for Times New Roman and Computer Modern), "
+                "and small fonts are grounds to return a proposal without review. "
+                "Figures, tables and captions may legitimately be smaller."
+            ), ""
+        return "clear", f"Body text measures about {_num(got)}pt.", ""
+
+    if prop == "margins":
+        got = layout.get("margin_in")
+        if not isinstance(got, (int, float)):
+            return rb_not_in_text(ctx, req)
+        # Side margins only -- see document_text._measure_layout for why the
+        # vertical edges are excluded. 0.1" of slack because a glyph's x0
+        # includes its side bearing, so a true 1" margin measures ~0.96".
+        if got < 1.0 - 0.1:
+            return "flagged", (
+                f"Side margins measure about {_num(got)} inch. NSF requires at "
+                "least one inch in all directions. Measured left and right only "
+                "— running headers and footers legitimately sit in the top and "
+                "bottom band, so those are not judged here."
+            ), ""
+        return "clear", f"Side margins measure about {_num(got)} inch.", ""
+
+    if prop == "paper":
+        w, h = layout.get("page_w_in"), layout.get("page_h_in")
+        if not (isinstance(w, (int, float)) and isinstance(h, (int, float))):
+            return rb_not_in_text(ctx, req)
+        # Letter, either orientation, with a little slack for rounding.
+        ok = ((abs(w - 8.5) <= 0.15 and abs(h - 11.0) <= 0.15)
+              or (abs(w - 11.0) <= 0.15 and abs(h - 8.5) <= 0.15))
+        if not ok:
+            return "flagged", (
+                f"Pages measure about {_num(w)} by {_num(h)} inches. NSF requires "
+                "no larger than standard letter (8.5 by 11, either orientation)."
+            ), ""
+        return "clear", f"Pages measure {_num(w)} by {_num(h)} inches.", ""
+
+    return rb_not_in_text(ctx, req)
+
+
+def _num(v: float) -> str:
+    """3.0 -> '3', 0.96 -> '0.96' (no trailing '.0' in a sentence)."""
+    return str(int(v)) if float(v).is_integer() else str(round(float(v), 2))
+
+
 CHECKS = {
     "rb_headings": rb_headings,
     "rb_no_urls": rb_no_urls,
@@ -373,4 +450,5 @@ CHECKS = {
     "rb_narrative": rb_narrative,
     "rb_page_limit": rb_page_limit,
     "rb_not_in_text": rb_not_in_text,
+    "rb_formatting": rb_formatting,
 }

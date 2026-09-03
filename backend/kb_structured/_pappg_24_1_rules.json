@@ -42,10 +42,11 @@
       "section_label": "Format of the Proposal",
       "kind": "deterministic",
       "scored": true,
-      "check": "rb_not_in_text",
+      "check": "rb_formatting",
       "check_args": {
         "section": "format_of_the_proposal",
-        "handled_by": "the formatting of the PDF you upload — check it there, not in the text"
+        "handled_by": "the formatting of the PDF you upload — check it there, not in the text",
+        "property": "font"
       },
       "source": "Use one of the following fonts identified below: • Arial7 (not Arial Narrow), Courier New, or Palatino Linotype at a font size of 10 points or larger; • Times New Roman at a font size of 11 points or larger; or • Computer Modern family of fonts at a font size of 11 points or larger.",
       "why": "Standard fonts and minimum sizes ensure legibility for reviewers and prevent unfair space advantages.",
@@ -120,10 +121,11 @@
       "section_label": "Format of the Proposal",
       "kind": "deterministic",
       "scored": true,
-      "check": "rb_not_in_text",
+      "check": "rb_formatting",
       "check_args": {
         "section": "format_of_the_proposal",
-        "handled_by": "the formatting of the PDF you upload — check it there, not in the text"
+        "handled_by": "the formatting of the PDF you upload — check it there, not in the text",
+        "property": "margins"
       },
       "source": "Margins, in all directions, must be at least an inch.",
       "why": "Ensures uniform printable margins and clean layout for electronic document rendering.",
@@ -169,10 +171,11 @@
       "section_label": "Format of the Proposal",
       "kind": "deterministic",
       "scored": true,
-      "check": "rb_not_in_text",
+      "check": "rb_formatting",
       "check_args": {
         "section": "format_of_the_proposal",
-        "handled_by": "the formatting of the PDF you upload — check it there, not in the text"
+        "handled_by": "the formatting of the PDF you upload — check it there, not in the text",
+        "property": "paper"
       },
       "source": "Paper size must be no larger than standard letter paper size (8½ by 11 or 11 by 8½).",
       "why": "Standardizes document layout across all submitted files and review systems.",
