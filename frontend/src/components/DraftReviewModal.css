@@ -1042,4 +1042,35 @@ a.eir-delegation-name svg { vertical-align: -1px; }
   color: var(--text-main);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── page ledger ──────────────────────────────────────────────────────────
+   Deliberately NOT green anywhere in here. This says a page was FOUND, never
+   that it passed -- this modal has rendered presence as approval four times
+   (the section map's ticks, "addressed" read as praise, a 100% on a 152-word
+   section) and had to unship it every time. */
+.eir-ledger {
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+.eir-ledger-head { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.6rem; }
+.eir-ledger-sub { font-size: 0.8rem; color: var(--text-tertiary); }
+.eir-ledger-warn { font-size: 0.85rem; color: var(--eir-warn); margin: 0.35rem 0; }
+.eir-ledger-rows { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.eir-ledger-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+.eir-ledger-pill em { font-style: normal; color: var(--text-tertiary); font-size: 0.72rem; }
+.eir-src-unassigned { border-color: var(--eir-warn); }
+.eir-src-blank { opacity: 0.65; }
+
+.eir-extract-map { margin: 0.5rem 0 0; padding-left: 1rem; font-size: 0.8rem; }
+.eir-extract-guess { color: var(--eir-warn); }
 .eir-score-src-of { color: var(--text-tertiary); font-size: 0.78rem; }

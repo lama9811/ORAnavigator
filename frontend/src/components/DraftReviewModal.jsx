@@ -558,6 +558,21 @@ function ExtractionReport({ extraction }) {
           sections near its end were not checked &mdash; split it and re-run.
         </div>
       )}
+      {/* Which file was read as which section, so a mis-map is visible on
+          screen rather than silently shaping the score. The backend has sent
+          this since it built the section map; this is the first render of it. */}
+      {extraction.sections?.length > 0 && (
+        <ul className="eir-extract-map">
+          {extraction.sections.map((s) => (
+            <li key={s.filename}>
+              <code>{s.filename}</code> read as <strong>{s.label || s.section || "nothing"}</strong>
+              {s.source === "filename_narrowed" && (
+                <span className="eir-extract-guess"> — matched on a shorter name; check this is right</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -1060,6 +1075,22 @@ function FindingGroup({ label, words, items, solicitationId, forced }) {
 
 
 
+// Consecutive pages with the same answer collapse to one row: 56 pills is a
+// wall, "p6–20 Project Description" is a fact a PI can check at a glance.
+function collapseLedger(rows) {
+  const out = [];
+  for (const r of rows) {
+    const label = r.section || (r.source === "blank" ? "no readable text" : "not placed");
+    const last = out[out.length - 1];
+    if (last && last.label === label && last.source === r.source && r.page === last.to + 1) {
+      last.to = r.page;
+    } else {
+      out.push({ from: r.page, to: r.page, label, source: r.source });
+    }
+  }
+  return out;
+}
+
 function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt }) {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
@@ -1171,14 +1202,63 @@ function ResultsView({ result, extraction, onBack, submission, onSaved, savedAt 
 
       <MistakesPanel mistakes={result.mistakes} />
 
+      {/* The page ledger: every page of the upload was listed before it was
+          read, so this reports what was FOUND, never what was judged. No
+          green, no checkmarks, no progress bar here — this modal has rendered
+          presence as approval four times (the section map's ticks, "addressed"
+          read as praise, a 100% on a 152-word section) and had to unship it
+          each time. Absent entirely for a pasted review, which has no PDF
+          pages to account for. */}
+      {result.page_ledger?.length > 0 && (
+        <div className="eir-ledger">
+          <div className="eir-ledger-head">
+            <strong>
+              {result.page_ledger.length - (result.pages_unaccounted?.length || 0)} of{" "}
+              {result.page_ledger.length} pages accounted for
+            </strong>
+            <span className="eir-ledger-sub">
+              Every page of your upload was listed before it was read, and each one had
+              to quote itself back. Finding a page is not a judgement of what is on it.
+            </span>
+          </div>
+          {result.pages_unaccounted?.length > 0 && (
+            <p className="eir-ledger-warn">
+              Page{result.pages_unaccounted.length > 1 ? "s" : ""}{" "}
+              {result.pages_unaccounted.join(", ")} could not be placed, so the score is
+              withheld. These pages were read — they were not judged.
+            </p>
+          )}
+          {result.toc_mismatch?.map((m) => (
+            <p key={m.section} className="eir-ledger-warn">
+              {m.label}: {m.ledger_pages} page{m.ledger_pages === 1 ? "" : "s"} found,
+              but this proposal's own table of contents says {m.toc_pages}.
+            </p>
+          ))}
+          <div className="eir-ledger-rows">
+            {collapseLedger(result.page_ledger).map((r) => (
+              <span key={r.from} className={`eir-ledger-pill eir-src-${r.source}`}>
+                {r.from === r.to ? `p${r.from}` : `p${r.from}–${r.to}`}{" "}
+                {r.label}
+                <em>{{ structure: "from the PDF", model: "read", blank: "no text", unassigned: "not placed" }[r.source]}</em>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <ScorePanel score={result.score} solicitationId={solId} />
 
       <DelegationNotice books={result.delegated} />
 
       {/* Shown on results too: if one of five files failed to read, that fact
           has to travel WITH the score, or the score silently means less than
-          it appears to. */}
-      {extraction?.files?.some((f) => f.error || f.truncated) && (
+          it appears to. Also mounts when there's nothing wrong but a mapping
+          exists to show — a mis-map is exactly as worth seeing when it's right
+          as when it's wrong. */}
+      {extraction && (
+        extraction.files?.some((f) => f.error || f.truncated) ||
+        extraction.sections?.length > 0
+      ) && (
         <ExtractionReport extraction={extraction} />
       )}
 
