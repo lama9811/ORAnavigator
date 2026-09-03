@@ -190,7 +190,7 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
     name = filename or "file"
     ext = os.path.splitext(name)[1].lower()
     out = {"filename": name, "text": "", "pages": 0, "chars": 0,
-           "truncated": False, "error": None}
+           "truncated": False, "error": None, "page_texts": []}
 
     if not data:
         out["error"] = "The file is empty."
@@ -237,6 +237,12 @@ def extract_upload(filename: str, data: bytes, *, sections: dict = None) -> dict
         return out
 
     out.update(text=text, pages=pages, chars=len(text), truncated=truncated)
+
+    # Returned rather than dropped: `services.page_ledger` accounts for every
+    # page against this very list, and re-extracting the PDF to get it back
+    # would risk the two reads disagreeing -- the failure `_extract_pdf`'s
+    # docstring warns about.
+    out["page_texts"] = page_texts or []
 
     # STRUCTURAL SPLIT, opt-in and fail-safe. Only here, where the raw bytes and
     # the per-page texts are both still in scope, so nothing has to carry a
