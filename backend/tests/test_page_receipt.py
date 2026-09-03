@@ -132,11 +132,14 @@ def test_an_ellipsis_can_span_non_adjacent_lines_on_ONE_page():
 
 
 def test_a_quote_shorter_than_the_floor_is_rejected():
-    # 5 words -- one short of RECEIPT_MIN_WORDS -- and a REAL, in-order
-    # substring of the page otherwise, so this pins the floor at exactly 6
-    # rather than merely proving some floor >= 4 exists. Lower RECEIPT_MIN_WORDS
-    # to 5 and this quote would verify; the test would then fail to catch it.
+    # TWO-SIDED PIN, both hardcoded word counts, both real in-order substrings
+    # of the page. 5 words -- one short of RECEIPT_MIN_WORDS -- catches the
+    # floor DROPPING (to 5, this quote would verify and the assert would fail).
+    # 6 words -- exactly RECEIPT_MIN_WORDS -- catches the floor RISING (to 7 or
+    # 8, this quote would be wrongly rejected). One side alone leaves the other
+    # direction free to drift with nothing red.
     assert not pl.receipt_ok(_body(PAGE), "The research yields journal articles")
+    assert pl.receipt_ok(_body(PAGE), "The research yields journal articles with")
 
 
 def test_an_empty_quote_never_verifies():
@@ -168,9 +171,13 @@ def test_a_page_with_no_body_text_is_blank():
 
 def test_the_blank_threshold_is_exactly_40_chars():
     # 300+ chars vs 0 chars (the case above) passes for any BLANK_CHARS in
-    # 1..300 -- not a pin. 39 vs 40 is the actual boundary.
-    assert pl.is_blank("x" * (pl.BLANK_CHARS - 1))
-    assert not pl.is_blank("x" * pl.BLANK_CHARS)
+    # 1..300 -- not a pin. LITERAL 39 vs 40 is the actual boundary, and it must
+    # stay literal: deriving these from pl.BLANK_CHARS would make the test
+    # pass identically whatever the constant happens to be -- a guard that
+    # cannot fail is not a guard.
+    assert pl.BLANK_CHARS == 40
+    assert pl.is_blank("x" * 39)
+    assert not pl.is_blank("x" * 40)
 
 
 def test_the_page_marker_is_stripped_even_when_it_is_not_repeated():
