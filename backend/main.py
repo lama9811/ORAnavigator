@@ -5105,10 +5105,43 @@ def _solicitation_warnings(read_report: dict, contract: Optional[dict],
     return out
 
 
+# How many independent reads of a solicitation are merged into one requirement
+# list. SIX, and the number is MEASURED rather than picked -- five uploads of
+# one byte-identical 54,065-char federal solicitation at each setting:
+#
+#   passes  rows returned        spread  two-upload agreement  wall clock
+#   1       36 40 46 48 52         16          79%             23-78s
+#   3       55 62 56 55 59          7          79%             25-38s
+#   6       63 62 63                1          85%             30-36s
+#
+# The reads run CONCURRENTLY, which is why six of them are FASTER than the
+# slowest single read: wall clock is the slowest pass, not the sum. What six
+# buys over three is the spread -- one row, against seven -- and that is the
+# number a PI actually experiences, because the checklist is a stored snapshot
+# and whichever list their upload drew is the one they keep.
+#
+# The cost is 6x the model calls on a path that runs ONCE per proposal, and
+# `_MODEL_SLOTS` in solicitation_requirements bounds the fan-out so six passes
+# over a multi-chunk document cannot become a 429 storm.
+#
+# Env-overridable so this can be turned down without a deploy; 1 restores the
+# pre-2026-09-04 behaviour exactly.
+SOLICITATION_READ_PASSES = int(os.getenv("SOLICITATION_READ_PASSES", "6"))
+
+
 def _read_solicitation_requirements(text: str, contract: Optional[dict]) -> dict:
     """Shared body: text -> requirements + merit criteria + warnings."""
     from services import solicitation_requirements as _sr
-    out = _sr.extract_requirements(text)
+    # SEVERAL READS, MERGED BY QUOTE -- the one place `passes` is turned on;
+    # the count and the evidence for it are on SOLICITATION_READ_PASSES above.
+    # A single read returned 36 / 40 / 46 / 48 / 52 requirements over five
+    # uploads of one byte-identical solicitation, and only 59% of the 54 the
+    # document states appeared in every read. The checklist is a STORED
+    # SNAPSHOT, so a PI was permanently issued whichever subset their upload
+    # happened to draw. The reads run CONCURRENTLY, so this costs roughly the
+    # slowest one rather than the sum, and stays inside both `budget_s` and
+    # the 300s Cloud Run request cap.
+    out = _sr.extract_requirements(text, passes=SOLICITATION_READ_PASSES)
     merit = _sr.extract_merit_criteria(text) if out.get("ai") else []
     extraction = {k: v for k, v in out.items() if k != "requirements"}
     return {

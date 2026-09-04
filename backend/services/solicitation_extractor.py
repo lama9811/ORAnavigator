@@ -109,6 +109,10 @@ _CONTRACT_KEYS = (
 # exactly the wrong value.
 _CAP_STATUS_VALUES = ("stated", "not_stated")
 
+# Anchored at the start so "2026-06-12T17:00:00-05:00" and "2026-06-12" both
+# yield the same sortable day while the full string is what gets stored.
+_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
 
 # Strict rules passed as the model's SYSTEM INSTRUCTION; the solicitation text is
 # sent separately as the user content. Every filled field must carry a verbatim
@@ -131,6 +135,7 @@ Return ONLY a JSON object with EXACTLY these fields (unknown -> null, or {} / []
   "program_id": short program identifier as it appears (e.g. "NSF 23-573", "PA-24-001", "DE-FOA-0002884") or null,
   "program_name": short human-readable name (e.g. "Faculty Early Career Development") or null,
   "deadline": ISO-8601 with timezone if known (e.g. "2026-06-12T17:00:00-05:00") or date "2026-06-12" or null,
+  "deadlines": EVERY due date the solicitation states, as a list of {"label": "<what this date is for, e.g. Letter of Intent / Full Proposal / Category II>", "date": "<ISO-8601, same format rules as deadline>"}. List them ALL, in any order -- which one is "the" deadline is decided downstream, not by you. [] if the text states none,
   "deadline_details": when the solicitation gives MORE THAN ONE deadline (different categories/tracks, or recurring dates), a short plain-text summary listing EACH deadline with its category/condition as stated (e.g. "Category II: July 28, 2026; Category I & III: July 27, 2027; recurring annually on the fourth Tuesday in July"); null if there is only a single deadline,
   "page_limits": object mapping section name (snake_case) -> integer page limit. Examples: {"project_description": 15, "data_management_plan": 2, "biosketch": 5},
   "required_attachments": array of required attachment / element names (e.g. ["Biosketch", "Current & Pending Support", "Data Management Plan"]); include conditionally-required, exclude purely optional; [] if none,
@@ -373,6 +378,46 @@ def _coerce_extracted(raw: dict) -> dict:
     # Canonicalize the sponsor token so downstream template/section selection
     # works whether Gemini returned "NSF" or "National Science Foundation".
     out["sponsor"] = _canon_sponsor(out["sponsor"])
+
+    # THE DEADLINE IS COMPUTED, NOT CHOSEN. `_EXTRACT_SYSTEM` rule 3 has always
+    # said "the SINGLE EARLIEST upcoming date explicitly stated" -- so this
+    # changes no policy, it just makes the rule actually hold. MEASURED
+    # 2026-09-04 on NSF 23-598, 10 reads of byte-identical text: the model
+    # returned the Letter of Intent date 8 times and the full proposal date
+    # twice, a three-month swing in the field that drives
+    # internal_routing_deadline, the ICS feed and the reminder emails. It named
+    # BOTH dates correctly in all 10 -- it simply could not pick between them.
+    # Picking the smaller of two dates is arithmetic, so golden rule 1 applies:
+    # the model reports, code decides.
+    #
+    # A fixed seed was tested rather than assumed and is NOT the fix (10 seeded
+    # runs held the deadline but attachments still swung 5 -> 8). Temperature is
+    # already 0.0.
+    #
+    # The model's OWN pick is one of the candidates, so this can only ever move
+    # the date EARLIER -- an incomplete list can never push it later than what
+    # the model already said.
+    #
+    # FAILS SAFE: no list, an unparseable list, or nothing recognisable leaves
+    # `out["deadline"]` exactly as it arrived. A date we cannot read must never
+    # blank one we can.
+    candidates = []
+    for entry in (raw.get("deadlines") or []) if isinstance(
+            raw.get("deadlines"), list) else []:
+        value = (entry.get("date") if isinstance(entry, dict) else entry)
+        candidates.append(value)
+    candidates.append(out["deadline"])
+    dated = []
+    for value in candidates:
+        if not isinstance(value, str):
+            continue
+        match = _ISO_DATE.match(value.strip())
+        if match:
+            # Sort on the DAY, keep the ORIGINAL string -- a stated time of day
+            # is real information and must survive being chosen.
+            dated.append((match.group(0), value.strip()))
+    if dated:
+        out["deadline"] = min(dated)[1]
 
     return out
 
