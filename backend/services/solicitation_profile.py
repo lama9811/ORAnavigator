@@ -126,6 +126,18 @@ _EQUIVALENT_SECTIONS = (
      frozenset({"special", "information", "supplementary", "documentation"})),
     (frozenset({"supplementary", "document"}),
      frozenset({"special", "information", "supplementary", "document"})),
+    # ADDED 2026-09-04. Measured over 5 reads of one solicitation: the same
+    # part of the proposal came back as `budget`, `budget_justification` and
+    # `budget_budget_justification`. The last two already collapse (a signature
+    # is a SET, so the repeated word vanishes); bare `budget` does not, and a
+    # row filed under a key that lost the merge can never be located.
+    #
+    # A NAMED equivalence, never a looser matcher -- containment would fold
+    # "Project Description Supplementary Documents" into "Project Description"
+    # and lose a real section, which is what set EQUALITY exists to prevent
+    # (test_a_narrower_section_is_still_not_swallowed).
+    (frozenset({"budget"}),
+     frozenset({"budget", "justification"})),
 )
 
 

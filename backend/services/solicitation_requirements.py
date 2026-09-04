@@ -51,6 +51,7 @@ when the solicitation is attached and the result is stored — never per review.
 from __future__ import annotations
 
 import os
+import threading
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -406,6 +407,26 @@ _DOCUMENT_HEADINGS = {
     "other_information",
     "summary_program_requirement",
     "program_requirement",
+    # ADDED 2026-09-04, each one OBSERVED leaking in a 5-run measurement of one
+    # real federal solicitation (see tests/test_solicitation_consistency.py,
+    # which names the document). "proposal" is
+    # filler, so `preparation` also covers "Proposal Preparation"; the naive
+    # singulariser turns "Due Dates" into `due_date`.
+    #
+    # None of these names a part of a proposal, which is why they are safe and
+    # why the leak mattered: a section that cannot exist in a draft is never
+    # located, so every requirement filed under it reports "Not located" and
+    # leaves the score's denominator -- extracted and then never checked.
+    #
+    # DELIBERATELY ABSENT, and this is the dangerous direction: `introduction`,
+    # `background`, `results_prior_support`. A PI's own Project Description
+    # routinely opens with those, and dropping one to None would file its
+    # requirements at whole-document scope. Guarded by
+    # test_a_real_proposal_section_is_not_dropped.
+    "due_date",
+    "eligibility",
+    "eligibility_info",
+    "preparation",
 }
 
 # A leading "VII." / "2." is the solicitation's own section NUMBER. It has to be
@@ -482,6 +503,20 @@ def _coerce(row: dict) -> Optional[dict]:
     return out
 
 
+# EVERY model call in this module passes through this semaphore, because the
+# pools NEST and their caps MULTIPLY: `passes` fans out at the top, and inside
+# each pass `MAX_WORKERS` fans out again per chunk. Six passes over a
+# multi-chunk solicitation is 6x4 = 24 calls in flight, and gemini_client's
+# backoff is a fixed 1s/2s with no jitter -- a thundering herd rather than a
+# fix. Same failure class draft_review had to grow `_MODEL_SLOTS` for.
+#
+# 8 is above MAX_WORKERS (so a single-pass read of a big document is completely
+# unaffected) and above the typical one-chunk fan-out of `passes` (so the
+# common case never queues), while bounding the pathological product.
+_MODEL_SLOTS_N = int(os.getenv("SOLICITATION_MODEL_SLOTS", "8"))
+_MODEL_SLOTS = threading.BoundedSemaphore(_MODEL_SLOTS_N)
+
+
 def _ask(prompt: str, system: str = _SYSTEM, key: str = "requirements") -> list:
     # 32k out, not 8k. MEASURED against a real federal solicitation: one chunk
     # produced enough rows to hit an 8192-token ceiling mid-string, so the JSON
@@ -500,20 +535,21 @@ def _ask(prompt: str, system: str = _SYSTEM, key: str = "requirements") -> list:
     # also the MORE complete ones, because the slow run spent its own budget_s
     # on thinking and got through fewer sweep rounds. Same lesson
     # opportunity_finder already learned.
-    ai = gemini_client.generate_json(
-        prompt, temperature=0.0, max_output_tokens=32768, timeout_s=180,
-        thinking_budget=0,
-        system_instruction=system, model=MODEL, location=MODEL_LOCATION)
+    with _MODEL_SLOTS:
+        ai = gemini_client.generate_json(
+            prompt, temperature=0.0, max_output_tokens=32768, timeout_s=180,
+            thinking_budget=0,
+            system_instruction=system, model=MODEL, location=MODEL_LOCATION)
     if not ai or not isinstance(ai.get(key), list):
         return []
     return ai[key]
 
 
-def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 8,
-                         budget_s: float = DEFAULT_BUDGET_S,
-                         targeted: bool = True,
-                         system: Optional[str] = None,
-                         sweep_system: Optional[str] = None) -> dict:
+def _extract_once(text: str, *, use_ai: bool = True, max_rounds: int = 8,
+                  budget_s: float = DEFAULT_BUDGET_S,
+                  targeted: bool = True,
+                  system: Optional[str] = None,
+                  sweep_system: Optional[str] = None) -> dict:
     """Every requirement in `text`, each backed by a verbatim quote from it.
 
     max_rounds was 3, which was the binding constraint for the wrong reason.
@@ -540,7 +576,8 @@ def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 8,
     out: dict = {"requirements": [], "ai": False, "rounds": 0, "chunks": 0,
                  "chars": len(text), "dropped_unverified": 0,
                  "hit_round_cap": False, "hit_time_cap": False,
-                 "targeted_added": 0, "targeted_ran": False, "elapsed_s": 0.0}
+                 "targeted_added": 0, "targeted_ran": False, "elapsed_s": 0.0,
+                 "passes": 1}
     if not text.strip() or not use_ai:
         return out
 
@@ -664,6 +701,151 @@ def extract_requirements(text: str, *, use_ai: bool = True, max_rounds: int = 8,
     out["ai"] = True
     out["elapsed_s"] = round(time.monotonic() - started, 1)
     return out
+
+
+# How much of one row's quote must appear in another's for the two to be the
+# same requirement. 5-gram overlap of the VERBATIM quotes, the same measure
+# tests/test_solicitation_requirements_recall.py uses -- and deliberately NOT
+# the id, which is derived from the model's own label and churns: measured
+# id-jaccard 0.04-0.12 between two reads that had found the same rules. A merge
+# on ids would stack near-duplicates instead of collapsing them.
+_MERGE_FLOOR = 0.34
+_MERGE_NGRAM = 5
+
+
+def _shingles(text: str, n: int = _MERGE_NGRAM) -> frozenset:
+    words = re.sub(r"[^a-z0-9 ]+", " ", (text or "").lower()).split()
+    return frozenset(tuple(words[i:i + n]) for i in range(len(words) - n + 1))
+
+
+def _same_quote(a: frozenset, b: frozenset) -> bool:
+    """Do two quotes point at the same sentence?
+
+    Scored against the SHORTER quote, so one reader quoting a longer span of
+    the same sentence than another still matches."""
+    if not a or not b:
+        return False
+    return len(a & b) / min(len(a), len(b)) >= _MERGE_FLOOR
+
+
+def _merge_passes(results: list) -> list:
+    """Union the rows of several independent reads of one document.
+
+    THE COMPOUND-SENTENCE TRAP, and why this is not a plain quote-dedupe.
+    `_SYSTEM` rule 4 deliberately SPLITS a compound requirement ("must describe
+    how A, B and C") into several rows, so more than one legitimate row can
+    quote the same sentence. Collapsing a quote-cluster to one row would delete
+    real requirements -- the opposite of what a union is for.
+
+    So rows are grouped by quote, and each group keeps the rows of the SINGLE
+    pass that contributed the most of them. A pass's split of one sentence is
+    internally coherent; mixing two passes' splits is not. Where every pass
+    returned one row per sentence -- the common case -- this is exactly a
+    quote-dedupe.
+
+    Conservative by construction: a row is only ever dropped in favour of
+    another pass's reading of the same sentence, never in favour of nothing."""
+    clusters: list = []          # [{"sh": frozenset, "rows": {pass_index: [row]}}]
+    for index, result in enumerate(results):
+        for row in result.get("requirements") or []:
+            sh = _shingles(row.get("source") or "")
+            for cluster in clusters:
+                if _same_quote(sh, cluster["sh"]):
+                    cluster["rows"].setdefault(index, []).append(row)
+                    break
+            else:
+                clusters.append({"sh": sh, "rows": {index: [row]}})
+
+    merged = []
+    for cluster in clusters:
+        # max() on the count, ties broken by the earliest pass so the result
+        # does not depend on dict ordering.
+        best = min(cluster["rows"].items(), key=lambda kv: (-len(kv[1]), kv[0]))
+        merged.extend(best[1])
+
+    # Ids are the checklist's `source_ref`; two rows sharing one would make a
+    # ticked task ambiguous. Unique WITHIN a pass, so a collision here can only
+    # come from two passes wording two different requirements identically.
+    seen: dict = {}
+    for row in merged:
+        base = row["id"]
+        if base in seen:
+            seen[base] += 1
+            row["id"] = f"{base}_{seen[base]}"[:80]
+        else:
+            seen[base] = 1
+    return merged
+
+
+def extract_requirements(text: str, *, passes: int = 1, **kwargs) -> dict:
+    """Every requirement in `text`, read `passes` times and merged.
+
+    WHY MORE THAN ONE READ. MEASURED 2026-09-04 on a 54,065-char federal
+    solicitation, five reads of byte-identical text: 36 / 40 / 46 / 48 / 52 rows. Compared by quote overlap
+    the five runs between them found 54 distinct requirements and only 32 --
+    59% -- appeared in EVERY run; ten appeared in exactly one run of five,
+    among them a statute-compliance rule and an eligibility limit that a
+    reviewer would reject the proposal over. One read gets a random subset of a
+    real document, and because the checklist is a STORED SNAPSHOT whichever
+    subset a PI drew was frozen into their checklist and their Draft Review
+    denominator for the life of the proposal.
+
+    The sweep already asks "what did the first reader miss?" and it is not
+    enough -- it CONVERGES, and convergence means two readers agree, not that
+    the document is exhausted. Independent reads converge to different places.
+
+    CONCURRENT, so this costs roughly the slowest read rather than the sum, and
+    each pass gets the whole `budget_s` rather than a share of it. A typical
+    solicitation is ONE chunk (CHUNK_CHARS is 60,000), so `MAX_WORKERS` never
+    engages inside a pass and `passes` really is the whole fan-out.
+
+    DEFAULTS TO 1 so every existing caller, and every test written before this,
+    behaves exactly as it did. The upload endpoint is what opts in.
+
+    A pass that returns nothing is not allowed to hide the fact: the reported
+    caps are the OR across passes, because a list one reader ran out of clock
+    on is a list that may be incomplete however well the others did."""
+    passes = max(1, int(passes or 1))
+    if passes == 1:
+        return _extract_once(text, **kwargs)
+
+    def _one(_):
+        # GOLDEN RULE 3, applied to the fan-out. Reading six times is six
+        # chances to raise, and throwing away five good reads because the sixth
+        # thread died is worse than the single read this replaced. Swallowed
+        # per pass and LOUD in the log -- never silent.
+        try:
+            return _extract_once(text, **kwargs)
+        except Exception as exc:                       # noqa: BLE001
+            print(f"   [SOLICITATION] requirement pass failed: {exc!r}")
+            return exc
+
+    with ThreadPoolExecutor(max_workers=passes) as pool:
+        outcomes = list(pool.map(_one, range(passes)))
+
+    results = [o for o in outcomes if not isinstance(o, Exception)]
+    if not results:
+        # Every pass threw. `_extract_once` already returns an EMPTY result
+        # when the model is merely unavailable, so this is a real bug and must
+        # not hide behind a fallback that reports "no requirements found".
+        raise next(o for o in outcomes if isinstance(o, Exception))
+
+    merged = dict(results[0])
+    merged["failed_passes"] = len(outcomes) - len(results)
+    merged["requirements"] = _merge_passes(results)
+    merged["passes"] = passes
+    merged["per_pass"] = [len(r.get("requirements") or []) for r in results]
+    merged["dropped_unverified"] = sum(r.get("dropped_unverified") or 0
+                                       for r in results)
+    merged["targeted_added"] = sum(r.get("targeted_added") or 0
+                                   for r in results)
+    for flag in ("hit_round_cap", "hit_time_cap"):
+        merged[flag] = any(bool(r.get(flag)) for r in results)
+    merged["targeted_ran"] = all(bool(r.get("targeted_ran")) for r in results)
+    merged["ai"] = any(bool(r.get("ai")) for r in results)
+    merged["elapsed_s"] = round(max(float(r.get("elapsed_s") or 0.0)
+                                    for r in results), 1)
+    return merged
 
 
 def extract_merit_criteria(text: str, *, use_ai: bool = True) -> list[dict]:
